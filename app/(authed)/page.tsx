@@ -519,16 +519,16 @@ export default function HomePage() {
     return (
         // Inside HomePage component return:
         <div>
-            <h1>Portfolio 5DD Report</h1>
-            <p>
+            <h1>Portfolio Action Report</h1>
+            <div style={{ fontSize: 10 }}>
                 {pricesLoading
                 ? 'Prices are refreshing...'
                 // Check if timestamp exists before formatting
                 : lastPriceFetchTimestamp
-                    ? `Prices are current as of ${formatTimestamp(lastPriceFetchTimestamp)}`
+                    ? `Prices as of ${formatTimestamp(lastPriceFetchTimestamp)}`
                     : 'Prices not fetched yet.' // Message if no timestamp loaded
                 }
-            </p>
+            </div>
             {pricesError && <p style={{ color: 'red' }}>Price Error: {pricesError}</p>}
             {isTxnLoading && <p>Loading transaction data...</p>} {/* Show txn loading state */}
             {txnError && <p style={{ color: 'red' }}>Transaction Error: {txnError}</p>} {/* Show txn error */}
