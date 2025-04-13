@@ -257,6 +257,10 @@ export default function AddTransactionForStockPage() {
 
       if (errors) throw errors;
 
+      // --- ADD THIS LOG ---
+      console.log(`Raw fetched data for stockId ${stockId}:`, JSON.stringify(fetchedTxns, null, 2));
+      // --- END LOG ---
+
       setTransactions(fetchedTxns as TransactionDataType[]);
       //console.log('Fetched transactions:', fetchedTxns);
 

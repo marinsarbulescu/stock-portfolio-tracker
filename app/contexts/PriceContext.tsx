@@ -52,15 +52,15 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
         const storedDataString = window.localStorage.getItem(PRICES_STORAGE_KEY);
         if (storedDataString) {
           const storedData: StoredPriceInfo = JSON.parse(storedDataString);
-          console.log("Initializing latestPrices from localStorage data:", storedData?.prices);
+          //console.log("Initializing latestPrices from localStorage data:", storedData?.prices);
           return storedData.prices || {}; // Extract 'prices' property
         }
       } catch (error) {
-        console.error("Error reading/parsing stored prices state:", error);
+        //console.error("Error reading/parsing stored prices state:", error);
         // Don't clear storage here, let timestamp try
       }
     }
-    console.log("Initializing latestPrices with: {} (default)");
+    //console.log("Initializing latestPrices with: {} (default)");
     return {}; // Default empty object
   });
 
@@ -69,21 +69,21 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window !== 'undefined') {
       try {
         const storedDataString = window.localStorage.getItem(PRICES_STORAGE_KEY);
-        console.log("Attempting to initialize timestamp. Found string:", storedDataString);
+        //console.log("Attempting to initialize timestamp. Found string:", storedDataString);
         if (storedDataString) {
           const storedData: StoredPriceInfo = JSON.parse(storedDataString);
-          console.log("Parsed stored data for timestamp:", storedData);
+          //console.log("Parsed stored data for timestamp:", storedData);
           const loadedTimestamp = storedData.timestamp ? new Date(storedData.timestamp) : null;
-          console.log("Initializing lastPriceFetchTimestamp with:", loadedTimestamp);
+          //console.log("Initializing lastPriceFetchTimestamp with:", loadedTimestamp);
           return loadedTimestamp; // Extract 'timestamp' property and convert to Date
         }
       } catch (error) {
-        console.error("Error reading/parsing stored timestamp state:", error);
+        //console.error("Error reading/parsing stored timestamp state:", error);
         // Clear storage only if parsing fails completely
         window.localStorage.removeItem(PRICES_STORAGE_KEY);
       }
     }
-    console.log("Initializing lastPriceFetchTimestamp with: null (default)");
+    //console.log("Initializing lastPriceFetchTimestamp with: null (default)");
     return null; // Default null
   });
   // --- End Corrected Initialization ---
@@ -103,7 +103,7 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
            // Converts Date object to ISO string, should be the NEW date
            timestamp: lastPriceFetchTimestamp?.toISOString() ?? null
        };
-       console.log("Attempting to save state to localStorage:", dataToStore); // <<< Log 1
+       //console.log("Attempting to save state to localStorage:", dataToStore); // <<< Log 1
        window.localStorage.setItem(PRICES_STORAGE_KEY, JSON.stringify(dataToStore));
     } catch (error) { /* ... */ }
     // Runs whenever latestPrices OR lastPriceFetchTimestamp changes
@@ -113,7 +113,7 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
 
   // --- Functions (fetchLatestPricesForAllStocks, sendNotificationEmail) ---
   const fetchLatestPricesForAllStocks = useCallback(async () => {
-    console.log('Triggering fetch for all stock prices...');
+    //console.log('Triggering fetch for all stock prices...');
     setPricesLoading(true);
     setPricesError(null);
     // Optional: Decide whether to clear prices immediately or show stale during load
@@ -128,12 +128,12 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
       const symbols = stocks?.map(stock => stock?.symbol).filter(Boolean) as string[] ?? [];
  
       if (symbols.length === 0) {
-        console.log('No stocks found to fetch prices for.');
+        //console.log('No stocks found to fetch prices for.');
         setLatestPrices({}); // Set empty prices
         setLastPriceFetchTimestamp(new Date()); // Update timestamp to now
       } else {
         // If symbols exist, proceed to fetch prices
-        console.log('Fetching prices from backend for symbols:', symbols);
+        //console.log('Fetching prices from backend for symbols:', symbols);
         try { // Inner try specifically for fetching prices
           const { data: priceResults, errors: priceErrors } = await client.queries.getLatestPrices({ symbols });
           if (priceErrors) throw priceErrors;
@@ -167,7 +167,7 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
         // priceMap is accessible here
         setLatestPrices(priceMap);
         setLastPriceFetchTimestamp(new Date()); // Update timestamp when fetch attempt finishes
-        console.log('Prices updated in context:', priceMap);
+        //console.log('Prices updated in context:', priceMap);
  
       } // End else block (symbols.length > 0)
  
