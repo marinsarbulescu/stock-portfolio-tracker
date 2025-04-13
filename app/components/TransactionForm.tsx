@@ -177,9 +177,9 @@ export default function TransactionForm({
         const pdpValue = stockData?.pdp;
         const plrValue = stockData?.plr;
         if (typeof pdpValue === 'number' && typeof plrValue === 'number') {
-          lbd = priceValue - (priceValue * (pdpValue * -1 / 100));
+          lbd = priceValue - (priceValue * (pdpValue / 100));
           console.log(`>>> LBD calculated: ${lbd}`); // --- Add Log 5 ---
-          tp = priceValue + (priceValue * (pdpValue * -1 * plrValue / 100))
+          tp = priceValue + (priceValue * (pdpValue * plrValue / 100))
           console.log(`>>> TP calculated: ${tp}`); // --- Add Log 5 ---
         } else {
           console.log('>>> PDP or PLR value was not a number:', pdpValue); // --- Add Log 6 ---
