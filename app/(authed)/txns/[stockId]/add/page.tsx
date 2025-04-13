@@ -75,7 +75,7 @@ export default function AddTransactionForStockPage() {
       direction = 'descending';
     }
     setTxnSortConfig({ key, direction });
-    console.log(`Sorting by ${key}, direction ${direction}`);
+    //console.log(`Sorting by ${key}, direction ${direction}`);
   };
   // --- End Sort Request Function ---
 
@@ -132,7 +132,7 @@ export default function AddTransactionForStockPage() {
       if (errors) throw errors;
       const currentGoals = goalsList[0] ?? null;
       setUserGoals(currentGoals);
-      console.log('Fetched goals for budget calc:', currentGoals);
+      //console.log('Fetched goals for budget calc:', currentGoals);
     } catch (err: any) {
       console.error("Error fetching goals:", err);
       // setGoalsError(err.message || "Failed to load goals data.");
@@ -148,14 +148,14 @@ export default function AddTransactionForStockPage() {
     setIsAllTxnsLoading(true);
     // setTxnError(null); // Use specific error state if preferred
     try {
-        console.log('Fetching all buy transactions for budget calc...');
+        //console.log('Fetching all buy transactions for budget calc...');
         const { data: userTxns, errors } = await client.models.Transaction.list({
             // Fetch all, pagination might be needed for very large numbers later
             selectionSet: ['id', 'action', 'investment', 'price', 'quantity']
         });
         if (errors) throw errors;
         setAllUserTxns(userTxns as TransactionDataType[]);
-        console.log('Fetched all buy transactions:', userTxns);
+        //console.log('Fetched all buy transactions:', userTxns);
     } catch (err: any) {
         console.error('Error fetching all buy transactions:', err);
         // setAllTxnError(err.message || 'Failed to load all transactions.');
@@ -167,7 +167,7 @@ export default function AddTransactionForStockPage() {
   // --- End Fetch All Buy Txns ---
   
   const handleEditTxnClick = (transaction: Schema['Transaction']) => {
-    console.log('Editing transaction:', transaction);
+    //console.log('Editing transaction:', transaction);
     setTxnToEdit(transaction);
     setIsEditingTxn(true);
     // Optional: Scroll to the form or display it prominently
@@ -177,7 +177,7 @@ export default function AddTransactionForStockPage() {
   const handleUpdateTransaction = async (updatedTxnDataFromForm: Schema['Transaction']) => {
     // updatedTxnDataFromForm comes directly from the form's onUpdate prop
     // It should already contain the ID and all calculated/updated fields
-    console.log('Attempting to update transaction with data from form:', updatedTxnDataFromForm);
+    //console.log('Attempting to update transaction with data from form:', updatedTxnDataFromForm);
     setTxnError(null);
     //setIsLoading(true); // Add loading state indication maybe
   
@@ -188,7 +188,7 @@ export default function AddTransactionForStockPage() {
   
       if (errors) throw errors;
   
-      console.log('Transaction updated successfully:', updatedTxn);
+      //console.log('Transaction updated successfully:', updatedTxn);
       setIsEditingTxn(false);
       setTxnToEdit(null);
       fetchTransactions();        // Refresh list for THIS stock
@@ -212,7 +212,7 @@ export default function AddTransactionForStockPage() {
     if (!window.confirm('Are you sure you want to delete this transaction?')) {
       return;
     }
-    console.log(`Attempting to delete transaction with id: ${idToDelete}`);
+    //console.log(`Attempting to delete transaction with id: ${idToDelete}`);
     setTxnError(null); // Clear previous errors
   
     try {
@@ -222,7 +222,7 @@ export default function AddTransactionForStockPage() {
         console.error('Error deleting transaction:', errors);
         setTxnError(errors[0]?.message || 'Failed to delete transaction.');
       } else {
-        console.log('Transaction deleted successfully!');
+        //console.log('Transaction deleted successfully!');
         // Refresh the transactions list
         fetchTransactions();
       }
@@ -237,11 +237,12 @@ export default function AddTransactionForStockPage() {
   // Use useCallback to memoize the function, preventing unnecessary calls
   const fetchTransactions = useCallback(async () => {
     if (!stockId) return; // Don't fetch if stockId isn't available yet
+    console.log(`Filtering transactions for stockId: [${stockId}]`);
 
     setIsTxnLoading(true);
     setTxnError(null);
     try {
-      console.log(`Workspaceing transactions for stockId: ${stockId}`);
+      //console.log(`Workspaceing transactions for stockId: ${stockId}`);
       // List transactions, filtering by portfolioStockId and sorting by date descending
       const { data: fetchedTxns, errors } = await client.models.Transaction.list({
         filter: { portfolioStockId: { eq: stockId } },
@@ -257,7 +258,7 @@ export default function AddTransactionForStockPage() {
       if (errors) throw errors;
 
       setTransactions(fetchedTxns as TransactionDataType[]);
-      console.log('Fetched transactions:', fetchedTxns);
+      //console.log('Fetched transactions:', fetchedTxns);
 
     } catch (err: any) {
       console.error('Error fetching transactions:', err);
