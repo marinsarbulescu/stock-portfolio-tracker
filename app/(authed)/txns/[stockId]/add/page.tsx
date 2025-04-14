@@ -7,6 +7,7 @@ import TransactionForm from '@/app/components/TransactionForm'; // Adjust path i
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import type { GraphQLError } from 'graphql';
 
 const client = generateClient<Schema>();
 type TransactionItem = Schema['Transaction'];
@@ -19,6 +20,13 @@ type SharesTypeValue = TransactionDataType['sharesType']; // Expect: "Play" | "H
 
 type TransactionCreateInput = Omit<TransactionDataType, 'id' | 'createdAt' | 'updatedAt' | 'owner' | 'portfolioStock' | 'completedTxnId'>; // Adjust omit list
 type TransactionUpdateInput = Partial<TransactionDataType> & { id: string };
+
+// --- ADD THIS TYPE DEFINITION ---
+// Derive the type returned by the list operation after awaiting
+type TransactionListResultType = Awaited<ReturnType<typeof client.models.Transaction.list>>;
+// This evaluates to something like:
+// { data: Schema['Transaction'][], errors?: readonly GraphQLError[], nextToken?: string | null }
+// --- END TYPE DEFINITION ---
 
 export default function AddTransactionForStockPage() {
   const params = useParams();
@@ -33,9 +41,9 @@ export default function AddTransactionForStockPage() {
   const [isTxnLoading, setIsTxnLoading] = useState(true);
   const [txnError, setTxnError] = useState<string | null>(null);
 
-  const [nextToken, setNextToken] = useState<string | null>(null);
+  //const [nextToken, setNextToken] = useState<string | null>(null);
 
-  const [isTxnLoadingMore, setIsTxnLoadingMore] = useState(false);
+  //const [isTxnLoadingMore, setIsTxnLoadingMore] = useState(false);
 
   const [isEditingTxn, setIsEditingTxn] = useState(false);
   const [txnToEdit, setTxnToEdit] = useState<Schema['Transaction'] | null>(null);
@@ -239,66 +247,69 @@ export default function AddTransactionForStockPage() {
 
   // --- Add Function to Fetch Transactions ---
   // Use useCallback to memoize the function, preventing unnecessary calls
-  const fetchTransactions = useCallback(async (currentToken: string | null = null) => {
-    if (!stockId) return;
+  // --- Modified Fetch Transactions Function (Fetches All Pages) ---
+  const fetchTransactions = useCallback(async () => {
+    if (!stockId) return; // Exit if no stockId
 
-    const isFetchingMore = currentToken !== null;
-    console.log(`Workspaceing transactions for stockId: [${stockId}], Token: [${currentToken}], IsFetchingMore: ${isFetchingMore}`);
-
-    // Set appropriate loading state
-    if (isFetchingMore) {
-      setIsTxnLoadingMore(true);
-    } else {
-      setIsTxnLoading(true); // Initial load or full refresh
-      setTransactions([]);   // Clear transactions on initial load/refresh
-      setNextToken(null);    // Reset token on initial load/refresh
-    }
+    console.log(`Workspaceing ALL transactions for stockId: [${stockId}]`);
+    setIsTxnLoading(true); // Indicate loading started
     setTxnError(null);
+    // Clear previous transactions before fetching all new ones
+    setTransactions([]);
+
+    let accumulatedTxns: Schema['Transaction'][] = [];
+    let currentToken: string | null = null;
+    let loopSafetyCounter = 0; // Prevent potential infinite loops
+    const maxLoops = 20; // Set a reasonable max number of pages
 
     try {
-      const listResult = await client.models.Transaction.list({
-        filter: { portfolioStockId: { eq: stockId } },
-        nextToken: currentToken, // Pass the token here
-        limit: 25, // Define a page size (e.g., 25)
-        // Removed server-side sort: sort: (t) => t.date('DESC'),
-        // Fetch full models (removed selectionSet based on previous debugging)
-      });
+      do {
+        // Safety break
+        loopSafetyCounter++;
+        if (loopSafetyCounter > maxLoops) {
+           console.warn("Exceeded maximum pagination requests. Breaking loop.");
+           throw new Error(`Could not fetch all transactions after ${maxLoops} pages.`);
+        }
 
-      console.log(`Raw listResult for stockId ${stockId}:`, listResult); // Log the raw result
+        console.log(`Workspaceing page with token: ${currentToken ? '...' : 'null'}`); // Don't log full token
+        const listResult: TransactionListResultType = await client.models.Transaction.list({
+          filter: { portfolioStockId: { eq: stockId } },
+          nextToken: currentToken,
+          limit: 100,
+        });
 
-      const fetchedTxns = listResult.data;
-      const errors = listResult.errors;
-      const returnedToken = listResult.nextToken ?? null; // Get the NEW token
+        const fetchedTxns = listResult.data;
+        const errors = listResult.errors; // Check for GraphQL errors
+        const returnedToken = listResult.nextToken ?? null;
 
-      console.log(`Workspaceed ${fetchedTxns?.length ?? 0} items. Next Token Received: ${returnedToken}`);
+        console.log(`Workspaceed ${fetchedTxns?.length ?? 0} items. Next Token Received: ${returnedToken ? 'Yes' : 'No'}`);
 
-      if (errors) throw errors;
+        if (errors) throw errors; // Throw GraphQL errors
 
-      if (fetchedTxns) {
-          // Append results if fetching more, otherwise replace
-          setTransactions(prevTxns =>
-              isFetchingMore ? [...prevTxns, ...fetchedTxns] : [...fetchedTxns]
-          );
-      }
-      setNextToken(returnedToken); // Store the token for the *next* page load
+        if (fetchedTxns) {
+            // Add the fetched items to our accumulator array
+            // Using 'as any' workaround if type mismatch persists
+            accumulatedTxns = [...accumulatedTxns, ...(fetchedTxns as any)];
+        }
+        // Set the token for the *next* loop iteration
+        currentToken = returnedToken;
+
+      } while (currentToken !== null); // Continue looping as long as there's a nextToken
+
+      console.log(`Finished fetching. Total transactions: ${accumulatedTxns.length}`);
+      //@ts-ignore
+      setTransactions(accumulatedTxns); // Set the final state with ALL transactions
 
     } catch (err: any) {
-      console.error('Error fetching transactions:', err);
+      console.error('Error fetching all transactions:', err);
       const errMsg = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || 'Failed to load transactions.');
       setTxnError(errMsg);
-      // Maybe don't clear transactions if fetching 'more' failed?
-      if (!isFetchingMore) {
-         setTransactions([]);
-      }
+      setTransactions([]); // Clear transactions on error
     } finally {
-      // Reset correct loading state
-      if (isFetchingMore) {
-        setIsTxnLoadingMore(false);
-      } else {
-        setIsTxnLoading(false);
-      }
+      setIsTxnLoading(false); // Set loading false only after ALL pages are fetched or an error occurs
     }
-  // Depend only on stockId, client is stable. fetchTransactions is called manually for pagination.
+  // Depend only on stockId. The function now handles its own looping.
+  // Adding setTransactions etc. can cause infinite loops if not careful.
   }, [stockId]);
   // --- End Fetch Transactions Function ---
 
@@ -431,16 +442,14 @@ export default function AddTransactionForStockPage() {
   // --- End Memoized Sort Logic ---
   
   useEffect(() => {
-    if (stockId) { // Ensure stockId is available before fetching
-      console.log("StockId changed or initial load, fetching first page.");
-      fetchTransactions(null); // Fetch first page (pass null token)
+    if (stockId) {
+        console.log("StockId changed or initial load, fetching ALL transactions.");
+        fetchTransactions(); // Call the function (it handles pagination internally)
     } else {
-        // Clear transactions if stockId becomes invalid/null
-        setTransactions([]);
-        setNextToken(null);
+        setTransactions([]); // Clear if no stockId
     }
-  // Depend only on stockId to prevent infinite loops
-  }, [stockId]);
+  // Include fetchTransactions if ESLint requires, as it's stable due to useCallback
+  }, [stockId, fetchTransactions]);
   
   // --- Fetch Transactions on Initial Load or when stockId changes ---
   useEffect(() => {
@@ -653,17 +662,6 @@ export default function AddTransactionForStockPage() {
         )}
       </div>
       {/* --- End Transaction List --- */}
-
-      {nextToken && ( // Only show the button if there is a nextToken
-        <div style={{ textAlign: 'center', margin: '2rem 0' }}>
-          <button
-            onClick={() => fetchTransactions(nextToken)} // Pass the stored token
-            disabled={isTxnLoadingMore} // Disable while loading more
-          >
-            {isTxnLoadingMore ? 'Loading...' : 'Load More Transactions'}
-          </button>
-        </div>
-      )}
 
     </div>
   );
