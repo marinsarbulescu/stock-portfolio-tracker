@@ -555,8 +555,8 @@ export default function HomePage() {
                     {sortedTableData.length === 0 ? (
                         <tr><td colSpan={7} style={{ textAlign: 'center', padding: '1rem' }}>No stocks in portfolio.</td></tr>
                     ) : (
-                        sortedTableData.map((item) => ( // item should match ReportDataItem structure
-                            <tr key={item.id} style={{ borderBottom: '1px solid #eee' }}>
+                        sortedTableData.map((item, index) => ( // item should match ReportDataItem structure
+                            <tr key={item.id} style={{ backgroundColor: index % 2 !== 0 ? '#272727' : 'transparent' }}>
                                 <td style={{ padding: '5px' }}>
                                     <Link href={`/txns/${item.id}/add`} style={{ textDecoration: 'none', color: 'inherit' }}>
                                         {item.symbol}
