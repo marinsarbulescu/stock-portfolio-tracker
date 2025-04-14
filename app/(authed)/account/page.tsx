@@ -61,7 +61,7 @@ export default function AccountPage() {
 
   return (
     <div>
-      <h1>Account Details</h1>
+      <h2>Account Details</h2>
       {user ? (
         <>
           <p>Welcome!</p>

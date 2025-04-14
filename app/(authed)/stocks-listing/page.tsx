@@ -125,7 +125,7 @@ export default function StocksListingPage() {
 
   return (
     <div>
-      <h1>Your Stock Portfolio</h1>
+      <h2>Portfolio</h2>
       {isLoading && <p>Loading stocks...</p>}
       {error && <p style={{ color: 'red' }}>Error: {error}</p>}
 

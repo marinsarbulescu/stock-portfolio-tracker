@@ -138,7 +138,7 @@ export default function GoalsPage() {
 
   return (
     <div>
-      <h1>Portfolio Goals</h1>
+      <h2>Portfolio Goals</h2>
       <form onSubmit={handleSaveGoals} style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxWidth: '500px' }}>
         {error && <p style={{ color: 'red' }}>Error: {error}</p>}
         {success && <p style={{ color: 'green' }}>{success}</p>}

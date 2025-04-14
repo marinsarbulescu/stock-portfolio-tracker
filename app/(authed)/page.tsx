@@ -502,7 +502,7 @@ export default function HomePage() {
     return (
         // Inside HomePage component return:
         <div>
-            <h1>Portfolio Action Report</h1>
+            <h2>Opportunity Report</h2>
             <div style={{ fontSize: 10 }}>
                 {pricesLoading
                 ? 'Prices are refreshing...'

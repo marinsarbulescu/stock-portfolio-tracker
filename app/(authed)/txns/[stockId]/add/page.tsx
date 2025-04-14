@@ -498,9 +498,9 @@ export default function AddTransactionForStockPage() {
 
   return (
     <div>
-      <h1>
+      <h2>
         Add Transaction {stockSymbol ? `for ${stockSymbol.toUpperCase()}` : ''}
-      </h1>
+      </h2>
       <div style={{ marginBottom: '1.5rem', padding: '10px'}}>
         {(isGoalsLoading || isAllTxnsLoading) ? (
           <p>Loading stats...</p>
