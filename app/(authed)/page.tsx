@@ -5,6 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
 import { usePrices } from '@/app/contexts/PriceContext'; // Import context hook
+import Link from 'next/link';
 
 // Define types locally matching schema if needed (or import if shared)
 type PortfolioStockDataType = { // Simplified representation needed for this page
@@ -489,10 +490,10 @@ export default function HomePage() {
     const getBreakEvenCellStyle = (percent: number | null): React.CSSProperties => {
         if (percent === null || percent === undefined) return {}; // Default style
     
-        if (percent > 0) {
-            return { backgroundColor: 'lightgreen' };
-        } else if (percent > -1) { // Between -1 (exclusive) and 0 (inclusive)
-            return { backgroundColor: 'yellow' };
+        if (percent >= 0) {
+            return { backgroundColor: '#006400', };
+        } else if (percent >= -1) { // Between -1 (exclusive) and 0 (inclusive)
+            return { backgroundColor: '#727500' };
         } else {
             return {}; // Default for less than -1
         }
@@ -556,18 +557,22 @@ export default function HomePage() {
                     ) : (
                         sortedTableData.map((item) => ( // item should match ReportDataItem structure
                             <tr key={item.id} style={{ borderBottom: '1px solid #eee' }}>
-                                <td style={{ padding: '5px' }}>{item.symbol}</td>                                
                                 <td style={{ padding: '5px' }}>
-                                    {typeof item.fiveDayDip === 'number' ? `${item.fiveDayDip.toFixed(2)}%` : '--'}
+                                    <Link href={`/txns/${item.id}/add`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                        {item.symbol}
+                                    </Link>
+                                </td>                                
+                                <td style={{ padding: '5px' }}>
+                                    {typeof item.fiveDayDip === 'number' && Math.abs(item.fiveDayDip) > 0.0001 ? `${item.fiveDayDip.toFixed(2)}%` : '-'}
                                 </td>
                                 <td style={{ padding: '5px' }}>
-                                    {typeof item.lbd === 'number' ? `${item.lbd.toFixed(2)}%` : '--'}
+                                    {typeof item.lbd === 'number' ? `${item.lbd.toFixed(2)}%` : '-'}
                                 </td>
                                 <td style={{ padding: '5px' }}>{item.buys}</td>
-                                <td style={{ padding: '5px' }}>{item.sinceBuy ?? '--'}</td>
-                                <td style={{ padding: '5px' }}>{item.sinceSell ?? '--'}</td>
+                                <td style={{ padding: '5px' }}>{item.sinceBuy ?? '-'}</td>
+                                <td style={{ padding: '5px' }}>{item.sinceSell ?? '-'}</td>
                                 <td style={{ padding: '5px' }}>
-                                    {typeof item.currentPrice === 'number' ? item.currentPrice.toFixed(2) : '--'}
+                                    {typeof item.currentPrice === 'number' ? item.currentPrice.toFixed(2) : '-'}
                                 </td>
                                 <td style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToBe) }}>
                                     {typeof item.percentToBe === 'number'
