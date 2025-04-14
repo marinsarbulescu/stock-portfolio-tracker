@@ -33,6 +33,10 @@ export default function AddTransactionForStockPage() {
   const [isTxnLoading, setIsTxnLoading] = useState(true);
   const [txnError, setTxnError] = useState<string | null>(null);
 
+  const [nextToken, setNextToken] = useState<string | null>(null);
+
+  const [isTxnLoadingMore, setIsTxnLoadingMore] = useState(false);
+
   const [isEditingTxn, setIsEditingTxn] = useState(false);
   const [txnToEdit, setTxnToEdit] = useState<Schema['Transaction'] | null>(null);
 
@@ -235,43 +239,67 @@ export default function AddTransactionForStockPage() {
 
   // --- Add Function to Fetch Transactions ---
   // Use useCallback to memoize the function, preventing unnecessary calls
-  const fetchTransactions = useCallback(async () => {
-    if (!stockId) return; // Don't fetch if stockId isn't available yet
-    console.log(`Filtering transactions for stockId: [${stockId}]`);
+  const fetchTransactions = useCallback(async (currentToken: string | null = null) => {
+    if (!stockId) return;
 
-    setIsTxnLoading(true);
+    const isFetchingMore = currentToken !== null;
+    console.log(`Workspaceing transactions for stockId: [${stockId}], Token: [${currentToken}], IsFetchingMore: ${isFetchingMore}`);
+
+    // Set appropriate loading state
+    if (isFetchingMore) {
+      setIsTxnLoadingMore(true);
+    } else {
+      setIsTxnLoading(true); // Initial load or full refresh
+      setTransactions([]);   // Clear transactions on initial load/refresh
+      setNextToken(null);    // Reset token on initial load/refresh
+    }
     setTxnError(null);
+
     try {
-      //console.log(`Workspaceing transactions for stockId: ${stockId}`);
-      // List transactions, filtering by portfolioStockId and sorting by date descending
-      const { data: fetchedTxns, errors } = await client.models.Transaction.list({
+      const listResult = await client.models.Transaction.list({
         filter: { portfolioStockId: { eq: stockId } },
-        //sort: (t) => t.date('DESC'), // Sort newest first
-         // Select specific fields if needed
-         selectionSet: [
-          'id', 'date', 'action', 'signal', 'price', 'investment',
-          'quantity', 'playShares', 'holdShares', 'lbd', 'tp', 'completedTxnId',
-          'sharesType', 'txnProfit'
-      ]
+        nextToken: currentToken, // Pass the token here
+        limit: 25, // Define a page size (e.g., 25)
+        // Removed server-side sort: sort: (t) => t.date('DESC'),
+        // Fetch full models (removed selectionSet based on previous debugging)
       });
+
+      console.log(`Raw listResult for stockId ${stockId}:`, listResult); // Log the raw result
+
+      const fetchedTxns = listResult.data;
+      const errors = listResult.errors;
+      const returnedToken = listResult.nextToken ?? null; // Get the NEW token
+
+      console.log(`Workspaceed ${fetchedTxns?.length ?? 0} items. Next Token Received: ${returnedToken}`);
 
       if (errors) throw errors;
 
-      // --- ADD THIS LOG ---
-      console.log(`Raw fetched data for stockId ${stockId}:`, JSON.stringify(fetchedTxns, null, 2));
-      // --- END LOG ---
-
-      setTransactions(fetchedTxns as TransactionDataType[]);
-      //console.log('Fetched transactions:', fetchedTxns);
+      if (fetchedTxns) {
+          // Append results if fetching more, otherwise replace
+          setTransactions(prevTxns =>
+              isFetchingMore ? [...prevTxns, ...fetchedTxns] : [...fetchedTxns]
+          );
+      }
+      setNextToken(returnedToken); // Store the token for the *next* page load
 
     } catch (err: any) {
       console.error('Error fetching transactions:', err);
-      setTxnError(err.message || 'Failed to load transactions.');
-      setTransactions([]);
+      const errMsg = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || 'Failed to load transactions.');
+      setTxnError(errMsg);
+      // Maybe don't clear transactions if fetching 'more' failed?
+      if (!isFetchingMore) {
+         setTransactions([]);
+      }
     } finally {
-      setIsTxnLoading(false);
+      // Reset correct loading state
+      if (isFetchingMore) {
+        setIsTxnLoadingMore(false);
+      } else {
+        setIsTxnLoading(false);
+      }
     }
-  }, [stockId]); // Dependency array includes stockId
+  // Depend only on stockId, client is stable. fetchTransactions is called manually for pagination.
+  }, [stockId]);
   // --- End Fetch Transactions Function ---
 
   // Rename and update the calculation logic
@@ -403,19 +431,16 @@ export default function AddTransactionForStockPage() {
   // --- End Memoized Sort Logic ---
   
   useEffect(() => {
-    if (stockId) {
-      client.models.PortfolioStock.get({ id: stockId }, { selectionSet: ['symbol', 'budget'] })
-        .then(({ data, errors }) => {
-          if (data) {
-            setStockSymbol(data.symbol ?? undefined);
-            setStockBudget(data.budget);
-            fetchUserGoals();
-            fetchAllUserTransactions();
-          }
-          if (errors) console.error("Error fetching stock symbol/budget", errors);
-        });
+    if (stockId) { // Ensure stockId is available before fetching
+      console.log("StockId changed or initial load, fetching first page.");
+      fetchTransactions(null); // Fetch first page (pass null token)
+    } else {
+        // Clear transactions if stockId becomes invalid/null
+        setTransactions([]);
+        setNextToken(null);
     }
-  }, [stockId, fetchUserGoals, fetchAllUserTransactions]);
+  // Depend only on stockId to prevent infinite loops
+  }, [stockId]);
   
   // --- Fetch Transactions on Initial Load or when stockId changes ---
   useEffect(() => {
@@ -628,6 +653,17 @@ export default function AddTransactionForStockPage() {
         )}
       </div>
       {/* --- End Transaction List --- */}
+
+      {nextToken && ( // Only show the button if there is a nextToken
+        <div style={{ textAlign: 'center', margin: '2rem 0' }}>
+          <button
+            onClick={() => fetchTransactions(nextToken)} // Pass the stored token
+            disabled={isTxnLoadingMore} // Disable while loading more
+          >
+            {isTxnLoadingMore ? 'Loading...' : 'Load More Transactions'}
+          </button>
+        </div>
+      )}
 
     </div>
   );
