@@ -137,6 +137,7 @@ export default function AddTransactionForStockPage() {
   
   // --- Add Function to Fetch Goals ---
   const fetchUserGoals = useCallback(async () => {
+    console.log("Fetching goals...");
     setIsGoalsLoading(true);
     // setError(null); // Use a specific error state if preferred
     try {
@@ -144,7 +145,7 @@ export default function AddTransactionForStockPage() {
       if (errors) throw errors;
       const currentGoals = goalsList[0] ?? null;
       setUserGoals(currentGoals);
-      //console.log('Fetched goals for budget calc:', currentGoals);
+      console.log('Fetched goals for budget calc:', currentGoals);
     } catch (err: any) {
       console.error("Error fetching goals:", err);
       // setGoalsError(err.message || "Failed to load goals data.");
@@ -157,20 +158,22 @@ export default function AddTransactionForStockPage() {
 
   // --- Add Function to Fetch All Buy Transactions ---
   const fetchAllUserTransactions = useCallback(async () => {
+    console.log("Fetching all transactions...");
     setIsAllTxnsLoading(true);
     // setTxnError(null); // Use specific error state if preferred
     try {
-        //console.log('Fetching all buy transactions for budget calc...');
+        console.log('Fetching all buy transactions for budget calc...');
         const { data: userTxns, errors } = await client.models.Transaction.list({
             // Fetch all, pagination might be needed for very large numbers later
             selectionSet: ['id', 'action', 'investment', 'price', 'quantity']
         });
         if (errors) throw errors;
         setAllUserTxns(userTxns as TransactionDataType[]);
-        //console.log('Fetched all buy transactions:', userTxns);
+        console.log('Fetched all buy transactions:', userTxns);
     } catch (err: any) {
         console.error('Error fetching all buy transactions:', err);
         // setAllTxnError(err.message || 'Failed to load all transactions.');
+        console.log("ERROR fetching all transactions:", err);
         setAllUserTxns([]);
     } finally {
         setIsAllTxnsLoading(false);
@@ -313,6 +316,37 @@ export default function AddTransactionForStockPage() {
   }, [stockId]);
   // --- End Fetch Transactions Function ---
 
+  
+  useEffect(() => {
+    // Fetch data needed for budget calculations and display
+    fetchUserGoals();
+    fetchAllUserTransactions();
+
+    // Fetch the stock symbol for display
+    if (stockId) {
+      client.models.PortfolioStock.get({ id: stockId }, { selectionSet: ['symbol', 'budget'] }) // Fetch budget too!
+        .then(({ data, errors }) => {
+          if (data) {
+            setStockSymbol(data.symbol ?? undefined);
+            setStockBudget(data.budget); // Store the fetched stock budget
+            console.log("Fetched stock details:", data);
+          }
+          if (errors) {
+            console.error("Error fetching stock details", errors);
+            // Handle error, maybe set a specific error state
+            setStockSymbol(undefined);
+            setStockBudget(undefined);
+          }
+        });
+    } else {
+        setStockSymbol(undefined); // Clear if no stockId
+        setStockBudget(undefined);
+    }
+
+  // Run only once on mount - fetchUserGoals and fetchAllUserTransactions are stable due to useCallback
+  }, [stockId, fetchUserGoals, fetchAllUserTransactions]);
+
+  
   // Rename and update the calculation logic
   const netBudgetImpact = useMemo(() => {
     return allUserTxns.reduce((sum, txn) => {
@@ -451,11 +485,11 @@ export default function AddTransactionForStockPage() {
   // Include fetchTransactions if ESLint requires, as it's stable due to useCallback
   }, [stockId, fetchTransactions]);
   
-  // --- Fetch Transactions on Initial Load or when stockId changes ---
-  useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]); // Call fetchTransactions when it's available/changes
-  // --- End Initial Fetch ---
+  // // --- Fetch Transactions on Initial Load or when stockId changes ---
+  // useEffect(() => {
+  //   fetchTransactions();
+  // }, [fetchTransactions]); // Call fetchTransactions when it's available/changes
+  // // --- End Initial Fetch ---
 
 
   if (!stockId) {
