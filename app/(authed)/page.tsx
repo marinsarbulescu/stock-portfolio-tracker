@@ -337,7 +337,7 @@ export default function HomePage() {
                     last5Closes.forEach(pastClose => {
                         if (pastClose.close > 0) {
                            const diffPercent = (currentPrice / pastClose.close - 1) * 100;
-                           if (diffPercent <= pdp) {
+                           if (diffPercent <= (pdp * -1)) {
                                if (minDipMeetingCondition === null || diffPercent < minDipMeetingCondition) {
                                    minDipMeetingCondition = diffPercent;
                                }
@@ -406,65 +406,6 @@ export default function HomePage() {
     }, [portfolioStocks, latestPrices, processedTxns]);
     // --- End Calculate Report Data ---
 
-
-
-
-    // --- Calculate 5DD ---
-    // const fiveDayDipResults = useMemo((): FiveDayDipResult => {
-    //     const results: FiveDayDipResult = {};
-    //     console.log("Calculating 5DD. Prices:", latestPrices); // Debug log
-
-    //     portfolioStocks.forEach(stock => {
-    //         const priceData = latestPrices[stock.symbol];
-    //         const currentPrice = priceData?.currentPrice;
-    //         const pdp = stock.pdp; // Assuming PDP is stored like -2 for -2%
-
-    //         // Ensure we have valid data to calculate
-    //         if (typeof currentPrice !== 'number' || typeof pdp !== 'number' || !priceData?.historicalCloses || priceData.historicalCloses.length === 0) {
-    //             results[stock.symbol] = null;
-    //             return; // Cannot calculate
-    //         }
-
-    //         // Get the 5 most recent historical closes (API might return more than 5)
-    //         const last5Closes = priceData.historicalCloses
-    //                               .sort((a, b) => b.date.localeCompare(a.date)) // Ensure sorted descending
-    //                               .slice(0, 5);
-
-    //         if(last5Closes.length === 0) {
-    //            results[stock.symbol] = null;
-    //            return;
-    //         }
-
-    //         let minDipPercent: number | null = null;
-
-    //         last5Closes.forEach(pastClose => {
-    //             if (pastClose.close > 0) { // Avoid division by zero
-    //                const diffPercent = (currentPrice / pastClose.close - 1) * 100; // Calculate % diff
-    //                const pdpThreshold = pdp; // Using the direct percentage value
-
-    //                // Check if the dip condition is met
-    //                if (diffPercent <= pdpThreshold) {
-    //                    // If condition met, update minDipPercent if this dip is larger (more negative)
-    //                    if (minDipPercent === null || diffPercent < minDipPercent) {
-    //                        minDipPercent = diffPercent;
-    //                    }
-    //                }
-    //             }
-    //         });
-    //         results[stock.symbol] = minDipPercent; // Store the biggest dip % or null
-    //     });
-    //     console.log("5DD Results:", results); // Debug log
-    //     return results;
-    // }, [portfolioStocks, latestPrices]); // Recalculate when stocks or prices change
-
-
-    // --- Create Data for Table & Sort ---
-    // const tableData = useMemo(() => {
-    //    return portfolioStocks.map(stock => ({
-    //        ...stock,
-    //        fiveDayDip: fiveDayDipResults[stock.symbol] // Add calculated dip
-    //    }));
-    // }, [portfolioStocks, fiveDayDipResults]);
 
     type ReportColumnKey = 'symbol' | 'currentPrice' | 'fiveDayDip' | 'lbd' | 'sinceBuy' |
          'sinceSell' | 'buys' | 'percentToBe' | 'percentToTp' | 'tpShares';
