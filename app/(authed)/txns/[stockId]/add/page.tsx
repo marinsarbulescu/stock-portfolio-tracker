@@ -446,6 +446,23 @@ export default function AddTransactionForStockPage() {
   }, [currentPlayShares, currentHoldShares]);
   // --- End Share Count Calculations ---
   
+  // --- Add this useMemo hook ---
+  const completedBuyTxnIds = useMemo(() => {
+    //console.log("Calculating completed Buy IDs for this stock's transactions...");
+    const ids = new Set<string>();
+    // Iterate through the transactions specifically loaded for THIS stock
+    transactions.forEach(t => {
+        // If it's a Sell transaction and it specifies which Buy it completed...
+        // Ensure we check 't.completedTxnId' exists and is not null/empty string
+        if (t.action === 'Sell' && t.completedTxnId) {
+            ids.add(t.completedTxnId);
+        }
+    });
+    //console.log("Completed Buy Txn IDs for this stock:", ids); // Optional debug log
+    return ids;
+  }, [transactions]); // Re-calculate only when this stock's transactions change
+  // --- End completedBuyTxnIds hook ---
+  
   // --- Add Memoized Sort Logic ---
   const sortedTransactions = useMemo(() => {
     let sortableItems = [...transactions]; // Create a mutable copy of transactions for THIS stock
@@ -499,7 +516,7 @@ export default function AddTransactionForStockPage() {
   return (
     <div>
       <h2>
-        Add Transaction {stockSymbol ? `for ${stockSymbol.toUpperCase()}` : ''}
+        {stockSymbol ? stockSymbol.toUpperCase() : ''} details
       </h2>
       <div style={{ marginBottom: '1.5rem', padding: '10px'}}>
         {(isGoalsLoading || isAllTxnsLoading) ? (
@@ -578,41 +595,35 @@ export default function AddTransactionForStockPage() {
             }}
           />
       )}
-
-      
-      {/* --- Add Column Toggle Checkboxes --- */}
-      <div style={{ marginBottom: '1rem', padding: '10px', border: '1px solid #eee' }}>
-        <strong>Toggle Columns:</strong>
-        {Object.keys(columnVisibility).map((key) => (
-          <label key={key} style={{ marginLeft: '15px', whiteSpace: 'nowrap' }}>
-            <input
-              type="checkbox"
-              checked={columnVisibility[key as keyof ColumnVisibilityState]}
-              onChange={() =>
-                setColumnVisibility((prev) => ({
-                  ...prev,
-                  [key]: !prev[key as keyof ColumnVisibilityState], // Toggle the specific key
-                }))
-              }
-              style={{ marginRight: '5px' }}
-            />
-            {/* Simple formatting for the label */}
-            {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-          </label>
-        ))}
-      </div>
-      {/* --- End Column Toggle Checkboxes --- */}
       
       
       {/* --- Add Transaction List/Table Below Form --- */}
-      <div style={{ marginTop: '3rem' }}>
-        <h2>Recent Transactions {stockSymbol ? `for ${stockSymbol.toUpperCase()}` : ''}</h2>
+      <div style={{ marginTop: '2rem' }}>
+        <div style={{ marginBottom: '1rem', marginTop: '1rem', padding: '5px', border: '1px solid #353535', fontSize: '0.7em', color: "gray" }}>
+          {Object.keys(columnVisibility).map((key) => (
+            <label key={key} style={{ marginLeft: '15px', whiteSpace: 'nowrap' }}>
+              <input
+                type="checkbox"
+                checked={columnVisibility[key as keyof ColumnVisibilityState]}
+                onChange={() =>
+                  setColumnVisibility((prev) => ({
+                    ...prev,
+                    [key]: !prev[key as keyof ColumnVisibilityState], // Toggle the specific key
+                  }))
+                }
+                style={{ marginRight: '5px' }}
+              />
+              {/* Simple formatting for the label */}
+              {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+            </label>
+          ))}
+        </div>
 
         {isTxnLoading && <p>Loading transactions...</p>}
         {txnError && <p style={{ color: 'red' }}>Error loading transactions: {txnError}</p>}
 
         {!isTxnLoading && !txnError && (
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
                 <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('date')}>
@@ -640,56 +651,52 @@ export default function AddTransactionForStockPage() {
             <tbody>
               {transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={14} style={{ textAlign: 'center', padding: '1rem' }}>
+                  {/* Use dynamic colspan based on visible columns */}
+                  <td colSpan={totalVisibleColumns} style={{ textAlign: 'center', padding: '1rem' }}>
                     No transactions found for this stock.
                   </td>
                 </tr>
               ) : (
-                sortedTransactions.map((txn) => (
-                  
-                  <tr key={txn.id} style={{ borderBottom: '1px solid #eee' }}>
-                    
-                    <td style={{ padding: '5px' }}>{txn.date}</td>
-                    
-                    {columnVisibility.txnId && <td style={{ padding: '5px' }}>{txn.id || '--'}</td>}
-                    
-                    <td style={{ padding: '5px' }}>{txn.action}</td>
-                    
-                    {columnVisibility.signal && <td style={{ padding: '5px' }}>{txn.signal || '--'}</td>}
-                    
-                    <td style={{ padding: '5px' }}>{txn.price?.toFixed(2) ?? '--'}</td>
-                    {columnVisibility.investment && <td style={{ padding: '5px' }}>{txn.investment?.toFixed(2) ?? '--'}</td>}
-                    {columnVisibility.playShares && <td style={{ padding: '5px' }}>{getPlaySharesDisplay(txn) ?? '--'}</td>}
-                    {columnVisibility.holdShares && <td style={{ padding: '5px' }}>{getHoldSharesDisplay(txn) ?? '--'}</td>}
-                    {columnVisibility.totalShares && <td style={{ padding: '5px' }}>{txn.quantity?.toFixed(5) ?? '--'}</td>}
-                    {columnVisibility.lbd && <td style={{ padding: '5px' }}>{txn.lbd?.toFixed(2) ?? '--'}</td>}
-                    
-                    <td style={{ padding: '5px' }}>{txn.tp?.toFixed(2) ?? '--'}</td>
-                    {columnVisibility.txnProfit && <td style={{ padding: '5px' }}>{getTxnProfitDisplay(txn) ?? '--'}</td>}                    
-                    {columnVisibility.completedTxnId && <td style={{ padding: '5px' }}>{txn.completedTxnId ?? '--'}</td>}
-                    
-                    
-                    <td style={{ padding: '5px', textAlign: 'center' }}>
-                        {/* Edit Button placeholder */}
-                        <button
-                            onClick={() => handleEditTxnClick(txn as any)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', marginRight: '5px', color: 'blue' }}
-                            title="Edit Transaction"
-                        >
-                            <FaEdit />
-                        </button>
-                        {/* Delete Button */}
-                        <button
-                            
-                            onClick={() => handleDeleteTransaction(txn.id)} // Call delete handler
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'red' }}
-                            title="Delete Transaction"
-                        >
-                            <FaTrashAlt />
-                        </button>
-                    </td>
-                  </tr>
-                ))
+                // Map over sorted transactions
+                sortedTransactions.map((txn) => { // txn is type TransactionDataType
+
+                  // --- Determine if this row should be highlighted ---
+                  const isCompletedBuy = txn.action === 'Buy' && completedBuyTxnIds.has(txn.id);
+                  // --- End determination ---
+
+                  return (
+                    <tr
+                      key={txn.id}
+                      style={{
+                        
+                        // --- Apply conditional background color ---
+                        color: isCompletedBuy ? '#616161' : undefined, // Light gray for completed Buys
+                        // Consider reducing opacity slightly too if desired
+                        // opacity: isCompletedBuy ? 0.8 : 1,
+                      }}
+                    >
+                      {/* Render all your existing <td> elements for the row */}
+                      <td style={{ padding: '5px' }}>{txn.date}</td>
+                      {columnVisibility.txnId && <td style={{ padding: '5px' }}>{txn.id || '--'}</td>}
+                      <td style={{ padding: '5px' }}>{txn.action}</td>
+                      {columnVisibility.signal && <td style={{ padding: '5px' }}>{txn.signal || '--'}</td>}
+                      <td style={{ padding: '5px' }}>{txn.price?.toFixed(2) ?? '--'}</td>
+                      {columnVisibility.investment && <td style={{ padding: '5px' }}>{txn.investment?.toFixed(2) ?? '--'}</td>}
+                      {columnVisibility.playShares && <td style={{ padding: '5px' }}>{getPlaySharesDisplay(txn) ?? '--'}</td>}
+                      {columnVisibility.holdShares && <td style={{ padding: '5px' }}>{getHoldSharesDisplay(txn) ?? '--'}</td>}
+                      {columnVisibility.totalShares && <td style={{ padding: '5px' }}>{txn.quantity?.toFixed(5) ?? '--'}</td>}
+                      {columnVisibility.lbd && <td style={{ padding: '5px' }}>{txn.lbd?.toFixed(2) ?? '--'}</td>}
+                      <td style={{ padding: '5px' }}>{txn.tp?.toFixed(2) ?? '--'}</td>
+                      {columnVisibility.txnProfit && <td style={{ padding: '5px' }}>{getTxnProfitDisplay(txn) ?? '--'}</td>}
+                      {columnVisibility.completedTxnId && <td style={{ padding: '5px' }}>{txn.completedTxnId ?? '--'}</td>}
+                      <td style={{ padding: '5px', textAlign: 'center' }}>
+                          {/* Edit/Delete Buttons */}
+                          <button onClick={() => handleEditTxnClick(txn as any)} /* ... styles ... */ > <FaEdit /> </button>
+                          <button onClick={() => handleDeleteTransaction(txn.id)} /* ... styles ... */ > <FaTrashAlt /> </button>
+                      </td>
+                    </tr>
+                  );
+                }) // End map
               )}
             </tbody>
           </table>

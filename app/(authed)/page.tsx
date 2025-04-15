@@ -548,9 +548,11 @@ export default function HomePage() {
         if (percent === null || percent === undefined) return {}; // Default style
     
         if (percent >= 0) {
-            return { backgroundColor: '#286328', };
+            //return { backgroundColor: '#286328', };
+            return { color: '#01ff00' };
         } else if (percent >= -1) { // Between -1 (exclusive) and 0 (inclusive)
-            return { backgroundColor: '#737538' };
+            //return { backgroundColor: '#737538' };
+            return { color: '#edff00' };
         } else {
             return {}; // Default for less than -1
         }
@@ -563,10 +565,12 @@ export default function HomePage() {
     
         if (days > 30) {
              // Over 30 days - light red background
-            return { backgroundColor: '#5d3232' }; // Light red hex code
+            //return { backgroundColor: '#5d3232' }; // Light red hex code
+            return { color: '#ff0000' };
         } else if (days > 20) {
              // Between 21 and 30 days (inclusive) - light yellow background
-            return { backgroundColor: '#5a5745' }; // Light yellow hex code
+            //return { backgroundColor: '#5a5745' }; // Light yellow hex code
+            return { color: '#ffb400' };
         } else {
             // 20 days or less - default background
             return {};
@@ -587,12 +591,9 @@ export default function HomePage() {
                 }
             </div>
             {pricesError && <p style={{ color: 'red' }}>Price Error: {pricesError}</p>}
-            {/* ---{isTxnLoading && <p>Loading transaction data...</p>} */}
-            {/* ---{txnError && <p style={{ color: 'red' }}>Transaction Error: {txnError}</p>} */}
             
             {/* --- Add Column Toggle Checkboxes --- */}
             <div style={{ marginBottom: '1rem', marginTop: '1rem', padding: '10px', border: '1px solid #353535', fontSize: '0.7em', color: "gray" }}>
-            <strong>Toggle Columns:</strong>
             {/* Map over the keys of the state object to create checkboxes */}
             {(Object.keys(reportColumnVisibility) as Array<keyof ReportColumnVisibilityState>).map((key) => (
                 <label key={key} style={{ marginLeft: '15px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
@@ -614,7 +615,7 @@ export default function HomePage() {
             </div>
             {/* --- End Column Toggle Checkboxes --- */}
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: 14 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
                 <thead>
                     <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
                         <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('symbol')}>
@@ -676,7 +677,7 @@ export default function HomePage() {
                         </tr>
                     ) : (
                         sortedTableData.map((item, index) => ( // item should match ReportDataItem structure
-                            <tr key={item.id} style={{ backgroundColor: index % 2 !== 0 ? '#272727' : 'transparent' }}>
+                            <tr key={item.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
                                 <td style={{ padding: '5px' }}>
                                     <Link href={`/txns/${item.id}/add`} style={{ textDecoration: 'none', color: 'inherit' }}>
                                         {item.symbol}

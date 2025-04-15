@@ -301,9 +301,9 @@ export default function TransactionForm({
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '400px' }}>
-        {portfolioStockSymbol && !isEditMode && <p>Adding transaction for: <strong>{portfolioStockSymbol.toUpperCase()}</strong></p>}
+        {portfolioStockSymbol && !isEditMode}
         {/* @ts-ignore - TS incorrectly thinks id might be missing on initialData */}
-        <h2>{isEditMode ? `Edit Transaction (ID: ${initialData?.id ? initialData.id.substring(0, 5) + '...' : 'N/A'})` : 'Add New Transaction'}</h2>
+        <h2>{isEditMode ? `Edit transaction (ID: ${initialData?.id ? initialData.id.substring(0, 5) + '...' : 'N/A'})` : 'Add transaction'}</h2>
         {error && <p style={{ color: 'red' }}>Error: {error}</p>}
         {success && <p style={{ color: 'green' }}>{success}</p>}
 
