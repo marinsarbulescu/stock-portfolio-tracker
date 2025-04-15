@@ -12,9 +12,14 @@ type PortfolioStockDataType = { // Simplified representation needed for this pag
     id: string;
     symbol: string;
     pdp: number | null | undefined;
+    name?: string | null | undefined;
     // Add other fields if needed by the table/sort
 }
+
 type FiveDayDipResult = Record<string, number | null>; // Map: symbol -> dip percentage or null
+
+// Define Transaction List Result Type (helpful for pagination function)
+type TransactionListResultType = Awaited<ReturnType<typeof client.models.Transaction.list>>;
 
 const client = generateClient<Schema>();
 
@@ -53,49 +58,107 @@ export default function HomePage() {
         }
     }
     
-    const fetchPageData = useCallback(async () => {
-        // Set loading states for both stocks and transactions
-        setIsLoading(true); // For stocks
-        setIsTxnLoading(true); // For transactions
-        setError(null);
-        setTxnError(null);
-    
+    // --- Helper function to fetch ALL transactions using pagination ---
+    const fetchAllPaginatedTransactions = useCallback(async (): Promise<Schema['Transaction'][]> => {
+        console.log("Fetching ALL user transactions with pagination...");
+        let accumulatedTxns: Schema['Transaction'][] = [];
+        let currentToken: string | null = null;
+        let loopSafetyCounter = 0;
+        const maxLoops = 25; // Adjust max pages if needed
+
+        // --- IMPORTANT: Define the full selectionSet needed by ANY calculation using allTransactions ---
+        const selectionSetNeeded = [
+            'id', 'date', 'action', 'price', 'portfolioStockId',
+            'tp', 'completedTxnId', 'playShares', 'investment',
+            'quantity', 'holdShares', 'sharesType'
+        ] as const;
+        // --- END selectionSet definition ---
+
         try {
-            // Fetch stocks AND transactions concurrently
-            const [stockResult, txnResult] = await Promise.all([
+            do {
+                loopSafetyCounter++;
+                if (loopSafetyCounter > maxLoops) {
+                    console.warn("Exceeded maximum pagination loops fetching all transactions.");
+                    throw new Error(`Could not fetch all transactions after ${maxLoops} pages.`);
+                }
+
+                console.log(`Workspaceing transaction page with token: ${currentToken ? '...' : 'null'}`);
+                const listResult: TransactionListResultType = await client.models.Transaction.list({
+                    nextToken: currentToken,
+                    limit: 1000, // Fetch larger chunks
+                    selectionSet: selectionSetNeeded // Use defined selectionSet
+                });
+
+                const fetchedTxns = listResult.data;
+                const errors = listResult.errors;
+                const returnedToken = listResult.nextToken ?? null;
+
+                console.log(`Workspaceed ${fetchedTxns?.length ?? 0} transactions. Next Token: ${returnedToken ? 'Yes' : 'No'}`);
+
+                if (errors) throw errors; // Throw GraphQL errors
+
+                if (fetchedTxns) {
+                    accumulatedTxns = [...accumulatedTxns, ...(fetchedTxns as any)];
+                }
+                currentToken = returnedToken;
+
+            } while (currentToken !== null);
+
+            console.log(`Finished fetching. Total user transactions: ${accumulatedTxns.length}`);
+            return accumulatedTxns;
+
+        } catch (err: any) {
+            console.error('Error during paginated transaction fetch:', err);
+            const errMsg = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || 'Failed to load all transactions.');
+            throw new Error(errMsg); // Re-throw to be caught by fetchPageData
+        }
+    }, []); // Empty dependency array - stable function definition
+    // --- End Helper Function ---
+
+
+    // --- Updated function to fetch both stocks and ALL transactions ---
+    const fetchPageData = useCallback(async () => {
+        setIsLoading(true); // Use combined loading state
+        setError(null);     // Use combined error state
+        // Clear previous data? Optional, but can prevent displaying stale data on refetch
+        // setPortfolioStocks([]);
+        // setAllTransactions([]);
+
+        try {
+            console.log("Starting parallel fetch for stocks and all transactions...");
+            // Fetch stocks AND use the pagination helper for transactions
+            const [stockResult, allTxnsData] = await Promise.all([
                 client.models.PortfolioStock.list({
-                    selectionSet: ['id', 'symbol', 'pdp', 'name' /* Add other needed fields */]
+                    selectionSet: ['id', 'symbol', 'pdp', 'name'] // Fields needed for report
                 }),
-                client.models.Transaction.list({
-                    // Fetch fields needed for LTPIA and other calcs
-                    selectionSet: [
-                        'id', 'date', 'action', 'price','portfolioStockId',
-                        'tp', 'completedTxnId', 'playShares'
-                     ]
-                })
+                fetchAllPaginatedTransactions() // Call the pagination helper
             ]);
-    
-            // Process stocks result
-            if (stockResult.errors) throw stockResult.errors;
-            setPortfolioStocks(stockResult.data as any); // Using 'as any' for now, refine PortfolioStockDataType if needed
-    
-            // Process transactions result
-            if (txnResult.errors) throw txnResult.errors;
-            setAllTransactions(txnResult.data as any); // Set all transactions state
-    
-            console.log('Fetched Stocks:', stockResult.data);
-            console.log('Fetched Transactions:', txnResult.data);
-    
+            console.log("Parallel fetches completed.");
+
+            // Process stocks result (basic error check)
+            if (stockResult && Array.isArray((stockResult as any).errors) && (stockResult as any).errors.length > 0) {
+                 throw (stockResult as any).errors;
+            }
+            setPortfolioStocks(stockResult.data as any);
+
+            // Transactions data is the complete array from the helper
+            setAllTransactions(allTxnsData);
+
+            console.log('Fetched Stocks Count:', stockResult.data?.length);
+            console.log('Fetched All Transactions Count:', allTxnsData?.length);
+
         } catch (err: any) {
             console.error("Error fetching page data:", err);
             const errorMessage = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || "Failed to load page data.");
-            setError(errorMessage); // Use general error state for now
-            setTxnError(errorMessage); // Could set specific txn error too
+            setError(errorMessage); // Set combined error state
+            // Clear data on error
+            setPortfolioStocks([]);
+            setAllTransactions([]);
         } finally {
-            setIsLoading(false);
-            setIsTxnLoading(false);
+            setIsLoading(false); // Set combined loading state false
         }
-    }, []);
+    }, [fetchAllPaginatedTransactions]); // Add helper to dependencies
+    // --- End Updated fetchPageData ---
     
     useEffect(() => {
         fetchPageData();
@@ -551,8 +614,8 @@ export default function HomePage() {
                     </tr>
                 </thead>
                 <tbody>
-                    {/* Use the final sorted data */}
-                    {sortedTableData.length === 0 ? (
+                    {/* Use combined isLoading/error checked above, map sortedTableData */}
+                    {sortedTableData.length === 0 && !isLoading ? ( // Check isLoading here too
                         <tr><td colSpan={7} style={{ textAlign: 'center', padding: '1rem' }}>No stocks in portfolio.</td></tr>
                     ) : (
                         sortedTableData.map((item, index) => ( // item should match ReportDataItem structure
