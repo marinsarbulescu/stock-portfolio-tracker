@@ -137,7 +137,7 @@ export default function AddTransactionForStockPage() {
   
   // --- Add Function to Fetch Goals ---
   const fetchUserGoals = useCallback(async () => {
-    console.log("Fetching goals...");
+    //console.log("Fetching goals...");
     setIsGoalsLoading(true);
     // setError(null); // Use a specific error state if preferred
     try {
@@ -145,7 +145,7 @@ export default function AddTransactionForStockPage() {
       if (errors) throw errors;
       const currentGoals = goalsList[0] ?? null;
       setUserGoals(currentGoals);
-      console.log('Fetched goals for budget calc:', currentGoals);
+      //console.log('Fetched goals for budget calc:', currentGoals);
     } catch (err: any) {
       console.error("Error fetching goals:", err);
       // setGoalsError(err.message || "Failed to load goals data.");
@@ -158,22 +158,22 @@ export default function AddTransactionForStockPage() {
 
   // --- Add Function to Fetch All Buy Transactions ---
   const fetchAllUserTransactions = useCallback(async () => {
-    console.log("Fetching all transactions...");
+    //console.log("Fetching all transactions...");
     setIsAllTxnsLoading(true);
     // setTxnError(null); // Use specific error state if preferred
     try {
-        console.log('Fetching all buy transactions for budget calc...');
+        //console.log('Fetching all buy transactions for budget calc...');
         const { data: userTxns, errors } = await client.models.Transaction.list({
             // Fetch all, pagination might be needed for very large numbers later
             selectionSet: ['id', 'action', 'investment', 'price', 'quantity']
         });
         if (errors) throw errors;
         setAllUserTxns(userTxns as TransactionDataType[]);
-        console.log('Fetched all buy transactions:', userTxns);
+        //console.log('Fetched all buy transactions:', userTxns);
     } catch (err: any) {
         console.error('Error fetching all buy transactions:', err);
         // setAllTxnError(err.message || 'Failed to load all transactions.');
-        console.log("ERROR fetching all transactions:", err);
+        //console.log("ERROR fetching all transactions:", err);
         setAllUserTxns([]);
     } finally {
         setIsAllTxnsLoading(false);
@@ -254,7 +254,7 @@ export default function AddTransactionForStockPage() {
   const fetchTransactions = useCallback(async () => {
     if (!stockId) return; // Exit if no stockId
 
-    console.log(`Workspaceing ALL transactions for stockId: [${stockId}]`);
+    //console.log(`Workspaceing ALL transactions for stockId: [${stockId}]`);
     setIsTxnLoading(true); // Indicate loading started
     setTxnError(null);
     // Clear previous transactions before fetching all new ones
@@ -274,7 +274,7 @@ export default function AddTransactionForStockPage() {
            throw new Error(`Could not fetch all transactions after ${maxLoops} pages.`);
         }
 
-        console.log(`Workspaceing page with token: ${currentToken ? '...' : 'null'}`); // Don't log full token
+        //console.log(`Workspaceing page with token: ${currentToken ? '...' : 'null'}`); // Don't log full token
         const listResult: TransactionListResultType = await client.models.Transaction.list({
           filter: { portfolioStockId: { eq: stockId } },
           nextToken: currentToken,
@@ -285,7 +285,7 @@ export default function AddTransactionForStockPage() {
         const errors = listResult.errors; // Check for GraphQL errors
         const returnedToken = listResult.nextToken ?? null;
 
-        console.log(`Workspaceed ${fetchedTxns?.length ?? 0} items. Next Token Received: ${returnedToken ? 'Yes' : 'No'}`);
+        //console.log(`Workspaceed ${fetchedTxns?.length ?? 0} items. Next Token Received: ${returnedToken ? 'Yes' : 'No'}`);
 
         if (errors) throw errors; // Throw GraphQL errors
 
@@ -299,7 +299,7 @@ export default function AddTransactionForStockPage() {
 
       } while (currentToken !== null); // Continue looping as long as there's a nextToken
 
-      console.log(`Finished fetching. Total transactions: ${accumulatedTxns.length}`);
+      //console.log(`Finished fetching. Total transactions: ${accumulatedTxns.length}`);
       //@ts-ignore
       setTransactions(accumulatedTxns); // Set the final state with ALL transactions
 
@@ -329,7 +329,7 @@ export default function AddTransactionForStockPage() {
           if (data) {
             setStockSymbol(data.symbol ?? undefined);
             setStockBudget(data.budget); // Store the fetched stock budget
-            console.log("Fetched stock details:", data);
+            //console.log("Fetched stock details:", data);
           }
           if (errors) {
             console.error("Error fetching stock details", errors);
@@ -477,7 +477,7 @@ export default function AddTransactionForStockPage() {
   
   useEffect(() => {
     if (stockId) {
-        console.log("StockId changed or initial load, fetching ALL transactions.");
+        //console.log("StockId changed or initial load, fetching ALL transactions.");
         fetchTransactions(); // Call the function (it handles pagination internally)
     } else {
         setTransactions([]); // Clear if no stockId

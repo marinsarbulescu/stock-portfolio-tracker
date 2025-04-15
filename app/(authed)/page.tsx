@@ -60,7 +60,7 @@ export default function HomePage() {
     
     // --- Helper function to fetch ALL transactions using pagination ---
     const fetchAllPaginatedTransactions = useCallback(async (): Promise<Schema['Transaction'][]> => {
-        console.log("Fetching ALL user transactions with pagination...");
+        //console.log("Fetching ALL user transactions with pagination...");
         let accumulatedTxns: Schema['Transaction'][] = [];
         let currentToken: string | null = null;
         let loopSafetyCounter = 0;
@@ -82,10 +82,10 @@ export default function HomePage() {
                     throw new Error(`Could not fetch all transactions after ${maxLoops} pages.`);
                 }
 
-                console.log(`Workspaceing transaction page with token: ${currentToken ? '...' : 'null'}`);
+                //console.log(`Workspaceing transaction page with token: ${currentToken ? '...' : 'null'}`);
                 const listResult: TransactionListResultType = await client.models.Transaction.list({
                     nextToken: currentToken,
-                    limit: 1000, // Fetch larger chunks
+                    limit: 5000, // Fetch larger chunks
                     selectionSet: selectionSetNeeded // Use defined selectionSet
                 });
 
@@ -93,7 +93,7 @@ export default function HomePage() {
                 const errors = listResult.errors;
                 const returnedToken = listResult.nextToken ?? null;
 
-                console.log(`Workspaceed ${fetchedTxns?.length ?? 0} transactions. Next Token: ${returnedToken ? 'Yes' : 'No'}`);
+                //console.log(`Workspaceed ${fetchedTxns?.length ?? 0} transactions. Next Token: ${returnedToken ? 'Yes' : 'No'}`);
 
                 if (errors) throw errors; // Throw GraphQL errors
 
@@ -104,7 +104,7 @@ export default function HomePage() {
 
             } while (currentToken !== null);
 
-            console.log(`Finished fetching. Total user transactions: ${accumulatedTxns.length}`);
+            //console.log(`Finished fetching. Total user transactions: ${accumulatedTxns.length}`);
             return accumulatedTxns;
 
         } catch (err: any) {
@@ -125,7 +125,7 @@ export default function HomePage() {
         // setAllTransactions([]);
 
         try {
-            console.log("Starting parallel fetch for stocks and all transactions...");
+            //console.log("Starting parallel fetch for stocks and all transactions...");
             // Fetch stocks AND use the pagination helper for transactions
             const [stockResult, allTxnsData] = await Promise.all([
                 client.models.PortfolioStock.list({
@@ -133,7 +133,7 @@ export default function HomePage() {
                 }),
                 fetchAllPaginatedTransactions() // Call the pagination helper
             ]);
-            console.log("Parallel fetches completed.");
+            //console.log("Parallel fetches completed.");
 
             // Process stocks result (basic error check)
             if (stockResult && Array.isArray((stockResult as any).errors) && (stockResult as any).errors.length > 0) {
@@ -144,8 +144,8 @@ export default function HomePage() {
             // Transactions data is the complete array from the helper
             setAllTransactions(allTxnsData);
 
-            console.log('Fetched Stocks Count:', stockResult.data?.length);
-            console.log('Fetched All Transactions Count:', allTxnsData?.length);
+            //console.log('Fetched Stocks Count:', stockResult.data?.length);
+            //console.log('Fetched All Transactions Count:', allTxnsData?.length);
 
         } catch (err: any) {
             console.error("Error fetching page data:", err);
@@ -176,7 +176,7 @@ export default function HomePage() {
     type ProcessedTxnMap = Record<string, ProcessedStockTxnData>; // Keyed by stock ID
 
     const processedTxns = useMemo((): ProcessedTxnMap => {
-        console.log(`Processing ${allTransactions.length} transactions for ${portfolioStocks.length} stocks.`);
+        //console.log(`Processing ${allTransactions.length} transactions for ${portfolioStocks.length} stocks.`);
         const dataMap: ProcessedTxnMap = {};
         portfolioStocks.forEach(stock => {
            // @ts-ignore
@@ -193,7 +193,7 @@ export default function HomePage() {
                 completedBuyTxnIds.add(txn.completedTxnId);
             }
         });
-        console.log('Completed Buy Txn IDs:', completedBuyTxnIds);
+        //console.log('Completed Buy Txn IDs:', completedBuyTxnIds);
         // --- End Find Completed ---
     
         // Sort transactions once (e.g., by date descending for lastBuy/lastSell)
@@ -271,7 +271,7 @@ export default function HomePage() {
         // --- End Find LTPIA ---
     
     
-        console.log('Processed Transactions Map:', dataMap);
+        //console.log('Processed Transactions Map:', dataMap);
         return dataMap;
     }, [allTransactions, portfolioStocks]);
 
@@ -311,7 +311,7 @@ export default function HomePage() {
 
     // --- Calculate Final Report Data (Phase 3) ---
     const reportData = useMemo((): ReportDataItem[] => {
-        console.log("Calculating report data...");
+        //console.log("Calculating report data...");
 
         return portfolioStocks.map(stock => {
             // @ts-ignore
@@ -367,7 +367,11 @@ export default function HomePage() {
             const lastBuyPrice = txnData.lastBuy?.price;
             if (typeof currentPrice === 'number' && typeof lastBuyPrice === 'number' && typeof pdp === 'number' && lastBuyPrice > 0) {
                 const diffPercent = (currentPrice / lastBuyPrice - 1) * 100;
-                if (diffPercent <= pdp) {
+                //console.log("0 -- stock.symbol", stock.symbol);
+                //console.log("1 -- diffPercent", diffPercent);
+                //console.log("1 -- (pdp * -1)", (pdp * -1));
+                if (diffPercent <= (pdp * -1)) {
+                    //console.log("3 -- (diffPercent <= (pdp * -1))");
                     lbdPercent = diffPercent;
                 }
             }
