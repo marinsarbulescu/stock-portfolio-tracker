@@ -24,6 +24,45 @@ type TransactionListResultType = Awaited<ReturnType<typeof client.models.Transac
 const client = generateClient<Schema>();
 
 export default function HomePage() {
+    // Define the shape of the visibility state
+    interface ReportColumnVisibilityState {
+        fiveDayDip: boolean;
+        lbd: boolean;
+        buys: boolean;
+        sinceBuy: boolean;
+        sinceSell: boolean;
+        currentPrice: boolean;
+        percentToBe: boolean;
+        percentToTp: boolean;
+        tpShares: boolean;
+    }
+    
+    // Initialize the state (decide defaults - here all are visible initially)
+    const [reportColumnVisibility, setReportColumnVisibility] = useState<ReportColumnVisibilityState>({
+        fiveDayDip: true,
+        lbd: true,
+        buys: true,
+        sinceBuy: true,
+        sinceSell: false,
+        currentPrice: true,
+        percentToBe: false,
+        percentToTp: true,
+        tpShares: false,
+    });
+
+    // Mapping from state keys to desired display labels
+    const COLUMN_LABELS: Record<keyof ReportColumnVisibilityState, string> = {
+        fiveDayDip: '5DD',      // Custom Label
+        lbd: 'LBD',         // Custom Label
+        buys: 'Buys',
+        sinceBuy: 'Last Buy',
+        sinceSell: 'Last Sell',
+        currentPrice: 'Price',
+        percentToBe: '%2BE',          // Custom Label
+        percentToTp: '%2TP',          // Custom Label
+        tpShares: 'TP-Shs'        // Custom Label
+    };
+    
     const [portfolioStocks, setPortfolioStocks] = useState<PortfolioStockDataType[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -31,8 +70,8 @@ export default function HomePage() {
     // Add state for all transactions
     const [allTransactions, setAllTransactions] = useState<Schema['Transaction'][]>([]);
     // Add loading/error state specifically for transactions if desired
-    const [isTxnLoading, setIsTxnLoading] = useState(true);
-    const [txnError, setTxnError] = useState<string | null>(null);
+    //const [isTxnLoading, setIsTxnLoading] = useState(true);
+    //const [txnError, setTxnError] = useState<string | null>(null);
 
     // Get price data from context
     const { latestPrices, pricesLoading, pricesError, lastPriceFetchTimestamp } = usePrices(); // <-- Add timestamp
@@ -407,6 +446,16 @@ export default function HomePage() {
     // --- End Calculate Report Data ---
 
 
+    // Calculate the number of currently visible columns
+    const visibleColumnCount = useMemo(() => {
+        // Start with columns that are always visible (e.g., Ticker)
+        let count = 1;
+        // Add count of toggleable columns that are currently true
+        count += (Object.values(reportColumnVisibility) as boolean[]).filter(Boolean).length;
+        return count;
+    }, [reportColumnVisibility]);
+    
+    
     type ReportColumnKey = 'symbol' | 'currentPrice' | 'fiveDayDip' | 'lbd' | 'sinceBuy' |
          'sinceSell' | 'buys' | 'percentToBe' | 'percentToTp' | 'tpShares';
     const [sortConfig, setSortConfig] = useState<{ key: ReportColumnKey; direction: 'ascending' | 'descending' } | null>(null);
@@ -499,11 +548,28 @@ export default function HomePage() {
         if (percent === null || percent === undefined) return {}; // Default style
     
         if (percent >= 0) {
-            return { backgroundColor: '#006400', };
+            return { backgroundColor: '#286328', };
         } else if (percent >= -1) { // Between -1 (exclusive) and 0 (inclusive)
-            return { backgroundColor: '#727500' };
+            return { backgroundColor: '#737538' };
         } else {
             return {}; // Default for less than -1
+        }
+    };
+
+    const getSinceBuyCellStyle = (days: number | null): React.CSSProperties => {
+        if (days === null || typeof days !== 'number') {
+            return {}; // No highlighting if data is missing or invalid
+        }
+    
+        if (days > 30) {
+             // Over 30 days - light red background
+            return { backgroundColor: '#5d3232' }; // Light red hex code
+        } else if (days > 20) {
+             // Between 21 and 30 days (inclusive) - light yellow background
+            return { backgroundColor: '#5a5745' }; // Light yellow hex code
+        } else {
+            // 20 days or less - default background
+            return {};
         }
     };
 
@@ -511,7 +577,7 @@ export default function HomePage() {
         // Inside HomePage component return:
         <div>
             <h2>Opportunity Report</h2>
-            <div style={{ fontSize: 10 }}>
+            <div style={{ fontSize: '0.7em', color: "gray" }}>
                 {pricesLoading
                 ? 'Prices are refreshing...'
                 // Check if timestamp exists before formatting
@@ -521,9 +587,32 @@ export default function HomePage() {
                 }
             </div>
             {pricesError && <p style={{ color: 'red' }}>Price Error: {pricesError}</p>}
-            {isTxnLoading && <p>Loading transaction data...</p>} {/* Show txn loading state */}
-            {txnError && <p style={{ color: 'red' }}>Transaction Error: {txnError}</p>} {/* Show txn error */}
-
+            {/* ---{isTxnLoading && <p>Loading transaction data...</p>} */}
+            {/* ---{txnError && <p style={{ color: 'red' }}>Transaction Error: {txnError}</p>} */}
+            
+            {/* --- Add Column Toggle Checkboxes --- */}
+            <div style={{ marginBottom: '1rem', marginTop: '1rem', padding: '10px', border: '1px solid #353535', fontSize: '0.7em', color: "gray" }}>
+            <strong>Toggle Columns:</strong>
+            {/* Map over the keys of the state object to create checkboxes */}
+            {(Object.keys(reportColumnVisibility) as Array<keyof ReportColumnVisibilityState>).map((key) => (
+                <label key={key} style={{ marginLeft: '15px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                    <input
+                        type="checkbox"
+                        checked={reportColumnVisibility[key]}
+                        onChange={() =>
+                            // Update state by toggling the specific key's value
+                            setReportColumnVisibility((prev) => ({
+                                ...prev,
+                                [key]: !prev[key],
+                            }))
+                        }
+                        style={{ marginRight: '5px', cursor: 'pointer' }}
+                    />
+                    {COLUMN_LABELS[key]}
+                </label>
+            ))}
+            </div>
+            {/* --- End Column Toggle Checkboxes --- */}
 
             <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: 14 }}>
                 <thead>
@@ -531,37 +620,60 @@ export default function HomePage() {
                         <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('symbol')}>
                             Ticker {sortConfig?.key === 'symbol' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                         </th>
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('fiveDayDip')}>
-                            5DD (%) {sortConfig?.key === 'fiveDayDip' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('lbd')}>
-                            LBD (%) {sortConfig?.key === 'lbd' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('buys')}>
-                            Buys {sortConfig?.key === 'buys' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('sinceBuy')}>
-                            Since Buy {sortConfig?.key === 'sinceBuy' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('sinceSell')}>
-                            Since Sell {sortConfig?.key === 'sinceSell' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>                        
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('currentPrice')}>
-                            Price {sortConfig?.key === 'currentPrice' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('percentToBe')}>
-                            %2BE {sortConfig?.key === 'percentToBe' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('percentToTp')}>
-                            %2TP {sortConfig?.key === 'percentToTp' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        <th onClick={() => requestSort('tpShares')}>TP-Shs</th>
+                        {reportColumnVisibility.fiveDayDip && (
+                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('fiveDayDip')}>
+                                5DD (%) {sortConfig?.key === 'fiveDayDip' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                            </th>
+                        )}
+                        {reportColumnVisibility.lbd && (
+                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('lbd')}>
+                                LBD (%) {sortConfig?.key === 'lbd' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                            </th>
+                        )}
+                        {reportColumnVisibility.buys && (
+                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('buys')}>
+                                Buys {sortConfig?.key === 'buys' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                            </th>
+                        )}
+                        {reportColumnVisibility.sinceBuy && (
+                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('sinceBuy')}>
+                                L-Buy {sortConfig?.key === 'sinceBuy' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                            </th>
+                        )}
+                        {reportColumnVisibility.sinceSell && (
+                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('sinceSell')}>
+                                L-Sell {sortConfig?.key === 'sinceSell' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                            </th>                        
+                        )}
+                        {reportColumnVisibility.currentPrice && (
+                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('currentPrice')}>
+                                Price {sortConfig?.key === 'currentPrice' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                            </th>
+                        )}
+                        {reportColumnVisibility.percentToBe && (
+                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('percentToBe')}>
+                                %2BE {sortConfig?.key === 'percentToBe' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                            </th>
+                        )}
+                        {reportColumnVisibility.percentToTp && (
+                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('percentToTp')}>
+                                %2TP {sortConfig?.key === 'percentToTp' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                            </th>
+                        )}
+                        {reportColumnVisibility.tpShares && (
+                            <th onClick={() => requestSort('tpShares')}>TP-Shs</th>
+                        )}
                     </tr>
                 </thead>
                 <tbody>
                     {/* Use combined isLoading/error checked above, map sortedTableData */}
                     {sortedTableData.length === 0 && !isLoading ? ( // Check isLoading here too
-                        <tr><td colSpan={7} style={{ textAlign: 'center', padding: '1rem' }}>No stocks in portfolio.</td></tr>
+                        <tr>
+                            {/* Use dynamic colspan */}
+                            <td colSpan={visibleColumnCount} style={{ textAlign: 'center', padding: '1rem' }}>
+                                No stocks in portfolio.
+                            </td>
+                        </tr>
                     ) : (
                         sortedTableData.map((item, index) => ( // item should match ReportDataItem structure
                             <tr key={item.id} style={{ backgroundColor: index % 2 !== 0 ? '#272727' : 'transparent' }}>
@@ -570,33 +682,56 @@ export default function HomePage() {
                                         {item.symbol}
                                     </Link>
                                 </td>                                
-                                <td style={{ padding: '5px' }}>
-                                    {typeof item.fiveDayDip === 'number' && Math.abs(item.fiveDayDip) > 0.0001 ? `${item.fiveDayDip.toFixed(2)}%` : '-'}
-                                </td>
-                                <td style={{ padding: '5px' }}>
-                                    {typeof item.lbd === 'number' ? `${item.lbd.toFixed(2)}%` : '-'}
-                                </td>
-                                <td style={{ padding: '5px' }}>{item.buys}</td>
-                                <td style={{ padding: '5px' }}>{item.sinceBuy ?? '-'}</td>
-                                <td style={{ padding: '5px' }}>{item.sinceSell ?? '-'}</td>
-                                <td style={{ padding: '5px' }}>
-                                    {typeof item.currentPrice === 'number' ? item.currentPrice.toFixed(2) : '-'}
-                                </td>
-                                <td style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToBe) }}>
-                                    {typeof item.percentToBe === 'number'
-                                        ? `${item.percentToBe.toFixed(2)}%`
-                                        : '--'}
-                                </td>
-                                <td style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToTp) }}> {/* <<< ADD STYLING HERE */}
-                                    {typeof item.percentToTp === 'number'
-                                        ? `${item.percentToTp.toFixed(2)}%`
-                                        : '--'}
-                                </td>
-                                <td style={{ padding: '5px' }}>
-                                    {typeof item.tpShares === 'number'
-                                        ? item.tpShares.toFixed(5) // Format shares to 5 decimals, adjust if needed
-                                        : '--'}
-                                </td>
+                                {reportColumnVisibility.fiveDayDip && (
+                                    <td style={{ padding: '5px' }}>
+                                        {typeof item.fiveDayDip === 'number' && Math.abs(item.fiveDayDip) > 0.0001 ? `${item.fiveDayDip.toFixed(2)}%` : '-'}
+                                    </td>
+                                )}
+                                {reportColumnVisibility.lbd && (
+                                    <td style={{ padding: '5px' }}>
+                                        {typeof item.lbd === 'number' ? `${item.lbd.toFixed(2)}%` : '-'}
+                                    </td>
+                                )}
+                                {reportColumnVisibility.buys && (
+                                    <td style={{ padding: '5px' }}>{item.buys}</td>
+                                )}
+                                {reportColumnVisibility.sinceBuy && (
+                                    <td style={{
+                                        padding: '5px', // Keep existing padding
+                                        ...getSinceBuyCellStyle(item.sinceBuy) // Merge conditional styles
+                                        }}>
+                                        {item.sinceBuy ?? '-'}
+                                    </td>
+                                )}
+                                {reportColumnVisibility.sinceSell && (
+                                    <td style={{ padding: '5px' }}>{item.sinceSell ?? '-'}</td>
+                                )}
+                                {reportColumnVisibility.currentPrice && (
+                                    <td style={{ padding: '5px' }}>
+                                        {typeof item.currentPrice === 'number' ? item.currentPrice.toFixed(2) : '-'}
+                                    </td>
+                                )}
+                                {reportColumnVisibility.percentToBe && (
+                                    <td style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToBe) }}>
+                                        {typeof item.percentToBe === 'number'
+                                            ? `${item.percentToBe.toFixed(2)}%`
+                                            : '--'}
+                                    </td>
+                                )}
+                                {reportColumnVisibility.percentToTp && (
+                                    <td style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToTp) }}> {/* <<< ADD STYLING HERE */}
+                                        {typeof item.percentToTp === 'number'
+                                            ? `${item.percentToTp.toFixed(2)}%`
+                                            : '--'}
+                                    </td>
+                                )}
+                                {reportColumnVisibility.tpShares && (
+                                    <td style={{ padding: '5px' }}>
+                                        {typeof item.tpShares === 'number'
+                                            ? item.tpShares.toFixed(5) // Format shares to 5 decimals, adjust if needed
+                                            : '--'}
+                                    </td>
+                                )}
                             </tr>
                         ))
                     )}
