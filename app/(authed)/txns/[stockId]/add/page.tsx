@@ -514,13 +514,6 @@ export default function AddTransactionForStockPage() {
     }
   // Include fetchTransactions if ESLint requires, as it's stable due to useCallback
   }, [stockId, fetchTransactions]);
-  
-  // // --- Fetch Transactions on Initial Load or when stockId changes ---
-  // useEffect(() => {
-  //   fetchTransactions();
-  // }, [fetchTransactions]); // Call fetchTransactions when it's available/changes
-  // // --- End Initial Fetch ---
-
 
   if (!stockId) {
     return <p>Stock ID not found.</p>;
