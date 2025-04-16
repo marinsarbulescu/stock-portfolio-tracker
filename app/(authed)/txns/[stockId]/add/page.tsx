@@ -79,6 +79,19 @@ export default function AddTransactionForStockPage() {
     completedTxnId: false,
   });
 
+  // Mapping from state keys to desired display labels
+  const COLUMN_LABELS: Record<keyof ColumnVisibilityState, string> = {
+    txnId: 'Txn Id',
+    signal: 'Signal',
+    investment: 'Inv.',
+    playShares: 'Play Shs',
+    holdShares: 'Hold Shs',
+    totalShares: 'Total Shs',
+    lbd: 'LND',
+    txnProfit: 'Txn P/L',
+    completedTxnId: 'Completed Buy Id',
+};
+
   // --- Add Function to Handle Sort Requests ---
   const requestTxnSort = (key: SortableTxnKey) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -613,8 +626,7 @@ export default function AddTransactionForStockPage() {
                 }
                 style={{ marginRight: '5px' }}
               />
-              {/* Simple formatting for the label */}
-              {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+              {COLUMN_LABELS[key as keyof ColumnVisibilityState]}
             </label>
           ))}
         </div>
@@ -636,15 +648,15 @@ export default function AddTransactionForStockPage() {
                   Price {txnSortConfig?.key === 'price' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : null}
                 </th>
                 {columnVisibility.investment && <th style={{ padding: '5px' }}>Inv.</th>}
-                {columnVisibility.playShares && <th style={{ padding: '5px' }}>P-Shs</th>}
-                {columnVisibility.holdShares && <th style={{ padding: '5px' }}>H-Shs</th>}
-                {columnVisibility.totalShares && <th style={{ padding: '5px' }}>T-Shs</th>}
+                {columnVisibility.playShares && <th style={{ padding: '5px' }}>Play Shs</th>}
+                {columnVisibility.holdShares && <th style={{ padding: '5px' }}>Hold Shs</th>}
+                {columnVisibility.totalShares && <th style={{ padding: '5px' }}>Total Shs</th>}
                 {columnVisibility.lbd && <th style={{ padding: '5px' }}>LBD</th>}
                 <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('tp')}>
                   TP {txnSortConfig?.key === 'tp' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : null}
                 </th>
-                {columnVisibility.txnProfit && <th style={{ padding: '5px' }}>Txn Profit</th>}
-                {columnVisibility.completedTxnId && <th style={{ padding: '5px' }}>Completed Txn Id</th>}
+                {columnVisibility.txnProfit && <th style={{ padding: '5px' }}>Txn P/L</th>}
+                {columnVisibility.completedTxnId && <th style={{ padding: '5px' }}>Completed Buy Id</th>}
                 <th style={{ padding: '5px' }}>Actions</th>
               </tr>
             </thead>
