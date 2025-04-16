@@ -33,6 +33,7 @@ const schema = a.schema({
       pdp: a.float(),   // Price Dip Percent, optional number
       plr: a.float(),   // Profit Loss Ratio, optional number
       budget: a.float(), // Annual budget, optional number
+      isHidden: a.boolean().default(false), // Hide the stock from the reporting table
       transactions: a.hasMany('Transaction', 'portfolioStockId')
     })
     // Add owner-based authorization: grants full access ONLY to the record's owner

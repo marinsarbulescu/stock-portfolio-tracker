@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react'; // Added useCal
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource'; // Adjust path if needed
 import AddStockForm from '@/app/components/AddStockForm'; // Adjust path if needed
-import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { FaEdit, FaTrashAlt, FaEye, FaEyeSlash } from 'react-icons/fa'; // Add FaEye and FaEyeSlash here
 import Link from 'next/link';
 import { usePrices } from '@/app/contexts/PriceContext';
 
@@ -36,37 +36,79 @@ export default function StocksListingPage() {
   // Inside your component function
   const { latestPrices, pricesLoading, pricesError } = usePrices();
 
+  const handleToggleHidden = async (stock: PortfolioStockDataType) => {
+    const newHiddenState = !stock.isHidden; // Calculate the new state
+    // Optional confirmation for clarity
+    if (!window.confirm(`Are you sure you want to ${newHiddenState ? 'hide' : 'show'} ${stock.symbol?.toUpperCase()} in reports?`)) {
+        return;
+    }
+
+    console.log(`Attempting to set isHidden=${newHiddenState} for stock id: ${stock.id}`);
+    setError(null); // Clear previous errors
+
+    try {
+        // Update only the isHidden field
+        const { data: updatedStock, errors } = await client.models.PortfolioStock.update({
+            id: stock.id,
+            isHidden: newHiddenState,
+        });
+
+        if (errors) {
+            console.error('Error updating stock hidden status:', errors);
+            setError(errors[0]?.message || 'Failed to update stock.');
+        } else {
+            console.log('Stock hidden status updated successfully:', updatedStock);
+            // Refresh the portfolio list to potentially update UI indication if needed
+            fetchPortfolio();
+        }
+    } catch (err: any) {
+        console.error('Unexpected error updating stock hidden status:', err);
+        setError(err.message || 'An error occurred during update.');
+    }
+};
+
   // Fetch Portfolio Function
   const fetchPortfolio = useCallback(async () => {
-    setIsLoading(true);
+    setIsLoading(true); // Set loading at the start
     setError(null);
-    //setPricesLoading(true); // Also set prices loading true initially
-    //setPricesError(null);
-    //setLatestPrices({});
-    
+
     try {
-      // --- Fetch Portfolio Stocks (Your existing code) ---
+      // --- Fetch Portfolio Stocks ONCE ---
+      console.log("Fetching portfolio stocks...");
       const { data: stocks, errors } = await client.models.PortfolioStock.list({
-        selectionSet: ['id', 'symbol', 'name', 'stockType', 'region', 'pdp', 'plr', 'budget'] // Ensure 'symbol' is selected
+        // Fetch all fields needed for the table AND the toggle button logic
+        selectionSet: [
+            'id',
+            'symbol',
+            'name',
+            'stockType', // Assuming 'stockType' is the correct field name based on your JSX
+            'region',
+            'pdp',
+            'plr',
+            'budget',
+            'isHidden'  // <<< Ensure isHidden is included here
+        ]
       });
-      if (errors) throw errors; // Throw stock fetching errors
-  
-      // Set the portfolio stocks state (Your existing code - use the correct setter)
-      setPortfolioStocksData(stocks as PortfolioStockDataType[]); // Use your state setter
-      console.log('Fetched portfolio:', stocks);
-      // --- End Fetch Portfolio Stocks ---
-  
-    } catch (err: any) { // Catch errors from fetching stocks OR prices
-      console.error("Error fetching portfolio or prices:", err);
-      const errorMessage = Array.isArray(err.errors) ? err.errors[0].message : (err.message || "An unexpected error occurred.");
-      setError(errorMessage); // Set general error state
-      // Ensure loading states are reset if error happens before price fetch finishes
-      //setPricesLoading(false);
+      // --- End Fetch ---
+
+      if (errors) {
+          console.error("Error fetching portfolio:", errors);
+          throw errors; // Throw error to be caught below
+      }
+
+      // Set state with the fetched data (which includes isHidden)
+      setPortfolioStocksData(stocks as PortfolioStockDataType[]);
+      console.log('Fetched portfolio count:', stocks.length);
+
+    } catch (err: any) {
+      console.error("Error fetching portfolio:", err);
+      const errorMessage = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || "An unexpected error occurred fetching portfolio.");
+      setError(errorMessage);
+      setPortfolioStocksData([]); // Clear data on error
     } finally {
-      setIsLoading(false); // Set stock loading false
-      // pricesLoading is handled within its own try/finally or after symbol check
+      setIsLoading(false); // Set loading false when done (success or error)
     }
-  }, []); // Add dependencies if needed, e.g., [client] - though client is usually stable
+  }, []);
   
   // Keep your useEffect to call fetchPortfolio
   useEffect(() => { fetchPortfolio(); }, [fetchPortfolio]);
@@ -126,16 +168,24 @@ export default function StocksListingPage() {
   return (
     <div>
       <h2>Portfolio</h2>
+      
+      {/* Button/Link to Add New Stock (opens form or navigates) - Optional */}
+      {!isEditing && (
+         <button onClick={() => setIsEditing(true)} style={{marginTop: '1rem'}}>Add New Stock</button>
+         // When isEditing becomes true without stockToEditData, the form should show in 'Add' mode
+         // OR navigate to a separate /add-stocks page which renders <AddStockForm />
+      )}
+
       {isLoading && <p>Loading stocks...</p>}
       {error && <p style={{ color: 'red' }}>Error: {error}</p>}
 
       {/* Table Display (Only when NOT editing) */}
       {!isLoading && !error && !isEditing && (
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: 14 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
               {/* Headers */}
-              <th>Symbol</th>
+              <th>Ticker</th>
               <th style={{  maxWidth: '150px', }}>Name</th>
               <th>Type</th>
               <th>Region</th>
@@ -151,9 +201,9 @@ export default function StocksListingPage() {
               <tr><td colSpan={8} style={{ textAlign: 'center', padding: '1rem' }}>Your portfolio is empty.</td></tr>
             ) : (
               // --- Map over portfolioStocksData (simpler type) ---
-              portfolioStocksData.map((stock) => (
+              portfolioStocksData.map((stock, index) => (
                 // --- Check for TS errors accessing stock properties below ---
-                <tr key={stock.id} style={{ borderBottom: '1px solid #eee' }}>
+                <tr key={stock.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
                   {/* Symbol Link */}
                   <td><Link href={`/txns/${stock.id}/add`} /*...*/ >{stock.symbol?.toUpperCase()}</Link></td>
                   {/* Other Data Cells */}
@@ -168,8 +218,11 @@ export default function StocksListingPage() {
                   <td>{typeof stock.budget === 'number' ? stock.budget.toLocaleString('en-US', {style:'currency', currency:'USD'}) : '--'}</td>
                   {/* Actions */}
                   <td style={{ textAlign: 'center' }}>
-                    <button onClick={() => handleEditClick(stock)} /* Pass stock data */ title="Edit Stock" /*...*/><FaEdit /></button>
-                    <button onClick={() => handleDeleteStock(stock.id)} /* Pass ID */ title="Delete Stock" /*...*/><FaTrashAlt /></button>
+                    <button onClick={() => handleEditClick(stock)} title="Edit Stock"><FaEdit /></button>
+                    <button onClick={() => handleToggleHidden(stock)} title={stock.isHidden ? "Show in Reports" : "Hide from Reports"}>
+                      {stock.isHidden ? <FaEyeSlash /> : <FaEye />}
+                    </button>
+                    <button onClick={() => handleDeleteStock(stock.id)} title="Delete Stock"><FaTrashAlt /></button>
                   </td>
                 </tr>
               ))
@@ -178,7 +231,19 @@ export default function StocksListingPage() {
         </table>
       )}
 
-      {/* Conditional Edit Form */}
+      
+      {isEditing && !stockToEditData && (
+         <div style={{ marginTop: '2rem', border: '1px solid #ccc', padding: '1rem' }}>
+           <h2>New Stock</h2>
+           <AddStockForm
+             isEditMode={false} // Explicitly Add mode
+             // No initialData needed
+             onStockAdded={() => { fetchPortfolio(); setIsEditing(false); }} // Refresh list and close form on add
+             onCancel={handleCancelEdit} // Use cancel handler to close form
+           />
+         </div>
+      )}
+
       {isEditing && stockToEditData && (
         <div style={{ marginTop: '2rem', border: '1px solid #ccc', padding: '1rem' }}>
           <h2>Edit Stock: {stockToEditData.symbol?.toUpperCase()}</h2>
@@ -190,27 +255,6 @@ export default function StocksListingPage() {
           />
         </div>
       )}
-
-      {/* Button/Link to Add New Stock (opens form or navigates) - Optional */}
-      {!isEditing && (
-         <button onClick={() => setIsEditing(true)} style={{marginTop: '1rem'}}>Add New Stock</button>
-         // When isEditing becomes true without stockToEditData, the form should show in 'Add' mode
-         // OR navigate to a separate /add-stocks page which renders <AddStockForm />
-      )}
-       {/* If using the same form for Add mode: */}
-       {isEditing && !stockToEditData && (
-         <div style={{ marginTop: '2rem', border: '1px solid #ccc', padding: '1rem' }}>
-           <h2>Add New Stock</h2>
-           <AddStockForm
-             isEditMode={false} // Explicitly Add mode
-             // No initialData needed
-             onStockAdded={() => { fetchPortfolio(); setIsEditing(false); }} // Refresh list and close form on add
-             onCancel={handleCancelEdit} // Use cancel handler to close form
-           />
-         </div>
-       )}
-
-
     </div>
   );
 }

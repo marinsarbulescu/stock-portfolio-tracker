@@ -168,7 +168,11 @@ export default function HomePage() {
             // Fetch stocks AND use the pagination helper for transactions
             const [stockResult, allTxnsData] = await Promise.all([
                 client.models.PortfolioStock.list({
-                    selectionSet: ['id', 'symbol', 'pdp', 'name'] // Fields needed for report
+                    selectionSet: ['id', 'symbol', 'pdp', 'name'], // Fields needed for report
+                    filter: {
+                        isHidden: { ne: true } // ne: not equal to true (i.e., fetch if false or null/undefined)
+                        // Or you could use: isHidden: { eq: false } if you are sure all items will have the field set
+                    }
                 }),
                 fetchAllPaginatedTransactions() // Call the pagination helper
             ]);

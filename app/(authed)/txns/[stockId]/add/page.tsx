@@ -658,7 +658,7 @@ export default function AddTransactionForStockPage() {
                 </tr>
               ) : (
                 // Map over sorted transactions
-                sortedTransactions.map((txn) => { // txn is type TransactionDataType
+                sortedTransactions.map((txn, index) => { // txn is type TransactionDataType
 
                   // --- Determine if this row should be highlighted ---
                   const isCompletedBuy = txn.action === 'Buy' && completedBuyTxnIds.has(txn.id);
@@ -670,6 +670,7 @@ export default function AddTransactionForStockPage() {
                       style={{
                         
                         // --- Apply conditional background color ---
+                        backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent',
                         color: isCompletedBuy ? '#616161' : undefined, // Light gray for completed Buys
                         // Consider reducing opacity slightly too if desired
                         // opacity: isCompletedBuy ? 0.8 : 1,
