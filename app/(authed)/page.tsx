@@ -215,108 +215,133 @@ export default function HomePage() {
         ltpiaPrice?: number | null;
         ltpiaTp?: number | null;
         ltpiaPlayShares?: number | null;
+        currentPlayShares: number;
+        currentHoldShares: number;
+        totalCurrentShares: number;
     }
     type ProcessedTxnMap = Record<string, ProcessedStockTxnData>; // Keyed by stock ID
 
     const processedTxns = useMemo((): ProcessedTxnMap => {
-        //console.log(`Processing ${allTransactions.length} transactions for ${portfolioStocks.length} stocks.`);
+        console.log(`Processing ${allTransactions.length} transactions for share balances...`);
         const dataMap: ProcessedTxnMap = {};
-        portfolioStocks.forEach(stock => {
-           // @ts-ignore
-           const stockId = stock.id;
-           if (stockId) { dataMap[stockId] = { buyCount: 0 }; }
-        });
     
-        // --- Find all completed Buy Txn IDs ---
+        // --- Find all completed Buy Txn IDs first (needs one pass) ---
         const completedBuyTxnIds = new Set<string>();
         allTransactions.forEach(txn => {
             // @ts-ignore
             if (txn.action === 'Sell' && txn.completedTxnId) {
-                // @ts-ignore
+                 // @ts-ignore
                 completedBuyTxnIds.add(txn.completedTxnId);
             }
         });
-        //console.log('Completed Buy Txn IDs:', completedBuyTxnIds);
+        // console.log('Completed Buy Txn IDs:', completedBuyTxnIds);
         // --- End Find Completed ---
     
-        // Sort transactions once (e.g., by date descending for lastBuy/lastSell)
-        const sortedTxns = [...allTransactions].sort((a, b) => {
-           // @ts-ignore
-           const dateB = b.date ?? '';
-           // @ts-ignore
-           const dateA = a.date ?? '';
-           return dateB.localeCompare(dateA);
-        });
+        // --- Process data PER STOCK ---
+        portfolioStocks.forEach(stock => {
+            const stockId = stock.id;
+            if (!stockId) return; // Skip if stock has no ID (shouldn't happen)
     
-        // Find lastBuy, lastSell, buyCount
-        sortedTxns.forEach(txn => {
-             // @ts-ignore
-             const stockId = txn.portfolioStockId;
-             // @ts-ignore
-             const action = txn.action;
-             // @ts-ignore
-             const date = txn.date;
-             // @ts-ignore
-             const price = txn.price;
+            // Initialize data structure for this stock
+            const stockData: ProcessedStockTxnData = {
+                buyCount: 0,
+                currentPlayShares: 0,
+                currentHoldShares: 0,
+                totalCurrentShares: 0,
+                // lastIncompleteBuyPrice: null, // Initialize if needed
+                ltpiaPrice: null,
+                ltpiaTp: null,
+                ltpiaPlayShares: null,
+            };
     
-             if (stockId && date && dataMap[stockId]) {
-                const stockData = dataMap[stockId];
+            // Get transactions ONLY for the current stock
+            // Using 'any' temporarily to bypass potential strict type issues with filter/sort
+            const stockTxns = allTransactions.filter(txn => (txn as any).portfolioStockId === stockId);
+    
+            // Sort this stock's transactions chronologically (Ascending) for balance calculation
+            const sortedStockTxns = [...stockTxns].sort((a, b) => {
+                const dateA = (a as any).date ?? '';
+                const dateB = (b as any).date ?? '';
+                return dateA.localeCompare(dateB);
+            });
+    
+            // --- Calculate running balances and find latest dates/info ---
+            let runningPlayShares = 0;
+            let runningHoldShares = 0;
+            let lowestTpIncompleteBuy: Schema['Transaction'] | null = null;
+    
+            sortedStockTxns.forEach(txn => {
+                const action = (txn as any).action;
+                const playSharesTxn = typeof (txn as any).playShares === 'number' ? (txn as any).playShares : 0;
+                const holdSharesTxn = typeof (txn as any).holdShares === 'number' ? (txn as any).holdShares : 0;
+                const quantityTxn = typeof (txn as any).quantity === 'number' ? (txn as any).quantity : 0;
+                const sharesTypeTxn = (txn as any).sharesType;
+                const date = (txn as any).date;
+                const price = (txn as any).price;
+                const id = (txn as any).id;
+                const tp = (txn as any).tp;
+    
                 if (action === 'Buy') {
                     stockData.buyCount++;
-                    if (!stockData.lastBuy) {
+                    // Update absolute last buy date/price seen so far
+                    if (!stockData.lastBuy || (date && date >= stockData.lastBuy.date)) {
                         stockData.lastBuy = { date: date, price: price ?? null };
                     }
+                    // Add shares
+                    runningPlayShares += playSharesTxn;
+                    runningHoldShares += holdSharesTxn;
+    
+                    // Check for LTPIA candidacy (incomplete buy with a TP)
+                    if (!completedBuyTxnIds.has(id) && typeof tp === 'number') {
+                        if (lowestTpIncompleteBuy === null || tp < (lowestTpIncompleteBuy as any).tp) {
+                            lowestTpIncompleteBuy = txn;
+                        }
+                    }
+    
                 } else if (action === 'Sell') {
-                    if (!stockData.lastSell) {
+                    // Update absolute last sell date seen so far
+                    if (!stockData.lastSell || (date && date >= stockData.lastSell.date)) {
                         stockData.lastSell = { date: date };
                     }
+                    // Subtract shares
+                    if (sharesTypeTxn === 'Play') {
+                        runningPlayShares -= quantityTxn;
+                    } else if (sharesTypeTxn === 'Hold') {
+                        runningHoldShares -= quantityTxn;
+                    }
                 }
-             }
-        });
+            }); // End loop through stock's transactions
     
-        // --- Find LTPIA for each stock ---
-        Object.keys(dataMap).forEach(stockId => {
-           const stockData = dataMap[stockId];
-           let lowestTpIncompleteBuy: Schema['Transaction'] | null = null; // Temporarily use full type
-    
-           allTransactions
-             .filter(txn => {
-                // @ts-ignore 
-                return txn.portfolioStockId === stockId && // Belongs to this stock
-                    // @ts-ignore
-                    txn.action === 'Buy' &&             // Is a Buy
-                    // @ts-ignore
-                    !completedBuyTxnIds.has(txn.id) && // Is NOT completed
-                    // @ts-ignore
-                    typeof txn.tp === 'number';         // Has a valid TP value
-             })
-             .forEach(incompleteBuyTxn => {
-                // @ts-ignore 
-                if (lowestTpIncompleteBuy === null || incompleteBuyTxn.tp < lowestTpIncompleteBuy.tp) {
-                     lowestTpIncompleteBuy = incompleteBuyTxn;
-                 }
-             });
-
-             const finalLTPIA = lowestTpIncompleteBuy as any;
-    
-            // Store the BUY price of the found LTPIA transaction
-            stockData.ltpiaPrice = finalLTPIA?.price ?? null; // Access price on the 'any' type
-            stockData.ltpiaTp = finalLTPIA?.tp ?? null;    // Access tp on the 'any' type
-            // @ts-ignore
-            stockData.ltpiaPlayShares = lowestTpIncompleteBuy?.playShares ?? null;
-            // Log LTPIA finding for debugging
-            // if(lowestTpIncompleteBuy) {
-            //      console.log(`LTPIA for <span class="math-inline">\{stockId\}\: TxnId\=</span>{lowestTpIncompleteBuy.id}, TP=<span class="math-inline">\{lowestTpIncompleteBuy\.tp\}, BuyPrice\=</span>{stockData.ltpiaPrice}`);
-            // } else {
-            //      console.log(`No LTPIA found for ${stockId}`);
-            // }
-        });
-        // --- End Find LTPIA ---
+            // Store final calculated balances
+            stockData.currentPlayShares = runningPlayShares;
+            stockData.currentHoldShares = runningHoldShares;
+            // Ensure we don't end up with tiny negative floats due to precision issues
+            stockData.totalCurrentShares = Math.max(0, runningPlayShares + runningHoldShares);
     
     
-        //console.log('Processed Transactions Map:', dataMap);
+            // --- Store LTPIA details ---
+            const finalLTPIA = lowestTpIncompleteBuy as any;
+            stockData.ltpiaPrice = finalLTPIA?.price ?? null;
+            stockData.ltpiaTp = finalLTPIA?.tp ?? null;
+            stockData.ltpiaPlayShares = finalLTPIA?.playShares ?? null;
+    
+             // --- (Optional) Find Last Incomplete Buy Price if needed for LBD ---
+             // const incompleteBuys = sortedStockTxns // Use already sorted stock txns
+             //    .filter(txn => (txn as any).action === 'Buy' && !completedBuyTxnIds.has((txn as any).id))
+             //    .sort((a, b) => { // Sort descending by date
+             //        const dateB = (b as any).date ?? ''; const dateA = (a as any).date ?? '';
+             //        return dateB.localeCompare(dateA);
+             //    });
+             // stockData.lastIncompleteBuyPrice = (incompleteBuys[0] as any)?.price ?? null;
+    
+            // Add the processed data for this stock to the main map
+            dataMap[stockId] = stockData;
+    
+        }); // End loop through portfolioStocks
+    
+        //console.log('Processed Transactions Map (with shares):', dataMap);
         return dataMap;
-    }, [allTransactions, portfolioStocks]);
+    }, [allTransactions, portfolioStocks]); // Dependencies
 
 
     interface ReportDataItem {
@@ -331,6 +356,7 @@ export default function HomePage() {
         percentToBe: number | null;
         percentToTp: number | null;
         tpShares: number | null;
+        totalCurrentShares: number;
       }
 
     function calculateDaysAgo(dateString: string | null | undefined): number | null {
@@ -355,19 +381,28 @@ export default function HomePage() {
     // --- Calculate Final Report Data (Phase 3) ---
     const reportData = useMemo((): ReportDataItem[] => {
         //console.log("Calculating report data...");
-
+    
         return portfolioStocks.map(stock => {
-            // @ts-ignore
             const stockId: string = stock.id;
-            // @ts-ignore
             const symbol: string = stock.symbol;
-            // @ts-ignore
             const pdp: number | null | undefined = stock.pdp;
-
             const priceData = latestPrices[symbol];
-            const txnData = processedTxns[stockId] ?? { buyCount: 0 };
+            // Ensure default includes new fields
+            const txnData = processedTxns[stockId] ?? {
+                buyCount: 0,
+                currentPlayShares: 0,
+                currentHoldShares: 0,
+                totalCurrentShares: 0,
+                // Initialize other fields used below to null/0 as appropriate
+                ltpiaPrice: null,
+                ltpiaTp: null,
+                ltpiaPlayShares: null,
+                lastBuy: undefined, // Or appropriate default
+                lastSell: undefined,
+            };
             const currentPrice = priceData?.currentPrice ?? null;
-
+    
+            
             // Calculate 5DD (Moved from separate hook)
             let fiveDayDipPercent: number | null = null;
             if (typeof currentPrice === 'number' && typeof pdp === 'number' && priceData?.historicalCloses) {
@@ -418,36 +453,35 @@ export default function HomePage() {
                     lbdPercent = diffPercent;
                 }
             }
-
-            // Calculate Since Buy/Sell Days
+    
+    
             const sinceBuyDays = calculateDaysAgo(txnData.lastBuy?.date);
             const sinceSellDays = calculateDaysAgo(txnData.lastSell?.date);
-
-            // Get Buy Count
             const buyCount = txnData.buyCount;
-
-            // Get TP Shares
             const tpSharesValue = txnData.ltpiaPlayShares;
-
-
+    
+            // --- Get Total Current Shares ---
+            const totalShares = txnData.totalCurrentShares;
+    
+    
             // Return combined data object
             return {
                 id: stockId,
                 symbol: symbol,
                 currentPrice: currentPrice,
-                fiveDayDip: fiveDayDipPercent, // Use calculated value
+                fiveDayDip: fiveDayDipPercent,
                 lbd: lbdPercent,
-                percentToBe: percentToBe,      // <<< FIX: Assign correct variable
+                percentToBe: percentToBe,
                 percentToTp: percentToTp,
-                tpShares: tpSharesValue ?? null, // Convert undefined to null
+                tpShares: tpSharesValue ?? null,
                 sinceBuy: sinceBuyDays,
                 sinceSell: sinceSellDays,
                 buys: buyCount,
+                // --- Assign Total Shares ---
+                totalCurrentShares: totalShares,
             };
         });
-    // Update dependencies: remove fiveDayDipResults
-    }, [portfolioStocks, latestPrices, processedTxns]);
-    // --- End Calculate Report Data ---
+    }, [portfolioStocks, latestPrices, processedTxns]); // Dependencies
 
 
     // Calculate the number of currently visible columns
@@ -683,9 +717,16 @@ export default function HomePage() {
                         sortedTableData.map((item, index) => ( // item should match ReportDataItem structure
                             <tr key={item.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
                                 <td style={{ padding: '5px' }}>
-                                    <Link href={`/txns/${item.id}/add`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                                        {item.symbol}
-                                    </Link>
+                                <Link
+                                    href={`/txns/${item.id}/add`}
+                                    style={{
+                                    textDecoration: 'none',
+                                    // Apply conditional color based on total shares
+                                    color: item.totalCurrentShares === 0 ? 'red' : 'inherit' // Check if total is zero
+                                    }}
+                                >
+                                    {item.symbol}
+                                </Link>
                                 </td>                                
                                 {reportColumnVisibility.fiveDayDip && (
                                     <td style={{ padding: '5px' }}>
