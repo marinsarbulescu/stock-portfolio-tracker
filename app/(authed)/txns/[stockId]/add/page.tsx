@@ -690,18 +690,18 @@ export default function AddTransactionForStockPage() {
                     >
                       {/* Render all your existing <td> elements for the row */}
                       <td style={{ padding: '5px' }}>{txn.date}</td>
-                      {columnVisibility.txnId && <td style={{ padding: '5px' }}>{txn.id || '--'}</td>}
+                      {columnVisibility.txnId && <td style={{ padding: '5px' }}>{txn.id || '-'}</td>}
                       <td style={{ padding: '5px' }}>{txn.action}</td>
-                      {columnVisibility.signal && <td style={{ padding: '5px' }}>{txn.signal || '--'}</td>}
-                      <td style={{ padding: '5px' }}>{txn.price?.toFixed(2) ?? '--'}</td>
-                      {columnVisibility.investment && <td style={{ padding: '5px' }}>{txn.investment?.toFixed(2) ?? '--'}</td>}
-                      {columnVisibility.playShares && <td style={{ padding: '5px' }}>{getPlaySharesDisplay(txn) ?? '--'}</td>}
-                      {columnVisibility.holdShares && <td style={{ padding: '5px' }}>{getHoldSharesDisplay(txn) ?? '--'}</td>}
-                      {columnVisibility.totalShares && <td style={{ padding: '5px' }}>{txn.quantity?.toFixed(5) ?? '--'}</td>}
+                      {columnVisibility.signal && <td style={{ padding: '5px' }}>{txn.signal || '-'}</td>}
+                      <td style={{ padding: '5px' }}>{txn.price?.toFixed(2) ?? '-'}</td>
+                      {columnVisibility.investment && <td style={{ padding: '5px' }}>{txn.investment?.toFixed(2) ?? '-'}</td>}
+                      {columnVisibility.playShares && <td style={{ padding: '5px' }}>{getPlaySharesDisplay(txn) ?? '-'}</td>}
+                      {columnVisibility.holdShares && <td style={{ padding: '5px' }}>{getHoldSharesDisplay(txn) ?? '-'}</td>}
+                      {columnVisibility.totalShares && <td style={{ padding: '5px' }}>{txn.quantity?.toFixed(5) ?? '-'}</td>}
                       {columnVisibility.lbd && <td style={{ padding: '5px' }}>{txn.lbd?.toFixed(2) ?? '--'}</td>}
-                      <td style={{ padding: '5px' }}>{txn.tp?.toFixed(2) ?? '--'}</td>
-                      {columnVisibility.txnProfit && <td style={{ padding: '5px' }}>{getTxnProfitDisplay(txn) ?? '--'}</td>}
-                      {columnVisibility.completedTxnId && <td style={{ padding: '5px' }}>{txn.completedTxnId ?? '--'}</td>}
+                      <td style={{ padding: '5px' }}>{txn.tp?.toFixed(2) ?? '-'}</td>
+                      {columnVisibility.txnProfit && <td style={{ padding: '5px' }}>{getTxnProfitDisplay(txn) ?? '-'}</td>}
+                      {columnVisibility.completedTxnId && <td style={{ padding: '5px' }}>{txn.completedTxnId ?? '-'}</td>}
                       <td style={{ padding: '5px', textAlign: 'center' }}>
                           {/* Edit/Delete Buttons */}
                           <button onClick={() => handleEditTxnClick(txn as any)} /* ... styles ... */ > <FaEdit /> </button>

@@ -720,21 +720,21 @@ export default function HomePage() {
                                     <td style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToBe) }}>
                                         {typeof item.percentToBe === 'number'
                                             ? `${item.percentToBe.toFixed(2)}%`
-                                            : '--'}
+                                            : '-'}
                                     </td>
                                 )}
                                 {reportColumnVisibility.percentToTp && (
                                     <td style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToTp) }}> {/* <<< ADD STYLING HERE */}
                                         {typeof item.percentToTp === 'number'
                                             ? `${item.percentToTp.toFixed(2)}%`
-                                            : '--'}
+                                            : '-'}
                                     </td>
                                 )}
                                 {reportColumnVisibility.tpShares && (
                                     <td style={{ padding: '5px' }}>
                                         {typeof item.tpShares === 'number'
                                             ? item.tpShares.toFixed(5) // Format shares to 5 decimals, adjust if needed
-                                            : '--'}
+                                            : '-'}
                                     </td>
                                 )}
                             </tr>

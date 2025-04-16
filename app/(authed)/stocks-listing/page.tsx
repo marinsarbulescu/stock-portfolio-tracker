@@ -207,15 +207,15 @@ export default function StocksListingPage() {
                   {/* Symbol Link */}
                   <td><Link href={`/txns/${stock.id}/add`} /*...*/ >{stock.symbol?.toUpperCase()}</Link></td>
                   {/* Other Data Cells */}
-                  <td>{stock.name ?? '--'}</td>
+                  <td>{stock.name ?? '-'}</td>
                   <td>{stock.stockType}</td>
                   <td>{stock.region}</td>
                   <td>
                     {pricesLoading ? '...' : (latestPrices[stock.symbol]?.currentPrice?.toFixed(2) ?? 'N/A')}
                   </td>
-                  <td>{stock.pdp ?? '--'}</td>
-                  <td>{stock.plr ?? '--'}</td>
-                  <td>{typeof stock.budget === 'number' ? stock.budget.toLocaleString('en-US', {style:'currency', currency:'USD'}) : '--'}</td>
+                  <td>{stock.pdp ?? '-'}</td>
+                  <td>{stock.plr ?? '-'}</td>
+                  <td>{typeof stock.budget === 'number' ? stock.budget.toLocaleString('en-US', {style:'currency', currency:'USD'}) : '-'}</td>
                   {/* Actions */}
                   <td style={{ textAlign: 'center' }}>
                     <button onClick={() => handleEditClick(stock)} title="Edit Stock"><FaEdit /></button>
