@@ -93,7 +93,49 @@ export default function AddTransactionForStockPage() {
     txnProfit: 'Txn P/L',
     txnProfitPercent: 'Txn P/L (%)',
     completedTxnId: 'Completed Buy Id',
-};
+  };
+
+  // --- Add this useMemo hook for Total Stock P/L ---
+  const stockTotalProfit = useMemo(() => {
+    // Calculate the sum of profits from all relevant transactions for THIS stock
+    return transactions.reduce((sum, txn) => {
+      // Check if txnProfit is a valid number before adding
+      if (typeof txn.txnProfit === 'number') {
+        return sum + txn.txnProfit;
+      }
+      return sum; // Otherwise, keep the sum as is
+    }, 0); // Start sum at 0
+  }, [transactions]); // Dependency: Recalculate when this stock's transactions change
+  // --- End Total Stock P/L hook ---
+
+  // --- Add these useMemo hooks for P/L Percentage ---
+
+  // Calculate the total amount invested in Buy transactions for THIS stock
+  const totalBuyInvestment = useMemo(() => {
+    return transactions.reduce((sum, txn) => {
+      // Check if it's a Buy action and investment is a valid number
+      if (txn.action === 'Buy' && typeof txn.investment === 'number') {
+        return sum + txn.investment;
+      }
+      return sum;
+    }, 0);
+  }, [transactions]);
+
+  // Calculate the overall P/L percentage based on total profit / total investment
+  const stockProfitPercent = useMemo(() => {
+    // Avoid division by zero if no investment was made
+    if (totalBuyInvestment === 0) {
+      return null; // Or return 0, or NaN, depending on how you want to display it
+    }
+    // Ensure stockTotalProfit is also valid (it should be a number from its hook)
+    if (typeof stockTotalProfit !== 'number') {
+        return null;
+    }
+    // Calculate percentage
+    return (stockTotalProfit / totalBuyInvestment) * 100;
+  }, [stockTotalProfit, totalBuyInvestment]); // Dependencies
+
+  // --- End P/L Percentage hooks ---
 
   // --- Add Function to Handle Sort Requests ---
   const requestTxnSort = (key: SortableTxnKey) => {
@@ -478,6 +520,44 @@ export default function AddTransactionForStockPage() {
     return ids;
   }, [transactions]); // Re-calculate only when this stock's transactions change
   // --- End completedBuyTxnIds hook ---
+
+  // --- Add these useMemo hooks for COMPLETED P/L Percentage ---
+
+  // --- REPLACE the previous cost basis hook with this one ---
+  // Calculate the total COST BASIS of ONLY the shares involved in completed trades
+  const completedTradesCostBasis = useMemo(() => {
+    return transactions.reduce((sum, txn) => {
+      // Check if it's a Sell transaction with a calculated profit
+      if (txn.action === 'Sell' && typeof txn.txnProfit === 'number' &&
+          typeof txn.price === 'number' && typeof txn.quantity === 'number')
+      {
+        // Calculate the cost basis for THIS specific sell transaction
+        // Cost = Revenue - Profit
+        const sellRevenue = txn.price * txn.quantity;
+        const costBasisForThisSell = sellRevenue - txn.txnProfit;
+        return sum + costBasisForThisSell;
+      }
+      return sum; // Otherwise, keep the sum as is
+    }, 0);
+  }, [transactions]); // Dependency: Recalculate when transactions change
+  // --- End completedTradesCostBasis hook ---
+
+
+  // --- REPLACE the previous percentage hook with this one ---
+  // Calculate the P/L percentage based ONLY on completed transactions' profit vs cost
+  const completedStockProfitPercent = useMemo(() => {
+    // Avoid division by zero if the cost basis for completed trades is zero
+    if (completedTradesCostBasis === 0) {
+      return null; // Or 0 or NaN
+    }
+    // Ensure stockTotalProfit is valid
+    if (typeof stockTotalProfit !== 'number') {
+        return null;
+    }
+    // Calculate percentage: (Total Profit from Completed Sells) / (Total Cost Basis for those Sells)
+    return (stockTotalProfit / completedTradesCostBasis) * 100; // Use the new cost basis
+  }, [stockTotalProfit, completedTradesCostBasis]); // Dependencies updated
+  // --- End completedStockProfitPercent hook ---
   
   // --- Add Memoized Sort Logic ---
   const sortedTransactions = useMemo(() => {
@@ -527,12 +607,12 @@ export default function AddTransactionForStockPage() {
       <h2>
         {stockSymbol ? stockSymbol.toUpperCase() : ''} details
       </h2>
-      <div style={{ marginBottom: '1.5rem', padding: '10px'}}>
+      <div style={{ marginBottom: '1.5rem', padding: '10px', paddingLeft: '0px'}}>
         {(isGoalsLoading || isAllTxnsLoading) ? (
           <p>Loading stats...</p>
         ) : (          
-          <div style={{ display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap' }}>
-            <div style={{ flexBasis: '30%', minWidth: '150px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', fontSize: '0.8em' }}>
+            {/* <div style={{ flexBasis: '30%', minWidth: '150px' }}>
               <p>
                 Remaining Annual Budget: 
                 <strong style={{ marginLeft: '10px', fontSize: '1.1em' }}>
@@ -544,8 +624,8 @@ export default function AddTransactionForStockPage() {
                   (Target: ${userGoals?.totalBudget?.toFixed(2) ?? '0.00'} - Net Impact: ${netBudgetImpact.toFixed(2)})
                 </small>
               </p>
-            </div>  
-            <div style={{ flexBasis: '30%', minWidth: '150px', paddingLeft: '15px' }}>
+            </div>   */}
+            <div style={{ flexBasis: '30%', minWidth: '150px'}}>
               <p>
                 Stock Annual Budget:  {typeof stockBudget === 'number' 
                                         ? stockBudget.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
@@ -561,20 +641,53 @@ export default function AddTransactionForStockPage() {
                 )}
               <p>Buys: {buyCount}</p>
               <p>Sells: {sellCount}</p>
+              <p>Incomplete Buys: {buyCount - sellCount}</p>
             </div>
             <div style={{ flexBasis: '30%', minWidth: '150px', paddingLeft: '15px' }}>
               {isTxnLoading ? ( <p>Calculating share counts...</p>) : (
                 <>
                   <p>
-                    Play Shares: <strong>{currentPlayShares.toFixed(5)}</strong>
+                    Play Shs: {currentPlayShares.toFixed(5)}
                   </p>
                   <p>
-                    Hold Shares: <strong>{currentHoldShares.toFixed(5)}</strong>
+                    Hold Shs: {currentHoldShares.toFixed(5)}
                   </p>
                   <p>
-                    Total Shares: <strong>{totalCurrentShares.toFixed(5)}</strong>
+                    Total Shs: {totalCurrentShares.toFixed(5)}
                   </p>
                 </>
+              )}
+            </div>
+
+            <div style={{ flexBasis: '30%', minWidth: '150px', paddingLeft: '15px' }}>
+              {/* --- START: Add Stock P/L Stats --- */}
+              {!isTxnLoading && ( // Only show once transactions are loaded
+                  <>
+                      <p>
+                        P/L (All):&nbsp; 
+                          <strong>
+                            {stockTotalProfit.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                          </strong> /&nbsp;
+                          <strong> 
+                            {typeof stockProfitPercent === 'number'
+                                ? `${stockProfitPercent.toFixed(2)}%`
+                                : '--' // Display dashes if percentage couldn't be calculated
+                            }
+                          </strong>
+                      </p>
+                      <p>
+                        P/L (Compl. Txns):&nbsp; 
+                          <strong>
+                            {stockTotalProfit.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                          </strong> /&nbsp;
+                          <strong>
+                            {typeof completedStockProfitPercent === 'number'
+                                ? `${completedStockProfitPercent.toFixed(2)}%`
+                                : '--'
+                            }
+                          </strong>
+                      </p>
+                  </>
               )}
             </div>
           </div>   
