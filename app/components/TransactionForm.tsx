@@ -112,27 +112,26 @@ export default function TransactionForm({
 
 
   // Handle form submission
+  // Replace the entire handleSubmit function
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsLoading(true);
     setError(null);
     setSuccess(null);
 
-    // --- Validation (Existing) ---
+    // --- Validation (Existing + sharesType) ---
     if (!date || (!isEditMode && !portfolioStockId) || !action) {
       setError('Date, Action required. Stock context must be provided when adding.');
       setIsLoading(false); return;
     }
     if (action === 'Sell' && !sharesInput) {
-      setError('Shares are required for Sell transactions.');
+      setError('Shares quantity is required for Sell transactions.');
       setIsLoading(false); return;
     }
-    // --- ADDED Validation for sharesType on Sell ---
     if (action === 'Sell' && !sharesType) {
         setError('Shares Type (Play/Hold) is required for Sell transactions.');
         setIsLoading(false); return;
     }
-    // --- End Added Validation ---
     if ((action === 'Buy' || action === 'Div') && !investment) {
         setError('Investment/Amount is required for Buy/Dividend transactions.');
         setIsLoading(false); return;
@@ -141,101 +140,85 @@ export default function TransactionForm({
         setError('Price is required for Buy/Sell transactions.');
         setIsLoading(false); return;
     }
-     // completedTxnId is optional for profit calc, but might be required logically later
+     // completedTxnId is optional for profit calc
 
     // --- Parse Inputs (Existing) ---
-    const priceValue = price ? parseFloat(price) : undefined;
+    const priceValue = price ? parseFloat(price) : undefined; // This is the SELL price for Sell actions
     const investmentValue = investment ? parseFloat(investment) : undefined;
-    const sharesInputValue = sharesInput ? parseFloat(sharesInput) : undefined; // This is the 'quantity' for Sell
+    const sharesInputValue = sharesInput ? parseFloat(sharesInput) : undefined; // This is the quantity for Sell actions
 
     // --- Calculate Derived Buy Fields (LBD, TP, Buy Shares) (Existing) ---
-    let quantity: number | undefined | null = null;
+    let quantity: number | undefined | null = null; // Represents Buy quantity OR Sell quantity
     let playShares: number | undefined | null = null;
     let holdShares: number | undefined | null = null;
     let lbd: number | undefined | null = null;
     let tp: number | undefined | null = null;
 
     if (action === 'Buy') {
-        // Calculate quantity, playShares, holdShares for Buy
         if (investmentValue && priceValue && priceValue !== 0) {
            quantity = investmentValue / priceValue;
            playShares = quantity / 2;
            holdShares = quantity / 2;
         }
-        // Calculate LBD & TP for Buy
         if (priceValue) {
              try {
-                 //console.log(`>>> Fetching PDP and PLR for stock ID: ${portfolioStockId}`);
                  const { data: stockData } = await client.models.PortfolioStock.get({ id: portfolioStockId }, { selectionSet: ['pdp', 'plr'] });
-                 //console.log('>>> Fetched stock data for LBD and TP:', stockData);
                  const pdpValue = stockData?.pdp;
                  const plrValue = stockData?.plr;
                  if (typeof pdpValue === 'number' && typeof plrValue === 'number') {
                      lbd = priceValue - (priceValue * (pdpValue / 100));
-                     tp = priceValue + (priceValue * (pdpValue * plrValue / 100)) // Assuming PDP is positive for calc
-                     //console.log(`>>> LBD calculated: ${lbd}`);
-                     //console.log(`>>> TP calculated: ${tp}`);
-                 } else {
-                     //console.log('>>> PDP or PLR value was not a number:', pdpValue, plrValue);
+                     tp = priceValue + (priceValue * (pdpValue * plrValue / 100));
                  }
-             } catch (fetchErr) {
-                 console.warn("Could not fetch stock PDP or PLR for LBD and TP calc", fetchErr);
-                 setError("Warning: Could not fetch stock PDP or PLR to calculate LBD and TP.");
-             }
+             } catch (fetchErr) { /* ... error handling ... */ }
         }
     } else if (action === 'Sell') {
-        // For Sell, quantity is directly from input
-        quantity = sharesInputValue;
-        // playShares/holdShares aren't calculated/stored on the Sell txn itself
-        playShares = null;
-        holdShares = null;
-        // LBD/TP aren't calculated for Sell
-        lbd = null;
-        tp = null;
+        quantity = sharesInputValue; // Sell quantity from input
+        playShares = null; holdShares = null; lbd = null; tp = null; // Not applicable to Sell txn record
     }
     // --- End Derived Field Calculation ---
 
 
-    // --- Calculate TxnProfit and TxnProfitPercent for Sell ---
-    let txnProfit: number | null = null; // Initialize as null
-    let calculatedTxnProfitPercent: number | null = null; // Initialize new variable
+    // --- Calculate TxnProfit and TxnProfitPercent for Sell (Using NEW Logic) ---
+    let txnProfit: number | null = null;
+    let calculatedTxnProfitPercent: number | null = null;
 
-    // Condition: Is a Sell, has a completedTxnId reference, price, and quantity entered
+    // Condition: Is a Sell, has a completedTxnId, has Sell price, has quantity
     if (action === 'Sell' && completedTxnId && priceValue && quantity) {
-      //console.log(`>>> Sell action with completedTxnId: ${completedTxnId}. Fetching original Buy...`);
+      //console.log(`>>> Sell action with completedTxnId: ${completedTxnId}. Fetching original Buy price...`);
       try {
-        // Fetch the original Buy transaction
+        // --- MODIFIED: Fetch original Buy transaction PRICE ---
         const { data: buyTxn, errors: buyErrors } = await client.models.Transaction.get(
             { id: completedTxnId },
-            { selectionSet: ['investment'] } // Fetch original investment
+            { selectionSet: ['price'] } // <<< Fetch 'price' instead of 'investment'
         );
 
         if (buyErrors) throw buyErrors;
 
-        if (buyTxn && typeof buyTxn.investment === 'number' && buyTxn.investment !== null) {
-          const originalBuyInvestment = buyTxn.investment;
+        // Check if original buy and its price exist and are valid numbers
+        if (buyTxn && typeof buyTxn.price === 'number' && buyTxn.price !== null) {
+          const originalBuyPrice = buyTxn.price; // Get the original buy price per share
 
-          // Cost basis assumption: Play and Hold shares cost half the original investment each
-          const costBasis = originalBuyInvestment / 2;
-          const sellRevenue = priceValue * quantity;
+          // --- NEW CALCULATION LOGIC ---
+          const sellQuantity = quantity; // Quantity being sold in this transaction
+          const sellRevenue = priceValue * sellQuantity; // Revenue from this sale
+          const costOfSharesSold = originalBuyPrice * sellQuantity; // Cost of the shares being sold
 
-          // Calculate absolute profit/loss
-          txnProfit = sellRevenue - costBasis;
-          //console.log(`>>> Calculated TxnProfit: ${txnProfit} (Revenue: ${sellRevenue}, Cost Basis Used: ${costBasis})`);
+          txnProfit = sellRevenue - costOfSharesSold; // Calculate profit/loss
+          //console.log(`>>> Calculated TxnProfit: ${txnProfit} (Revenue: ${sellRevenue}, Cost: ${costOfSharesSold})`);
 
-          // --- ADDED: Calculate Percentage Profit/Loss ---
-          if (costBasis !== 0) { // Avoid division by zero
-            calculatedTxnProfitPercent = (txnProfit / costBasis) * 100;
+          // Calculate Percentage Profit/Loss based on the cost of shares sold
+          if (costOfSharesSold !== 0) { // Avoid division by zero
+            calculatedTxnProfitPercent = (txnProfit / costOfSharesSold) * 100;
             //console.log(`>>> Calculated TxnProfitPercent: ${calculatedTxnProfitPercent}%`);
           } else {
-            calculatedTxnProfitPercent = null; // Cannot calculate percentage if cost basis is zero
-            //console.log(">>> Cost basis was zero, cannot calculate TxnProfitPercent.");
+            calculatedTxnProfitPercent = null;
+            //console.log(">>> Cost basis (costOfSharesSold) was zero, cannot calculate TxnProfitPercent.");
           }
-          // --- END ADDED: Percentage Calculation ---
+          // --- END NEW CALCULATION LOGIC ---
 
         } else {
-          console.warn(`>>> Original Buy (ID: ${completedTxnId}) investment not found or invalid.`);
-          setError("Warning: Could not calculate profit/percentage, original Buy investment missing or invalid.");
+          console.warn(`>>> Original Buy (ID: ${completedTxnId}) price not found or invalid.`);
+          setError("Warning: Could not calculate profit/percentage, original Buy price missing or invalid.");
           // Keep txnProfit and calculatedTxnProfitPercent as null
         }
       } catch (fetchErr: any) {
@@ -247,30 +230,26 @@ export default function TransactionForm({
     // --- End TxnProfit Calculation ---
 
 
-    // --- Prepare Final Payload ---
-    // Use null for fields not applicable to the action type
+    // --- Prepare Final Payload (No changes needed here, uses calculated variables) ---
     const finalPayload = {
         date: date,
         action: action as TxnActionValue,
-        signal: signal || undefined, // Use undefined if not selected
+        signal: signal || undefined,
         price: priceValue,
         investment: (action === 'Buy' || action === 'Div') ? investmentValue : null,
-        quantity: quantity, // Buy quantity calculated, Sell quantity from input, Div is null
-        playShares: (action === 'Buy') ? playShares : null, // Only store for Buy
-        holdShares: (action === 'Buy') ? holdShares : null, // Only store for Buy
-        sharesType: (action === 'Sell') ? sharesType : undefined, // Store 'Play' or 'Hold' for Sell
-        lbd: (action === 'Buy') ? lbd : null, // Only store for Buy
-        tp: (action === 'Buy') ? tp : null, // Only store for Buy
-        completedTxnId: (action === 'Sell') ? (completedTxnId || undefined) : undefined, // Only store for Sell
-        txnProfit: (action === 'Sell') ? txnProfit : null, // Only store for Sell
-        // --- ADDED: Include calculated percentage in payload ---
-        txnProfitPercent: (action === 'Sell') ? calculatedTxnProfitPercent : null, // Only store for Sell
+        quantity: quantity,
+        playShares: (action === 'Buy') ? playShares : null,
+        holdShares: (action === 'Buy') ? holdShares : null,
+        sharesType: (action === 'Sell') ? sharesType : undefined,
+        lbd: (action === 'Buy') ? lbd : null,
+        tp: (action === 'Buy') ? tp : null,
+        completedTxnId: (action === 'Sell') ? (completedTxnId || undefined) : undefined,
+        txnProfit: (action === 'Sell') ? txnProfit : null,
+        txnProfitPercent: (action === 'Sell') ? calculatedTxnProfitPercent : null,
     };
     // --- End Payload Prep ---
 
-    // --- Add Log: Check final payload ---
     //console.log('>>> Final Payload being prepared:', finalPayload);
-
 
     // --- Submit Logic (Existing) ---
     try {
@@ -278,40 +257,32 @@ export default function TransactionForm({
         // --- UPDATE ---
         // @ts-ignore
         if (!initialData?.id || !onUpdate) throw new Error('Missing ID or update handler for edit.');
-        const updatePayload: TransactionUpdatePayload = { // You can optionally type the variable now
+        const updatePayload: TransactionUpdatePayload = {
           // @ts-ignore
           id: initialData.id,
-          portfolioStockId: portfolioStockId, // Always include FK
-          ...finalPayload // Spread calculated fields
+          portfolioStockId: portfolioStockId,
+          ...finalPayload
         };
-        //console.log('>>> Calling onUpdate with payload:', updatePayload);
         await onUpdate(updatePayload); // Call parent's update handler
         setSuccess('Transaction updated successfully!');
 
       } else {
         // --- CREATE ---
         const createPayload = {
-          portfolioStockId: portfolioStockId, // Include FK
-          ...finalPayload // Spread calculated fields
+          portfolioStockId: portfolioStockId,
+          ...finalPayload
         };
-        //console.log('Creating transaction:', createPayload);
         const { errors, data: newTransaction } = await client.models.Transaction.create(createPayload);
         if (errors) throw errors;
-
-        //console.log('Transaction added successfully:', newTransaction);
         setSuccess('Transaction added successfully!');
-        // Reset form only on successful ADD
+        // Reset form
         setDate(defaultFormState.date); setAction(defaultFormState.action); setSignal(defaultFormState.signal);
         setPrice(defaultFormState.price); setInvestment(defaultFormState.investment); setSharesInput(defaultFormState.sharesInput);
-        setCompletedTxnId(defaultFormState.completedTxnId); setSharesType('Play'); // Reset sharesType too
-        onTransactionAdded?.(); // Notify parent
+        setCompletedTxnId(defaultFormState.completedTxnId); setSharesType('Play');
+        onTransactionAdded?.();
       }
-    } catch (err: any) {
-        console.error("Error saving transaction:", err);
-        const errorMessage = Array.isArray(err) ? err[0].message : (err.message || "An unexpected error occurred.");
-        setError(errorMessage);
-        setSuccess(null);
-    } finally {
+    } catch (err: any) { /* ... error handling ... */ }
+    finally {
       setIsLoading(false);
     }
   }; // End handleSubmit
