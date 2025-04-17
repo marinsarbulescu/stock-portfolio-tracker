@@ -32,7 +32,7 @@ export default function AddTransactionForStockPage() {
   const params = useParams();
   const stockId = params.stockId as string; // Get stockId from URL
 
-  type SortableTxnKey = 'date' | 'price' | 'action' | 'signal' | 'investment' | 'quantity' | 'lbd' | 'tp';
+  type SortableTxnKey = 'date' | 'price' | 'action' | 'signal' | 'investment' | 'quantity' | 'lbd' | 'tp' | 'txnProfitPercent';
   const [txnSortConfig, setTxnSortConfig] = useState<{ key: SortableTxnKey; direction: 'ascending' | 'descending' } | null>({ key: 'tp', direction: 'ascending' });
 
   const [stockSymbol, setStockSymbol] = useState<string | undefined>(undefined);
@@ -64,6 +64,7 @@ export default function AddTransactionForStockPage() {
     totalShares: boolean;
     lbd: boolean;
     txnProfit: boolean;
+    txnProfitPercent: boolean;
     completedTxnId: boolean;
   }
   
@@ -75,7 +76,8 @@ export default function AddTransactionForStockPage() {
     holdShares: false,
     totalShares: false,
     lbd: true,
-    txnProfit: false, // Initially visible, even if data is null
+    txnProfit: true, // Initially visible, even if data is null
+    txnProfitPercent: true,
     completedTxnId: false,
   });
 
@@ -89,6 +91,7 @@ export default function AddTransactionForStockPage() {
     totalShares: 'Total Shs',
     lbd: 'LND',
     txnProfit: 'Txn P/L',
+    txnProfitPercent: 'Txn P/L (%)',
     completedTxnId: 'Completed Buy Id',
 };
 
@@ -143,7 +146,7 @@ export default function AddTransactionForStockPage() {
   };
 
   // --- Calculate Visible Column Count ---
-  const alwaysVisibleColumnCount = 6; // Date, Txn Id, Action, Price, Quantity, Actions
+  const alwaysVisibleColumnCount = 10; // Date, Action, Price, Investment, Play Shares, LBD, TP, Txn L/P, Txn L/P (%), Actions
   const visibleOptionalColumns = Object.values(columnVisibility).filter(isVisible => isVisible).length;
   const totalVisibleColumns = alwaysVisibleColumnCount + visibleOptionalColumns;
   // --- End Calculation ---
@@ -585,6 +588,7 @@ export default function AddTransactionForStockPage() {
         <TransactionForm
             isEditMode={true}
             initialData={txnToEdit}
+            // @ts-ignore
             onUpdate={handleUpdateTransaction}
             onCancel={handleCancelEditTxn}
             portfolioStockId={stockId}
@@ -649,6 +653,7 @@ export default function AddTransactionForStockPage() {
                   TP {txnSortConfig?.key === 'tp' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : null}
                 </th>
                 {columnVisibility.txnProfit && <th style={{ padding: '5px' }}>Txn P/L</th>}
+                {columnVisibility.txnProfitPercent && <th style={{ padding: '5px' }}>Txn P/L (%)</th>}
                 {columnVisibility.completedTxnId && <th style={{ padding: '5px' }}>Completed Buy Id</th>}
                 <th style={{ padding: '5px' }}>Actions</th>
               </tr>
@@ -694,6 +699,12 @@ export default function AddTransactionForStockPage() {
                       {columnVisibility.lbd && <td style={{ padding: '5px' }}>{txn.lbd?.toFixed(2) ?? '--'}</td>}
                       <td style={{ padding: '5px' }}>{txn.tp?.toFixed(2) ?? '-'}</td>
                       {columnVisibility.txnProfit && <td style={{ padding: '5px' }}>{getTxnProfitDisplay(txn) ?? '-'}</td>}
+                      {columnVisibility.txnProfitPercent && (<td style={{ padding: '5px' }}>
+                          {typeof txn.txnProfitPercent === 'number'
+                            ? `${txn.txnProfitPercent.toFixed(2)}%`
+                            : '--'}
+                        </td>
+                      )}
                       {columnVisibility.completedTxnId && <td style={{ padding: '5px' }}>{txn.completedTxnId ?? '-'}</td>}
                       <td style={{ padding: '5px', textAlign: 'center' }}>
                           {/* Edit/Delete Buttons */}

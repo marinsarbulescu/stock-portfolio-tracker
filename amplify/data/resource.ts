@@ -54,6 +54,7 @@ const schema = a.schema({
       tp: a.float(),              // Take Profit ($). Calculated target price, at which we get a Sell signal. TP = Buy Price + (Buy Price * PDP * PLR)
       completedTxnId: a.string(), // Link to another Txn ID (for Sell closing a Buy?)
       txnProfit: a.float(),
+      txnProfitPercent: a.float(),
       portfolioStockId: a.id().required(), // Foreign key ID
       portfolioStock: a.belongsTo('PortfolioStock', 'portfolioStockId'), // Define the relationship
     })
