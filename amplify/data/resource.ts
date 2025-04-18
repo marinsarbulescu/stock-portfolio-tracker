@@ -34,7 +34,8 @@ const schema = a.schema({
       plr: a.float(),   // Profit Loss Ratio, optional number
       budget: a.float(), // Annual budget, optional number
       isHidden: a.boolean().default(false), // Hide the stock from the reporting table
-      transactions: a.hasMany('Transaction', 'portfolioStockId')
+      transactions: a.hasMany('Transaction', 'portfolioStockId'),
+      stockWallets: a.hasMany('StockWallet', 'portfolioStockId'),
     })
     // Add owner-based authorization: grants full access ONLY to the record's owner
     .authorization((allow) => [allow.owner()]),
@@ -71,6 +72,38 @@ const schema = a.schema({
       intEtfsTarget: a.integer(),   // # of Int ETFs target (optional integer)
     })
     .authorization((allow) => [allow.owner()]),
+
+  // --- ADD THIS NEW MODEL ---
+  StockWallet: a
+  .model({
+      // Link back to the parent stock
+      portfolioStockId: a.id().required(),
+      portfolioStock: a.belongsTo('PortfolioStock', ['portfolioStockId']),
+
+      // Wallet specific fields
+      buyPrice: a.float().required(), // The unique buy price for this wallet
+      totalSharesQty: a.float().required(), // Total shares EVER bought at this price
+      totalInvestment: a.float().required(), // Total investment EVER for this wallet (at this price)
+
+      // Tracking sales FROM this wallet
+      sharesSold: a.float().required().default(0), // Shares sold specifically from this wallet
+      remainingShares: a.float().required(), // totalSharesQty - sharesSold (Must be updated on Buy/Sell)
+      realizedPl: a.float().default(0), // Accumulated P/L $ from sales FROM this wallet
+
+      // Optional: Calculated fields based on buyPrice (if needed for display/sorting)
+      // These might need recalculation if underlying assumptions (PLR/PDP) change
+      tpValue: a.float(), // Calculated TP Price ($) based on buyPrice
+      tpPercent: a.float(), // Calculated TP Percent (%) based on buyPrice
+
+      // Optional: Calculated overall P/L % for this specific wallet
+      // Could be: realizedPl / (buyPrice * sharesSold) * 100
+      realizedPlPercent: a.float(),
+
+  })
+  .authorization((allow) => [
+      allow.owner() // Only owner can CRUD their wallets
+  ]),
+// --- END ADD NEW MODEL ---
 
   // Define the input type for a single portfolio item
   PortfolioItemInput: a.customType({

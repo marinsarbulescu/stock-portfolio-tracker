@@ -18,26 +18,31 @@ type TransactionUpdatePayload = Partial<TransactionDataType> & { id: string };
 
 // Define props for the component
 interface TransactionFormProps {
-  portfolioStockId: string; // Always required now
-  portfolioStockSymbol?: string;
-  onTransactionAdded?: () => void; // Callback for Add mode success
+  portfolioStockId: string; // ID is required for context
+  portfolioStockSymbol?: string; // Symbol is optional (for display)
+  onTransactionAdded?: () => void; // Callback after successful add/update
+  // Add these props:
+  forceAction?: Schema['Transaction']['type']['action']; // Optional prop to lock the action
+  showCancelButton?: boolean; // Optional prop to show a cancel button
+  onCancel?: () => void; // Callback for cancel action
+  // Props for edit mode (keep existing)
   isEditMode?: boolean;
-  initialData?: Partial<TransactionItem> | null;
-  oonUpdate?: (updatePayload: TransactionUpdatePayload) => Promise<void>; 
-  onCancel?: () => void;
+  initialData?: Partial<TransactionItem['type']> | null; // Or use TransactionItem type if defined
+  onUpdate?: (updatedData: any) => Promise<void>; // Adjust type as needed
 }
+
 
 // Define specific types for dropdowns from schema
 // @ts-ignore - Acknowledge TS issues with Amplify generated Enum types
-type TxnActionValue = Schema['Transaction']['action'];
+//type TxnActionValue = Schema['Transaction']['type']['action'];
 // @ts-ignore
-type TxnSignalValue = Schema['Transaction']['signal'];
+//type TxnSignalValue = Schema['Transaction']['type']['signal'];
 
 // Default values for resetting the form
 const defaultFormState = {
   date: '',
-  action: 'Buy' as TxnActionValue,
-  signal: undefined as TxnSignalValue | undefined,
+  action: 'Buy' as Schema['Transaction']['type']['action'], // <-- Use full path
+  signal: undefined as Schema['Transaction']['type']['signal'] | undefined,
   price: '',
   investment: '',
   sharesInput: '', // Renamed state for shares input
@@ -48,17 +53,20 @@ export default function TransactionForm({
   portfolioStockId,
   portfolioStockSymbol,
   onTransactionAdded,
-  isEditMode = false,
-  initialData,
-  // @ts-ignore
-  onUpdate,
-  onCancel
-}: TransactionFormProps) {
+  forceAction, // <-- Add prop
+  showCancelButton = false, // <-- Add prop with default
+  onCancel, // <-- Add prop
+  isEditMode = false, // Keep existing props
+  initialData = null,
+  onUpdate
+}: TransactionFormProps) { // <-- Use the interface
 
   // State for form fields
   const [date, setDate] = useState(defaultFormState.date);
-  const [action, setAction] = useState<TxnActionValue>(defaultFormState.action);
-  const [signal, setSignal] = useState<TxnSignalValue | undefined>(defaultFormState.signal);
+  const [action, setAction] = useState<Schema['Transaction']['type']['action']>( // <-- Use full path
+    forceAction ? forceAction : (isEditMode && initialData?.action ? initialData.action : 'Buy')
+  );
+  const [signal, setSignal] = useState<Schema['Transaction']['type']['signal'] | undefined>(defaultFormState.signal);
   const [price, setPrice] = useState(defaultFormState.price);
   const [investment, setInvestment] = useState(defaultFormState.investment);
   const [sharesInput, setSharesInput] = useState(defaultFormState.sharesInput); // Input for Sell action
@@ -233,7 +241,7 @@ export default function TransactionForm({
     // --- Prepare Final Payload (No changes needed here, uses calculated variables) ---
     const finalPayload = {
         date: date,
-        action: action as TxnActionValue,
+        action: action as Schema['Transaction']['type']['action'], // <-- Use full path if casting
         signal: signal || undefined,
         price: priceValue,
         investment: (action === 'Buy' || action === 'Div') ? investmentValue : null,
@@ -275,6 +283,100 @@ export default function TransactionForm({
         const { errors, data: newTransaction } = await client.models.Transaction.create(createPayload);
         if (errors) throw errors;
         setSuccess('Transaction added successfully!');
+
+        // ============================================================
+        // === START: ADDED WALLET UPDATE/CREATE LOGIC for BUY ======
+        // ============================================================
+        if (action === 'Buy' && newTransaction && priceValue && quantity && investmentValue) {
+          console.log('>>> Buy detected, attempting to find/update/create StockWallet...');
+          try {
+              // 1. Find existing wallet for this stock and price
+              console.log('[Wallet Logic] Querying existing wallet...');
+              const { data: existingWallets, errors: listErrors } = await client.models.StockWallet.list({
+                  filter: {
+                      and: [
+                          { portfolioStockId: { eq: portfolioStockId } },
+                          { buyPrice: { eq: priceValue } }
+                      ]
+                  }
+                  // Limit 1? Should only be one per price.
+              });
+              console.log('[Wallet Logic] Query result:', { data: existingWallets, errors: listErrors });
+
+              if (listErrors) throw listErrors; // Propagate list errors
+
+              const existingWallet = existingWallets[0]; // Get the first match if any
+
+              if (existingWallet) {
+                  // 2a. Wallet EXISTS - Update it
+                  console.log(`[Wallet Logic] Existing wallet found (ID: ${existingWallet.id}), preparing update...`);
+                  const newWalletData = {
+                      id: existingWallet.id,
+                      totalSharesQty: existingWallet.totalSharesQty + quantity,
+                      totalInvestment: existingWallet.totalInvestment + investmentValue,
+                      remainingShares: existingWallet.remainingShares + quantity,
+                      // TP values might not need recalculation unless PDP/PLR changed
+                  };
+                  console.log('[Wallet Logic] Calling StockWallet.update with:', newWalletData);
+                  const { data: updatedWallet, errors: updateErrors } = await client.models.StockWallet.update(newWalletData);
+                  if (updateErrors) throw updateErrors;
+                  console.log(`[Wallet Logic] Wallet update SUCCESS:`, updatedWallet);
+
+              } else {
+                  // 2b. Wallet DOES NOT EXIST - Create it
+                  console.log(`[Wallet Logic] No existing wallet found for price ${priceValue}, preparing create...`);
+
+                  // Fetch Stock's PDP/PLR to calculate initial TP for the new wallet
+                  let initialTpValue: number | null = null;
+                  let initialTpPercent: number | null = null; // TP % might not be needed directly on wallet?
+                  try {
+                      const { data: stockData } = await client.models.PortfolioStock.get(
+                          { id: portfolioStockId },
+                          { selectionSet: ['pdp', 'plr'] }
+                      );
+                      const pdpValue = stockData?.pdp;
+                      const plrValue = stockData?.plr;
+                      if (typeof pdpValue === 'number' && typeof plrValue === 'number' && priceValue) {
+                           // Same TP calculation as in the Buy transaction logic
+                           initialTpValue = priceValue + (priceValue * (pdpValue * plrValue / 100));
+                           initialTpPercent = pdpValue * plrValue;
+                      }
+                  } catch (stockFetchErr) {
+                      console.warn("Could not fetch stock PDP/PLR for initial Wallet TP calc", stockFetchErr);
+                      // Continue without TP if fetch fails
+                  }
+
+                  const newWalletData = {
+                      portfolioStockId: portfolioStockId,
+                      buyPrice: priceValue,
+                      totalSharesQty: quantity,
+                      totalInvestment: investmentValue,
+                      sharesSold: 0, // Starts at 0
+                      remainingShares: quantity, // Initially equals total quantity
+                      realizedPl: 0, // Starts at 0
+                      tpValue: initialTpValue, // Calculated TP price
+                      tpPercent: initialTpPercent, // Store if needed
+                      // realizedPlPercent: null, // Starts at null or 0
+                  };
+                  console.log('[Wallet Logic] Calling StockWallet.create with:', newWalletData);
+                  const { data: createdWallet, errors: createErrors } = await client.models.StockWallet.create(newWalletData);
+                  if (createErrors) throw createErrors;
+                  console.log(`[Wallet Logic] New wallet create SUCCESS:`, createdWallet);
+              }
+
+          } catch (walletError: any) {
+              // Log wallet errors but don't block the main transaction success/reset
+              console.error("[Wallet Logic] !!! Error processing StockWallet:", walletError);
+              // Optionally set a secondary warning state for the UI?
+              setError(prev => prev ? `${prev} (Wallet update failed)` : 'Transaction saved, but Wallet update failed.');
+          }
+      } else {
+        console.log('[Wallet Logic] Conditions not met for Wallet processing (Not a Buy or missing data). Action:', action); // <-- ADD LOG
+      }
+      // ============================================================
+      // === END: ADDED WALLET UPDATE/CREATE LOGIC ==================
+      // ============================================================
+
         // Reset form
         setDate(defaultFormState.date); setAction(defaultFormState.action); setSignal(defaultFormState.signal);
         setPrice(defaultFormState.price); setInvestment(defaultFormState.investment); setSharesInput(defaultFormState.sharesInput);
@@ -297,22 +399,56 @@ export default function TransactionForm({
 
         {/* --- Fields --- */}
         <div><label htmlFor="date">Date:</label><input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required disabled={isLoading} style={{width: '100%'}} /></div>
-        <div><label htmlFor="action">Action:</label><select id="action" value={action} onChange={(e) => setAction(e.target.value as TxnActionValue)} required disabled={isLoading} style={{width: '100%'}}><option value="Buy">Buy</option><option value="Sell">Sell</option><option value="Div">Dividend</option></select></div>
+        <div>
+          <label htmlFor="action">Action:</label>
+          <select
+            id="action"
+            value={action}
+            // Disable changing action if forceAction is set or if editing
+            onChange={(e) => setAction(e.target.value as Schema['Transaction']['type']['action'])}
+            required
+            disabled={isLoading || !!forceAction || isEditMode} // <-- Disable if forceAction is true or editing
+            style={{ width: '100%' }}
+          >
+            {/* Conditionally render options or just the forced one */}
+            {forceAction ? (
+              <option value={forceAction}>{forceAction}</option>
+            ) : (
+              <>
+                  <option value="Buy">Buy</option>
+                  <option value="Sell">Sell</option>
+                  <option value="Div">Dividend</option>
+              </>
+            )}
+          </select>
+        </div>
 
         {/* Signal - Conditional Options */}
-        <div>
-            <label htmlFor="signal">Signal:</label>
-            <select id="signal" value={signal ?? ''} onChange={(e) => setSignal(e.target.value as TxnSignalValue || undefined)} required={action !== 'Div'} disabled={isLoading || action === 'Div'} style={{width: '100%'}}>
-                <option value="">-- Select Signal --</option>
-                {(action === 'Buy') && (<><option value="_5DD">_5DD</option><option value="Cust">Cust</option><option value="Initial">Initial</option><option value="EOM">EOM</option><option value="LBD">LBD</option></>)}
-                {(action === 'Sell') && (<><option value="Cust">Cust</option><option value="TPH">TPH</option><option value="TPP">TPP</option></>)}
-                {(action === 'Div') && (<option value="Div">Div</option>)}
-            </select>
-        </div>
+        {(action === 'Buy' || action === 'Sell' || action === 'Div') && (
+            <div>
+                <label htmlFor="signal">Signal:</label>
+                <select
+                    id="signal"
+                    value={signal ?? ''}
+                    onChange={(e) => setSignal(e.target.value as Schema['Transaction']['type']['signal'])}
+                    // Signal is required based on action type (as per your previous logic)
+                    required={(action === 'Buy' || action === 'Sell' || action === 'Div')}
+                    disabled={isLoading}
+                    style={{ width: '100%' }}
+                >
+                    <option value="">-- Select Signal --</option>
+                    {/* Dynamically filter options based on Action */}\
+                    {/* Ensure 'action' variable holds the correct value (forced or selected) */}
+                    {action === 'Buy' && <> <option value="_5DD">_5DD</option> <option value="Cust">Cust</option> <option value="Initial">Initial</option> <option value="EOM">EOM</option> <option value="LBD">LBD</option> </>}
+                    {action === 'Sell' && <> <option value="Cust">Cust</option> <option value="TPH">TPH</option> <option value="TPP">TPP</option> </>}
+                    {action === 'Div' && <> <option value="Div">Div</option> </>}
+                </select>
+            </div>
+        )}
 
         {/* Price - Required for Buy/Sell */}
         {(action === 'Buy' || action === 'Sell') && (
-            <div><label htmlFor="price">Price:</label><input id="price" type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} required={action !== 'Div'} placeholder={action === 'Div' ? 'Optional' : 'e.g., 150.25'} disabled={isLoading} style={{width: '100%'}} /></div>
+            <div><label htmlFor="price">Price:</label><input id="price" type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} required={true} placeholder={'e.g., 150.25'} disabled={isLoading} style={{width: '100%'}} /></div>
         )}
 
         {/* Investment/Amount - Required for Buy/Div */}
@@ -349,10 +485,17 @@ export default function TransactionForm({
         )}
 
         {/* Buttons */}
-        <div style={{ marginTop: '1rem' }}>
-            <button type="submit" disabled={isLoading}>{isLoading ? 'Saving...' : (isEditMode ? 'Update Transaction' : 'Add Transaction')}</button>
-            {isEditMode && onCancel && (<button type="button" onClick={onCancel} disabled={isLoading} style={{ marginLeft: '10px' }}>Cancel</button>)}
-        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '1rem' }}>
+          {/* Conditionally show Cancel button */}
+          {showCancelButton && onCancel && (
+              <button type="button" onClick={onCancel} disabled={isLoading}>
+                  Cancel
+              </button>
+          )}
+          <button type="submit" disabled={isLoading /* || other conditions */} style={{ marginLeft: showCancelButton ? '0' : 'auto' /* Align right if no cancel */ }}>
+              {isLoading ? (isEditMode ? 'Updating...' : 'Adding...') : (isEditMode ? 'Update Transaction' : 'Add Transaction')}
+          </button>
+      </div>
     </form>
   );
 }

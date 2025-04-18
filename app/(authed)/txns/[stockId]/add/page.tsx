@@ -700,6 +700,7 @@ export default function AddTransactionForStockPage() {
         
         <TransactionForm
             isEditMode={true}
+            // @ts-ignore
             initialData={txnToEdit}
             // @ts-ignore
             onUpdate={handleUpdateTransaction}

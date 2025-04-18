@@ -724,6 +724,17 @@ export default function HomePage() {
                                     }}
                                 >
                                     {item.symbol}
+                                </Link> |
+
+                                <Link
+                                    href={`/wallets/${item.id}`}
+                                    style={{
+                                    textDecoration: 'none',
+                                    // Apply conditional color based on total shares
+                                    color: item.totalCurrentShares === 0 ? 'red' : 'inherit' // Check if total is zero
+                                    }}
+                                >
+                                    {item.symbol}
                                 </Link>
                                 </td>                                
                                 {reportColumnVisibility.fiveDayDip && (
