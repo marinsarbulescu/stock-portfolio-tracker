@@ -9,7 +9,7 @@ const regionEnum = a.enum(['US', 'EU', 'APAC']);
 const txnActionEnum = a.enum(['Buy', 'Sell', 'Div']); // Div = Dividend
 const txnSignalEnum = a.enum([
   '_5DD', 'Cust', 'Initial', 'EOM', 'LBD', // For Buy action
-  'TPH', 'TPP',                             // For Sell action
+  'TPH', 'TPP', 'TP',                             // For Sell action
   'Div'                                     // For Div action
 ]);
 

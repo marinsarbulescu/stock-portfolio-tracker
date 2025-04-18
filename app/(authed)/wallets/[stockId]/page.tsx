@@ -67,12 +67,12 @@ export default function StockWalletPage() {
     const [sellDate, setSellDate] = useState(getTodayDateString()); // Default to today
     const [sellQuantity, setSellQuantity] = useState('');
     const [sellPrice, setSellPrice] = useState('');
+    const [sellSignal, setSellSignal] = useState<Schema['Transaction']['type']['signal'] | undefined>('Cust');
     const [sellError, setSellError] = useState<string | null>(null); // For errors within the modal
     const [isSelling, setIsSelling] = useState(false); // Loading state for submission
     // --- END NEW STATE ---
 
     const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
-
 
     // --- ADD Function to Fetch Transactions ---
     // Adapted from txns/[stockId]/add/page.tsx
@@ -190,29 +190,132 @@ const handleUpdateTransaction = async (updatedTxnDataFromForm: TransactionDataTy
     }
 };
 
-const handleDeleteTransaction = async (idToDelete: string) => {
-    if (!window.confirm('Are you sure you want to delete this transaction? This might affect Wallet calculations.')) {
+const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
+    // Use the passed transaction object
+    const idToDelete = txnToDelete.id;
+    const walletIdToUpdate = txnToDelete.completedTxnId; // Wallet ID is stored here for wallet-linked sells
+    const isWalletSell = txnToDelete.action === 'Sell' && !!walletIdToUpdate;
+
+    // Confirm deletion
+    const confirmationMessage = isWalletSell
+        ? 'Are you sure you want to delete this Sell transaction? This will also reverse its impact on the linked Stock Wallet (P/L, shares sold, sell count).'
+        : 'Are you sure you want to delete this transaction?';
+
+    if (!window.confirm(confirmationMessage)) {
         return;
     }
-    console.log(`Attempting to delete transaction: ${idToDelete}`);
-    // Add loading state indication if desired
-    try {
-        const { errors } = await client.models.Transaction.delete({ id: idToDelete });
 
-        if (errors) throw errors;
+    console.log(`Attempting to delete transaction: ${idToDelete}. Wallet linked: ${isWalletSell}`);
+    setTxnError(null); // Clear previous table errors
+    // Add a loading state specific to this row/operation if desired
+
+    let walletUpdateError: string | null = null;
+    let walletUpdateSuccess = false;
+
+    try {
+        // --- Step 1: Update Wallet Conditionally (BEFORE deleting transaction) ---
+        if (isWalletSell) {
+            console.log(`Updating wallet ${walletIdToUpdate} due to deleted sell txn ${idToDelete}`);
+            const quantitySold = txnToDelete.quantity;
+            const sellPrice = txnToDelete.price;
+
+            // Ensure we have the necessary info from the deleted transaction
+            if (typeof quantitySold !== 'number' || quantitySold <= 0 || typeof sellPrice !== 'number') {
+                 throw new Error(`Cannot update wallet: Invalid quantity (${quantitySold}) or price (${sellPrice}) on transaction being deleted.`);
+            }
+
+            try {
+                // Fetch the wallet to get current values and buyPrice
+                const { data: wallet, errors: fetchErrors } = await client.models.StockWallet.get(
+                    { id: walletIdToUpdate },
+                    { selectionSet: ['buyPrice', 'sharesSold', 'remainingShares', 'realizedPl', 'sellTxnCount'] } // Fetch needed fields
+                );
+
+                if (fetchErrors) throw fetchErrors; // Propagate fetch errors
+
+                if (!wallet) {
+                    throw new Error(`Could not find associated Stock Wallet (ID: ${walletIdToUpdate}) to update.`);
+                }
+                if (typeof wallet.buyPrice !== 'number') {
+                     throw new Error(`Cannot reverse P/L: Wallet (ID: ${walletIdToUpdate}) is missing its Buy Price.`);
+                }
+
+                // Calculate the P/L impact of the transaction being deleted
+                const plImpact = (sellPrice - wallet.buyPrice) * quantitySold;
+
+                // Calculate the reversed wallet values
+                const newSharesSold = Math.max(0, (wallet.sharesSold ?? 0) - quantitySold); // Prevent going below 0
+                const newRemainingShares = (wallet.remainingShares ?? 0) + quantitySold; // Add back sold shares
+                const newRealizedPl = (wallet.realizedPl ?? 0) - plImpact; // Subtract the P/L of this sale
+                const newSellTxnCount = Math.max(0, (wallet.sellTxnCount ?? 0) - 1); // Decrement count, prevent going below 0
+
+                // Recalculate Realized P/L % for the wallet based on NEW totals
+                const newCostBasis = wallet.buyPrice * newSharesSold; // Cost basis of REMAINING sold shares
+                let newRealizedPlPercent: number | null = null;
+                if (newCostBasis !== 0) {
+                    newRealizedPlPercent = (newRealizedPl / newCostBasis) * 100;
+                } else if (newRealizedPl === 0 && newSharesSold === 0) {
+                    newRealizedPlPercent = 0; // Explicitly 0% if no sales remaining and P/L is 0
+                }
+
+                // Prepare wallet update payload
+                const walletUpdatePayload = {
+                    id: walletIdToUpdate,
+                    sharesSold: newSharesSold,
+                    remainingShares: newRemainingShares,
+                    realizedPl: newRealizedPl,
+                    sellTxnCount: newSellTxnCount,
+                    realizedPlPercent: newRealizedPlPercent,
+                };
+
+                console.log("Reverting wallet changes with payload:", walletUpdatePayload);
+                const { errors: updateErrors } = await client.models.StockWallet.update(walletUpdatePayload);
+                if (updateErrors) throw updateErrors; // Propagate update errors
+
+                walletUpdateSuccess = true; // Mark wallet update as successful
+
+            } catch (walletErr: any) {
+                 console.error("Error updating wallet during transaction delete:", walletErr);
+                 // Capture the error but allow transaction delete attempt to proceed
+                 walletUpdateError = `Wallet update failed: ${Array.isArray(walletErr) ? walletErr[0].message : walletErr.message}`;
+            }
+        }
+
+        // --- Step 2: Delete the Transaction ---
+        console.log(`Proceeding to delete transaction ${idToDelete}`);
+        const { errors: deleteErrors } = await client.models.Transaction.delete({ id: idToDelete });
+        if (deleteErrors) throw deleteErrors; // Throw delete error if it occurs
 
         console.log('Transaction deleted successfully!');
-        // --- REFRESH BOTH ---
-        fetchTransactions();
-        fetchWallets(); // Refresh wallets as deletes might affect them
-        // --- END REFRESH ---
+
+        // Handle final status based on outcomes
+        if (isWalletSell && !walletUpdateSuccess) {
+             setTxnError(`Transaction deleted, but reversing wallet changes failed: ${walletUpdateError}`);
+        } else if (walletUpdateError) {
+             // Should not happen if update succeeded, but as safety
+             setTxnError(`Transaction deleted, but encountered wallet issue: ${walletUpdateError}`);
+        } else {
+             // Success, clear any previous error
+             setTxnError(null);
+        }
 
     } catch (err: any) {
-        console.error('Unexpected error deleting transaction:', err);
+        // Catch errors from Transaction.delete or errors propagated from Wallet update/fetch
+        console.error('Error during delete process:', err);
         const errorMessage = Array.isArray(err) ? err[0].message : (err.message || 'Failed to delete transaction.');
-        setTxnError(`Delete Failed: ${errorMessage}`); // Show error near the table
+        // If wallet update succeeded but delete failed, we have inconsistent state! Log clearly.
+        if (walletUpdateSuccess) {
+             console.error("CRITICAL: Wallet was updated, but Transaction delete failed! Manual reconciliation needed.");
+             setTxnError(`Wallet impact reversed, but FAILED TO DELETE transaction: ${errorMessage}`);
+        } else {
+            setTxnError(`Delete Failed: ${errorMessage}`); // General delete error
+        }
     } finally {
-         // Reset loading state
+        // --- Step 3: Refresh Both Lists regardless of outcome ---
+        console.log("Refreshing wallets and transactions after delete attempt.");
+        fetchTransactions();
+        fetchWallets();
+        // Reset loading state if applicable
     }
 };
 // --- END Edit/Delete Handlers ---
@@ -420,6 +523,7 @@ const handleDeleteTransaction = async (idToDelete: string) => {
         setSellPrice('');
         setSellError(null);
         setIsSelling(false);
+        setSellSignal('Cust');
         setIsSellModalOpen(true);
     };
     // --- END FUNCTION ---
@@ -470,6 +574,12 @@ const handleDeleteTransaction = async (idToDelete: string) => {
         }
         // --- End Validation ---
 
+        if (!sellSignal) {
+            setSellError("Please select a Sell Signal.");
+            setIsSelling(false);
+            return;
+        }
+
         // --- Database Operations ---
         try {
             // 1. Calculate P/L for this specific sale
@@ -507,9 +617,8 @@ const handleDeleteTransaction = async (idToDelete: string) => {
                 date: sellDate,
                 price: price,
                 quantity: quantity, // Use 'shares' field for quantity sold in Txn record
-                signal: 'Cust' as const, // Default signal for now
                 completedTxnId: walletToSell.id, // Store Wallet ID here
-                // investment: undefined, // Explicitly undefined
+                signal: sellSignal || undefined,
             };
             console.log("Creating Transaction with payload:", transactionPayload);
 
@@ -550,6 +659,7 @@ const handleDeleteTransaction = async (idToDelete: string) => {
         // Also clear any errors or partial input if desired, though handleOpenSellModal already resets
         setSellError(null);
         setIsSelling(false);
+        setSellSignal('Cust');
      };
     // --- End Cancel Handler ---
 
@@ -717,6 +827,23 @@ const handleDeleteTransaction = async (idToDelete: string) => {
                                 <label htmlFor="sellPrice" style={labelStyle}>Sell Price ($):</label>
                                 <input id="sellPrice" type="number" /*...*/ value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} required disabled={isSelling} style={inputStyle} />
                             </div>
+                            <div style={formGroupStyle}>
+                                <label htmlFor="sellSignal" style={labelStyle}>Signal:</label>
+                                <select
+                                    id="sellSignal"
+                                    value={sellSignal ?? ''} // Handle undefined state
+                                    onChange={(e) => setSellSignal(e.target.value as Schema['Transaction']['type']['signal'] || undefined)}
+                                    required // Make signal required for sell
+                                    disabled={isSelling}
+                                    style={inputStyle} // Reuse input style or create new
+                                >
+                                    <option value="">-- Select Signal --</option>
+                                    <option value="Cust">Cust</option>
+                                    <option value="TP">TP</option>
+                                    {/* <option value="TPH">TPH</option>
+                                    <option value="TPP">TPP</option> */}
+                                </select>
+                            </div>
                             {/* End Form Fields */}
 
                             {/* Action Buttons */}
@@ -801,7 +928,7 @@ const handleDeleteTransaction = async (idToDelete: string) => {
                                         <td style={{ padding: '5px' }}>{txn.action === 'Buy' ? formatCurrency(txn.lbd) : '-'}</td>
                                         <td style={{ padding: '5px', textAlign: 'center' }}>
                                             <button onClick={() => handleEditTxnClick(txn)} title="Edit Transaction" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray', marginRight: '5px' }}><FaEdit /></button>
-                                            <button onClick={() => handleDeleteTransaction(txn.id)} title="Delete Transaction" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray' }}><FaTrashAlt /></button>
+                                            <button onClick={() => handleDeleteTransaction(txn)} title="Delete Transaction" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray' }}><FaTrashAlt /></button>
                                         </td>
                                     </tr>
                                 ))
