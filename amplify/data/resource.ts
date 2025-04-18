@@ -99,6 +99,8 @@ const schema = a.schema({
       // Could be: realizedPl / (buyPrice * sharesSold) * 100
       realizedPlPercent: a.float(),
 
+      sellTxnCount: a.integer().required().default(0),
+
   })
   .authorization((allow) => [
       allow.owner() // Only owner can CRUD their wallets

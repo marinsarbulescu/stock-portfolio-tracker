@@ -336,11 +336,19 @@ export default function TransactionForm({
                       );
                       const pdpValue = stockData?.pdp;
                       const plrValue = stockData?.plr;
+                      
+                      console.log(`[Wallet Logic] Fetched PDP: ${pdpValue}, PLR: ${plrValue}`);
+
                       if (typeof pdpValue === 'number' && typeof plrValue === 'number' && priceValue) {
                            // Same TP calculation as in the Buy transaction logic
                            initialTpValue = priceValue + (priceValue * (pdpValue * plrValue / 100));
                            initialTpPercent = pdpValue * plrValue;
-                      }
+                           console.log(`[Wallet Logic] Calculated initialTpPercent: ${initialTpPercent}`);
+                      } else {
+                            // --- ADD LOG if calculation skipped ---
+                            console.log(`[Wallet Logic] Skipped TP calculation (PDP/PLR not numbers or priceValue missing?)`);
+                            // --- END LOG ---
+                       }
                   } catch (stockFetchErr) {
                       console.warn("Could not fetch stock PDP/PLR for initial Wallet TP calc", stockFetchErr);
                       // Continue without TP if fetch fails
@@ -356,12 +364,13 @@ export default function TransactionForm({
                       realizedPl: 0, // Starts at 0
                       tpValue: initialTpValue, // Calculated TP price
                       tpPercent: initialTpPercent, // Store if needed
-                      // realizedPlPercent: null, // Starts at null or 0
+                      sellTxnCount: 0,
                   };
-                  console.log('[Wallet Logic] Calling StockWallet.create with:', newWalletData);
+                  console.log('[Wallet Logic] Payload being sent:', JSON.stringify(newWalletData, null, 2));
                   const { data: createdWallet, errors: createErrors } = await client.models.StockWallet.create(newWalletData);
                   if (createErrors) throw createErrors;
-                  console.log(`[Wallet Logic] New wallet create SUCCESS:`, createdWallet);
+                  console.log(`[Wallet Logic] Wallet create SUCCESS. Returned data:`, JSON.stringify(createdWallet, null, 2));
+                  console.log(`[Wallet Logic] TP Percent value in returned data: ${createdWallet?.tpPercent}`);
               }
 
           } catch (walletError: any) {

@@ -7,7 +7,7 @@ import { useParams } from 'next/navigation';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource'; // Adjust path if needed
 import TransactionForm from '@/app/components/TransactionForm';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { FaEdit, FaTrashAlt, FaDollarSign } from 'react-icons/fa';
 import type { GraphQLError } from 'graphql';
 
 // Define the type for the fetched wallet data (no longer needs nested stock)
@@ -15,7 +15,7 @@ type StockWalletDataType = Schema['StockWallet']['type'];
 
 // Define the keys we can sort the table by (removed 'symbol')
 type SortableWalletKey = 'buyPrice' | 'totalInvestment' | 'totalSharesQty' | 'tpValue' | 'tpPercent' | 'sharesSold' | 
-    'realizedPl' | 'realizedPlPercent' | 'remainingShares';
+    'realizedPl' | 'realizedPlPercent' | 'remainingShares' | 'sellTxnCount';
 
 type TransactionItem = Schema['Transaction']; // Already likely defined
 type TransactionDataType = Schema['Transaction']['type']; // Already likely defined
@@ -91,7 +91,7 @@ export default function StockWalletPage() {
             'lbd',        // Keep LBD column
             'completedTxnId', // Needed for editing Sell
             'sharesType',     // Needed for editing Sell
-            'playShares', 'holdShares', 'tp', 'txnProfit', 'txnProfitPercent' // Needed for editing logic in TransactionForm
+            'playShares', 'holdShares', 'tp', 'txnProfit', 'txnProfitPercent', // Needed for editing logic in TransactionForm
         ] as const;
 
 
@@ -270,6 +270,7 @@ const handleDeleteTransaction = async (idToDelete: string) => {
                 'realizedPlPercent',
                 'remainingShares',
                 'portfolioStockId',
+                'sellTxnCount',
                 // No longer need portfolioStock.symbol here
             ] as const;
 
@@ -495,6 +496,7 @@ const handleDeleteTransaction = async (idToDelete: string) => {
                 remainingShares: remaining - quantity, // Use validated remaining & quantity
                 realizedPl: (walletToSell.realizedPl ?? 0) + realizedPlForSale,
                 realizedPlPercent: newRealizedPlPercent,
+                sellTxnCount: (walletToSell.sellTxnCount ?? 0) + 1,
             };
             console.log("Updating StockWallet with payload:", walletPayload);
 
@@ -585,7 +587,7 @@ const handleDeleteTransaction = async (idToDelete: string) => {
     return (
         <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <h2>Wallets for {stockSymbol?.toUpperCase()}</h2>
+                <h3>Wallets for {stockSymbol?.toUpperCase()}</h3>
                 {/* --- ADD BUTTON --- */}
                 <button onClick={handleOpenBuyModal} style={{ padding: '8px 15px' }}>
                     Add Buy Transaction
@@ -595,7 +597,7 @@ const handleDeleteTransaction = async (idToDelete: string) => {
 
             {error && <p style={{ color: 'red' }}>Error loading wallets: {error}</p>}
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.9em' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
                 <thead>
                     <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
                         {/* --- Removed Symbol Header --- */}
@@ -614,6 +616,9 @@ const handleDeleteTransaction = async (idToDelete: string) => {
                         {/* <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('tpPercent')}>
                             TP (%) {sortConfig?.key === 'tpPercent' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                         </th> */}
+                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('sellTxnCount')}>
+                            Sells {sortConfig?.key === 'sellTxnCount' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                        </th>
                         <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('sharesSold')}>
                             Shs Sold {sortConfig?.key === 'sharesSold' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                         </th>
@@ -652,6 +657,7 @@ const handleDeleteTransaction = async (idToDelete: string) => {
                                 <td style={{ padding: '5px' }}>{formatShares(wallet.totalSharesQty)}</td>
                                 <td style={{ padding: '5px' }}>{formatCurrency(wallet.tpValue)}</td>
                                 {/* <td style={{ padding: '5px' }}>{formatPercent(wallet.tpPercent)}</td> */}
+                                <td style={{ padding: '5px' }}>{wallet.sellTxnCount ?? 0}</td>
                                 <td style={{ padding: '5px' }}>{formatShares(wallet.sharesSold)}</td>
                                 <td style={{ padding: '5px' }}>{formatCurrency(wallet.realizedPl)}</td>
                                 <td style={{ padding: '5px' }}>{formatPercent(wallet.realizedPlPercent)}</td>
@@ -660,13 +666,21 @@ const handleDeleteTransaction = async (idToDelete: string) => {
                                     {/* Conditionally render Sell button if shares remain */}
                                     {wallet.remainingShares && wallet.remainingShares > 0 ? (
                                         <button
-                                            //onClick={() => alert(`Sell action for Wallet ID: ${wallet.id} - Not implemented yet!`)} // <-- REMOVE OLD
-                                            onClick={() => handleOpenSellModal(wallet)} // <-- ADD THIS
-                                            style={{ /* ... existing styles ... */ }}
+                                            onClick={() => handleOpenSellModal(wallet)}
+                                            // --- UPDATE STYLES & CONTENT ---
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                padding: '5px', // Adjust as needed
+                                                color: '#28a745', // Example: Green color for sell icon
+                                                fontSize: '1.1em' // Adjust size if needed
+                                            }}
                                             title={`Sell from Wallet (Buy Price: ${formatCurrency(wallet.buyPrice)})`}
-                                            disabled={!wallet.remainingShares || wallet.remainingShares <= 0} // Keep disabled logic
+                                            disabled={!wallet.remainingShares || wallet.remainingShares <= 0}
                                         >
-                                            Sell
+                                            {/* Replace text with icon */}
+                                            <FaDollarSign />
                                         </button>
                                     ) : (
                                         '-' // Show nothing or '--' if no remaining shares
@@ -747,7 +761,7 @@ const handleDeleteTransaction = async (idToDelete: string) => {
 
                 {/* Transaction Table */}
                 {!isTxnLoading && !txnError && (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.9em' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
                         <thead>
                             <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
                                 {/* Simplified Columns */}
