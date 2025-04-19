@@ -40,6 +40,12 @@ export default function StockWalletPage() {
     // --- State for Stock Symbol (for Title) ---
     const [stockSymbol, setStockSymbol] = useState<string | undefined>(undefined);
 
+    // --- ADD STATE for Migration ---
+    const [isMigrating, setIsMigrating] = useState(false);
+    const [migrationError, setMigrationError] = useState<string | null>(null);
+    const [migrationSuccess, setMigrationSuccess] = useState<string | null>(null);
+    // --- END Migration State ---
+
     // State for fetched wallet data for THIS stock
     const [wallets, setWallets] = useState<StockWalletDataType[]>([]);
     // State for loading and error status
@@ -73,6 +79,224 @@ export default function StockWalletPage() {
     // --- END NEW STATE ---
 
     const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
+
+
+        // --- Function to fetch wallets FOR THIS STOCK ---
+        const fetchWallets = useCallback(async () => {
+            // Only fetch if stockId is available
+            if (!stockId) {
+                 console.log("Stock ID missing, cannot fetch wallets.");
+                 setWallets([]); // Clear wallets if no ID
+                 setIsLoading(false);
+                 return;
+            }
+    
+            setIsLoading(true);
+            setError(null);
+            try {
+                //console.log(`Workspaceing stock wallets for stockId: ${stockId}`);
+                // Define fields needed from the StockWallet model
+                const selectionSetNeeded = [
+                    'id',
+                    'buyPrice',
+                    'totalInvestment',
+                    'totalSharesQty',
+                    'tpPercent',
+                    'tpValue',
+                    'sharesSold',
+                    'realizedPl',
+                    'realizedPlPercent',
+                    'remainingShares',
+                    'portfolioStockId',
+                    'sellTxnCount',
+                    // No longer need portfolioStock.symbol here
+                ] as const;
+    
+                // --- ADDED FILTER ---
+                const result = await client.models.StockWallet.list({
+                    filter: { portfolioStockId: { eq: stockId } }, // Filter by stockId
+                    selectionSet: selectionSetNeeded,
+                });
+    
+                if (result.errors) throw result.errors;
+    
+                //console.log(`Workspaceed ${result.data.length} wallets for ${stockId}.`);
+                setWallets(result.data as StockWalletDataType[]);
+    
+            } catch (err: any) {
+                console.error("Error fetching stock wallets:", err);
+                const message = Array.isArray(err?.errors) ? err.errors[0].message : err.message;
+                setError(message || "Failed to fetch wallet data.");
+                setWallets([]);
+            } finally {
+                setIsLoading(false);
+            }
+        }, [stockId]); // <<< ADD stockId dependency
+
+    const handleMigrateBuysToWallets = useCallback(async () => {
+        if (!stockId) {
+            setMigrationError("Stock ID is missing.");
+            return;
+        }
+        if (!transactions || transactions.length === 0) {
+            setMigrationError("No transactions found for this stock to process.");
+            return;
+        }
+
+        setIsMigrating(true);
+        setMigrationError(null);
+        setMigrationSuccess(null);
+        console.log(`Starting wallet migration for stockId: ${stockId}`);
+
+        let walletsChecked = 0;
+        let walletsCreated = 0;
+        let walletsSkipped = 0;
+        let walletsFailed = 0;
+
+        try {
+            // --- 1. Get Stock Details (PDP, PLR) ---
+            // We need these for TP calculation. Fetch if not already in state.
+            console.log("Fetching stock details (PDP, PLR)...");
+            const { data: stockData, errors: stockErrors } = await client.models.PortfolioStock.get(
+                { id: stockId },
+                { selectionSet: ['pdp', 'plr'] } // Only fetch needed fields
+            );
+            if (stockErrors || !stockData) {
+                throw stockErrors || new Error("Could not fetch stock details (PDP/PLR).");
+            }
+            const pdpValue = stockData.pdp;
+            const plrValue = stockData.plr;
+            console.log(`Stock Details: PDP=${pdpValue}, PLR=${plrValue}`);
+
+            // --- 2. Process Existing Transactions (already in 'transactions' state) ---
+            console.log(`Processing ${transactions.length} transactions...`);
+            const buyGroups = new Map<string, {
+                buyPrice: number;
+                totalInvestment: number;
+                totalSharesQty: number;
+            }>();
+
+            for (const txn of transactions) {
+                if (txn.action === 'Buy' && typeof txn.price === 'number' && typeof txn.quantity === 'number' && typeof txn.investment === 'number') {
+                    // Use toFixed for consistent price key matching potential floating point inaccuracies
+                    const priceKey = txn.price.toFixed(4); // Adjust decimals if needed
+                    const group = buyGroups.get(priceKey) ?? {
+                        buyPrice: txn.price, // Store original precise price
+                        totalInvestment: 0,
+                        totalSharesQty: 0,
+                    };
+                    group.totalInvestment += txn.investment;
+                    group.totalSharesQty += txn.quantity;
+                    buyGroups.set(priceKey, group);
+                }
+            }
+            console.log(`Found ${buyGroups.size} unique Buy groups.`);
+
+            if (buyGroups.size === 0) {
+                setMigrationSuccess("No relevant Buy transactions found to create wallets from.");
+                setIsMigrating(false);
+                return;
+            }
+
+            // --- 3. Check Existing Wallets and Create New Ones ---
+            for (const [priceKey, group] of Array.from(buyGroups.entries())) {
+                walletsChecked++; // Make sure this and subsequent lines are inside the loop braces
+                const buyPrice = group.buyPrice;
+                console.log(`Processing group: Buy Price ${buyPrice}`);
+
+                // Idempotency Check
+                try {
+                    const { data: existingWallets, errors: checkErrors } = await client.models.StockWallet.list({
+                        filter: {
+                            and: [
+                                { portfolioStockId: { eq: stockId } },
+                                // Be careful with floating point comparisons; might need range or check after fetching
+                                // Let's fetch and check precise equality for now
+                                { buyPrice: { eq: buyPrice } }
+                            ]
+                        },
+                        limit: 1 // We only need to know if >= 1 exists
+                    });
+
+                    if (checkErrors) throw checkErrors; // Handle errors during check
+
+                    if (existingWallets && existingWallets.length > 0) {
+                        console.log(`-> Wallet already exists for price ${buyPrice}. Skipping.`);
+                        walletsSkipped++;
+                        continue; // Go to next buy group
+                    }
+
+                    // Wallet does not exist, proceed to create
+                    console.log(`-> Wallet for price ${buyPrice} does not exist. Creating...`);
+
+                    // Calculate TP
+                    let tpValue: number | null = null;
+                    let tpPercent: number | null = null;
+                    if (typeof pdpValue === 'number' && typeof plrValue === 'number' && buyPrice !== 0) {
+                        tpValue = buyPrice + (buyPrice * (pdpValue * plrValue / 100));
+                        tpPercent = pdpValue * plrValue;
+                    }
+
+                    // Prepare Wallet Data (NO 'owner' needed - generateClient handles it)
+                    const newWalletData = {
+                        portfolioStockId: stockId,
+                        buyPrice: buyPrice,
+                        totalInvestment: group.totalInvestment,
+                        totalSharesQty: group.totalSharesQty,
+                        sharesSold: 0,
+                        remainingShares: group.totalSharesQty,
+                        realizedPl: 0,
+                        sellTxnCount: 0, // Initialize required field
+                        tpValue: tpValue, // Will be null if calculation failed
+                        tpPercent: tpPercent, // Will be null if calculation failed
+                        realizedPlPercent: 0, // Initialize as 0%
+                        // Timestamps and __typename added automatically by generateClient
+                    };
+
+                    console.log("   Creating with data:", newWalletData);
+                    const { data: createdWallet, errors: createErrors } = await client.models.StockWallet.create(newWalletData);
+
+                    if (createErrors) throw createErrors;
+
+                    if (!createdWallet) {
+                        // This case should ideally not happen if errors is empty, but it's safest to check
+                        throw new Error("Wallet creation failed unexpectedly: No data returned after create call.");
+                    }
+                    
+                    console.log(`   Successfully created wallet: ${createdWallet.id}`);
+                    walletsCreated++;
+
+                } catch (err: any) {
+                    console.error(`Error processing group for buy price ${buyPrice}:`, err);
+                    const message = Array.isArray(err) ? err[0].message : err.message;
+                    // Store only the first error encountered? Or collect all? Let's store first.
+                    if (!migrationError) {
+                        setMigrationError(`Failed on price ${buyPrice}: ${message}`);
+                    }
+                    walletsFailed++;
+                }
+            } // End loop through buyGroups
+
+            // --- 4. Set Final Status ---
+            if (walletsFailed > 0) {
+                setMigrationError(`Processed ${buyGroups.size} buy groups. ${walletsCreated} wallets created, ${walletsSkipped} skipped, ${walletsFailed} failed. Check console for details.`);
+            } else {
+                setMigrationSuccess(`Migration complete. ${walletsCreated} new wallets created, ${walletsSkipped} existing wallets skipped.`);
+            }
+
+            // --- 5. Refresh Wallet List ---
+            fetchWallets(); // Refresh the displayed list
+
+        } catch (error: any) {
+            console.error("Critical error during migration process:", error);
+            const message = Array.isArray(error?.errors) ? error.errors[0].message : error.message;
+            setMigrationError(message || "An unexpected error occurred.");
+        } finally {
+            setIsMigrating(false);
+        }
+    }, [stockId, transactions, fetchWallets]); // Dependencies needed by the handler
+
+// ... rest of the component (sorting logic, formatting helpers, return statement with tables/modals) ...
 
     // --- ADD Function to Fetch Transactions ---
     // Adapted from txns/[stockId]/add/page.tsx
@@ -346,57 +570,6 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
         }
     }, [stockId]); // Dependency on stockId
 
-    // --- Function to fetch wallets FOR THIS STOCK ---
-    const fetchWallets = useCallback(async () => {
-        // Only fetch if stockId is available
-        if (!stockId) {
-             console.log("Stock ID missing, cannot fetch wallets.");
-             setWallets([]); // Clear wallets if no ID
-             setIsLoading(false);
-             return;
-        }
-
-        setIsLoading(true);
-        setError(null);
-        try {
-            //console.log(`Workspaceing stock wallets for stockId: ${stockId}`);
-            // Define fields needed from the StockWallet model
-            const selectionSetNeeded = [
-                'id',
-                'buyPrice',
-                'totalInvestment',
-                'totalSharesQty',
-                'tpPercent',
-                'tpValue',
-                'sharesSold',
-                'realizedPl',
-                'realizedPlPercent',
-                'remainingShares',
-                'portfolioStockId',
-                'sellTxnCount',
-                // No longer need portfolioStock.symbol here
-            ] as const;
-
-            // --- ADDED FILTER ---
-            const result = await client.models.StockWallet.list({
-                filter: { portfolioStockId: { eq: stockId } }, // Filter by stockId
-                selectionSet: selectionSetNeeded,
-            });
-
-            if (result.errors) throw result.errors;
-
-            //console.log(`Workspaceed ${result.data.length} wallets for ${stockId}.`);
-            setWallets(result.data as StockWalletDataType[]);
-
-        } catch (err: any) {
-            console.error("Error fetching stock wallets:", err);
-            const message = Array.isArray(err?.errors) ? err.errors[0].message : err.message;
-            setError(message || "Failed to fetch wallet data.");
-            setWallets([]);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [stockId]); // <<< ADD stockId dependency
 
     // Fetch wallet data when stockId changes or fetchWallets updates
     useEffect(() => {
@@ -703,7 +876,21 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                     Add Buy Transaction
                 </button>
                 {/* --- END BUTTON --- */}
+
+                {/* --- ADD MIGRATION BUTTON --- */}
+                <button
+                    onClick={handleMigrateBuysToWallets} // We will create this function next
+                    disabled={isMigrating || isLoading || isTxnLoading} // Disable while loading/migrating
+                    style={{ padding: '5px 10px', fontSize: '0.8em' }}
+                 >
+                    {isMigrating ? 'Processing...' : 'Generate Wallets from Buys'}
+                 </button>
+                 {/* --- END MIGRATION BUTTON --- */}
             </div>
+
+            {/* Display Migration Feedback */}
+            {migrationError && <p style={{ color: 'red', fontSize: '0.9em' }}>Migration Error: {migrationError}</p>}
+             {migrationSuccess && <p style={{ color: 'lightgreen', fontSize: '0.9em' }}>{migrationSuccess}</p>}
 
             <h3>Wallets</h3>
 
