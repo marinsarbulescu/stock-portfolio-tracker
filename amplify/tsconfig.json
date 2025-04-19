@@ -14,7 +14,7 @@
       ]
     },
     // --- Ensure JS Output ---
-    "noEmit": false,       // Explicitly allow JS file generation
+    "noEmit": true,       // Explicitly allow JS file generation
     "outDir": "dist",      // Standard output directory (Amplify might manage this internally)
     "sourceMap": true,     // Recommended for debugging
     "declaration": false    // Recommended for TS interoperability

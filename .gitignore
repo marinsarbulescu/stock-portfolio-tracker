@@ -50,5 +50,9 @@ amplify/logs/
 amplify_outputs*.json
 amplifyconfiguration.json
 
+# Amplify backend build artifacts
+amplify/**/*.js
+amplify/**/*.js.map
+
 # Build output
 dist/
