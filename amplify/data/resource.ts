@@ -1,6 +1,6 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
-import { getYfinanceData } from '../functions/getYfinanceData/resource';
-import { sendStockEmail } from '../functions/sendStockEmail/resource';
+import { getYfinanceData } from '../functions/getYfinanceData/resource.js';
+import { sendStockEmail } from '../functions/sendStockEmail/resource.js';
 
 // Define Enums first
 const stockTypeEnum = a.enum(['Stock', 'ETF', 'Crypto']); // Changed order to match default in form example
@@ -148,13 +148,12 @@ const schema = a.schema({
 export type Schema = ClientSchema<typeof schema>;
 
 // Define the data resource for your backend
-export const data = defineData({
+// --- ADD TYPE ANNOTATION ---
+export const data = defineData({ // <<< Add : DataResources<Schema>
   schema,
-  // Configure authorization modes
   authorizationModes: {
-    // Use Cognito User Pools as the default mechanism for authorizing API calls
     defaultAuthorizationMode: 'userPool',
-    // You could add an API key for public read access if needed later
     // apiKeyAuthorizationMode: { expiresInDays: 30 },
   },
 });
+// --- END TYPE ANNOTATION ---

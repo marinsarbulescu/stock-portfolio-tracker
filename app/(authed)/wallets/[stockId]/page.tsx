@@ -697,13 +697,15 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
     return (
         <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <h3>Wallets for {stockSymbol?.toUpperCase()}</h3>
+                <h3>{stockSymbol?.toUpperCase()}</h3>
                 {/* --- ADD BUTTON --- */}
                 <button onClick={handleOpenBuyModal} style={{ padding: '8px 15px' }}>
                     Add Buy Transaction
                 </button>
                 {/* --- END BUTTON --- */}
             </div>
+
+            <h3>Wallets</h3>
 
             {error && <p style={{ color: 'red' }}>Error loading wallets: {error}</p>}
 

@@ -1,0 +1,22 @@
+// amplify/functions/walletMigrationScript/tsconfig.json
+{
+  "compilerOptions": {
+    // --- Settings for Node.js ESM Runtime (based on package.json type="module") ---
+    "target": "es2022",         // Target modern Node.js runtime
+    "module": "node16",         // Handles ESM/CJS interop for Node.js
+    "moduleResolution": "node16", // Corresponds to module: node16
+    "outDir": "./dist",         // <<< Explicitly output to dist folder
+    "rootDir": "./src",         // <<< Specify where source .ts files are
+    // --- Essential Flags ---
+    "esModuleInterop": true,    // Allow default imports from CJS modules
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,             // Enable strict type checking
+    "skipLibCheck": true,       // Skip checking library declaration files
+    // --- Ensure Output ---
+    "noEmit": false,          // <<< MUST be false (or omitted) to generate JS
+    "sourceMap": true,        // Generate source maps for debugging
+    "declaration": false      // Do not generate .d.ts files
+  },
+  "include": ["./src/**/*.ts"], // Only compile files in the src directory
+  "exclude": ["node_modules", "dist"] // Ignore dependencies and previous output
+}

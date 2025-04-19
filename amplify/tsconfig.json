@@ -12,6 +12,16 @@
       "$amplify/*": [
         "../.amplify/generated/*"
       ]
-    }
-  }
+    },
+    // --- Ensure JS Output ---
+    "noEmit": false,       // Explicitly allow JS file generation
+    "outDir": "dist",      // Standard output directory (Amplify might manage this internally)
+    "sourceMap": true,     // Recommended for debugging
+    "declaration": false    // Recommended for TS interoperability
+    // --- End Ensure JS Output ---
+  },
+  // --- Add Include/Exclude ---
+  "include": ["./**/*.ts"], // Process all .ts files within the amplify folder
+  "exclude": ["node_modules", "**/dist"] // Ignore node_modules and output folders
+  // --- End Include/Exclude ---
 }
