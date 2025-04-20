@@ -151,221 +151,240 @@ export default function StockWalletPage() {
 
         // Inside StockWalletPage component
 
-    const handleMigrateBuysToWallets = useCallback(async () => {
-        if (!stockId) { setMigrationError("Stock ID is missing."); return; }
-        // Use the 'transactions' state which should already be populated
-        if (!transactions) { setMigrationError("Transactions not loaded yet."); return; } // Check if transactions array itself is null/undefined
-
-        setIsMigrating(true);
-        setMigrationError(null);
-        setMigrationSuccess(null);
-        console.log(`[MIGRATE] Starting wallet migration for stockId: ${stockId}`);
-
-        let oldBuyTxnCount = 0;
-        let buyGroupsCreated = 0;
-        // walletsChecked isn't strictly needed here, we check map keys
-        let walletsCreated = 0;
-        let walletsSkipped = 0;
-        let walletsFailed = 0;
-
-        try {
-            // --- 1. Get Stock Details (Ratio, PDP, PLR) ---
-            console.log("[MIGRATE] Fetching stock details (Ratio, PDP, PLR)...");
-            const { data: stockData, errors: stockErrors } = await client.models.PortfolioStock.get(
-                { id: stockId }, { selectionSet: ['swingHoldRatio', 'pdp', 'plr'] }
-            );
-            // Allow migration to proceed even if PDP/PLR missing, but ratio is important
-            if (stockErrors) throw stockErrors; // Throw if fetch fails critically
-            if (!stockData) throw new Error("Could not fetch stock details.");
-
-            const pdpValue = stockData.pdp;
-            const plrValue = stockData.plr;
-            // Determine default ratio (e.g., 100% Swing if not set or invalid)
-            let ratio = 1.0; // Default to 100% Swing
-            if (typeof stockData.swingHoldRatio === 'number' && stockData.swingHoldRatio >= 0 && stockData.swingHoldRatio <= 100) {
-                 ratio = stockData.swingHoldRatio / 100.0;
-            } else {
-                 console.warn(`[MIGRATE] Stock swingHoldRatio (${stockData.swingHoldRatio}) is missing or invalid. Defaulting to 100% Swing (ratio=1.0) for migration.`);
-                 ratio = 1.0; // Explicitly set default if needed
-            }
-            console.log(`[MIGRATE] Stock Details: PDP=${pdpValue}, PLR=${plrValue}, Ratio=${ratio * 100}% Swing`);
-
-            // --- 2. Filter for OLD Buy Transactions (no txnType) ---
-            const epsilon = 0.000001; // For checking non-zero shares/investment
-            const oldBuyTransactions = transactions.filter(
-                txn => txn.action === 'Buy'
-                    && !txn.txnType // <<< Key filter for historical data
-                    && typeof txn.quantity === 'number' && txn.quantity > epsilon
-                    && typeof txn.price === 'number'
-                    && typeof txn.investment === 'number' && txn.investment > epsilon
-            );
-            oldBuyTxnCount = oldBuyTransactions.length;
-            console.log(`[MIGRATE] Found ${oldBuyTxnCount} historical Buy transactions potentially needing migration.`);
-
-            if (oldBuyTxnCount === 0) {
-                setMigrationSuccess("No historical Buy transactions found needing migration.");
-                setIsMigrating(false);
-                return;
-            }
-
-            // --- 3. Aggregate Expected Shares/Investment by Buy Price from OLD Transactions ---
-            const expectedWalletData = new Map<string, {
-                buyPrice: number;
-                expectedSwingShares: number;
-                expectedHoldShares: number;
-                expectedTotalInvestment: number;
-            }>();
-
-            for (const txn of oldBuyTransactions) {
-                // Type guards passed by filter, but keep checks just in case
-                if (typeof txn.price !== 'number' || typeof txn.quantity !== 'number' || typeof txn.investment !== 'number') continue;
-
-                const priceKey = txn.price.toFixed(4); // Consistent key
-                const group = expectedWalletData.get(priceKey) ?? {
-                    buyPrice: txn.price,
-                    expectedSwingShares: 0,
-                    expectedHoldShares: 0,
-                    expectedTotalInvestment: 0,
-                };
-
-                const txnSwingShares = txn.quantity * ratio;
-                const txnHoldShares = txn.quantity * (1 - ratio);
-
-                group.expectedSwingShares += txnSwingShares;
-                group.expectedHoldShares += txnHoldShares;
-                group.expectedTotalInvestment += txn.investment;
-                expectedWalletData.set(priceKey, group);
-            }
-            buyGroupsCreated = expectedWalletData.size;
-            console.log(`[MIGRATE] Aggregated old buys into ${buyGroupsCreated} price groups.`);
-
-            // --- 4. Fetch ALL Existing Wallets for this Stock to check against ---
-            console.log("[MIGRATE] Fetching ALL existing wallets for this stock...");
-            const { data: existingDbWalletsData, errors: fetchErrors } = await client.models.StockWallet.list({
-                 filter: { portfolioStockId: { eq: stockId } },
-                 selectionSet: ['id', 'buyPrice', 'walletType'], // Only need these for checking
-                 limit: 1000 // Fetch up to 1000 (add pagination if more expected)
-             });
-            if (fetchErrors) throw fetchErrors;
-            const existingDbWallets = existingDbWalletsData || [];
-            console.log(`[MIGRATE] Found ${existingDbWallets.length} existing wallet records in DB.`);
-
-            // Create a lookup map for quick checks: "buyPrice_walletType" -> true
-            const existingWalletMap = new Map<string, boolean>();
-            existingDbWallets.forEach(w => {
-                if (w.buyPrice != null && w.walletType) {
-                     const priceKey = w.buyPrice.toFixed(4);
-                     existingWalletMap.set(`${priceKey}_${w.walletType}`, true);
+        const handleMigrateBuysToWallets = useCallback(async () => {
+            if (!stockId) { setMigrationError("Stock ID is missing."); return; }
+            if (!transactions) { setMigrationError("Transactions not loaded yet."); return; }
+    
+            setIsMigrating(true);
+            setMigrationError(null);
+            setMigrationSuccess(null);
+            console.log(`[MIGRATE] Starting wallet migration for stockId: ${stockId}`);
+    
+            // Counters for summary
+            let oldBuyTxnCount = 0;
+            let buyGroupsCreated = 0;
+            let walletsCreated = 0;
+            let walletsSkipped = 0;
+            let walletsFailed = 0;
+    
+            try {
+                // --- 1. Get Stock Details (Ratio, PDP, PLR) ---
+                console.log("[MIGRATE] Fetching stock details...");
+                const { data: stockData, errors: stockErrors } = await client.models.PortfolioStock.get(
+                    { id: stockId }, { selectionSet: ['swingHoldRatio', 'pdp', 'plr'] }
+                );
+                if (stockErrors) throw stockErrors;
+                if (!stockData) throw new Error("Could not fetch stock details.");
+    
+                const pdpValue = stockData.pdp;
+                const plrValue = stockData.plr;
+                let ratio = 0.5; // Default to 50/50 if ratio invalid/missing
+                if (typeof stockData.swingHoldRatio === 'number' && stockData.swingHoldRatio >= 0 && stockData.swingHoldRatio <= 100) {
+                    ratio = stockData.swingHoldRatio / 100.0;
+                } else {
+                    console.warn(`[MIGRATE] Invalid stock swingHoldRatio (${stockData.swingHoldRatio}). Defaulting to 50/50 split.`);
                 }
-            });
-
-            // --- 5. Iterate Aggregated Groups and Create MISSING Typed Wallets ---
-            for (const [priceKey, expectedData] of Array.from(expectedWalletData.entries())) {
-                const { buyPrice, expectedSwingShares, expectedHoldShares, expectedTotalInvestment } = expectedData;
-
-                // Calculate proportional investment split for this group
-                const totalExpectedShares = expectedSwingShares + expectedHoldShares;
-                let groupSwingInvestment = 0;
-                let groupHoldInvestment = 0;
-                if (totalExpectedShares > epsilon && expectedTotalInvestment > 0) {
-                     groupSwingInvestment = (expectedSwingShares / totalExpectedShares) * expectedTotalInvestment;
-                     groupHoldInvestment = (expectedHoldShares / totalExpectedShares) * expectedTotalInvestment;
-                     if (Math.abs((groupSwingInvestment + groupHoldInvestment) - expectedTotalInvestment) > 0.001) {
-                        groupHoldInvestment = expectedTotalInvestment - groupSwingInvestment;
+                console.log(`[MIGRATE] Stock Details: PDP=${pdpValue}, PLR=${plrValue}, Ratio=${ratio * 100}% Swing`);
+    
+    
+                // --- 2. Filter for OLD Buy Transactions (no txnType) ---
+                // Use SHARE_EPSILON for checks
+                const oldBuyTransactions = transactions.filter(
+                    txn => txn.action === 'Buy'
+                        && !txn.txnType // Key filter
+                        && typeof txn.quantity === 'number' && txn.quantity > SHARE_EPSILON
+                        && typeof txn.price === 'number'
+                        && typeof txn.investment === 'number' && txn.investment > SHARE_EPSILON
+                );
+                oldBuyTxnCount = oldBuyTransactions.length;
+                console.log(`[MIGRATE] Found ${oldBuyTxnCount} historical Buy transactions.`);
+                if (oldBuyTxnCount === 0) {
+                    setMigrationSuccess("No historical Buy transactions found needing migration.");
+                    setIsMigrating(false);
+                    return;
+                }
+    
+    
+                // --- 3. Aggregate RAW Shares/Investment by Buy Price ---
+                // Store RAW values first
+                const expectedWalletData_raw = new Map<string, {
+                    buyPrice: number;
+                    expectedSwingShares_raw: number;
+                    expectedHoldShares_raw: number;
+                    expectedTotalInvestment_raw: number;
+                }>();
+    
+                for (const txn of oldBuyTransactions) {
+                     if (typeof txn.price !== 'number' || typeof txn.quantity !== 'number' || typeof txn.investment !== 'number') continue;
+                     const priceKey = txn.price.toFixed(4); // Key for grouping
+                     const group = expectedWalletData_raw.get(priceKey) ?? {
+                         buyPrice: txn.price, expectedSwingShares_raw: 0, expectedHoldShares_raw: 0, expectedTotalInvestment_raw: 0,
+                     };
+    
+                     // Calculate RAW splits for this transaction
+                     const txnSwingShares_raw = txn.quantity * ratio;
+                     const txnHoldShares_raw = txn.quantity * (1 - ratio);
+    
+                     // Accumulate RAW values
+                     group.expectedSwingShares_raw += txnSwingShares_raw;
+                     group.expectedHoldShares_raw += txnHoldShares_raw;
+                     group.expectedTotalInvestment_raw += txn.investment;
+                     expectedWalletData_raw.set(priceKey, group);
+                }
+                buyGroupsCreated = expectedWalletData_raw.size;
+                console.log(`[MIGRATE] Aggregated old buys into ${buyGroupsCreated} price groups (raw values).`);
+    
+    
+                // --- 4. Fetch ALL Existing Wallets to check against ---
+                console.log("[MIGRATE] Fetching existing wallets...");
+                const { data: existingDbWalletsData, errors: fetchErrors } = await client.models.StockWallet.list({ /* ... fetch existing ... */ });
+                if (fetchErrors) throw fetchErrors;
+                const existingDbWallets = existingDbWalletsData || [];
+                const existingWalletMap = new Map<string, boolean>();
+                existingDbWallets.forEach(w => {
+                    if (w.buyPrice != null && w.walletType) {
+                         const priceKey = w.buyPrice.toFixed(4);
+                         existingWalletMap.set(`${priceKey}_${w.walletType}`, true);
+                    }
+                });
+                console.log(`[MIGRATE] Found ${existingDbWallets.length} existing wallets.`);
+    
+    
+                // --- 5. Iterate Aggregated Groups, ROUND values, and Create MISSING Wallets ---
+                for (const [priceKey, rawData] of Array.from(expectedWalletData_raw.entries())) {
+                    const { buyPrice, expectedSwingShares_raw, expectedHoldShares_raw, expectedTotalInvestment_raw } = rawData;
+    
+                    // --- Round the AGGREGATED values for this price group ---
+                    const roundedSwingShares = parseFloat(expectedSwingShares_raw.toFixed(SHARE_PRECISION));
+                    const roundedHoldShares = parseFloat(expectedHoldShares_raw.toFixed(SHARE_PRECISION));
+                    const roundedTotalInvestment = parseFloat(expectedTotalInvestment_raw.toFixed(CURRENCY_PRECISION));
+    
+                    const finalSwingShares = (Math.abs(roundedSwingShares) < SHARE_EPSILON) ? 0 : roundedSwingShares;
+                    const finalHoldShares = (Math.abs(roundedHoldShares) < SHARE_EPSILON) ? 0 : roundedHoldShares;
+                    const finalTotalInvestment = (Math.abs(roundedTotalInvestment) < 0.001) ? 0 : roundedTotalInvestment; // Currency epsilon
+                    const finalTotalShares = finalSwingShares + finalHoldShares; // Sum of rounded parts
+    
+                    // --- Recalculate & Round proportional investment split using FINAL rounded values ---
+                    let finalSwingInvestment = 0;
+                    let finalHoldInvestment = 0;
+                    if (finalTotalShares > SHARE_EPSILON && finalTotalInvestment > 0) {
+                        finalSwingInvestment = (finalSwingShares / finalTotalShares) * finalTotalInvestment;
+                        finalHoldInvestment = (finalHoldShares / finalTotalShares) * finalTotalInvestment;
+                        // Adjust raw values slightly before rounding
+                        if (Math.abs((finalSwingInvestment + finalHoldInvestment) - finalTotalInvestment) > 0.0001) {
+                            finalHoldInvestment = finalTotalInvestment - finalSwingInvestment;
+                        }
+                        // Round the final split investment values
+                        finalSwingInvestment = parseFloat(finalSwingInvestment.toFixed(CURRENCY_PRECISION));
+                        finalHoldInvestment = parseFloat(finalHoldInvestment.toFixed(CURRENCY_PRECISION));
+                    }
+                     // Ensure final rounded splits sum exactly to final rounded total investment
+                     if(Math.abs((finalSwingInvestment + finalHoldInvestment) - finalTotalInvestment) > 0.001) {
+                          console.warn(`Adjusting final investment split for price ${buyPrice} due to rounding.`);
+                          finalHoldInvestment = finalTotalInvestment - finalSwingInvestment; // Assign remainder
+                          // Re-round just in case
+                          finalHoldInvestment = parseFloat(finalHoldInvestment.toFixed(CURRENCY_PRECISION));
                      }
-                }
-
-                // --- Check/Create SWING Wallet ---
-                if (expectedSwingShares > epsilon) {
-                    const swingMapKey = `${priceKey}_Swing`;
-                    if (existingWalletMap.has(swingMapKey)) {
-                        console.log(`[MIGRATE - Swing] Wallet already exists for price ${buyPrice}. Skipping.`);
-                        walletsSkipped++;
-                    } else {
-                        console.log(`[MIGRATE - Swing] Creating new wallet for price ${buyPrice}... Shares: ${expectedSwingShares}`);
-                        try {
-                            let tpValue = null, tpPercent = null;
-                            if (typeof pdpValue === 'number' && typeof plrValue === 'number' && buyPrice) {
-                                 tpValue = buyPrice + (buyPrice * (pdpValue * plrValue / 100));
-                                 tpPercent = pdpValue * plrValue;
+                    // --- End Investment Split Rounding ---
+    
+    
+                    // --- Check/Create SWING Wallet (using FINAL rounded values) ---
+                    if (finalSwingShares > SHARE_EPSILON) {
+                        const swingMapKey = `${priceKey}_Swing`;
+                        if (existingWalletMap.has(swingMapKey)) {
+                            console.log(`[MIGRATE - Swing] Wallet exists for price ${buyPrice}. Skipping.`);
+                            walletsSkipped++;
+                        } else {
+                            console.log(`[MIGRATE - Swing] Creating new wallet for price ${buyPrice}... Shares: ${finalSwingShares}, Inv: ${finalSwingInvestment}`);
+                            try {
+                                // Calculate TP (Raw then Round)
+                                let tpValue_raw = null, tpPercent = null;
+                                let tpValue_final = null;
+                                if (typeof pdpValue === 'number' && typeof plrValue === 'number' && buyPrice) {
+                                    tpValue_raw = buyPrice + (buyPrice * (pdpValue * plrValue / 100));
+                                    tpPercent = pdpValue * plrValue;
+                                    tpValue_final = parseFloat(tpValue_raw.toFixed(CURRENCY_PRECISION)); // Round TP
+                                }
+    
+                                const createPayload = {
+                                    portfolioStockId: stockId,
+                                    walletType: 'Swing' as const,
+                                    buyPrice: buyPrice,
+                                    totalSharesQty: finalSwingShares, // Use FINAL rounded value
+                                    totalInvestment: finalSwingInvestment, // Use FINAL rounded value
+                                    sharesSold: 0,
+                                    remainingShares: finalSwingShares, // Use FINAL rounded value
+                                    realizedPl: 0, sellTxnCount: 0,
+                                    tpValue: tpValue_final, // Use FINAL rounded value
+                                    tpPercent: tpPercent, realizedPlPercent: 0,
+                                };
+                                const { errors } = await client.models.StockWallet.create(createPayload as any);
+                                if (errors) throw errors;
+                                console.log(`[MIGRATE - Swing] Create SUCCESS`);
+                                walletsCreated++;
+                            } catch (err: any) {
+                                console.error(`[MIGRATE - Swing] FAILED creation for price ${buyPrice}:`, err?.errors || err);
+                                walletsFailed++;
+                                if (!migrationError) setMigrationError(`Failed creating Swing wallet for price ${buyPrice}: ${err.message}`);
                             }
-                            const createPayload = {
-                                portfolioStockId: stockId,
-                                walletType: 'Swing' as const,
-                                buyPrice: buyPrice,
-                                totalSharesQty: expectedSwingShares,
-                                totalInvestment: groupSwingInvestment,
-                                sharesSold: 0, remainingShares: expectedSwingShares,
-                                realizedPl: 0, sellTxnCount: 0,
-                                tpValue: tpValue, tpPercent: tpPercent, realizedPlPercent: 0,
-                            };
-                            const { errors } = await client.models.StockWallet.create(createPayload as any);
-                            if (errors) throw errors;
-                            console.log(`[MIGRATE - Swing] Create SUCCESS for price ${buyPrice}`);
-                            walletsCreated++;
-                        } catch (err: any) {
-                            console.error(`[MIGRATE - Swing] FAILED creation for price ${buyPrice}:`, err?.errors || err);
-                            walletsFailed++;
-                            if (!migrationError) setMigrationError(`Failed creating Swing wallet for price ${buyPrice}: ${err.message}`);
                         }
                     }
-                }
-
-                // --- Check/Create HOLD Wallet ---
-                if (expectedHoldShares > epsilon) {
-                     const holdMapKey = `${priceKey}_Hold`;
-                     if (existingWalletMap.has(holdMapKey)) {
-                         console.log(`[MIGRATE - Hold] Wallet already exists for price ${buyPrice}. Skipping.`);
-                         walletsSkipped++;
-                     } else {
-                         console.log(`[MIGRATE - Hold] Creating new wallet for price ${buyPrice}... Shares: ${expectedHoldShares}`);
-                         try {
-                             // TP generally not applied to Hold wallets by default
-                             const createPayload = {
-                                 portfolioStockId: stockId,
-                                 walletType: 'Hold' as const,
-                                 buyPrice: buyPrice,
-                                 totalSharesQty: expectedHoldShares,
-                                 totalInvestment: groupHoldInvestment,
-                                 sharesSold: 0, remainingShares: expectedHoldShares,
-                                 realizedPl: 0, sellTxnCount: 0,
-                                 tpValue: null, tpPercent: null, realizedPlPercent: 0,
-                             };
-                             const { errors } = await client.models.StockWallet.create(createPayload as any);
-                             if (errors) throw errors;
-                             console.log(`[MIGRATE - Hold] Create SUCCESS for price ${buyPrice}`);
-                             walletsCreated++;
-                         } catch (err: any) {
-                             console.error(`[MIGRATE - Hold] FAILED creation for price ${buyPrice}:`, err?.errors || err);
-                             walletsFailed++;
-                             if (!migrationError) setMigrationError(`Failed creating Hold wallet for price ${buyPrice}: ${err.message}`);
+    
+                    // --- Check/Create HOLD Wallet (using FINAL rounded values) ---
+                    if (finalHoldShares > SHARE_EPSILON) {
+                         const holdMapKey = `${priceKey}_Hold`;
+                         if (existingWalletMap.has(holdMapKey)) {
+                             console.log(`[MIGRATE - Hold] Wallet exists for price ${buyPrice}. Skipping.`);
+                             walletsSkipped++;
+                         } else {
+                             console.log(`[MIGRATE - Hold] Creating new wallet for price ${buyPrice}... Shares: ${finalHoldShares}, Inv: ${finalHoldInvestment}`);
+                             try {
+                                 const createPayload = {
+                                     portfolioStockId: stockId,
+                                     walletType: 'Hold' as const,
+                                     buyPrice: buyPrice,
+                                     totalSharesQty: finalHoldShares, // Use FINAL rounded value
+                                     totalInvestment: finalHoldInvestment, // Use FINAL rounded value
+                                     sharesSold: 0,
+                                     remainingShares: finalHoldShares, // Use FINAL rounded value
+                                     realizedPl: 0, sellTxnCount: 0,
+                                     tpValue: null, tpPercent: null, realizedPlPercent: 0, // TP usually null for Hold
+                                 };
+                                 const { errors } = await client.models.StockWallet.create(createPayload as any);
+                                 if (errors) throw errors;
+                                 console.log(`[MIGRATE - Hold] Create SUCCESS`);
+                                 walletsCreated++;
+                             } catch (err: any) {
+                                 console.error(`[MIGRATE - Hold] FAILED creation for price ${buyPrice}:`, err?.errors || err);
+                                 walletsFailed++;
+                                 if (!migrationError) setMigrationError(`Failed creating Hold wallet for price ${buyPrice}: ${err.message}`);
+                             }
                          }
-                     }
+                    }
+                } // End loop through aggregated buyGroups
+    
+    
+                // --- 6. Set Final Status ---
+                if (walletsFailed > 0) {
+                    setMigrationError(`Processed ${oldBuyTxnCount} txns (${buyGroupsCreated} groups). Created: ${walletsCreated}, Skipped: ${walletsSkipped}, Failed: ${walletsFailed}. Check console.`);
+                } else if (walletsCreated > 0) {
+                    setMigrationSuccess(`Migration complete. ${walletsCreated} new wallets created, ${walletsSkipped} existing wallets skipped.`);
+                } else {
+                    setMigrationSuccess(`Migration check complete. No new wallets needed, ${walletsSkipped} existing wallets skipped.`);
                 }
-            } // End loop through aggregated buyGroups
-
-            // --- 6. Set Final Status ---
-            if (walletsFailed > 0) {
-                setMigrationError(`Processed ${oldBuyTxnCount} txns (${buyGroupsCreated} groups). Created: ${walletsCreated}, Skipped: ${walletsSkipped}, Failed: ${walletsFailed}. Check console.`);
-            } else if (walletsCreated > 0) {
-                setMigrationSuccess(`Migration complete. ${walletsCreated} new wallets created, ${walletsSkipped} existing wallets skipped.`);
-            } else {
-                setMigrationSuccess(`Migration check complete. No new wallets needed, ${walletsSkipped} existing wallets skipped.`);
+    
+                // --- 7. Refresh Wallet List ---
+                console.log("[MIGRATE] Refreshing wallet list...");
+                fetchWallets();
+    
+            } catch (error: any) {
+                console.error("[MIGRATE] Critical error during migration process:", error);
+                const message = Array.isArray(error?.errors) ? error.errors[0].message : error.message;
+                setMigrationError(message || "An unexpected error occurred during migration.");
+            } finally {
+                setIsMigrating(false);
             }
-
-            // --- 7. Refresh Wallet List ---
-            console.log("[MIGRATE] Refreshing wallet list...");
-            fetchWallets();
-
-        } catch (error: any) {
-            console.error("[MIGRATE] Critical error during migration process:", error);
-            const message = Array.isArray(error?.errors) ? error.errors[0].message : error.message;
-            setMigrationError(message || "An unexpected error occurred during migration.");
-        } finally {
-            setIsMigrating(false);
-        }
-    }, [stockId, transactions, fetchWallets]); // Dependencies needed by the handler
-
+        }, [stockId, transactions, fetchWallets]); // Dependencies needed by the handler
 // ... rest of the component (sorting logic, formatting helpers, return statement with tables/modals) ...
 
     // --- ADD Function to Fetch Transactions ---
