@@ -750,7 +750,7 @@ export default function HomePage() {
                         sortedTableData.map((item, index) => ( // item should match ReportDataItem structure
                             <tr key={item.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
                                 <td style={{ padding: '5px' }}>
-                                <Link
+                                {/* <Link
                                     href={`/txns/${item.id}/add`}
                                     style={{
                                     textDecoration: 'none',
@@ -759,7 +759,7 @@ export default function HomePage() {
                                     }}
                                 >
                                     {item.symbol}
-                                </Link> |
+                                </Link> | */}
 
                                 <Link
                                     href={`/wallets/${item.id}`}
