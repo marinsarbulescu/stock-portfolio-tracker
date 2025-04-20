@@ -30,6 +30,10 @@ interface TransactionFormProps {
 // Define Buy Type options
 type BuyTypeValue = 'Swing' | 'Hold' | 'Split';
 
+const SHARE_PRECISION = 5;
+const CURRENCY_PRECISION = 2;
+const SHARE_EPSILON = 1 / (10**(SHARE_PRECISION + 2)); // For zero-checking
+
 // Default values for resetting the form
 const defaultFormState = {
   date: '',
@@ -135,11 +139,19 @@ export default function TransactionForm({
     const investmentValue = investment ? parseFloat(investment) : undefined;
 
     // --- Initialize derived fields ---
-    let quantity: number | undefined | null = null; // TOTAL quantity for Buy/Div
-    let calculatedSwingShares: number | undefined | null = null;
-    let calculatedHoldShares: number | undefined | null = null;
-    let lbd: number | undefined | null = null;
-    let tp: number | undefined | null = null;
+    let quantity_raw: number | undefined | null = null; // Raw total quantity
+    let quantity_final: number | undefined | null = null; // Rounded total quantity
+    let quantity: number | undefined | null = null;    
+    let calculatedSwingShares_raw: number | undefined | null = null;
+    let calculatedHoldShares_raw: number | undefined | null = null;
+    let calculatedSwingShares_final: number | undefined | null = null;
+    let calculatedHoldShares_final: number | undefined | null = null;
+
+    let lbd_raw: number | undefined | null = null;
+    let tp_raw: number | undefined | null = null;
+    let lbd_final: number | undefined | null = null;
+    let tp_final: number | undefined | null = null;
+
     let pdpValue: number | null | undefined = null;
     let plrValue: number | null | undefined = null;
 
@@ -147,7 +159,13 @@ export default function TransactionForm({
     // --- Calculations for Buy action ---
     if (action === 'Buy') {
         if (investmentValue && priceValue && priceValue > 0) {
-            quantity = investmentValue / priceValue; // Calculate total quantity
+          quantity_raw = investmentValue / priceValue; // Calculate raw total quantity
+
+          // --- Round TOTAL quantity ---
+          const roundedQuantity = parseFloat(quantity_raw.toFixed(SHARE_PRECISION));
+          quantity_final = (Math.abs(roundedQuantity) < SHARE_EPSILON) ? 0 : roundedQuantity;
+          console.log(`Calculated Quantity - Raw: ${quantity_raw}, Rounded: ${quantity_final}`);
+          // --- End Rounding ---
         } else {
             setError("Investment and positive Price are required to calculate quantity for Buy.");
             setIsLoading(false); return;
@@ -175,11 +193,16 @@ export default function TransactionForm({
                 ratio = 0.0; // 0% Swing (100% Hold)
             } // Default ratio remains 1.0 (100% Swing) for 'Swing' type
 
-             // Calculate LBD/TP
-             if (typeof pdpValue === 'number' && typeof plrValue === 'number' && priceValue) {
-                 lbd = priceValue - (priceValue * (pdpValue / 100));
-                 tp = priceValue + (priceValue * (pdpValue * plrValue / 100));
-             } else { console.log("Could not calculate LBD/TP (PDP/PLR invalid or price missing)"); }
+            // Calculate LBD/TP
+            if (typeof pdpValue === 'number' && typeof plrValue === 'number' && priceValue) {
+              lbd_raw = priceValue - (priceValue * (pdpValue / 100));
+              tp_raw = priceValue + (priceValue * (pdpValue * plrValue / 100));
+
+              // --- Round LBD/TP (Optional but good practice for currency) ---
+              lbd_final = parseFloat(lbd_raw.toFixed(CURRENCY_PRECISION));
+              tp_final = parseFloat(tp_raw.toFixed(CURRENCY_PRECISION));
+              // --- End Rounding ---
+            } else { console.log("Could not calculate LBD/TP (PDP/PLR invalid or price missing)"); }
 
         } catch (fetchErr: any) {
             console.error("Error fetching stock data", fetchErr);
@@ -187,10 +210,33 @@ export default function TransactionForm({
             setIsLoading(false); return;
         }
 
-        // Calculate share splits
-        if (quantity && quantity > 0) {
-            calculatedSwingShares = quantity * ratio;
-            calculatedHoldShares = quantity * (1 - ratio);
+        // Calculate share splits USING ROUNDED TOTAL quantity
+        if (quantity_final && quantity_final > 0) {
+          calculatedSwingShares_raw = quantity_final * ratio;
+          calculatedHoldShares_raw = quantity_final * (1 - ratio);
+
+          // --- Round SPLIT shares ---
+          const roundedSwing = parseFloat(calculatedSwingShares_raw.toFixed(SHARE_PRECISION));
+          const roundedHold = parseFloat(calculatedHoldShares_raw.toFixed(SHARE_PRECISION));
+
+          calculatedSwingShares_final = (Math.abs(roundedSwing) < SHARE_EPSILON) ? 0 : roundedSwing;
+          calculatedHoldShares_final = (Math.abs(roundedHold) < SHARE_EPSILON) ? 0 : roundedHold;
+
+          // --- Consistency Check (Optional) ---
+          // If the sum of rounded parts doesn't match the rounded total, adjust slightly
+          const roundedSum = calculatedSwingShares_final + calculatedHoldShares_final;
+          if (Math.abs(roundedSum - quantity_final) > SHARE_EPSILON / 10) { // Use smaller tolerance for check
+               console.warn(`Adjusting split shares slightly due to rounding (Total: ${quantity_final}, Sum: ${roundedSum})`);
+               // Example: Adjust the larger portion (or hold shares)
+               calculatedHoldShares_final = quantity_final - calculatedSwingShares_final;
+               // Re-round the adjusted value just in case
+               const reRoundedHold = parseFloat(calculatedHoldShares_final.toFixed(SHARE_PRECISION));
+               calculatedHoldShares_final = (Math.abs(reRoundedHold) < SHARE_EPSILON) ? 0 : reRoundedHold;
+
+          }
+          console.log(`Calculated Split - Swing Raw: ${calculatedSwingShares_raw}, Hold Raw: ${calculatedHoldShares_raw}`);
+          console.log(`Calculated Split - Swing Rounded: ${calculatedSwingShares_final}, Hold Rounded: ${calculatedHoldShares_final}`);
+          // --- End Rounding Split Shares ---
         }
     }
     // --- End Buy action calculations ---
@@ -209,22 +255,23 @@ export default function TransactionForm({
     // --- End TxnProfit ---
 
 
-    // --- Prepare Final Payload for Transaction ---
-    // Using Partial allows omitting fields that might be null/undefined based on action
+    // --- Prepare Final Payload for Transaction (using FINAL rounded values) ---
     const finalPayload: Partial<Omit<TransactionDataType, 'id' | 'portfolioStock' | 'createdAt' | 'updatedAt' | 'owner'>> = {
         date: date,
         action: action as Schema['Transaction']['type']['action'],
         signal: signal || undefined,
         price: priceValue,
-        investment: (action === 'Buy' || action === 'Div') ? investmentValue : null,
-        quantity: quantity, // TOTAL quantity
-        swingShares: (action === 'Buy') ? calculatedSwingShares : null,
-        holdShares: (action === 'Buy') ? calculatedHoldShares : null,
+        investment: (action === 'Buy' || action === 'Div') && typeof investmentValue === 'number' // <<< Add 'typeof' check
+         ? parseFloat(investmentValue.toFixed(CURRENCY_PRECISION))
+         : null, // Keep null if not Buy/Div or if investmentValue isn't a number
+        quantity: action === 'Sell' ? quantity : quantity_final, // Use 'quantity' for Sell edits, 'quantity_final' for Buy/Div
+        swingShares: (action === 'Buy') ? calculatedSwingShares_final : null, // Use FINAL rounded swing shares
+        holdShares: (action === 'Buy') ? calculatedHoldShares_final : null, // Use FINAL rounded hold shares
         txnType: (action === 'Buy') ? buyType : undefined,
-        lbd: lbd,
-        tp: tp,
+        lbd: lbd_final, // Use FINAL rounded LBD
+        tp: tp_final,   // Use FINAL rounded TP
         completedTxnId: (action === 'Sell') ? (completedTxnId || undefined) : undefined,
-        txnProfit: txnProfit,
+        txnProfit: txnProfit, // Keep as is or round if needed
         txnProfitPercent: calculatedTxnProfitPercent,
     };
     // --- End Payload Prep ---
@@ -456,10 +503,10 @@ export default function TransactionForm({
                 const createOrUpdateWallet = async (
                   type: 'Swing' | 'Hold',
                   sharesToAdd: number | null | undefined,
-                  investmentToAdd: number // Proportional investment
+                  investmentToAdd_raw: number // Proportional investment
               ) => {
                   // Use a small tolerance for floating point comparison
-                  const epsilon = 0.0001;
+                  const epsilon = SHARE_EPSILON;
                   if (!sharesToAdd || sharesToAdd <= epsilon) { // Check against tolerance
                       console.log(`[Wallet Logic - <span class="math-inline">\{type\}\] No significant shares to add \(</span>{sharesToAdd}). Skipping wallet.`);
                       return;
@@ -470,7 +517,11 @@ export default function TransactionForm({
                        throw new Error(`Cannot process ${type} wallet due to invalid price.`);
                   }
 
-                  console.log(`[Wallet Logic - ${type}] Processing... Shares: ${sharesToAdd}, Investment: ${investmentToAdd}, Price: ${priceValue}`);
+                  // --- Round Investment to Add ---
+                  const roundedInvestmentToAdd = parseFloat(investmentToAdd_raw.toFixed(CURRENCY_PRECISION));
+                  console.log(`[Wallet Logic - ${type}] Processing... Shares: ${sharesToAdd}, Investment: ${roundedInvestmentToAdd}, Price: ${priceValue}`);
+                  // --- End Rounding ---
+
                   try {
                       // 1. Fetch candidate wallets for this stock and type (BROADER filter)
                       console.log(`[Wallet Logic - ${type}] Fetching candidate wallets (Stock: ${portfolioStockId}, Type: ${type})...`);
@@ -482,7 +533,7 @@ export default function TransactionForm({
                           ]},
                            // Fetch necessary fields for update/check
                           selectionSet: ['id', 'buyPrice', 'totalSharesQty', 'totalInvestment', 'remainingShares'],
-                          limit: 500 // Fetch candidates
+                          limit: 1000 // Fetch candidates
                       });
 
                       if (listErrors) throw listErrors; // Handle list errors
@@ -502,40 +553,53 @@ export default function TransactionForm({
                       console.log(`[Wallet Logic - ${type}] Result of find():`, existingWallet ? `Found ID ${existingWallet.id}` : 'Not Found');
 
                       if (existingWallet) {
-                          // 3a. Update existing typed wallet
-                          console.log(`[Wallet Logic - ${type}] Found matching existing wallet ${existingWallet.id}. Updating...`);
+                          // 3a. Update existing wallet (Apply Rounding to final totals)
+                          console.log(`[Wallet Logic - ${type}] Found existing wallet ${existingWallet.id}. Updating...`);
+                          const currentTotalShares = existingWallet.totalSharesQty ?? 0;
+                          const currentInvestment = existingWallet.totalInvestment ?? 0;
+                          const currentRemaining = existingWallet.remainingShares ?? 0;
+
+                          // Calculate NEW totals
+                          const newTotalShares_raw = currentTotalShares + sharesToAdd;
+                          const newInvestment_raw = currentInvestment + roundedInvestmentToAdd;
+                          const newRemaining_raw = currentRemaining + sharesToAdd;
+
+                          // ROUND final totals before saving
+                          const finalTotalShares = parseFloat(newTotalShares_raw.toFixed(SHARE_PRECISION));
+                          const finalInvestment = parseFloat(newInvestment_raw.toFixed(CURRENCY_PRECISION));
+                          const finalRemainingShares = parseFloat(newRemaining_raw.toFixed(SHARE_PRECISION));
+
                           const updatePayload = {
                               id: existingWallet.id,
-                              totalSharesQty: (existingWallet.totalSharesQty ?? 0) + sharesToAdd,
-                              totalInvestment: (existingWallet.totalInvestment ?? 0) + investmentToAdd,
-                              remainingShares: (existingWallet.remainingShares ?? 0) + sharesToAdd,
+                              totalSharesQty: (Math.abs(finalTotalShares) < epsilon) ? 0 : finalTotalShares,
+                              totalInvestment: (Math.abs(finalInvestment) < 0.001) ? 0 : finalInvestment, // Currency epsilon
+                              remainingShares: (Math.abs(finalRemainingShares) < epsilon) ? 0 : finalRemainingShares,
                           };
                           const { errors: updateErrors } = await client.models.StockWallet.update(updatePayload);
                           if (updateErrors) throw updateErrors;
                           console.log(`[Wallet Logic - ${type}] Update SUCCESS`);
                       } else {
-                          // 3b. Create new typed wallet
-                          console.log(`[Wallet Logic - ${type}] No existing wallet found matching price ${priceValue}. Creating new...`);
-                          // Fetch PDP/PLR (use previously fetched values pdpValue, plrValue)
-                          let initialTpValue = null, initialTpPercent = null;
-                          if (typeof pdpValue === 'number' && typeof plrValue === 'number' && priceValue) {
-                              initialTpValue = priceValue + (priceValue * (pdpValue * plrValue / 100));
-                              initialTpPercent = pdpValue * plrValue;
-                          } else { console.log(`[Wallet Logic - ${type}] Could not calculate initial TP.`); }
-
-                         const createPayload = {
-                             portfolioStockId: portfolioStockId,
-                             walletType: type,
-                             buyPrice: priceValue,
-                             totalSharesQty: sharesToAdd,
-                             totalInvestment: investmentToAdd,
-                             sharesSold: 0, remainingShares: sharesToAdd,
-                             realizedPl: 0, sellTxnCount: 0,
-                             tpValue: initialTpValue, tpPercent: initialTpPercent, realizedPlPercent: 0,
-                         };
-                         const { errors: createErrors } = await client.models.StockWallet.create(createPayload as any);
-                         if (createErrors) throw createErrors;
-                         console.log(`[Wallet Logic - ${type}] Create SUCCESS`);
+                          // 3b. Create new wallet (use rounded values directly)
+                          console.log(`[Wallet Logic - ${type}] No existing wallet found. Creating new...`);
+                          // Fetch PDP/PLR (use previously fetched values)
+                          // Use rounded TP if available
+                          const createPayload = {
+                              portfolioStockId: portfolioStockId,
+                              walletType: type,
+                              buyPrice: priceValue, // Use the price from the form
+                              totalSharesQty: sharesToAdd, // Already rounded
+                              totalInvestment: roundedInvestmentToAdd, // Use rounded investment portion
+                              sharesSold: 0,
+                              remainingShares: sharesToAdd, // Already rounded
+                              realizedPl: 0,
+                              sellTxnCount: 0,
+                              tpValue: tp_final, // Use rounded TP
+                              tpPercent: /* calculate or fetch */ null, // Recalculate if needed
+                              realizedPlPercent: 0,
+                          };
+                          const { errors: createErrors } = await client.models.StockWallet.create(createPayload as any);
+                          if (createErrors) throw createErrors;
+                          console.log(`[Wallet Logic - ${type}] Create SUCCESS`);
                      }
                  } catch (walletError: any) {
                      console.error(`[Wallet Logic - ${type}] FAILED:`, walletError?.errors || walletError);
@@ -545,25 +609,23 @@ export default function TransactionForm({
 
                 // Calculate proportional investment
                 const totalInvestmentValue = investmentValue ?? 0;
-                const totalCalcQuantity = newTransaction.quantity ?? 0; // Use quantity from saved Txn
-                let swingInvestment = 0;
-                let holdInvestment = 0;
+                const totalCalcQuantity = quantity_final ?? 0; // Use rounded total quantity
+                let swingInvestment_raw = 0;
+                let holdInvestment_raw = 0;
 
-                if (totalCalcQuantity > 0.000001 && totalInvestmentValue > 0) {
-                     // Use calculated swing/hold shares from the transaction payload prep step
-                     swingInvestment = (calculatedSwingShares && calculatedSwingShares > 0) ? (calculatedSwingShares / totalCalcQuantity) * totalInvestmentValue : 0;
-                     holdInvestment = (calculatedHoldShares && calculatedHoldShares > 0) ? (calculatedHoldShares / totalCalcQuantity) * totalInvestmentValue : 0;
-                     // Adjust for potential rounding to ensure total matches
-                     if(Math.abs((swingInvestment + holdInvestment) - totalInvestmentValue) > 0.001) {
-                        console.warn("Adjusting investment split slightly due to rounding");
-                        // Assign remainder to hold (or swing, consistency matters)
-                        holdInvestment = totalInvestmentValue - swingInvestment;
-                     }
+                if (totalCalcQuantity > SHARE_EPSILON && totalInvestmentValue > 0) {
+                     // Use FINAL rounded shares for proportion calculation
+                    swingInvestment_raw = (calculatedSwingShares_final && calculatedSwingShares_final > 0) ? (calculatedSwingShares_final / totalCalcQuantity) * totalInvestmentValue : 0;
+                    holdInvestment_raw = (calculatedHoldShares_final && calculatedHoldShares_final > 0) ? (calculatedHoldShares_final / totalCalcQuantity) * totalInvestmentValue : 0;
+                     // Adjust raw values for rounding (sum should equal total investment)
+                    if(Math.abs((swingInvestment_raw + holdInvestment_raw) - totalInvestmentValue) > 0.0001) { // Small tolerance
+                        holdInvestment_raw = totalInvestmentValue - swingInvestment_raw;
+                    }
                 }
 
-                // Call update/create for Swing and Hold shares sequentially (safer than Promise.all for now)
-                await createOrUpdateWallet('Swing', calculatedSwingShares, swingInvestment);
-                await createOrUpdateWallet('Hold', calculatedHoldShares, holdInvestment);
+                // Call update/create, passing ROUNDED shares and RAW proportional investment
+                await createOrUpdateWallet('Swing', calculatedSwingShares_final ?? 0, swingInvestment_raw);
+                await createOrUpdateWallet('Hold', calculatedHoldShares_final ?? 0, holdInvestment_raw);
 
             } // End if (action === 'Buy') wallet logic
             // ============================================================

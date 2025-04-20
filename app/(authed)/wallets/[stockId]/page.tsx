@@ -82,9 +82,15 @@ export default function StockWalletPage() {
 
     const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
 
+    const SHARE_PRECISION = 5; // Or your desired share precision
+    const CURRENCY_PRECISION = 2; // Standard for currency
+    const PERCENT_PRECISION = 4; // Precision for percentages (adjust as needed)
+    // Epsilon for checking closeness to zero, based on share precision
+    const SHARE_EPSILON = 1 / (10**(SHARE_PRECISION + 2)); // e.g., 0.0000001 for 5 decimal places
 
-        // --- Function to fetch wallets FOR THIS STOCK ---
-        const fetchWallets = useCallback(async () => {
+
+    // --- Function to fetch wallets FOR THIS STOCK ---
+    const fetchWallets = useCallback(async () => {
             // Only fetch if stockId is available
             if (!stockId) {
                 console.log("[fetchWallets] Stock ID missing, skipping fetch.");
@@ -141,7 +147,7 @@ export default function StockWalletPage() {
             } finally {
                 setIsLoading(false);
             }
-        }, [stockId]); // <<< ADD stockId dependency
+    }, [stockId]); // <<< ADD stockId dependency
 
         // Inside StockWalletPage component
 
@@ -969,28 +975,31 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
             setSellError("No wallet selected for sale.");
             return;
         }
-
+    
         console.log("Data in walletToSell at start of handleSellSubmit:", JSON.stringify(walletToSell, null, 2));
-
+    
         setIsSelling(true);
         setSellError(null);
-
-        // --- Validation (Keep existing validation) ---
-        const quantity = parseFloat(sellQuantity);
-        const price = parseFloat(sellPrice);
-        const remaining = walletToSell.remainingShares ?? 0;
-        const buyPrice = walletToSell.buyPrice; // Get buy price from the wallet
-
+    
+        // --- Validation ---
+        const quantity = parseFloat(sellQuantity); // User input quantity
+        const price = parseFloat(sellPrice);       // User input price
+        const remaining = walletToSell.remainingShares ?? 0; // Current remaining from DB
+        const buyPrice = walletToSell.buyPrice;    // Buy price from wallet
+    
         if (isNaN(quantity) || quantity <= 0) {
             setSellError("Please enter a valid positive quantity.");
             setIsSelling(false);
             return;
         }
-        if (quantity > remaining) {
-            setSellError(`Quantity cannot exceed remaining shares (${formatShares(remaining)}).`);
+        // --- Modify remaining shares check using epsilon ---
+        // Check if trying to sell slightly more than available due to floating point issues
+        if (quantity > remaining + SHARE_EPSILON) {
+            setSellError(`Quantity cannot exceed remaining shares (${remaining.toFixed(SHARE_PRECISION)}).`); // Format output
             setIsSelling(false);
             return;
         }
+         // --- End modification ---
         if (isNaN(price) || price <= 0) {
             setSellError("Please enter a valid positive price.");
             setIsSelling(false);
@@ -1006,84 +1015,100 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
             setIsSelling(false);
             return;
         }
-        // --- End Validation ---
-
-        if (!sellSignal) {
+         if (!sellSignal) {
             setSellError("Please select a Sell Signal.");
             setIsSelling(false);
             return;
         }
-
+        // --- End Validation ---
+    
+    
         // --- Database Operations ---
         try {
-            // 1. Calculate P/L for this specific sale
+            // 1. Calculate raw P/L for this specific sale
             const realizedPlForSale = (price - buyPrice) * quantity;
-
-            // --- ADD: Calculate NEW totals and percentage ---
-            const newTotalSharesSold = (walletToSell.sharesSold ?? 0) + quantity;
-            const newTotalRealizedPl = (walletToSell.realizedPl ?? 0) + realizedPlForSale;
-            const costBasisOfSoldShares = buyPrice * newTotalSharesSold; // Use wallet's buyPrice
-
-            let newRealizedPlPercent: number | null = null;
-            if (costBasisOfSoldShares !== 0) { // Avoid division by zero
-                newRealizedPlPercent = (newTotalRealizedPl / costBasisOfSoldShares) * 100;
-            } else if (newTotalRealizedPl === 0) {
-                // If no profit/loss and no cost basis (e.g., first sale resulting in $0 P/L), percent is 0
-                newRealizedPlPercent = 0;
-            } // Otherwise, leave as null if cost basis is 0 but P/L is not (shouldn't happen)
-            // --- END: Calculation ---
-
-            // 2. Prepare StockWallet Update Payload
+    
+            // 2. Calculate NEW raw totals
+            const newTotalSharesSold_raw = (walletToSell.sharesSold ?? 0) + quantity;
+            const newTotalRealizedPl_raw = (walletToSell.realizedPl ?? 0) + realizedPlForSale;
+            const newRemainingShares_raw = remaining - quantity; // Calculate raw remaining
+    
+            // 3. --- Round the Calculated Values ---
+            // Round remaining shares
+            const roundedRemainingShares = parseFloat(newRemainingShares_raw.toFixed(SHARE_PRECISION));
+            // Force to exactly 0 if the rounded value is extremely close
+            const finalRemainingShares = (Math.abs(roundedRemainingShares) < SHARE_EPSILON) ? 0 : roundedRemainingShares;
+    
+            // Round realized P/L
+            const roundedRealizedPl = parseFloat(newTotalRealizedPl_raw.toFixed(CURRENCY_PRECISION));
+    
+            // Calculate and round realized P/L Percent
+            const costBasisOfSoldShares = buyPrice * newTotalSharesSold_raw; // Cost basis using wallet's buy price
+            let newRealizedPlPercent_raw: number | null = null;
+            if (costBasisOfSoldShares !== 0) {
+                 // Use rounded P/L for percentage calculation for consistency
+                newRealizedPlPercent_raw = (roundedRealizedPl / costBasisOfSoldShares) * 100;
+            } else if (roundedRealizedPl === 0) {
+                newRealizedPlPercent_raw = 0;
+            }
+            // Round the percentage itself
+            const finalRealizedPlPercent = typeof newRealizedPlPercent_raw === 'number'
+                ? parseFloat(newRealizedPlPercent_raw.toFixed(PERCENT_PRECISION))
+                : null;
+            // --- End Rounding ---
+    
+    
+            // 4. Prepare StockWallet Update Payload (using FINAL rounded values)
             const walletPayload = {
                 id: walletToSell.id,
-                sharesSold: (walletToSell.sharesSold ?? 0) + quantity,
-                remainingShares: remaining - quantity, // Use validated remaining & quantity
-                realizedPl: (walletToSell.realizedPl ?? 0) + realizedPlForSale,
-                realizedPlPercent: newRealizedPlPercent,
+                // sharesSold accumulates exact input quantities, should be precise enough
+                sharesSold: newTotalSharesSold_raw,
+                remainingShares: finalRemainingShares, // Use the final rounded & zero-checked value
+                realizedPl: roundedRealizedPl,         // Use the rounded currency value
+                realizedPlPercent: finalRealizedPlPercent,// Use the rounded percentage
                 sellTxnCount: (walletToSell.sellTxnCount ?? 0) + 1,
             };
             console.log("Updating StockWallet with payload:", walletPayload);
-
-            // 3. Prepare Transaction Create Payload
+    
+    
+            // 5. Prepare Transaction Create Payload (uses exact sale quantity/price)
             const transactionPayload = {
-                portfolioStockId: walletToSell.portfolioStockId, // Get stockId from the wallet
-                action: 'Sell' as const, // Ensure type matches Enum if defined, else cast
+                portfolioStockId: walletToSell.portfolioStockId,
+                action: 'Sell' as const,
                 date: sellDate,
                 price: price,
-                quantity: quantity, // Use 'shares' field for quantity sold in Txn record
-                completedTxnId: walletToSell.id, // Store Wallet ID here
+                quantity: quantity, // The exact quantity specified by the user for THIS sale
+                completedTxnId: walletToSell.id,
                 signal: sellSignal || undefined,
-                txnType: walletToSell.walletType
+                txnType: walletToSell.walletType,
+                 // Optionally add the rounded P/L for THIS specific transaction
+                 // txnProfit: parseFloat(realizedPlForSale.toFixed(CURRENCY_PRECISION)),
             };
             console.log("Creating Transaction with payload:", transactionPayload);
-
-
+    
+    
             // --- Execute DB Operations ---
-            // Note: These run sequentially. Consider Promise.all if they are independent
-            // and you want atomicity (though true atomicity requires backend transactions)
-
             const updatedWallet = await client.models.StockWallet.update(walletPayload);
-            if (updatedWallet.errors) throw updatedWallet.errors; // Throw if wallet update fails
-
+            if (updatedWallet.errors) throw updatedWallet.errors;
+    
             const newTransaction = await client.models.Transaction.create(transactionPayload);
-            if (newTransaction.errors) throw newTransaction.errors; // Throw if transaction create fails
-
+            if (newTransaction.errors) throw newTransaction.errors;
+    
             // --- Success ---
             console.log("Sell recorded successfully!", { updatedWallet: updatedWallet.data, newTransaction: newTransaction.data });
-            setIsSellModalOpen(false); // Close modal on success
-            fetchWallets(); // Refresh the wallet list in the table
-            fetchTransactions();
-
+            setIsSellModalOpen(false);
+            fetchWallets();
+            fetchTransactions(); // Refresh relevant data
+    
         } catch (err: any) {
             // --- Error Handling ---
             console.error("Error recording sell transaction:", err);
-            // Attempt to parse Amplify errors
             const errorMessage = Array.isArray(err) ? err[0].message : (err.message || "An unknown error occurred.");
             setSellError(`Failed to record sale: ${errorMessage}`);
-
+    
         } finally {
             // --- Cleanup ---
-            setIsSelling(false); // Ensure loading state is always reset
+            setIsSelling(false);
         }
         // --- End Database Operations ---
     };

@@ -16,6 +16,8 @@ type PortfolioStockDataType = { // Simplified representation needed for this pag
     // Add other fields if needed by the table/sort
 }
 
+type StockWalletDataType = Schema['StockWallet']['type'];
+
 type FiveDayDipResult = Record<string, number | null>; // Map: symbol -> dip percentage or null
 
 // Define Transaction List Result Type (helpful for pagination function)
@@ -29,7 +31,7 @@ export default function HomePage() {
         fiveDayDip: boolean;
         lbd: boolean;
         buys: boolean;
-        incompleteBuys: boolean;
+        //incompleteBuys: boolean;
         sinceBuy: boolean;
         sinceSell: boolean;
         currentPrice: boolean;
@@ -44,7 +46,7 @@ export default function HomePage() {
         fiveDayDip: true,
         lbd: true,
         buys: false,
-        incompleteBuys: true,
+        //incompleteBuys: true,
         sinceBuy: true,
         sinceSell: false,
         currentPrice: true,
@@ -58,8 +60,8 @@ export default function HomePage() {
     const COLUMN_LABELS: Record<keyof ReportColumnVisibilityState, string> = {
         fiveDayDip: '5DD',      // Custom Label
         lbd: 'LBD',         // Custom Label
-        buys: 'Buys',
-        incompleteBuys: 'I-Buys',
+        buys: 'Sw-Buys',
+        //incompleteBuys: 'I-Buys',
         sinceBuy: 'Last Buy',
         sinceSell: 'Last Sell',
         currentPrice: 'Price',
@@ -72,6 +74,8 @@ export default function HomePage() {
     const [portfolioStocks, setPortfolioStocks] = useState<PortfolioStockDataType[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    const [allWallets, setAllWallets] = useState<StockWalletDataType[]>([]);
 
     // Add state for all transactions
     const [allTransactions, setAllTransactions] = useState<Schema['Transaction'][]>([]);
@@ -113,9 +117,20 @@ export default function HomePage() {
 
         // --- IMPORTANT: Define the full selectionSet needed by ANY calculation using allTransactions ---
         const selectionSetNeeded = [
-            'id', 'date', 'action', 'price', 'portfolioStockId',
-            'tp', 'completedTxnId', 'playShares', 'investment',
-            'quantity', 'holdShares', 'sharesType'
+            'id',
+            'date',
+            'action',
+            'price',
+            'portfolioStockId',
+            'tp',
+            'completedTxnId',
+            'swingShares',
+            'holdShares',
+            'investment',
+            'quantity',            
+            'txnType',
+            'signal',
+            'lbd',
         ] as const;
         // --- END selectionSet definition ---
 
@@ -165,22 +180,39 @@ export default function HomePage() {
     const fetchPageData = useCallback(async () => {
         setIsLoading(true); // Use combined loading state
         setError(null);     // Use combined error state
-        // Clear previous data? Optional, but can prevent displaying stale data on refetch
-        // setPortfolioStocks([]);
-        // setAllTransactions([]);
+        setPortfolioStocks([]);
+        setAllTransactions([]);
+        setAllWallets([]);
 
         try {
             //console.log("Starting parallel fetch for stocks and all transactions...");
             // Fetch stocks AND use the pagination helper for transactions
-            const [stockResult, allTxnsData] = await Promise.all([
+            const [stockResult, allTxnsData, walletResult] = await Promise.all([
                 client.models.PortfolioStock.list({
                     selectionSet: ['id', 'symbol', 'pdp', 'name'], // Fields needed for report
                     filter: {
                         isHidden: { ne: true } // ne: not equal to true (i.e., fetch if false or null/undefined)
                         // Or you could use: isHidden: { eq: false } if you are sure all items will have the field set
-                    }
+                    },
+                    limit: 1000
                 }),
-                fetchAllPaginatedTransactions() // Call the pagination helper
+                fetchAllPaginatedTransactions(), // Call the pagination helper
+
+                client.models.StockWallet.list({
+                    // No filter here fetches ALL wallets for the user (owner auth applied by default)
+                    selectionSet: [ // Fields needed for calculations
+                        'id',
+                        'portfolioStockId',
+                        'walletType',
+                        'buyPrice',
+                        'remainingShares',
+                        'tpValue', // Needed for finding lowest TP
+                        'sellTxnCount', // Potentially useful later
+                        'sharesSold' // Potentially useful later
+                        // Add any other fields needed by revised calculations
+                    ],
+                    limit: 3000 // Adjust limit generously for wallets
+                })
             ]);
             //console.log("Parallel fetches completed.");
 
@@ -192,6 +224,9 @@ export default function HomePage() {
 
             // Transactions data is the complete array from the helper
             setAllTransactions(allTxnsData);
+
+            if (walletResult.errors) throw walletResult.errors;
+            setAllWallets(walletResult.data as any); // <<< Set wallets state
 
             //console.log('Fetched Stocks Count:', stockResult.data?.length);
             //console.log('Fetched All Transactions Count:', allTxnsData?.length);
@@ -228,112 +263,115 @@ export default function HomePage() {
     }
     type ProcessedTxnMap = Record<string, ProcessedStockTxnData>; // Keyed by stock ID
 
-    const processedTxns = useMemo((): ProcessedTxnMap => {
-        //console.log(`Processing ${allTransactions.length} transactions for share balances...`);
-        const dataMap: ProcessedTxnMap = {};
+    // --- Process Transactions & Wallets per Stock ---
+    interface ProcessedStockData {
+        // From Transactions
+        lastSwingBuy: { date: string; price: number | null } | undefined;
+        lastSwingSell: { date: string } | undefined;
+        swingBuyCount: number;
+        // From Wallets
+        activeSwingWallets: StockWalletDataType[]; // Keep the actual wallet objects
+        lowestSwingBuyPriceWallet: StockWalletDataType | null; // Wallet with lowest buy price (and shares > 0)
+        lowestSwingTpWallet: StockWalletDataType | null; // Wallet with lowest TP (and shares > 0)
+        totalCurrentSwingShares: number; // Sum remaining swing shares
+        totalCurrentHoldShares: number; // Sum remaining hold shares (calculated for reference)
+    }
+    type ProcessedDataMap = Record<string, ProcessedStockData>; // Keyed by stock ID
 
-        // --- Find all completed Buy Txn IDs first (needs one pass) ---
-        const completedBuyTxnIds = new Set<string>();
-        allTransactions.forEach(txn => {
-            // @ts-ignore
-            if (txn.action === 'Sell' && txn.completedTxnId) {
-                 // @ts-ignore
-                completedBuyTxnIds.add(txn.completedTxnId);
-            }
-        });
-        // --- End Find Completed ---
+    const processedData = useMemo((): ProcessedDataMap => {
+        console.log(`Processing ${allTransactions.length} transactions and ${allWallets.length} wallets...`);
+        const dataMap: ProcessedDataMap = {};
+        const epsilon = 0.000001; // Tolerance for share checks
+
+        // --- Add this mapping step ---
+        // Explicitly cast each transaction to the type we expect it to be
+        // (assuming schema and selectionSet are correct)
+        const typedTransactions: Schema['Transaction']['type'][] = allTransactions.map(
+            txn => txn as unknown as Schema['Transaction']['type']
+        );
+        // --- End mapping step ---
 
         // --- Process data PER STOCK ---
         portfolioStocks.forEach(stock => {
             const stockId = stock.id;
             if (!stockId) return;
 
+            // Filter transactions and wallets for the current stock
+            const stockTxns = typedTransactions.filter(txn => txn.portfolioStockId === stockId);
+            const stockWallets = allWallets.filter(w => w.portfolioStockId === stockId);
+
             // Initialize data structure for this stock
-            const stockData: ProcessedStockTxnData = {
-                buyCount: 0,
-                currentPlayShares: 0,
-                currentHoldShares: 0,
-                totalCurrentShares: 0,
-                incompleteBuyCount: 0, // Initialize new field
-                ltpiaPrice: null,
-                ltpiaTp: null,
-                ltpiaPlayShares: null,
+            const stockData: ProcessedStockData = {
+                lastSwingBuy: undefined,
+                lastSwingSell: undefined,
+                swingBuyCount: 0,
+                activeSwingWallets: [],
+                lowestSwingBuyPriceWallet: null,
+                lowestSwingTpWallet: null,
+                totalCurrentSwingShares: 0,
+                totalCurrentHoldShares: 0,
             };
 
-            const stockTxns = allTransactions.filter(txn => (txn as any).portfolioStockId === stockId);
-            const sortedStockTxns = [...stockTxns].sort((a, b) => {
-                const dateA = (a as any).date ?? ''; const dateB = (b as any).date ?? '';
-                return dateA.localeCompare(dateB); // Ascending for balance
-            });
-
-            // --- Calculate running balances, counts, and find latest dates/info ---
-            let runningPlayShares = 0;
-            let runningHoldShares = 0;
-            let lowestTpIncompleteBuy: Schema['Transaction'] | null = null;
-            let calculatedIncompleteBuys = 0; // Counter for incomplete buys
-
+            // --- Process Transactions ---
+            // Sort by date to find latest
+            const sortedStockTxns = [...stockTxns].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
             sortedStockTxns.forEach(txn => {
-                const action = (txn as any).action;
-                const playSharesTxn = typeof (txn as any).playShares === 'number' ? (txn as any).playShares : 0;
-                const holdSharesTxn = typeof (txn as any).holdShares === 'number' ? (txn as any).holdShares : 0;
-                const quantityTxn = typeof (txn as any).quantity === 'number' ? (txn as any).quantity : 0;
-                const sharesTypeTxn = (txn as any).sharesType;
-                const date = (txn as any).date;
-                const price = (txn as any).price;
-                const id = (txn as any).id;
-                const tp = (txn as any).tp;
-                const isCompleted = completedBuyTxnIds.has(id); // Check completion status
-
-                if (action === 'Buy') {
-                    stockData.buyCount++;
-                    if (!stockData.lastBuy || (date && date >= stockData.lastBuy.date)) {
-                        stockData.lastBuy = { date: date, price: price ?? null };
-                    }
-                    runningPlayShares += playSharesTxn;
-                    runningHoldShares += holdSharesTxn;
-
-                    // Increment incomplete count if this Buy is not completed
-                    if (!isCompleted) {
-                        calculatedIncompleteBuys++;
-                    }
-
-                    // Check for LTPIA candidacy (incomplete buy with a TP)
-                    if (!isCompleted && typeof tp === 'number') {
-                        if (lowestTpIncompleteBuy === null || tp < (lowestTpIncompleteBuy as any).tp) {
-                            lowestTpIncompleteBuy = txn;
-                        }
-                    }
-
-                } else if (action === 'Sell') {
-                    if (!stockData.lastSell || (date && date >= stockData.lastSell.date)) {
-                        stockData.lastSell = { date: date };
-                    }
-                    if (sharesTypeTxn === 'Play') {
-                        runningPlayShares -= quantityTxn;
-                    } else if (sharesTypeTxn === 'Hold') {
-                        runningHoldShares -= quantityTxn;
+                // Find Last Swing Buy (contributed to Swing shares)
+                if (txn.action === 'Buy' && (txn.txnType === 'Swing' || (txn.txnType === 'Split' && (txn.swingShares ?? 0) > epsilon))) {
+                    stockData.swingBuyCount++;
+                    // Update lastSwingBuy if this one is later or first
+                    if (!stockData.lastSwingBuy || (txn.date && txn.date >= stockData.lastSwingBuy.date)) {
+                        stockData.lastSwingBuy = { date: txn.date, price: txn.price ?? null };
                     }
                 }
-            }); // End loop through stock's transactions
+                // Find Last Swing Sell (sold FROM Swing shares)
+                else if (txn.action === 'Sell' && txn.txnType === 'Swing') {
+                    // Update lastSwingSell if this one is later or first
+                     if (!stockData.lastSwingSell || (txn.date && txn.date >= stockData.lastSwingSell.date)) {
+                        stockData.lastSwingSell = { date: txn.date };
+                    }
+                }
+            });
 
-            // Store final calculated balances and counts
-            stockData.currentPlayShares = runningPlayShares;
-            stockData.currentHoldShares = runningHoldShares;
-            stockData.totalCurrentShares = Math.max(0, runningPlayShares + runningHoldShares);
-            stockData.incompleteBuyCount = calculatedIncompleteBuys; // Store the count
+            // --- Process Wallets ---
+            stockData.activeSwingWallets = stockWallets.filter(w =>
+                w.walletType === 'Swing' && (w.remainingShares ?? 0) > epsilon
+            );
+            stockData.totalCurrentSwingShares = stockData.activeSwingWallets.reduce((sum, w) => sum + (w.remainingShares ?? 0), 0);
+            // Calculate total Hold shares for reference if needed elsewhere
+            stockData.totalCurrentHoldShares = stockWallets
+                .filter(w => w.walletType === 'Hold' && (w.remainingShares ?? 0) > epsilon)
+                .reduce((sum, w) => sum + (w.remainingShares ?? 0), 0);
 
-            // --- Store LTPIA details ---
-            const finalLTPIA = lowestTpIncompleteBuy as any;
-            stockData.ltpiaPrice = finalLTPIA?.price ?? null;
-            stockData.ltpiaTp = finalLTPIA?.tp ?? null;
-            stockData.ltpiaPlayShares = finalLTPIA?.playShares ?? null;
+
+            // Find Lowest Buy Price Active Swing Wallet
+            stockData.lowestSwingBuyPriceWallet = stockData.activeSwingWallets.reduce((lowest, current) => {
+                if (!lowest) return current; // First one becomes lowest initially
+                if (typeof current.buyPrice === 'number' && current.buyPrice < (lowest.buyPrice ?? Infinity)) {
+                    return current;
+                }
+                return lowest;
+            }, null as StockWalletDataType | null);
+
+            // Find Lowest TP Active Swing Wallet (considering only those with valid TP)
+             stockData.lowestSwingTpWallet = stockData.activeSwingWallets
+                 .filter(w => typeof w.tpValue === 'number' && w.tpValue > 0) // Filter for valid TPs
+                 .reduce((lowest, current) => {
+                    if (!lowest) return current;
+                    // We know tpValue is number here due to filter
+                    if (current.tpValue! < lowest.tpValue!) {
+                        return current;
+                    }
+                    return lowest;
+                 }, null as StockWalletDataType | null);
 
             dataMap[stockId] = stockData;
-
         }); // End loop through portfolioStocks
 
+        console.log("Finished processing transactions and wallets.", dataMap);
         return dataMap;
-    }, [allTransactions, portfolioStocks]); // Dependencies
+    // Update dependencies: now depends on wallets too
+    }, [allTransactions, allWallets, portfolioStocks]);
 
 
     interface ReportDataItem {
@@ -374,82 +412,78 @@ export default function HomePage() {
 
     // --- Calculate Final Report Data (Phase 3) ---
     const reportData = useMemo((): ReportDataItem[] => {
-        //console.log("Calculating report data...");
+        console.log("Calculating final report data based on processed data...");
 
         return portfolioStocks.map(stock => {
             const stockId: string = stock.id;
             const symbol: string = stock.symbol;
-            const pdp: number | null | undefined = stock.pdp;
-            const priceData = latestPrices[symbol];
-            // Ensure default includes new fields
-            const txnData = processedTxns[stockId] ?? {
-                buyCount: 0,
-                currentPlayShares: 0,
-                currentHoldShares: 0,
-                totalCurrentShares: 0,
-                incompleteBuyCount: 0, // Default for incomplete count
-                ltpiaPrice: null,
-                ltpiaTp: null,
-                ltpiaPlayShares: null,
-                lastBuy: undefined,
-                lastSell: undefined,
-            };
+            const pdp: number | null | undefined = stock.pdp; // Keep PDP from stock
+            const priceData = latestPrices[symbol]; // Get current price / history
             const currentPrice = priceData?.currentPrice ?? null;
 
+            // Get processed Txn/Wallet data for this stock
+            const procData = processedData[stockId] ?? { // Use new processedData map
+                lastSwingBuy: undefined, lastSwingSell: undefined, swingBuyCount: 0,
+                activeSwingWallets: [], lowestSwingBuyPriceWallet: null, lowestSwingTpWallet: null,
+                totalCurrentSwingShares: 0, totalCurrentHoldShares: 0, // Provide defaults
+            };
 
             // --- Calculations for 5DD, LBD, %2BE, %2TP ---
+            // 5DD (Uses Price History & PDP - unchanged logic)
             let fiveDayDipPercent: number | null = null;
             if (typeof currentPrice === 'number' && typeof pdp === 'number' && priceData?.historicalCloses) {
-                const historicalCloses = priceData.historicalCloses ?? [];
-                const last5Closes = historicalCloses.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-                if (last5Closes.length > 0) {
-                    let minDipMeetingCondition: number | null = null;
-                    last5Closes.forEach(pastClose => {
+                 const historicalCloses = priceData.historicalCloses ?? [];
+                 const last5Closes = historicalCloses.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+                 if (last5Closes.length > 0) {
+                     let minDipMeetingCondition: number | null = null;
+                     last5Closes.forEach(pastClose => {
                          if (pastClose.close > 0) {
-                           const diffPercent = (currentPrice / pastClose.close - 1) * 100;
-                           if (diffPercent <= (pdp * -1)) { // User's specific logic here
-                               if (minDipMeetingCondition === null || diffPercent < minDipMeetingCondition) {
-                                   minDipMeetingCondition = diffPercent;
-                               }
-                           }
+                            const diffPercent = (currentPrice / pastClose.close - 1) * 100;
+                            if (diffPercent <= (pdp * -1)) {
+                                if (minDipMeetingCondition === null || diffPercent < minDipMeetingCondition) {
+                                    minDipMeetingCondition = diffPercent;
+                                }
+                            }
                          }
-                    });
-                    fiveDayDipPercent = minDipMeetingCondition;
-                }
+                     });
+                     fiveDayDipPercent = minDipMeetingCondition;
+                 }
             }
 
+            // LBD (Uses Last SWING Buy Price & PDP)
             let lbdPercent: number | null = null;
-            const lastBuyPrice = txnData.lastBuy?.price;
-            if (typeof currentPrice === 'number' && typeof lastBuyPrice === 'number' && typeof pdp === 'number' && lastBuyPrice > 0) {
-                const diffPercent = (currentPrice / lastBuyPrice - 1) * 100;
-                if (diffPercent <= (pdp * -1)) { // User's specific logic here
+            const lastSwingBuyPrice = procData.lastSwingBuy?.price;
+            if (typeof currentPrice === 'number' && typeof lastSwingBuyPrice === 'number' && typeof pdp === 'number' && lastSwingBuyPrice > 0) {
+                const diffPercent = (currentPrice / lastSwingBuyPrice - 1) * 100;
+                if (diffPercent <= (pdp * -1)) {
                     lbdPercent = diffPercent;
                 }
             }
 
+            // %2BE (Uses Lowest Swing Buy Price)
             let percentToBe: number | null = null;
-            const ltpiaPrice = txnData.ltpiaPrice;
-            if (typeof currentPrice === 'number' && typeof ltpiaPrice === 'number' && ltpiaPrice > 0) {
-                percentToBe = (currentPrice / ltpiaPrice - 1) * 100;
+            const lowestSwingBuyPrice = procData.lowestSwingBuyPriceWallet?.buyPrice;
+            if (typeof currentPrice === 'number' && typeof lowestSwingBuyPrice === 'number' && lowestSwingBuyPrice > 0) {
+                percentToBe = (currentPrice / lowestSwingBuyPrice - 1) * 100;
             }
 
+            // TP, %2TP, TP-Shs (Uses Lowest Swing TP Wallet info)
+            const lowestSwingTpPrice = procData.lowestSwingTpWallet?.tpValue; // The TP value itself
+            const lowestSwingTpShares = procData.lowestSwingTpWallet?.remainingShares; // Shares in that wallet
             let percentToTp: number | null = null;
-            const ltpiaTakeProfitPrice = txnData.ltpiaTp;
-            if (typeof currentPrice === 'number' && typeof ltpiaTakeProfitPrice === 'number' && ltpiaTakeProfitPrice > 0) {
-                percentToTp = (currentPrice / ltpiaTakeProfitPrice - 1) * 100;
+            if (typeof currentPrice === 'number' && typeof lowestSwingTpPrice === 'number' && lowestSwingTpPrice > 0) {
+                percentToTp = (currentPrice / lowestSwingTpPrice - 1) * 100;
             }
             // --- End Calculations ---
 
+            // Get other data points
+            const sinceBuyDays = calculateDaysAgo(procData.lastSwingBuy?.date);
+            const sinceSellDays = calculateDaysAgo(procData.lastSwingSell?.date); // Last SWING sell
+            const swingBuyCountValue = procData.swingBuyCount;
+            // Calculate total shares from processed data
+            const totalShares = procData.totalCurrentSwingShares + procData.totalCurrentHoldShares;
 
-            const sinceBuyDays = calculateDaysAgo(txnData.lastBuy?.date);
-            const sinceSellDays = calculateDaysAgo(txnData.lastSell?.date);
-            const buyCount = txnData.buyCount; // Total buys
-            const tpSharesValue = txnData.ltpiaPlayShares;
-            const totalShares = txnData.totalCurrentShares;
-            const incompleteBuys = txnData.incompleteBuyCount; // Get the count
-
-
-            // Return combined data object
+            // Return combined data object for the report row
             return {
                 id: stockId,
                 symbol: symbol,
@@ -457,18 +491,19 @@ export default function HomePage() {
                 fiveDayDip: fiveDayDipPercent,
                 lbd: lbdPercent,
                 percentToBe: percentToBe,
-                ltpiaTakeProfitPrice: ltpiaTakeProfitPrice ?? null, // Keep previous fix
+                // Rename LTPIA TP Price to just TP
+                ltpiaTakeProfitPrice: lowestSwingTpPrice ?? null, // TP value to display
                 percentToTp: percentToTp,
-                tpShares: tpSharesValue ?? null,
+                tpShares: lowestSwingTpShares ?? null, // Shares corresponding to lowest TP wallet
                 sinceBuy: sinceBuyDays,
-                sinceSell: sinceSellDays,
-                buys: buyCount, // Total buys
-                totalCurrentShares: totalShares,
-                 // --- Assign Incomplete Buys Count ---
-                incompleteBuyCount: incompleteBuys,
+                sinceSell: sinceSellDays, // Since last SWING sell
+                buys: swingBuyCountValue, // Now represents SWING buys
+                totalCurrentShares: totalShares, // Keep total if needed
+                incompleteBuyCount: 0, // No longer calculated/used
             };
         });
-    }, [portfolioStocks, latestPrices, processedTxns]); // Dependencies
+    // Update dependencies
+    }, [portfolioStocks, latestPrices, processedData]);
 
 
     // Calculate the number of currently visible columns
@@ -658,22 +693,22 @@ export default function HomePage() {
                         )}
                         {reportColumnVisibility.buys && (
                             <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('buys')}>
-                                Buys {sortConfig?.key === 'buys' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                Sw Buys {sortConfig?.key === 'buys' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                             </th>
                         )}
-                        {reportColumnVisibility.incompleteBuys && (
+                        {/* {reportColumnVisibility.incompleteBuys && (
                         <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('incompleteBuyCount')}>
                             I-Buys {sortConfig?.key === 'incompleteBuyCount' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                         </th>
-                        )}
+                        )} */}
                         {reportColumnVisibility.sinceBuy && (
                             <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('sinceBuy')}>
-                                L-Buy {sortConfig?.key === 'sinceBuy' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                L Buy {sortConfig?.key === 'sinceBuy' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                             </th>
                         )}
                         {reportColumnVisibility.sinceSell && (
                             <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('sinceSell')}>
-                                L-Sell {sortConfig?.key === 'sinceSell' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                L Sell {sortConfig?.key === 'sinceSell' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                             </th>                        
                         )}
                         {reportColumnVisibility.currentPrice && (
@@ -750,9 +785,9 @@ export default function HomePage() {
                                 {reportColumnVisibility.buys && (
                                     <td style={{ padding: '5px' }}>{item.buys}</td>
                                 )}
-                                {reportColumnVisibility.incompleteBuys && (
+                                {/* {reportColumnVisibility.incompleteBuys && (
                                         <td style={{ padding: '5px' }}>{item.incompleteBuyCount}</td>
-                                )}
+                                )} */}
                                 {reportColumnVisibility.sinceBuy && (
                                     <td style={{
                                         padding: '5px', // Keep existing padding
