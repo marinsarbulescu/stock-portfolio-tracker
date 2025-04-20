@@ -1030,6 +1030,9 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
         const price = parseFloat(sellPrice);       // User input price
         const remaining = walletToSell.remainingShares ?? 0; // Current remaining from DB
         const buyPrice = walletToSell.buyPrice;    // Buy price from wallet
+
+        const remaining_rounded = parseFloat(remaining.toFixed(SHARE_PRECISION));
+        const quantity_input_rounded = parseFloat(quantity.toFixed(SHARE_PRECISION)); // Assuming quantity is already parsed number
     
         if (isNaN(quantity) || quantity <= 0) {
             setSellError("Please enter a valid positive quantity.");
@@ -1038,7 +1041,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
         }
         // --- Modify remaining shares check using epsilon ---
         // Check if trying to sell slightly more than available due to floating point issues
-        if (quantity > remaining + SHARE_EPSILON) {
+        if (quantity_input_rounded > remaining_rounded + SHARE_EPSILON) {
             setSellError(`Quantity cannot exceed remaining shares (${remaining.toFixed(SHARE_PRECISION)}).`); // Format output
             setIsSelling(false);
             return;
