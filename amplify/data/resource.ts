@@ -7,13 +7,9 @@ const stockTypeEnum = a.enum(['Stock', 'ETF', 'Crypto']); // Changed order to ma
 const regionEnum = a.enum(['US', 'EU', 'APAC']);
 
 const txnActionEnum = a.enum(['Buy', 'Sell', 'Div']); // Div = Dividend
-const txnSignalEnum = a.enum([
-  '_5DD', 'Cust', 'Initial', 'EOM', 'LBD', // For Buy action
-  'TPH', 'TPP', 'TP',                             // For Sell action
-  'Div'                                     // For Div action
-]);
+const txnSignalEnum = a.enum(['_5DD', 'Cust', 'Initial', 'EOM', 'LBD', 'TPH', 'TPP', 'TP', 'Div']);
 
-const sharesTypeEnum = a.enum(['Play', 'Hold']);
+const walletTypeEnum = a.enum(['Swing', 'Hold']);
 
 /* Define the schema */
 const schema = a.schema({
@@ -21,7 +17,7 @@ const schema = a.schema({
   Region: regionEnum,
   TxnAction: txnActionEnum,
   TxnSignal: txnSignalEnum,
-  SharesType: sharesTypeEnum,
+  WalletType: walletTypeEnum,
 
   // Define the model for storing portfolio stocks
   PortfolioStock: a
@@ -34,8 +30,11 @@ const schema = a.schema({
       plr: a.float(),   // Profit Loss Ratio, optional number
       budget: a.float(), // Annual budget, optional number
       isHidden: a.boolean().default(false), // Hide the stock from the reporting table
+      swingHoldRatio: a.float(),
       transactions: a.hasMany('Transaction', 'portfolioStockId'),
       stockWallets: a.hasMany('StockWallet', 'portfolioStockId'),
+      // Add owner field if not implicitly added by .authorization
+      owner: a.string()
     })
     // Add owner-based authorization: grants full access ONLY to the record's owner
     .authorization((allow) => [allow.owner()]),
@@ -48,9 +47,9 @@ const schema = a.schema({
       price: a.float(),                     // Price
       investment: a.float(),                // Investment amount
       quantity: a.float(),       // Shares bought or sold
-      playShares: a.float(),      // Play Shares. The number of shares that we will have available to sell at TP. (quantity / 2)
-      holdShares: a.float(),      // Hold Shares. The number of shares that we will hold on. (quantity / 2)
-      sharesType: a.ref('SharesType'),
+      swingShares: a.float(),       // <<< RENAMED from playShares
+      holdShares: a.float(),        // Existing field is fine
+      txnType: a.string(),          // <<< ADDED: "Swing", "Hold", "Split", or null
       lbd: a.float(),             // Last Buy Dip ($). Calculated target price for a new Buy Signal. LBD = Buy Price - (Buy Price * PDP)
       tp: a.float(),              // Take Profit ($). Calculated target price, at which we get a Sell signal. TP = Buy Price + (Buy Price * PDP * PLR)
       completedTxnId: a.string(), // Link to another Txn ID (for Sell closing a Buy?)
@@ -58,6 +57,8 @@ const schema = a.schema({
       txnProfitPercent: a.float(),
       portfolioStockId: a.id().required(), // Foreign key ID
       portfolioStock: a.belongsTo('PortfolioStock', 'portfolioStockId'), // Define the relationship
+      // Add owner field if not implicitly added by .authorization
+      owner: a.string()
     })
     .authorization((allow) => [allow.owner()]),
 
@@ -75,33 +76,25 @@ const schema = a.schema({
 
   // --- ADD THIS NEW MODEL ---
   StockWallet: a
-  .model({
+  .model(
+    {
       // Link back to the parent stock
       portfolioStockId: a.id().required(),
+      walletType: a.ref('WalletType').required(),
       portfolioStock: a.belongsTo('PortfolioStock', ['portfolioStockId']),
-
-      // Wallet specific fields
       buyPrice: a.float().required(), // The unique buy price for this wallet
       totalSharesQty: a.float().required(), // Total shares EVER bought at this price
       totalInvestment: a.float().required(), // Total investment EVER for this wallet (at this price)
-
-      // Tracking sales FROM this wallet
       sharesSold: a.float().required().default(0), // Shares sold specifically from this wallet
-      remainingShares: a.float().required(), // totalSharesQty - sharesSold (Must be updated on Buy/Sell)
+      remainingShares: a.float(), // totalSharesQty - sharesSold (Must be updated on Buy/Sell)
       realizedPl: a.float().default(0), // Accumulated P/L $ from sales FROM this wallet
-
-      // Optional: Calculated fields based on buyPrice (if needed for display/sorting)
-      // These might need recalculation if underlying assumptions (PLR/PDP) change
       tpValue: a.float(), // Calculated TP Price ($) based on buyPrice
       tpPercent: a.float(), // Calculated TP Percent (%) based on buyPrice
-
-      // Optional: Calculated overall P/L % for this specific wallet
-      // Could be: realizedPl / (buyPrice * sharesSold) * 100
       realizedPlPercent: a.float(),
-
       sellTxnCount: a.integer().required().default(0),
-
-  })
+      // Add owner field if not implicitly added by .authorization
+      owner: a.string(),
+    })
   .authorization((allow) => [
       allow.owner() // Only owner can CRUD their wallets
   ]),

@@ -46,6 +46,8 @@ export default function StockWalletPage() {
     const [migrationSuccess, setMigrationSuccess] = useState<string | null>(null);
     // --- END Migration State ---
 
+    const [activeTab, setActiveTab] = useState<'Swing' | 'Hold'>('Swing');
+
     // State for fetched wallet data for THIS stock
     const [wallets, setWallets] = useState<StockWalletDataType[]>([]);
     // State for loading and error status
@@ -62,7 +64,7 @@ export default function StockWalletPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Separate modal for editing
     const [txnToEdit, setTxnToEdit] = useState<TransactionDataType | null>(null);
     // State for Sorting Txn Table
-    type SortableTxnKey = 'date' | 'action' | 'signal' | 'price' | 'investment' | 'quantity' | 'lbd'; // Simplified keys
+    type SortableTxnKey = 'date' | 'action' | 'signal' | 'txnType' |'price' | 'investment' | 'quantity' | 'lbd'; // Simplified keys
     const [txnSortConfig, setTxnSortConfig] = useState<{ key: SortableTxnKey; direction: 'ascending' | 'descending' } | null>(null);
     // --- END ADD STATE ---
 
@@ -85,14 +87,15 @@ export default function StockWalletPage() {
         const fetchWallets = useCallback(async () => {
             // Only fetch if stockId is available
             if (!stockId) {
-                 console.log("Stock ID missing, cannot fetch wallets.");
-                 setWallets([]); // Clear wallets if no ID
-                 setIsLoading(false);
-                 return;
+                console.log("[fetchWallets] Stock ID missing, skipping fetch.");
+                setWallets([]); // Clear wallets if no ID
+                setIsLoading(false);
+                return;
             }
     
             setIsLoading(true);
             setError(null);
+            console.log(`[fetchWallets] Running fetch for stockId: ${stockId}`);
             try {
                 //console.log(`Workspaceing stock wallets for stockId: ${stockId}`);
                 // Define fields needed from the StockWallet model
@@ -109,22 +112,29 @@ export default function StockWalletPage() {
                     'remainingShares',
                     'portfolioStockId',
                     'sellTxnCount',
+                    'walletType',
                     // No longer need portfolioStock.symbol here
                 ] as const;
     
+                console.log(`[fetchWallets] Calling list with filter:`, { portfolioStockId: { eq: stockId } });
+                
                 // --- ADDED FILTER ---
                 const result = await client.models.StockWallet.list({
                     filter: { portfolioStockId: { eq: stockId } }, // Filter by stockId
                     selectionSet: selectionSetNeeded,
                 });
+
+                console.log(`[fetchWallets] Raw API result after edit/add:`, JSON.stringify(result, null, 2));
     
                 if (result.errors) throw result.errors;
     
-                //console.log(`Workspaceed ${result.data.length} wallets for ${stockId}.`);
+                const fetchedData = result.data || []; // Default to empty array if data is null/undefined
+                console.log(`[fetchWallets] Fetched ${fetchedData.length} wallets. Calling setWallets.`);
+                
                 setWallets(result.data as StockWalletDataType[]);
     
             } catch (err: any) {
-                console.error("Error fetching stock wallets:", err);
+                console.error("[fetchWallets] Error fetching stock wallets:", err);
                 const message = Array.isArray(err?.errors) ? err.errors[0].message : err.message;
                 setError(message || "Failed to fetch wallet data.");
                 setWallets([]);
@@ -133,164 +143,218 @@ export default function StockWalletPage() {
             }
         }, [stockId]); // <<< ADD stockId dependency
 
+        // Inside StockWalletPage component
+
     const handleMigrateBuysToWallets = useCallback(async () => {
-        if (!stockId) {
-            setMigrationError("Stock ID is missing.");
-            return;
-        }
-        if (!transactions || transactions.length === 0) {
-            setMigrationError("No transactions found for this stock to process.");
-            return;
-        }
+        if (!stockId) { setMigrationError("Stock ID is missing."); return; }
+        // Use the 'transactions' state which should already be populated
+        if (!transactions) { setMigrationError("Transactions not loaded yet."); return; } // Check if transactions array itself is null/undefined
 
         setIsMigrating(true);
         setMigrationError(null);
         setMigrationSuccess(null);
-        console.log(`Starting wallet migration for stockId: ${stockId}`);
+        console.log(`[MIGRATE] Starting wallet migration for stockId: ${stockId}`);
 
-        let walletsChecked = 0;
+        let oldBuyTxnCount = 0;
+        let buyGroupsCreated = 0;
+        // walletsChecked isn't strictly needed here, we check map keys
         let walletsCreated = 0;
         let walletsSkipped = 0;
         let walletsFailed = 0;
 
         try {
-            // --- 1. Get Stock Details (PDP, PLR) ---
-            // We need these for TP calculation. Fetch if not already in state.
-            console.log("Fetching stock details (PDP, PLR)...");
+            // --- 1. Get Stock Details (Ratio, PDP, PLR) ---
+            console.log("[MIGRATE] Fetching stock details (Ratio, PDP, PLR)...");
             const { data: stockData, errors: stockErrors } = await client.models.PortfolioStock.get(
-                { id: stockId },
-                { selectionSet: ['pdp', 'plr'] } // Only fetch needed fields
+                { id: stockId }, { selectionSet: ['swingHoldRatio', 'pdp', 'plr'] }
             );
-            if (stockErrors || !stockData) {
-                throw stockErrors || new Error("Could not fetch stock details (PDP/PLR).");
-            }
+            // Allow migration to proceed even if PDP/PLR missing, but ratio is important
+            if (stockErrors) throw stockErrors; // Throw if fetch fails critically
+            if (!stockData) throw new Error("Could not fetch stock details.");
+
             const pdpValue = stockData.pdp;
             const plrValue = stockData.plr;
-            console.log(`Stock Details: PDP=${pdpValue}, PLR=${plrValue}`);
-
-            // --- 2. Process Existing Transactions (already in 'transactions' state) ---
-            console.log(`Processing ${transactions.length} transactions...`);
-            const buyGroups = new Map<string, {
-                buyPrice: number;
-                totalInvestment: number;
-                totalSharesQty: number;
-            }>();
-
-            for (const txn of transactions) {
-                if (txn.action === 'Buy' && typeof txn.price === 'number' && typeof txn.quantity === 'number' && typeof txn.investment === 'number') {
-                    // Use toFixed for consistent price key matching potential floating point inaccuracies
-                    const priceKey = txn.price.toFixed(4); // Adjust decimals if needed
-                    const group = buyGroups.get(priceKey) ?? {
-                        buyPrice: txn.price, // Store original precise price
-                        totalInvestment: 0,
-                        totalSharesQty: 0,
-                    };
-                    group.totalInvestment += txn.investment;
-                    group.totalSharesQty += txn.quantity;
-                    buyGroups.set(priceKey, group);
-                }
+            // Determine default ratio (e.g., 100% Swing if not set or invalid)
+            let ratio = 1.0; // Default to 100% Swing
+            if (typeof stockData.swingHoldRatio === 'number' && stockData.swingHoldRatio >= 0 && stockData.swingHoldRatio <= 100) {
+                 ratio = stockData.swingHoldRatio / 100.0;
+            } else {
+                 console.warn(`[MIGRATE] Stock swingHoldRatio (${stockData.swingHoldRatio}) is missing or invalid. Defaulting to 100% Swing (ratio=1.0) for migration.`);
+                 ratio = 1.0; // Explicitly set default if needed
             }
-            console.log(`Found ${buyGroups.size} unique Buy groups.`);
+            console.log(`[MIGRATE] Stock Details: PDP=${pdpValue}, PLR=${plrValue}, Ratio=${ratio * 100}% Swing`);
 
-            if (buyGroups.size === 0) {
-                setMigrationSuccess("No relevant Buy transactions found to create wallets from.");
+            // --- 2. Filter for OLD Buy Transactions (no txnType) ---
+            const epsilon = 0.000001; // For checking non-zero shares/investment
+            const oldBuyTransactions = transactions.filter(
+                txn => txn.action === 'Buy'
+                    && !txn.txnType // <<< Key filter for historical data
+                    && typeof txn.quantity === 'number' && txn.quantity > epsilon
+                    && typeof txn.price === 'number'
+                    && typeof txn.investment === 'number' && txn.investment > epsilon
+            );
+            oldBuyTxnCount = oldBuyTransactions.length;
+            console.log(`[MIGRATE] Found ${oldBuyTxnCount} historical Buy transactions potentially needing migration.`);
+
+            if (oldBuyTxnCount === 0) {
+                setMigrationSuccess("No historical Buy transactions found needing migration.");
                 setIsMigrating(false);
                 return;
             }
 
-            // --- 3. Check Existing Wallets and Create New Ones ---
-            for (const [priceKey, group] of Array.from(buyGroups.entries())) {
-                walletsChecked++; // Make sure this and subsequent lines are inside the loop braces
-                const buyPrice = group.buyPrice;
-                console.log(`Processing group: Buy Price ${buyPrice}`);
+            // --- 3. Aggregate Expected Shares/Investment by Buy Price from OLD Transactions ---
+            const expectedWalletData = new Map<string, {
+                buyPrice: number;
+                expectedSwingShares: number;
+                expectedHoldShares: number;
+                expectedTotalInvestment: number;
+            }>();
 
-                // Idempotency Check
-                try {
-                    const { data: existingWallets, errors: checkErrors } = await client.models.StockWallet.list({
-                        filter: {
-                            and: [
-                                { portfolioStockId: { eq: stockId } },
-                                // Be careful with floating point comparisons; might need range or check after fetching
-                                // Let's fetch and check precise equality for now
-                                { buyPrice: { eq: buyPrice } }
-                            ]
-                        },
-                        limit: 1 // We only need to know if >= 1 exists
-                    });
+            for (const txn of oldBuyTransactions) {
+                // Type guards passed by filter, but keep checks just in case
+                if (typeof txn.price !== 'number' || typeof txn.quantity !== 'number' || typeof txn.investment !== 'number') continue;
 
-                    if (checkErrors) throw checkErrors; // Handle errors during check
+                const priceKey = txn.price.toFixed(4); // Consistent key
+                const group = expectedWalletData.get(priceKey) ?? {
+                    buyPrice: txn.price,
+                    expectedSwingShares: 0,
+                    expectedHoldShares: 0,
+                    expectedTotalInvestment: 0,
+                };
 
-                    if (existingWallets && existingWallets.length > 0) {
-                        console.log(`-> Wallet already exists for price ${buyPrice}. Skipping.`);
-                        walletsSkipped++;
-                        continue; // Go to next buy group
-                    }
+                const txnSwingShares = txn.quantity * ratio;
+                const txnHoldShares = txn.quantity * (1 - ratio);
 
-                    // Wallet does not exist, proceed to create
-                    console.log(`-> Wallet for price ${buyPrice} does not exist. Creating...`);
+                group.expectedSwingShares += txnSwingShares;
+                group.expectedHoldShares += txnHoldShares;
+                group.expectedTotalInvestment += txn.investment;
+                expectedWalletData.set(priceKey, group);
+            }
+            buyGroupsCreated = expectedWalletData.size;
+            console.log(`[MIGRATE] Aggregated old buys into ${buyGroupsCreated} price groups.`);
 
-                    // Calculate TP
-                    let tpValue: number | null = null;
-                    let tpPercent: number | null = null;
-                    if (typeof pdpValue === 'number' && typeof plrValue === 'number' && buyPrice !== 0) {
-                        tpValue = buyPrice + (buyPrice * (pdpValue * plrValue / 100));
-                        tpPercent = pdpValue * plrValue;
-                    }
+            // --- 4. Fetch ALL Existing Wallets for this Stock to check against ---
+            console.log("[MIGRATE] Fetching ALL existing wallets for this stock...");
+            const { data: existingDbWalletsData, errors: fetchErrors } = await client.models.StockWallet.list({
+                 filter: { portfolioStockId: { eq: stockId } },
+                 selectionSet: ['id', 'buyPrice', 'walletType'], // Only need these for checking
+                 limit: 1000 // Fetch up to 1000 (add pagination if more expected)
+             });
+            if (fetchErrors) throw fetchErrors;
+            const existingDbWallets = existingDbWalletsData || [];
+            console.log(`[MIGRATE] Found ${existingDbWallets.length} existing wallet records in DB.`);
 
-                    // Prepare Wallet Data (NO 'owner' needed - generateClient handles it)
-                    const newWalletData = {
-                        portfolioStockId: stockId,
-                        buyPrice: buyPrice,
-                        totalInvestment: group.totalInvestment,
-                        totalSharesQty: group.totalSharesQty,
-                        sharesSold: 0,
-                        remainingShares: group.totalSharesQty,
-                        realizedPl: 0,
-                        sellTxnCount: 0, // Initialize required field
-                        tpValue: tpValue, // Will be null if calculation failed
-                        tpPercent: tpPercent, // Will be null if calculation failed
-                        realizedPlPercent: 0, // Initialize as 0%
-                        // Timestamps and __typename added automatically by generateClient
-                    };
-
-                    console.log("   Creating with data:", newWalletData);
-                    const { data: createdWallet, errors: createErrors } = await client.models.StockWallet.create(newWalletData);
-
-                    if (createErrors) throw createErrors;
-
-                    if (!createdWallet) {
-                        // This case should ideally not happen if errors is empty, but it's safest to check
-                        throw new Error("Wallet creation failed unexpectedly: No data returned after create call.");
-                    }
-                    
-                    console.log(`   Successfully created wallet: ${createdWallet.id}`);
-                    walletsCreated++;
-
-                } catch (err: any) {
-                    console.error(`Error processing group for buy price ${buyPrice}:`, err);
-                    const message = Array.isArray(err) ? err[0].message : err.message;
-                    // Store only the first error encountered? Or collect all? Let's store first.
-                    if (!migrationError) {
-                        setMigrationError(`Failed on price ${buyPrice}: ${message}`);
-                    }
-                    walletsFailed++;
+            // Create a lookup map for quick checks: "buyPrice_walletType" -> true
+            const existingWalletMap = new Map<string, boolean>();
+            existingDbWallets.forEach(w => {
+                if (w.buyPrice != null && w.walletType) {
+                     const priceKey = w.buyPrice.toFixed(4);
+                     existingWalletMap.set(`${priceKey}_${w.walletType}`, true);
                 }
-            } // End loop through buyGroups
+            });
 
-            // --- 4. Set Final Status ---
+            // --- 5. Iterate Aggregated Groups and Create MISSING Typed Wallets ---
+            for (const [priceKey, expectedData] of Array.from(expectedWalletData.entries())) {
+                const { buyPrice, expectedSwingShares, expectedHoldShares, expectedTotalInvestment } = expectedData;
+
+                // Calculate proportional investment split for this group
+                const totalExpectedShares = expectedSwingShares + expectedHoldShares;
+                let groupSwingInvestment = 0;
+                let groupHoldInvestment = 0;
+                if (totalExpectedShares > epsilon && expectedTotalInvestment > 0) {
+                     groupSwingInvestment = (expectedSwingShares / totalExpectedShares) * expectedTotalInvestment;
+                     groupHoldInvestment = (expectedHoldShares / totalExpectedShares) * expectedTotalInvestment;
+                     if (Math.abs((groupSwingInvestment + groupHoldInvestment) - expectedTotalInvestment) > 0.001) {
+                        groupHoldInvestment = expectedTotalInvestment - groupSwingInvestment;
+                     }
+                }
+
+                // --- Check/Create SWING Wallet ---
+                if (expectedSwingShares > epsilon) {
+                    const swingMapKey = `${priceKey}_Swing`;
+                    if (existingWalletMap.has(swingMapKey)) {
+                        console.log(`[MIGRATE - Swing] Wallet already exists for price ${buyPrice}. Skipping.`);
+                        walletsSkipped++;
+                    } else {
+                        console.log(`[MIGRATE - Swing] Creating new wallet for price ${buyPrice}... Shares: ${expectedSwingShares}`);
+                        try {
+                            let tpValue = null, tpPercent = null;
+                            if (typeof pdpValue === 'number' && typeof plrValue === 'number' && buyPrice) {
+                                 tpValue = buyPrice + (buyPrice * (pdpValue * plrValue / 100));
+                                 tpPercent = pdpValue * plrValue;
+                            }
+                            const createPayload = {
+                                portfolioStockId: stockId,
+                                walletType: 'Swing' as const,
+                                buyPrice: buyPrice,
+                                totalSharesQty: expectedSwingShares,
+                                totalInvestment: groupSwingInvestment,
+                                sharesSold: 0, remainingShares: expectedSwingShares,
+                                realizedPl: 0, sellTxnCount: 0,
+                                tpValue: tpValue, tpPercent: tpPercent, realizedPlPercent: 0,
+                            };
+                            const { errors } = await client.models.StockWallet.create(createPayload as any);
+                            if (errors) throw errors;
+                            console.log(`[MIGRATE - Swing] Create SUCCESS for price ${buyPrice}`);
+                            walletsCreated++;
+                        } catch (err: any) {
+                            console.error(`[MIGRATE - Swing] FAILED creation for price ${buyPrice}:`, err?.errors || err);
+                            walletsFailed++;
+                            if (!migrationError) setMigrationError(`Failed creating Swing wallet for price ${buyPrice}: ${err.message}`);
+                        }
+                    }
+                }
+
+                // --- Check/Create HOLD Wallet ---
+                if (expectedHoldShares > epsilon) {
+                     const holdMapKey = `${priceKey}_Hold`;
+                     if (existingWalletMap.has(holdMapKey)) {
+                         console.log(`[MIGRATE - Hold] Wallet already exists for price ${buyPrice}. Skipping.`);
+                         walletsSkipped++;
+                     } else {
+                         console.log(`[MIGRATE - Hold] Creating new wallet for price ${buyPrice}... Shares: ${expectedHoldShares}`);
+                         try {
+                             // TP generally not applied to Hold wallets by default
+                             const createPayload = {
+                                 portfolioStockId: stockId,
+                                 walletType: 'Hold' as const,
+                                 buyPrice: buyPrice,
+                                 totalSharesQty: expectedHoldShares,
+                                 totalInvestment: groupHoldInvestment,
+                                 sharesSold: 0, remainingShares: expectedHoldShares,
+                                 realizedPl: 0, sellTxnCount: 0,
+                                 tpValue: null, tpPercent: null, realizedPlPercent: 0,
+                             };
+                             const { errors } = await client.models.StockWallet.create(createPayload as any);
+                             if (errors) throw errors;
+                             console.log(`[MIGRATE - Hold] Create SUCCESS for price ${buyPrice}`);
+                             walletsCreated++;
+                         } catch (err: any) {
+                             console.error(`[MIGRATE - Hold] FAILED creation for price ${buyPrice}:`, err?.errors || err);
+                             walletsFailed++;
+                             if (!migrationError) setMigrationError(`Failed creating Hold wallet for price ${buyPrice}: ${err.message}`);
+                         }
+                     }
+                }
+            } // End loop through aggregated buyGroups
+
+            // --- 6. Set Final Status ---
             if (walletsFailed > 0) {
-                setMigrationError(`Processed ${buyGroups.size} buy groups. ${walletsCreated} wallets created, ${walletsSkipped} skipped, ${walletsFailed} failed. Check console for details.`);
-            } else {
+                setMigrationError(`Processed ${oldBuyTxnCount} txns (${buyGroupsCreated} groups). Created: ${walletsCreated}, Skipped: ${walletsSkipped}, Failed: ${walletsFailed}. Check console.`);
+            } else if (walletsCreated > 0) {
                 setMigrationSuccess(`Migration complete. ${walletsCreated} new wallets created, ${walletsSkipped} existing wallets skipped.`);
+            } else {
+                setMigrationSuccess(`Migration check complete. No new wallets needed, ${walletsSkipped} existing wallets skipped.`);
             }
 
-            // --- 5. Refresh Wallet List ---
-            fetchWallets(); // Refresh the displayed list
+            // --- 7. Refresh Wallet List ---
+            console.log("[MIGRATE] Refreshing wallet list...");
+            fetchWallets();
 
         } catch (error: any) {
-            console.error("Critical error during migration process:", error);
+            console.error("[MIGRATE] Critical error during migration process:", error);
             const message = Array.isArray(error?.errors) ? error.errors[0].message : error.message;
-            setMigrationError(message || "An unexpected error occurred.");
+            setMigrationError(message || "An unexpected error occurred during migration.");
         } finally {
             setIsMigrating(false);
         }
@@ -310,12 +374,18 @@ export default function StockWalletPage() {
         // Fields needed for the simplified table and editing
         const selectionSetNeeded = [
             'id', 'date', 'action', 'signal', 'price',
-            'investment', // Needed for Buy/Div display and editing
-            'quantity',   // Used for 'Total Shares' display and editing Sell
-            'lbd',        // Keep LBD column
-            'completedTxnId', // Needed for editing Sell
-            'sharesType',     // Needed for editing Sell
-            'playShares', 'holdShares', 'tp', 'txnProfit', 'txnProfitPercent', // Needed for editing logic in TransactionForm
+            'investment',
+            'quantity',       // Total quantity
+            'lbd',
+            'completedTxnId', // Links Sell back to StockWallet ID
+            // --- UPDATE THESE ---
+            // 'sharesType',      // REMOVED
+            'txnType',        // ADDED
+            // 'playShares',      // REMOVED
+            'swingShares',    // ADDED (Renamed)
+            'holdShares',     // Keep
+            // --- END UPDATE ---
+            'tp', 'txnProfit', 'txnProfitPercent', // Keep for potential edit logic display
         ] as const;
 
 
@@ -367,7 +437,7 @@ export default function StockWalletPage() {
         if (stockId) {
             fetchTransactions(); // Fetch transactions when stockId is available
         }
-    }, [stockId, fetchTransactions]); // Add fetchTransactions dependency
+    }, [stockId, fetchTransactions, fetchWallets]); // Add fetchTransactions dependency
     // --- END useEffect ---
 
     
@@ -414,6 +484,63 @@ const handleUpdateTransaction = async (updatedTxnDataFromForm: TransactionDataTy
     }
 };
 
+// Inside StockWalletPage component
+
+const handleDeleteWallet = useCallback(async (walletToDelete: StockWalletDataType) => {
+    if (!walletToDelete) return;
+
+    const walletId = walletToDelete.id;
+    const walletType = walletToDelete.walletType;
+    const buyPrice = walletToDelete.buyPrice;
+    const remainingShares = walletToDelete.remainingShares ?? 0;
+    const sellTxnCount = walletToDelete.sellTxnCount ?? 0;
+    const epsilon = 0.000001; // Threshold for zero shares
+
+    // Double-check if shares are actually zero
+    if (remainingShares > epsilon) {
+        alert("Cannot delete wallet: Shares still remain.");
+        return;
+    }
+
+    // Construct confirmation message
+    let confirmMsg = `Are you sure you want to delete this empty ${walletType} wallet (Buy Price: ${formatCurrency(buyPrice)})?`;
+    if (sellTxnCount > 0) {
+        confirmMsg += `\n\nWARNING: This wallet has ${sellTxnCount} sell transaction(s) linked to it. Deleting the wallet might make historical P/L tracking for those sales difficult.`;
+    }
+
+    if (!window.confirm(confirmMsg)) {
+        return;
+    }
+
+    console.log(`Attempting to delete empty wallet: ${walletId}`);
+    setIsLoading(true); // Use main loading state or add specific delete loading state
+    // Clear previous feedback using setFeedback from response #236 if you added it
+    // setFeedback(null);
+
+    try {
+        const { errors } = await client.models.StockWallet.delete({ id: walletId });
+
+        if (errors) throw errors;
+
+        console.log(`Wallet ${walletId} deleted successfully.`);
+        // Set success feedback using setFeedback if implemented
+        // setFeedback({ type: 'success', message: `${walletType} wallet (Buy: ${formatCurrency(buyPrice)}) deleted.` });
+
+        // Refresh the wallets list
+        fetchWallets();
+
+    } catch (err: any) {
+        console.error(`Error deleting wallet ${walletId}:`, err);
+        const errorMessage = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || 'Failed to delete wallet.');
+        // Set error feedback using setFeedback if implemented
+         setError(`Delete Failed: ${errorMessage}`); // Use main error state for now
+        // setFeedback({ type: 'error', message: `Delete Failed: ${errorMessage}` });
+    } finally {
+        setIsLoading(false);
+    }
+}, [stockId, fetchWallets]); // Add dependencies (stockId needed indirectly? fetchWallets needed)
+// Note: If using setFeedback, add it to dependencies
+
 const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
     // Use the passed transaction object
     const idToDelete = txnToDelete.id;
@@ -437,6 +564,9 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
     let walletUpdateSuccess = false;
 
     try {
+        let overallSuccess = true; // <<< ADD THIS LINE to track wallet update success
+        let finalMessage = ""; // <<< ADD THIS LINE to accumulate warnings/messages
+        
         // --- Step 1: Update Wallet Conditionally (BEFORE deleting transaction) ---
         if (isWalletSell) {
             console.log(`Updating wallet ${walletIdToUpdate} due to deleted sell txn ${idToDelete}`);
@@ -504,13 +634,115 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                  walletUpdateError = `Wallet update failed: ${Array.isArray(walletErr) ? walletErr[0].message : walletErr.message}`;
             }
         }
+        
+        // ==============================================
+        // === Logic for DELETING A BUY TRANSACTION ===
+        // ==============================================
+        else if (txnToDelete.action === 'Buy') { // Use 'else if' assuming Div doesn't affect wallets
+            const buyPrice = txnToDelete.price;
+            const swingSharesToRemove = txnToDelete.swingShares ?? 0;
+            const holdSharesToRemove = txnToDelete.holdShares ?? 0;
+            const investmentToRemove = txnToDelete.investment ?? 0;
+            const epsilon = 0.000001;
 
-        // --- Step 2: Delete the Transaction ---
-        console.log(`Proceeding to delete transaction ${idToDelete}`);
-        const { errors: deleteErrors } = await client.models.Transaction.delete({ id: idToDelete });
-        if (deleteErrors) throw deleteErrors; // Throw delete error if it occurs
+            if (typeof buyPrice !== 'number' || (swingSharesToRemove < epsilon && holdSharesToRemove < epsilon)) {
+                console.warn("[Delete Buy] Cannot process wallet update: Invalid price or zero shares.");
+                finalMessage += ` | Wallet update skipped (invalid price/shares).`;
+            } else {
+                // Calculate proportional investment
+                const totalSharesInTxn = swingSharesToRemove + holdSharesToRemove;
+                let swingInvToRemove = 0;
+                let holdInvToRemove = 0;
+                if (totalSharesInTxn > epsilon && investmentToRemove > 0) {
+                    swingInvToRemove = (swingSharesToRemove / totalSharesInTxn) * investmentToRemove;
+                    holdInvToRemove = (holdSharesToRemove / totalSharesInTxn) * investmentToRemove;
+                    if (Math.abs((swingInvToRemove + holdInvToRemove) - investmentToRemove) > 0.001) {
+                        holdInvToRemove = investmentToRemove - swingInvToRemove; // Adjust rounding
+                    }
+                }
 
-        console.log('Transaction deleted successfully!');
+                // Define the helper function INSIDE the 'Buy' block
+                const updateWalletOnBuyDelete = async (
+                    type: 'Swing' | 'Hold',
+                    sharesToRemove: number,
+                    investmentToRemove: number
+                ): Promise<boolean> => {
+                    if (sharesToRemove <= epsilon) return true; // Success if nothing to remove
+
+                    console.log(`[Delete Buy - ${type}] Attempting wallet update. SharesToRemove: ${sharesToRemove}, InvToRemove: ${investmentToRemove}`);
+                    try {
+                        // Find wallet using client-side check
+                        const { data: candidates, errors: listErrors } = await client.models.StockWallet.list({
+                            filter: { and: [ { portfolioStockId: { eq: stockId } }, { walletType: { eq: type } } ] },
+                            selectionSet: ['id', 'buyPrice', 'sharesSold', 'sellTxnCount', 'totalSharesQty', 'totalInvestment', 'remainingShares'],
+                            limit: 500
+                        });
+                        if (listErrors) { throw listErrors; } // Propagate list errors
+
+                        const walletToUpdate = (candidates || []).find(wallet => wallet.buyPrice != null && Math.abs(wallet.buyPrice - buyPrice) < epsilon );
+
+                        if (!walletToUpdate) {
+                            console.warn(`[Delete Buy - ${type}] Wallet not found for price ${buyPrice}. Cannot update.`);
+                            finalMessage += ` | ${type} wallet (Price ${buyPrice}) not found.`;
+                            return true; // Treat as non-failure for Txn deletion
+                        }
+
+                        // Check for sales
+                        if ((walletToUpdate.sharesSold ?? 0) > epsilon || (walletToUpdate.sellTxnCount ?? 0) > 0) {
+                            console.warn(`[Delete Buy - ${type}] Wallet ${walletToUpdate.id} has sales. Skipping update.`);
+                            finalMessage += ` | ${type} wallet (Price ${buyPrice}) has sales, not reversed.`;
+                            return true; // Allow Txn deletion, skip wallet update
+                        }
+
+                        // No sales - Update wallet (subtract values)
+                        console.log(`[Delete Buy - ${type}] Applying reversal to wallet ${walletToUpdate.id}...`);
+                        const newTotalShares = Math.max(0, (walletToUpdate.totalSharesQty ?? 0) - sharesToRemove);
+                        const newInvestment = Math.max(0, (walletToUpdate.totalInvestment ?? 0) - investmentToRemove);
+                        const newRemaining = Math.max(0, (walletToUpdate.remainingShares ?? 0) - sharesToRemove);
+
+                        if(newRemaining < -epsilon || newTotalShares < -epsilon) { throw new Error("Negative shares calculation error."); }
+                        if (Math.abs(newRemaining - newTotalShares) > epsilon) { console.warn(`Potential inconsistency in remaining shares calculation for ${type} wallet ${walletToUpdate.id}.`); }
+
+                        const walletUpdatePayload = {
+                            id: walletToUpdate.id,
+                            totalSharesQty: newTotalShares, totalInvestment: newInvestment, remainingShares: newRemaining,
+                            sharesSold: 0, realizedPl: 0, sellTxnCount: 0, realizedPlPercent: 0, // Reset these as no sales occurred
+                        };
+                        const { errors: updateErrors } = await client.models.StockWallet.update(walletUpdatePayload);
+                        if (updateErrors) throw updateErrors; // Propagate update errors
+                        console.log(`[Delete Buy - ${type}] Wallet update successful.`);
+                        return true; // Success
+
+                    } catch (err: any) {
+                        console.error(`[Delete Buy - ${type}] Helper FAILED:`, err?.errors || err);
+                        finalMessage += ` | Error updating ${type} wallet: ${err.message}.`;
+                        return false; // Indicate critical failure
+                    }
+                }; // --- End updateWalletOnBuyDelete helper ---
+
+                // Attempt updates sequentially
+                const swingUpdateOk = await updateWalletOnBuyDelete('Swing', swingSharesToRemove, swingInvToRemove);
+                const holdUpdateOk = await updateWalletOnBuyDelete('Hold', holdSharesToRemove, holdInvToRemove);
+
+                if (!swingUpdateOk || !holdUpdateOk) {
+                    overallSuccess = false; // Mark overall process failed if wallet update had critical error
+                }
+            } // End if valid Buy Txn data for wallet update
+        } // --- END 'Buy' Deletion Block ---
+
+        // --- Finally, Delete the Transaction IF preceding wallet logic didn't critically fail ---
+        if (overallSuccess) {
+            console.log(`Proceeding to delete transaction ${idToDelete}`);
+            const { errors: deleteErrors } = await client.models.Transaction.delete({ id: idToDelete });
+            if (deleteErrors) throw deleteErrors; // Throw delete error if it occurs
+            console.log('Transaction deleted successfully!');
+            finalMessage = `Transaction deleted successfully.${finalMessage}`;
+            setTxnError(null); // Clear any previous warnings if fully successful
+            // You might want a success state here too: setTxnSuccess(finalMessage);
+        } else {
+             // Wallet logic failed, do not delete the transaction
+             throw new Error(`Transaction NOT deleted due to critical errors updating associated wallets.${finalMessage}`);
+        }
 
         // Handle final status based on outcomes
         if (isWalletSell && !walletUpdateSuccess) {
@@ -613,6 +845,35 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
         return sortableItems;
     }, [wallets, sortConfig]);
 
+    // --- ADD Client-Side Filtering for Tabs ---
+    const swingWallets = useMemo(() => {
+        // Log the input array that's about to be filtered
+        console.log(">>> Raw sortedWallets before Swing filter:", sortedWallets);
+
+        // Perform the filter operation
+        const filtered = sortedWallets.filter(w => w.walletType === 'Swing');
+
+        // Log the result of the filtering
+        console.log(">>> Filtered swingWallets RESULT:", filtered);
+
+        // Return the filtered array
+        return filtered;
+    }, [sortedWallets]); // Dependency array remains the same
+
+    const holdWallets = useMemo(() => {
+        // You can optionally log the input here too, though it's the same sortedWallets
+        // console.log(">>> Raw sortedWallets before Hold filter:", sortedWallets);
+
+        // Perform the filter operation
+        const filtered = sortedWallets.filter(w => w.walletType === 'Hold');
+
+        // Log the result of the filtering
+        console.log(">>> Filtered holdWallets RESULT:", filtered);
+
+        // Return the filtered array
+        return filtered;
+    }, [sortedWallets]); // Dependency array remains the same
+    // --- END Filtering Logic ---
 
     // --- ADD Txn Sorting Logic ---
     const requestTxnSort = (key: SortableTxnKey) => {
@@ -792,6 +1053,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                 quantity: quantity, // Use 'shares' field for quantity sold in Txn record
                 completedTxnId: walletToSell.id, // Store Wallet ID here
                 signal: sellSignal || undefined,
+                txnType: walletToSell.walletType
             };
             console.log("Creating Transaction with payload:", transactionPayload);
 
@@ -848,8 +1110,9 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
 
     // This function will be called by TransactionForm after a successful Buy
     const handleBuyAdded = () => {
-        console.log("Buy transaction added via modal, refreshing wallet list...");
+        console.log("[StockWalletPage] handleBuyAdded callback triggered!");
         setIsBuyModalOpen(false); // Close the modal
+        //await new Promise(resolve => setTimeout(resolve, 750));
         fetchWallets();
         fetchTransactions();
         // You might also need to refresh other data if the Buy impacts other calculations on the page
@@ -866,6 +1129,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
      // Show specific fetch error for wallets
      if (error && !stockSymbol) return <p style={{ color: 'red' }}>Error: {error}</p>;
 
+     console.log("[StockWalletPage Render] Component rendering. Wallets state length:", wallets.length, "Wallets state content:", wallets);
 
     return (
         <div>
@@ -894,6 +1158,33 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
 
             <h3>Wallets</h3>
 
+            {/* --- ADD TABS --- */}
+             <div style={{ marginBottom: '1rem', borderBottom: '1px solid #555', paddingBottom: '0.5rem' }}>
+                <button
+                    onClick={() => setActiveTab('Swing')}
+                    style={{
+                        padding: '8px 15px', marginRight: '10px', cursor: 'pointer',
+                        border: 'none', borderBottom: activeTab === 'Swing' ? '2px solid lightblue' : '2px solid transparent',
+                        background: 'none', color: activeTab === 'Swing' ? 'lightblue' : 'inherit',
+                        fontSize: '1em'
+                    }}
+                >
+                    Swing ({swingWallets.length})
+                </button>
+                <button
+                    onClick={() => setActiveTab('Hold')}
+                     style={{
+                        padding: '8px 15px', cursor: 'pointer',
+                        border: 'none', borderBottom: activeTab === 'Hold' ? '2px solid lightgreen' : '2px solid transparent',
+                        background: 'none', color: activeTab === 'Hold' ? 'lightgreen' : 'inherit',
+                        fontSize: '1em'
+                    }}
+                >
+                    Hold ({holdWallets.length})
+                </button>
+             </div>
+             {/* --- END TABS --- */}
+            
             {error && <p style={{ color: 'red' }}>Error loading wallets: {error}</p>}
 
             <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
@@ -934,23 +1225,24 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                     </tr>
                 </thead>
                 <tbody>
-                    {/* Check sortedWallets length now */}
-                    {sortedWallets.length === 0 ? (
+                    {/* Check if the selected filtered list is empty */}
+                    {(activeTab === 'Swing' ? swingWallets : holdWallets).length === 0 ? (
                         <tr>
-                            {/* --- Adjusted Colspan (8 columns) --- */}
                             <td colSpan={11} style={{ textAlign: 'center', padding: '1rem' }}>
-                                No wallets found for this stock.
+                                No {activeTab} wallets found for this stock.
                             </td>
                         </tr>
                     ) : (
-                        sortedWallets.map((wallet, index) => (
-                            <tr
+                        // Map ONLY over the selected filtered list (swingWallets or holdWallets)
+                        (activeTab === 'Swing' ? swingWallets : holdWallets).map((wallet, index) => (
+                           // Directly return the table row for the current 'wallet'
+                           <tr
                                 key={wallet.id}
                                 style={{
                                     backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent',
                                 }}
-                            >
-                                {/* --- Removed Symbol Cell --- */}
+                           >
+                                {/* Render cells using the 'wallet' object from the filtered list */}
                                 <td style={{ padding: '5px' }}>{formatCurrency(wallet.buyPrice)}</td>
                                 <td style={{ padding: '5px' }}>{formatCurrency(wallet.totalInvestment)}</td>
                                 <td style={{ padding: '5px' }}>{formatShares(wallet.totalSharesQty)}</td>
@@ -962,31 +1254,47 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                                 <td style={{ padding: '5px' }}>{formatPercent(wallet.realizedPlPercent)}</td>
                                 <td style={{ padding: '5px' }}>{formatShares(wallet.remainingShares)}</td>
                                 <td style={{ padding: '5px', textAlign: 'center' }}>
-                                    {/* Conditionally render Sell button if shares remain */}
+                                    {/* Sell button logic using the correct 'wallet' */}
                                     {wallet.remainingShares && wallet.remainingShares > 0 ? (
                                         <button
                                             onClick={() => handleOpenSellModal(wallet)}
-                                            // --- UPDATE STYLES & CONTENT ---
                                             style={{
-                                                background: 'none',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                padding: '5px', // Adjust as needed
-                                                color: '#28a745', // Example: Green color for sell icon
-                                                fontSize: '1.1em' // Adjust size if needed
+                                                background: 'none', border: 'none', cursor: 'pointer',
+                                                padding: '5px', color: '#28a745', fontSize: '1.1em'
                                             }}
                                             title={`Sell from Wallet (Buy Price: ${formatCurrency(wallet.buyPrice)})`}
                                             disabled={!wallet.remainingShares || wallet.remainingShares <= 0}
                                         >
-                                            {/* Replace text with icon */}
                                             <FaDollarSign />
                                         </button>
                                     ) : (
-                                        '-' // Show nothing or '--' if no remaining shares
+                                        '' // Show '-' if no remaining shares
                                     )}
+
+                                    {/* --- ADD DELETE BUTTON --- */}
+                                    {wallet.remainingShares === 0 ? (
+                                        <button
+                                            onClick={() => handleDeleteWallet(wallet)} // <<< Call new handler
+                                            // Enable only if remaining shares are effectively zero
+                                            disabled={(wallet.remainingShares ?? 0) > 0.000001}
+                                            title={ (wallet.remainingShares ?? 0) > 0.000001 ? "Delete disabled (shares remain)" : `Delete Empty ${wallet.walletType} Wallet` }
+                                            style={{
+                                                background: 'none', border: 'none', cursor: 'pointer',
+                                                padding: '5px', marginLeft: '8px', // Add some space
+                                                // Grey out when disabled, make red when enabled?
+                                                color: 'gray', // Grey or Red
+                                                fontSize: '1.1em'
+                                            }}
+                                        >
+                                            <FaTrashAlt />
+                                        </button>
+                                    ) : (
+                                        '' // Show '-' if no remaining shares
+                                    )}
+                                    {/* --- END DELETE BUTTON --- */}
                                 </td>
-                            </tr>
-                        ))
+                           </tr>
+                        )) // End map over the CORRECT list
                     )}
                 </tbody>
             </table>
@@ -1082,7 +1390,8 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                             <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
                                 {/* Simplified Columns */}
                                 <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('date')}>Date</th>
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('action')}>Action</th>
+                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('action')}>Txn</th>
+                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('txnType')}>Type</th>
                                 <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('signal')}>Signal</th>
                                 <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('price')}>Price</th>
                                 <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('investment')}>Inv</th>
@@ -1094,7 +1403,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                         <tbody>
                             {sortedTransactions.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} style={{ textAlign: 'center', padding: '1rem' }}> {/* Adjust colspan */}
+                                    <td colSpan={9} style={{ textAlign: 'center', padding: '1rem' }}> {/* Adjust colspan */}
                                         No transactions found for this stock.
                                     </td>
                                 </tr>
@@ -1108,6 +1417,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                                     >
                                         <td style={{ padding: '5px' }}>{txn.date}</td>
                                         <td style={{ padding: '5px' }}>{txn.action}</td>
+                                        <td style={{ padding: '5px' }}>{txn.txnType ?? '-'}</td>
                                         <td style={{ padding: '5px' }}>{txn.signal ?? '-'}</td>
                                         <td style={{ padding: '5px' }}>{formatCurrency(txn.price)}</td>
                                         {/* Show investment only if Buy/Div */}

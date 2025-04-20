@@ -9,502 +9,692 @@ const client = generateClient<Schema>();
 
 // Define the accurate item types
 type TransactionItem = Schema['Transaction'];
-type PortfolioStockItem = Schema['PortfolioStock']; // Needed for fetching PDP
-// @ts-ignore
-type SharesTypeValue = Schema['Transaction']['sharesType'];
-type TransactionDataType = Schema['Transaction']['type']; 
-
+type PortfolioStockItem = Schema['PortfolioStock'];
+type TransactionDataType = Schema['Transaction']['type'];
 type TransactionUpdatePayload = Partial<TransactionDataType> & { id: string };
+type StockWalletDataType = Schema['StockWallet']['type']; // Needed for type checking
 
 // Define props for the component
 interface TransactionFormProps {
-  portfolioStockId: string; // ID is required for context
-  portfolioStockSymbol?: string; // Symbol is optional (for display)
-  onTransactionAdded?: () => void; // Callback after successful add/update
-  // Add these props:
-  forceAction?: Schema['Transaction']['type']['action']; // Optional prop to lock the action
-  showCancelButton?: boolean; // Optional prop to show a cancel button
-  onCancel?: () => void; // Callback for cancel action
-  // Props for edit mode (keep existing)
+  portfolioStockId: string;
+  portfolioStockSymbol?: string;
+  onTransactionAdded?: () => void;
+  forceAction?: Schema['Transaction']['type']['action'];
+  showCancelButton?: boolean;
+  onCancel?: () => void;
   isEditMode?: boolean;
-  initialData?: Partial<TransactionItem['type']> | null; // Or use TransactionItem type if defined
-  onUpdate?: (updatedData: any) => Promise<void>; // Adjust type as needed
+  initialData?: Partial<TransactionItem['type']> | null;
+  onUpdate?: (updatedData: any) => Promise<void>;
 }
 
-
-// Define specific types for dropdowns from schema
-// @ts-ignore - Acknowledge TS issues with Amplify generated Enum types
-//type TxnActionValue = Schema['Transaction']['type']['action'];
-// @ts-ignore
-//type TxnSignalValue = Schema['Transaction']['type']['signal'];
+// Define Buy Type options
+type BuyTypeValue = 'Swing' | 'Hold' | 'Split';
 
 // Default values for resetting the form
 const defaultFormState = {
   date: '',
-  action: 'Buy' as Schema['Transaction']['type']['action'], // <-- Use full path
+  action: 'Buy' as Schema['Transaction']['type']['action'],
   signal: undefined as Schema['Transaction']['type']['signal'] | undefined,
   price: '',
   investment: '',
-  sharesInput: '', // Renamed state for shares input
-  completedTxnId: '',
+  sharesInput: '', // Used for Sell quantity display in Edit mode
+  completedTxnId: '', // Used for Sell linking/profit calc
+  buyType: 'Split' as BuyTypeValue, // Default Buy Type
 };
+
+// Helper function to get today's date in YYYY-MM-DD format
+const getTodayDateString = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 
 export default function TransactionForm({
   portfolioStockId,
   portfolioStockSymbol,
   onTransactionAdded,
-  forceAction, // <-- Add prop
-  showCancelButton = false, // <-- Add prop with default
-  onCancel, // <-- Add prop
-  isEditMode = false, // Keep existing props
+  forceAction,
+  showCancelButton = false,
+  onCancel,
+  isEditMode = false,
   initialData = null,
   onUpdate
-}: TransactionFormProps) { // <-- Use the interface
+}: TransactionFormProps) {
 
-  // State for form fields
+  // --- State for form fields ---
   const [date, setDate] = useState(defaultFormState.date);
-  const [action, setAction] = useState<Schema['Transaction']['type']['action']>( // <-- Use full path
-    forceAction ? forceAction : (isEditMode && initialData?.action ? initialData.action : 'Buy')
-  );
+  const [action, setAction] = useState<Schema['Transaction']['type']['action']>(defaultFormState.action);
   const [signal, setSignal] = useState<Schema['Transaction']['type']['signal'] | undefined>(defaultFormState.signal);
   const [price, setPrice] = useState(defaultFormState.price);
   const [investment, setInvestment] = useState(defaultFormState.investment);
-  const [sharesInput, setSharesInput] = useState(defaultFormState.sharesInput); // Input for Sell action
+  const [sharesInput, setSharesInput] = useState(defaultFormState.sharesInput);
   const [completedTxnId, setCompletedTxnId] = useState(defaultFormState.completedTxnId);
-  const [sharesType, setSharesType] = useState<SharesTypeValue>('Play')
+  const [buyType, setBuyType] = useState<BuyTypeValue>(defaultFormState.buyType);
 
+  const [warning, setWarning] = useState<string | null>(null);
+
+  console.log("[TransactionForm Render] Component rendering. Current warning state:", warning);
+  
   // State for submission status
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // --- CORRECTED: Effect to populate form for editing ---
+  // --- Effect to populate form for editing or set defaults ---
   useEffect(() => {
-    setError(null); // Clear errors when switching modes/data
-    setSuccess(null); // Clear success message
+    console.log("[TransactionForm useEffect] Running effect, clearing messages. Mode:", isEditMode, "Initial Data:", initialData);
+    setError(null);
+    setSuccess(null);
+    setWarning(null);
     if (isEditMode && initialData) {
       // Populate state from initialData for editing
-      // @ts-ignore
-      setDate(initialData.date ?? defaultFormState.date);
-      // @ts-ignore
+      setDate(initialData.date ?? getTodayDateString());
       setAction(initialData.action ?? defaultFormState.action);
-      // @ts-ignore
       setSignal(initialData.signal ?? defaultFormState.signal);
-      // @ts-ignore
       setPrice(initialData.price?.toString() ?? defaultFormState.price);
-      // @ts-ignore
       setInvestment(initialData.investment?.toString() ?? defaultFormState.investment);
-      // @ts-ignore
-      setSharesInput(initialData.quantity?.toString() ?? defaultFormState.sharesInput); // Populate sharesInput from quantity if editing Sell
-      // @ts-ignore
+      setSharesInput(initialData.quantity?.toString() ?? defaultFormState.sharesInput);
       setCompletedTxnId(initialData.completedTxnId ?? defaultFormState.completedTxnId);
-      // @ts-ignore
-      setSharesType(initialData.sharesType ?? 'Play');
+      setBuyType((initialData.txnType as BuyTypeValue) ?? defaultFormState.buyType);
     } else {
       // Reset form for Add mode
-      setDate(defaultFormState.date);
-      setAction(defaultFormState.action);
+      setDate(getTodayDateString());
+      setAction(forceAction ?? defaultFormState.action);
       setSignal(defaultFormState.signal);
       setPrice(defaultFormState.price);
       setInvestment(defaultFormState.investment);
       setSharesInput(defaultFormState.sharesInput);
       setCompletedTxnId(defaultFormState.completedTxnId);
-      setSharesType('Play');
+      setBuyType(defaultFormState.buyType);
     }
-  }, [isEditMode, initialData]);
-  // --- End CORRECTED Effect ---
-
-
-
-
+  }, [isEditMode, initialData, forceAction]);
+  // --- End Effect ---
 
 
   // Handle form submission
-  // Replace the entire handleSubmit function
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsLoading(true);
     setError(null);
     setSuccess(null);
+    setWarning(null);
 
-    // --- Validation (Existing + sharesType) ---
-    if (!date || (!isEditMode && !portfolioStockId) || !action) {
-      setError('Date, Action required. Stock context must be provided when adding.');
-      setIsLoading(false); return;
-    }
-    if (action === 'Sell' && !sharesInput) {
-      setError('Shares quantity is required for Sell transactions.');
-      setIsLoading(false); return;
-    }
-    if (action === 'Sell' && !sharesType) {
-        setError('Shares Type (Play/Hold) is required for Sell transactions.');
-        setIsLoading(false); return;
-    }
-    if ((action === 'Buy' || action === 'Div') && !investment) {
-        setError('Investment/Amount is required for Buy/Dividend transactions.');
-        setIsLoading(false); return;
-    }
-     if ((action === 'Buy' || action === 'Sell') && !price) {
-        setError('Price is required for Buy/Sell transactions.');
-        setIsLoading(false); return;
-    }
-     // completedTxnId is optional for profit calc
+    // --- Validation ---
+    if (!date || (!isEditMode && !portfolioStockId) || !action) { setError('Date, Action required.'); setIsLoading(false); return; }
+    if ((action === 'Buy' || action === 'Div') && !investment) { setError('Investment/Amount required for Buy/Dividend.'); setIsLoading(false); return; }
+    if ((action === 'Buy' || action === 'Sell') && !price) { setError('Price required for Buy/Sell.'); setIsLoading(false); return; }
+    if (action === 'Buy' && !buyType) { setError('Please select a Buy Type.'); setIsLoading(false); return; }
+    // --- End Validation ---
 
-    // --- Parse Inputs (Existing) ---
-    const priceValue = price ? parseFloat(price) : undefined; // This is the SELL price for Sell actions
+
+    // --- Parse Inputs ---
+    const priceValue = price ? parseFloat(price) : undefined;
     const investmentValue = investment ? parseFloat(investment) : undefined;
-    const sharesInputValue = sharesInput ? parseFloat(sharesInput) : undefined; // This is the quantity for Sell actions
 
-    // --- Calculate Derived Buy Fields (LBD, TP, Buy Shares) (Existing) ---
-    let quantity: number | undefined | null = null; // Represents Buy quantity OR Sell quantity
-    let playShares: number | undefined | null = null;
-    let holdShares: number | undefined | null = null;
+    // --- Initialize derived fields ---
+    let quantity: number | undefined | null = null; // TOTAL quantity for Buy/Div
+    let calculatedSwingShares: number | undefined | null = null;
+    let calculatedHoldShares: number | undefined | null = null;
     let lbd: number | undefined | null = null;
     let tp: number | undefined | null = null;
+    let pdpValue: number | null | undefined = null;
+    let plrValue: number | null | undefined = null;
 
+
+    // --- Calculations for Buy action ---
     if (action === 'Buy') {
-        if (investmentValue && priceValue && priceValue !== 0) {
-           quantity = investmentValue / priceValue;
-           playShares = quantity / 2;
-           holdShares = quantity / 2;
+        if (investmentValue && priceValue && priceValue > 0) {
+            quantity = investmentValue / priceValue; // Calculate total quantity
+        } else {
+            setError("Investment and positive Price are required to calculate quantity for Buy.");
+            setIsLoading(false); return;
         }
-        if (priceValue) {
-             try {
-                 const { data: stockData } = await client.models.PortfolioStock.get({ id: portfolioStockId }, { selectionSet: ['pdp', 'plr'] });
-                 const pdpValue = stockData?.pdp;
-                 const plrValue = stockData?.plr;
-                 if (typeof pdpValue === 'number' && typeof plrValue === 'number') {
-                     lbd = priceValue - (priceValue * (pdpValue / 100));
-                     tp = priceValue + (priceValue * (pdpValue * plrValue / 100));
-                 }
-             } catch (fetchErr) { /* ... error handling ... */ }
+
+        // Fetch stock details (ratio, pdp, plr)
+        let ratio = 1.0; // Default to 100% Swing
+        try {
+            console.log("Fetching stock details for ratio/TP/LBD...");
+            const { data: stock } = await client.models.PortfolioStock.get(
+                { id: portfolioStockId }, { selectionSet: ['swingHoldRatio', 'pdp', 'plr'] }
+            );
+            pdpValue = stock?.pdp;
+            plrValue = stock?.plr;
+
+            if (buyType === 'Split') {
+                if (typeof stock?.swingHoldRatio === 'number' && stock.swingHoldRatio >= 0 && stock.swingHoldRatio <= 100) {
+                    ratio = stock.swingHoldRatio / 100.0;
+                    console.log(`Using fetched ratio for split: ${ratio * 100}% Swing`);
+                } else {
+                    ratio = 0.5; // Default 50/50 if type is Split but ratio missing/invalid
+                    console.warn(`Swing/Hold ratio not found or invalid for stock, using default 50/50 split.`);
+                }
+            } else if (buyType === 'Hold') {
+                ratio = 0.0; // 0% Swing (100% Hold)
+            } // Default ratio remains 1.0 (100% Swing) for 'Swing' type
+
+             // Calculate LBD/TP
+             if (typeof pdpValue === 'number' && typeof plrValue === 'number' && priceValue) {
+                 lbd = priceValue - (priceValue * (pdpValue / 100));
+                 tp = priceValue + (priceValue * (pdpValue * plrValue / 100));
+             } else { console.log("Could not calculate LBD/TP (PDP/PLR invalid or price missing)"); }
+
+        } catch (fetchErr: any) {
+            console.error("Error fetching stock data", fetchErr);
+            setError(`Could not fetch stock details. ${fetchErr.message}`);
+            setIsLoading(false); return;
         }
-    } else if (action === 'Sell') {
-        quantity = sharesInputValue; // Sell quantity from input
-        playShares = null; holdShares = null; lbd = null; tp = null; // Not applicable to Sell txn record
+
+        // Calculate share splits
+        if (quantity && quantity > 0) {
+            calculatedSwingShares = quantity * ratio;
+            calculatedHoldShares = quantity * (1 - ratio);
+        }
     }
-    // --- End Derived Field Calculation ---
+    // --- End Buy action calculations ---
 
 
-    // --- Calculate TxnProfit and TxnProfitPercent for Sell (Using NEW Logic) ---
+    // --- TxnProfit Calculation (Only for Editing a Sell - Simplified) ---
     let txnProfit: number | null = null;
     let calculatedTxnProfitPercent: number | null = null;
-
-    // Condition: Is a Sell, has a completedTxnId, has Sell price, has quantity
-    if (action === 'Sell' && completedTxnId && priceValue && quantity) {
-      //console.log(`>>> Sell action with completedTxnId: ${completedTxnId}. Fetching original Buy price...`);
-      try {
-        // --- MODIFIED: Fetch original Buy transaction PRICE ---
-        const { data: buyTxn, errors: buyErrors } = await client.models.Transaction.get(
-            { id: completedTxnId },
-            { selectionSet: ['price'] } // <<< Fetch 'price' instead of 'investment'
-        );
-
-        if (buyErrors) throw buyErrors;
-
-        // Check if original buy and its price exist and are valid numbers
-        if (buyTxn && typeof buyTxn.price === 'number' && buyTxn.price !== null) {
-          const originalBuyPrice = buyTxn.price; // Get the original buy price per share
-
-          // --- NEW CALCULATION LOGIC ---
-          const sellQuantity = quantity; // Quantity being sold in this transaction
-          const sellRevenue = priceValue * sellQuantity; // Revenue from this sale
-          const costOfSharesSold = originalBuyPrice * sellQuantity; // Cost of the shares being sold
-
-          txnProfit = sellRevenue - costOfSharesSold; // Calculate profit/loss
-          //console.log(`>>> Calculated TxnProfit: ${txnProfit} (Revenue: ${sellRevenue}, Cost: ${costOfSharesSold})`);
-
-          // Calculate Percentage Profit/Loss based on the cost of shares sold
-          if (costOfSharesSold !== 0) { // Avoid division by zero
-            calculatedTxnProfitPercent = (txnProfit / costOfSharesSold) * 100;
-            //console.log(`>>> Calculated TxnProfitPercent: ${calculatedTxnProfitPercent}%`);
-          } else {
-            calculatedTxnProfitPercent = null;
-            //console.log(">>> Cost basis (costOfSharesSold) was zero, cannot calculate TxnProfitPercent.");
-          }
-          // --- END NEW CALCULATION LOGIC ---
-
-        } else {
-          console.warn(`>>> Original Buy (ID: ${completedTxnId}) price not found or invalid.`);
-          setError("Warning: Could not calculate profit/percentage, original Buy price missing or invalid.");
-          // Keep txnProfit and calculatedTxnProfitPercent as null
-        }
-      } catch (fetchErr: any) {
-        console.error("Error fetching referenced Buy transaction for profit calc:", fetchErr);
-        setError(`Warning: Error fetching original Buy txn (${fetchErr.message}). Profit/percentage not calculated.`);
-        // Keep txnProfit and calculatedTxnProfitPercent as null
-      }
+    if (isEditMode && action === 'Sell') {
+        txnProfit = initialData?.txnProfit ?? null;
+        calculatedTxnProfitPercent = initialData?.txnProfitPercent ?? null;
+        console.warn("Profit calculation skipped during Sell edit. Retaining initial values if available.");
+        // Ensure quantity uses the value from the form if edited
+        quantity = sharesInput ? parseFloat(sharesInput) : initialData?.quantity;
     }
-    // --- End TxnProfit Calculation ---
+    // --- End TxnProfit ---
 
 
-    // --- Prepare Final Payload (No changes needed here, uses calculated variables) ---
-    const finalPayload = {
+    // --- Prepare Final Payload for Transaction ---
+    // Using Partial allows omitting fields that might be null/undefined based on action
+    const finalPayload: Partial<Omit<TransactionDataType, 'id' | 'portfolioStock' | 'createdAt' | 'updatedAt' | 'owner'>> = {
         date: date,
-        action: action as Schema['Transaction']['type']['action'], // <-- Use full path if casting
+        action: action as Schema['Transaction']['type']['action'],
         signal: signal || undefined,
         price: priceValue,
         investment: (action === 'Buy' || action === 'Div') ? investmentValue : null,
-        quantity: quantity,
-        playShares: (action === 'Buy') ? playShares : null,
-        holdShares: (action === 'Buy') ? holdShares : null,
-        sharesType: (action === 'Sell') ? sharesType : undefined,
-        lbd: (action === 'Buy') ? lbd : null,
-        tp: (action === 'Buy') ? tp : null,
+        quantity: quantity, // TOTAL quantity
+        swingShares: (action === 'Buy') ? calculatedSwingShares : null,
+        holdShares: (action === 'Buy') ? calculatedHoldShares : null,
+        txnType: (action === 'Buy') ? buyType : undefined,
+        lbd: lbd,
+        tp: tp,
         completedTxnId: (action === 'Sell') ? (completedTxnId || undefined) : undefined,
-        txnProfit: (action === 'Sell') ? txnProfit : null,
-        txnProfitPercent: (action === 'Sell') ? calculatedTxnProfitPercent : null,
+        txnProfit: txnProfit,
+        txnProfitPercent: calculatedTxnProfitPercent,
     };
     // --- End Payload Prep ---
 
-    //console.log('>>> Final Payload being prepared:', finalPayload);
-
-    // --- Submit Logic (Existing) ---
+    // --- Submit Logic ---
     try {
-      if (isEditMode) {
-        // --- UPDATE ---
-        // @ts-ignore
-        if (!initialData?.id || !onUpdate) throw new Error('Missing ID or update handler for edit.');
-        const updatePayload: TransactionUpdatePayload = {
-          // @ts-ignore
-          id: initialData.id,
-          portfolioStockId: portfolioStockId,
-          ...finalPayload
-        };
-        await onUpdate(updatePayload); // Call parent's update handler
-        setSuccess('Transaction updated successfully!');
+        let savedTransaction: TransactionDataType | null = null;
 
-      } else {
-        // --- CREATE ---
-        const createPayload = {
-          portfolioStockId: portfolioStockId,
-          ...finalPayload
-        };
-        const { errors, data: newTransaction } = await client.models.Transaction.create(createPayload);
-        if (errors) throw errors;
-        setSuccess('Transaction added successfully!');
+        if (isEditMode) {
+            // --- UPDATE ---
+            if (!initialData?.id || !onUpdate) throw new Error('Missing ID or update handler for edit.');
+            const updatePayload: TransactionUpdatePayload = {
+                id: initialData.id,
+                portfolioStockId: portfolioStockId, // Include Stock ID in update
+                ...finalPayload // Spread the prepared fields
+            };
+            console.log("Submitting Update Payload:", updatePayload);
+            await onUpdate(updatePayload); // Call parent's update handler
+            setSuccess('Transaction updated successfully!');
+             // @ts-ignore Simulate result for consistency if needed downstream
+             savedTransaction = { ...initialData, ...updatePayload };
 
-        // ============================================================
-        // === START: ADDED WALLET UPDATE/CREATE LOGIC for BUY ======
-        // ============================================================
-        if (action === 'Buy' && newTransaction && priceValue && quantity && investmentValue) {
-          console.log('>>> Buy detected, attempting to find/update/create StockWallet...');
-          try {
-              // 1. Find existing wallet for this stock and price
-              console.log('[Wallet Logic] Querying existing wallet...');
-              const { data: existingWallets, errors: listErrors } = await client.models.StockWallet.list({
-                  filter: {
-                      and: [
-                          { portfolioStockId: { eq: portfolioStockId } },
-                          { buyPrice: { eq: priceValue } }
-                      ]
-                  }
-                  // Limit 1? Should only be one per price.
-              });
-              console.log('[Wallet Logic] Query result:', { data: existingWallets, errors: listErrors });
+             // ================================================================
+            // === START: WALLET UPDATE LOGIC ON TRANSACTION EDIT =============
+            // ================================================================
 
-              if (listErrors) throw listErrors; // Propagate list errors
+            // Only attempt wallet updates if the edited action is still 'Buy'
+            if (savedTransaction && savedTransaction.action === 'Buy') {
+              console.log("[Edit Wallet Logic] Checking if wallet update is needed for edited Buy txn...");
 
-              const existingWallet = existingWallets[0]; // Get the first match if any
+              // --- Safety Checks ---
+              // 1. Did Buy Price or Buy Type change? If so, DO NOT auto-update wallet.
+              //    (Requires complex reconciliation - warn user instead)
+              //    Compare using tolerance for price.
+              const epsilon = 0.0001;
+              const priceChanged = typeof initialData?.price !== 'number' || typeof savedTransaction.price !== 'number' || Math.abs(initialData.price - savedTransaction.price) > epsilon;
+              const buyTypeChanged = initialData?.txnType !== savedTransaction.txnType;
 
-              if (existingWallet) {
-                  // 2a. Wallet EXISTS - Update it
-                  console.log(`[Wallet Logic] Existing wallet found (ID: ${existingWallet.id}), preparing update...`);
-                  const newWalletData = {
-                      id: existingWallet.id,
-                      totalSharesQty: existingWallet.totalSharesQty + quantity,
-                      totalInvestment: existingWallet.totalInvestment + investmentValue,
-                      remainingShares: existingWallet.remainingShares + quantity,
-                      // TP values might not need recalculation unless PDP/PLR changed
-                  };
-                  console.log('[Wallet Logic] Calling StockWallet.update with:', newWalletData);
-                  const { data: updatedWallet, errors: updateErrors } = await client.models.StockWallet.update(newWalletData);
-                  if (updateErrors) throw updateErrors;
-                  console.log(`[Wallet Logic] Wallet update SUCCESS:`, updatedWallet);
-
+              if (priceChanged || buyTypeChanged) {
+                  console.warn("[Edit Wallet Logic] Buy Price or Buy Type changed. Skipping automatic wallet update. Manual reconciliation may be needed.");
+                  setWarning("Transaction updated, but Buy Price/Type changed; associated wallet(s) were NOT automatically updated.");
               } else {
-                  // 2b. Wallet DOES NOT EXIST - Create it
-                  console.log(`[Wallet Logic] No existing wallet found for price ${priceValue}, preparing create...`);
+                  // --- Price and Type are the SAME - Proceed to check/update wallet ---
 
-                  // Fetch Stock's PDP/PLR to calculate initial TP for the new wallet
-                  let initialTpValue: number | null = null;
-                  let initialTpPercent: number | null = null; // TP % might not be needed directly on wallet?
+                  // <<< --- ADD Ratio Calculation HERE --- >>>
+                  let ratio = 1.0; // Default (e.g., 100% Swing or 50/50) if fetch fails or no ratio
                   try {
-                      const { data: stockData } = await client.models.PortfolioStock.get(
-                          { id: portfolioStockId },
-                          { selectionSet: ['pdp', 'plr'] }
-                      );
-                      const pdpValue = stockData?.pdp;
-                      const plrValue = stockData?.plr;
-                      
-                      console.log(`[Wallet Logic] Fetched PDP: ${pdpValue}, PLR: ${plrValue}`);
-
-                      if (typeof pdpValue === 'number' && typeof plrValue === 'number' && priceValue) {
-                           // Same TP calculation as in the Buy transaction logic
-                           initialTpValue = priceValue + (priceValue * (pdpValue * plrValue / 100));
-                           initialTpPercent = pdpValue * plrValue;
-                           console.log(`[Wallet Logic] Calculated initialTpPercent: ${initialTpPercent}`);
-                      } else {
-                            // --- ADD LOG if calculation skipped ---
-                            console.log(`[Wallet Logic] Skipped TP calculation (PDP/PLR not numbers or priceValue missing?)`);
-                            // --- END LOG ---
+                       console.log("[Edit Wallet Logic] Fetching stock ratio for investment split...");
+                       const { data: stock } = await client.models.PortfolioStock.get(
+                           { id: portfolioStockId },
+                           { selectionSet: ['swingHoldRatio'] }
+                       );
+                       console.log(`[Edit Wallet Logic] Fetched stock.swingHoldRatio: ${stock?.swingHoldRatio}`);
+                       if (typeof stock?.swingHoldRatio === 'number' && stock.swingHoldRatio >= 0 && stock.swingHoldRatio <= 100) {
+                           ratio = stock.swingHoldRatio / 100.0;
+                       } else {
+                          //console.warn("[Edit Wallet Logic] swingHoldRatio not found/invalid, deciding default ratio based on buyType...");
+                          if (initialData?.txnType === 'Hold') {
+                            ratio = 0.0;
+                          } else if (initialData?.txnType === 'Swing') {
+                              ratio = 1.0;
+                          } else { // Split or unknown - default to 50/50? or 100% Swing?
+                              ratio = 0.5; // Defaulting to 50/50 for investment delta if ratio missing on SPLIT edit
+                          }
                        }
-                  } catch (stockFetchErr) {
-                      console.warn("Could not fetch stock PDP/PLR for initial Wallet TP calc", stockFetchErr);
-                      // Continue without TP if fetch fails
+                   } catch (fetchErr) {
+                       console.error("[Edit Wallet Logic] Failed to fetch stock ratio, using default ratio.", fetchErr);
+                       ratio = 0.5; // Use default on error
+                   }
+                   console.log(`[Edit Wallet Logic] Using ratio: ${ratio} for investment delta split.`);
+                  // <<< --- END Ratio Calculation --- >>>
+
+                  // Calculate *changes* in shares based on the update
+                  const initialSwing = (initialData?.swingShares ?? 0);
+                  const initialHold = (initialData?.holdShares ?? 0);
+                  const newSwing = (savedTransaction.swingShares ?? 0);
+                  const newHold = (savedTransaction.holdShares ?? 0);
+                  const deltaSwing = newSwing - initialSwing;
+                  const deltaHold = newHold - initialHold;
+
+                  // Calculate *change* in investment
+                  const initialInvestment = (initialData?.investment ?? 0);
+                  const newInvestment = (savedTransaction.investment ?? 0);
+                  const deltaInvestment = newInvestment - initialInvestment;
+
+                  // Helper to find and update a specific typed wallet IF no sales occurred
+                  // Helper to find and update a specific typed wallet IF no sales occurred
+                  const updateWalletIfNoSales = async (
+                    type: 'Swing' | 'Hold',
+                    shareDelta: number,
+                    investmentDelta: number
+                  ) => {
+                    // Only proceed if there's a change for this type
+                    if (Math.abs(shareDelta) < epsilon && Math.abs(investmentDelta) < epsilon) return;
+
+                    // Use the ORIGINAL price from the transaction being edited to find the wallet
+                    const originalBuyPrice = initialData?.price;
+                    if (typeof originalBuyPrice !== 'number') {
+                         console.warn(`[Edit Wallet Logic - ${type}] Cannot find wallet - original transaction price is invalid.`);
+                         setWarning(prev => prev ? `${prev} | Cannot find ${type} wallet (invalid original price).` : `Cannot find ${type} wallet (invalid original price).`);
+                         return;
+                    }
+
+                    console.log(`[Edit Wallet Logic - ${type}] Delta detected (Shares: ${shareDelta}, Inv: ${investmentDelta}). Checking wallet for price ${originalBuyPrice}...`);
+
+                    // Inside updateWalletIfNoSales helper function
+
+                  try {
+                    // 1. Fetch candidate wallets for this stock and type (BROADER filter)
+                    console.log(`[Edit Wallet Helper - ${type}] Fetching candidates for stock ${portfolioStockId}, type ${type}...`);
+                    const { data: candidates, errors: listErrors } = await client.models.StockWallet.list({
+                        filter: { and: [
+                            { portfolioStockId: { eq: portfolioStockId } },
+                            { walletType: { eq: type } }
+                            // REMOVED buyPrice filter here
+                        ]},
+                        selectionSet: ['id', 'buyPrice', 'sharesSold', 'sellTxnCount', 'totalSharesQty', 'totalInvestment', 'remainingShares'], // Ensure all needed fields fetched
+                        limit: 500 // Fetch candidates (adjust limit if needed)
+                    });
+
+                    if (listErrors) throw listErrors; // Handle list errors
+                    console.log(`[Edit Wallet Helper - ${type}] Found ${candidates?.length ?? 0} candidates. Searching for match with price ${originalBuyPrice}...`);
+
+                    // 2. Find matching wallet in code using tolerance
+                    const epsilon = 0.0001;
+                    // --- Use .find() on the fetched candidates ---
+                    const walletToUpdate = (candidates || []).find(wallet => {
+                        const isPriceValid = wallet.buyPrice != null && typeof wallet.buyPrice === 'number';
+                        const priceDifference = isPriceValid ? Math.abs(wallet.buyPrice! - originalBuyPrice) : Infinity;
+                        const isCloseEnough = priceDifference < epsilon;
+                        // Optional Log: console.log(`[Find Check - ${type}] Wallet ${wallet.id}, DB Price ${wallet.buyPrice}, Target ${originalBuyPrice}, Match: ${isCloseEnough}`);
+                        return isPriceValid && isCloseEnough;
+                    });
+                    console.log(`[Edit Wallet Helper - ${type}] Result of find():`, walletToUpdate ? `Found ID ${walletToUpdate.id}` : 'Not Found');
+
+
+                    // 3. Proceed with logic using the wallet found by .find()
+                    if (!walletToUpdate) {
+                        // Log warning and return (treat as non-critical failure for this helper)
+                        console.warn(`[Edit Wallet Helper - ${type}] Wallet not found matching Buy Price ${originalBuyPrice}. Cannot update.`);
+                        setWarning(prev => prev ? `${prev} | ${type} wallet not found.` : `${type} wallet not found for update.`);
+                        return true;
+                    }
+
+                    // 4. Check for sales on the found wallet
+                    if ((walletToUpdate.sharesSold ?? 0) > epsilon || (walletToUpdate.sellTxnCount ?? 0) > 0) {
+                        // Log warning and return (treat as non-critical failure)
+                        console.warn(`[Edit Wallet Helper - ${type}] Wallet ${walletToUpdate.id} has sales recorded. Skipping automatic update.`);
+                        setWarning(prev => prev ? `${prev} | ${type} wallet has sales, not updated.` : `${type} wallet has sales, not updated.`);
+                        return true;
+                    }
+
+                    // 5. No sales - Apply updates
+                    console.log(`[Edit Wallet Helper - ${type}] No sales detected for wallet ${walletToUpdate.id}. Applying updates...`);
+                    const currentTotalShares = walletToUpdate.totalSharesQty ?? 0;
+                    const currentInvestment = walletToUpdate.totalInvestment ?? 0;
+                    const currentRemaining = walletToUpdate.remainingShares ?? 0;
+                    // Calculate new values using deltas passed to the helper
+                    const newTotalShares = Math.max(0, currentTotalShares + shareDelta);
+                    const newInvestment = Math.max(0, currentInvestment + investmentDelta);
+                    const newRemaining = Math.max(0, currentRemaining + shareDelta);
+
+                    // Safety check results
+                    if(newRemaining < -epsilon || newTotalShares < -epsilon) { throw new Error("Negative shares calculation error."); }
+                    if (Math.abs(newRemaining - newTotalShares) > epsilon) { console.warn(`Potential inconsistency in remaining shares calculation for ${type} wallet ${walletToUpdate.id}.`); }
+
+
+                    // Prepare the explicit payload
+                    const walletUpdatePayload = {
+                        id: walletToUpdate.id,
+                        totalSharesQty: newTotalShares,
+                        totalInvestment: newInvestment,
+                        remainingShares: newRemaining,
+                        sharesSold: 0, // Still 0
+                        realizedPl: 0, // Still 0
+                        sellTxnCount: 0, // Still 0
+                        realizedPlPercent: 0, // Still 0
+                    };
+                    console.log(`[Edit Wallet Helper - ${type}] Update Payload:`, walletUpdatePayload);
+                    const { errors: updateErrors } = await client.models.StockWallet.update(walletUpdatePayload);
+                    if (updateErrors) throw updateErrors; // Throw actual error if update fails
+                    console.log(`[Edit Wallet Helper - ${type}] Wallet update successful.`);
+                    return true; // Indicate success
+
+                } catch (err: any) { // Catch errors from list, update, or calculations
+                    console.error(`[Edit Wallet Helper - ${type}] FAILED:`, err?.errors || err);
+                    setWarning(prev => prev ? `${prev} | Failed to update ${type} wallet.` : `Failed to update ${type} wallet.`);
+                    return false; // Indicate critical failure for this wallet update attempt
+                }
+                }; // End helper function
+
+                  // Call helper for Swing and Hold wallets
+                  await updateWalletIfNoSales('Swing', deltaSwing, deltaInvestment * (ratio)); // Distribute investment delta proportionally
+                  await updateWalletIfNoSales('Hold', deltaHold, deltaInvestment * (1 - ratio)); // Use 'ratio' calculated earlier in handleSubmit
+
+              } // End if Price/Type didn't change
+          } // End if action === 'Buy'
+
+          // ================================================================
+          // === END: WALLET UPDATE LOGIC ON TRANSACTION EDIT ===============
+          // ================================================================
+
+        } else {
+            // --- CREATE ---
+            const createPayload = {
+                portfolioStockId: portfolioStockId,
+                ...finalPayload
+            };
+            console.log("Submitting Create Payload:", createPayload);
+            // Use 'as any' temporarily if strict type checking causes issues with optional fields
+            const { errors, data: newTransaction } = await client.models.Transaction.create(createPayload as any);
+            if (errors) throw errors;
+
+            if (!newTransaction) {
+              throw new Error("Transaction creation failed unexpectedly: No data returned.");
+            }
+
+            setSuccess('Transaction added successfully!');
+            savedTransaction = newTransaction; // Store the newly created transaction
+
+
+            // ============================================================
+            // === START: UPDATED WALLET UPDATE/CREATE LOGIC for BUY ====
+            // ============================================================
+            if (action === 'Buy' && priceValue) {
+                console.log('>>> Buy detected, attempting to create/update TYPED StockWallet(s)...');
+
+                // Helper function to create/update typed wallets (REVISED CHECK LOGIC)
+                const createOrUpdateWallet = async (
+                  type: 'Swing' | 'Hold',
+                  sharesToAdd: number | null | undefined,
+                  investmentToAdd: number // Proportional investment
+              ) => {
+                  // Use a small tolerance for floating point comparison
+                  const epsilon = 0.0001;
+                  if (!sharesToAdd || sharesToAdd <= epsilon) { // Check against tolerance
+                      console.log(`[Wallet Logic - <span class="math-inline">\{type\}\] No significant shares to add \(</span>{sharesToAdd}). Skipping wallet.`);
+                      return;
+                  }
+                  // Ensure priceValue is valid before proceeding
+                  if (typeof priceValue !== 'number') {
+                       console.error(`[Wallet Logic - <span class="math-inline">\{type\}\] Invalid priceValue \(</span>{priceValue}), cannot process wallet.`);
+                       throw new Error(`Cannot process ${type} wallet due to invalid price.`);
                   }
 
-                  const newWalletData = {
-                      portfolioStockId: portfolioStockId,
-                      buyPrice: priceValue,
-                      totalSharesQty: quantity,
-                      totalInvestment: investmentValue,
-                      sharesSold: 0, // Starts at 0
-                      remainingShares: quantity, // Initially equals total quantity
-                      realizedPl: 0, // Starts at 0
-                      tpValue: initialTpValue, // Calculated TP price
-                      tpPercent: initialTpPercent, // Store if needed
-                      sellTxnCount: 0,
-                  };
-                  console.log('[Wallet Logic] Payload being sent:', JSON.stringify(newWalletData, null, 2));
-                  const { data: createdWallet, errors: createErrors } = await client.models.StockWallet.create(newWalletData);
-                  if (createErrors) throw createErrors;
-                  console.log(`[Wallet Logic] Wallet create SUCCESS. Returned data:`, JSON.stringify(createdWallet, null, 2));
-                  console.log(`[Wallet Logic] TP Percent value in returned data: ${createdWallet?.tpPercent}`);
-              }
+                  console.log(`[Wallet Logic - ${type}] Processing... Shares: ${sharesToAdd}, Investment: ${investmentToAdd}, Price: ${priceValue}`);
+                  try {
+                      // 1. Fetch candidate wallets for this stock and type (BROADER filter)
+                      console.log(`[Wallet Logic - ${type}] Fetching candidate wallets (Stock: ${portfolioStockId}, Type: ${type})...`);
+                      const { data: candidates, errors: listErrors } = await client.models.StockWallet.list({
+                          filter: { and: [
+                              { portfolioStockId: { eq: portfolioStockId } },
+                              { walletType: { eq: type } }
+                              // REMOVED buyPrice filter here
+                          ]},
+                           // Fetch necessary fields for update/check
+                          selectionSet: ['id', 'buyPrice', 'totalSharesQty', 'totalInvestment', 'remainingShares'],
+                          limit: 500 // Fetch candidates
+                      });
 
-          } catch (walletError: any) {
-              // Log wallet errors but don't block the main transaction success/reset
-              console.error("[Wallet Logic] !!! Error processing StockWallet:", walletError);
-              // Optionally set a secondary warning state for the UI?
-              setError(prev => prev ? `${prev} (Wallet update failed)` : 'Transaction saved, but Wallet update failed.');
-          }
-      } else {
-        console.log('[Wallet Logic] Conditions not met for Wallet processing (Not a Buy or missing data). Action:', action); // <-- ADD LOG
-      }
-      // ============================================================
-      // === END: ADDED WALLET UPDATE/CREATE LOGIC ==================
-      // ============================================================
+                      if (listErrors) throw listErrors; // Handle list errors
+                      console.log(`[Wallet Logic - ${type}] Found ${candidates?.length ?? 0} candidates.`);
 
-        // Reset form
-        setDate(defaultFormState.date); setAction(defaultFormState.action); setSignal(defaultFormState.signal);
-        setPrice(defaultFormState.price); setInvestment(defaultFormState.investment); setSharesInput(defaultFormState.sharesInput);
-        setCompletedTxnId(defaultFormState.completedTxnId); setSharesType('Play');
+                      // 2. Find matching wallet in code using tolerance WITH detailed logging
+                      const existingWallet = (candidates || []).find(wallet => {
+                          // --- Add Detailed Logs INSIDE find callback ---
+                          console.log(`[Wallet Find Check - ${type}] Comparing Form Price (Value: ${priceValue}, Type: ${typeof priceValue}) with DB Wallet (ID: ${wallet.id}) Price (Value: ${wallet.buyPrice}, Type: ${typeof wallet.buyPrice})`);
+                          const isPriceValid = wallet.buyPrice != null && typeof wallet.buyPrice === 'number'; // Check type too
+                          const priceDifference = isPriceValid ? Math.abs(wallet.buyPrice! - priceValue) : Infinity;
+                          const isCloseEnough = priceDifference < epsilon;
+                          console.log(`[Wallet Find Check - ${type}] DB Price Valid: ${isPriceValid}, Price Difference: <span class="math-inline">\{priceDifference\}, Is Close Enough \(<</span>{epsilon}): ${isCloseEnough}`);
+                          // --- End Detailed Logs ---
+                          return isPriceValid && isCloseEnough; // Return boolean result
+                      });
+                      console.log(`[Wallet Logic - ${type}] Result of find():`, existingWallet ? `Found ID ${existingWallet.id}` : 'Not Found');
+
+                      if (existingWallet) {
+                          // 3a. Update existing typed wallet
+                          console.log(`[Wallet Logic - ${type}] Found matching existing wallet ${existingWallet.id}. Updating...`);
+                          const updatePayload = {
+                              id: existingWallet.id,
+                              totalSharesQty: (existingWallet.totalSharesQty ?? 0) + sharesToAdd,
+                              totalInvestment: (existingWallet.totalInvestment ?? 0) + investmentToAdd,
+                              remainingShares: (existingWallet.remainingShares ?? 0) + sharesToAdd,
+                          };
+                          const { errors: updateErrors } = await client.models.StockWallet.update(updatePayload);
+                          if (updateErrors) throw updateErrors;
+                          console.log(`[Wallet Logic - ${type}] Update SUCCESS`);
+                      } else {
+                          // 3b. Create new typed wallet
+                          console.log(`[Wallet Logic - ${type}] No existing wallet found matching price ${priceValue}. Creating new...`);
+                          // Fetch PDP/PLR (use previously fetched values pdpValue, plrValue)
+                          let initialTpValue = null, initialTpPercent = null;
+                          if (typeof pdpValue === 'number' && typeof plrValue === 'number' && priceValue) {
+                              initialTpValue = priceValue + (priceValue * (pdpValue * plrValue / 100));
+                              initialTpPercent = pdpValue * plrValue;
+                          } else { console.log(`[Wallet Logic - ${type}] Could not calculate initial TP.`); }
+
+                         const createPayload = {
+                             portfolioStockId: portfolioStockId,
+                             walletType: type,
+                             buyPrice: priceValue,
+                             totalSharesQty: sharesToAdd,
+                             totalInvestment: investmentToAdd,
+                             sharesSold: 0, remainingShares: sharesToAdd,
+                             realizedPl: 0, sellTxnCount: 0,
+                             tpValue: initialTpValue, tpPercent: initialTpPercent, realizedPlPercent: 0,
+                         };
+                         const { errors: createErrors } = await client.models.StockWallet.create(createPayload as any);
+                         if (createErrors) throw createErrors;
+                         console.log(`[Wallet Logic - ${type}] Create SUCCESS`);
+                     }
+                 } catch (walletError: any) {
+                     console.error(`[Wallet Logic - ${type}] FAILED:`, walletError?.errors || walletError);
+                     throw new Error(`Transaction saved, but failed to create/update ${type} wallet: ${walletError.message}`);
+                 }
+             }; // End createOrUpdateWallet function
+
+                // Calculate proportional investment
+                const totalInvestmentValue = investmentValue ?? 0;
+                const totalCalcQuantity = newTransaction.quantity ?? 0; // Use quantity from saved Txn
+                let swingInvestment = 0;
+                let holdInvestment = 0;
+
+                if (totalCalcQuantity > 0.000001 && totalInvestmentValue > 0) {
+                     // Use calculated swing/hold shares from the transaction payload prep step
+                     swingInvestment = (calculatedSwingShares && calculatedSwingShares > 0) ? (calculatedSwingShares / totalCalcQuantity) * totalInvestmentValue : 0;
+                     holdInvestment = (calculatedHoldShares && calculatedHoldShares > 0) ? (calculatedHoldShares / totalCalcQuantity) * totalInvestmentValue : 0;
+                     // Adjust for potential rounding to ensure total matches
+                     if(Math.abs((swingInvestment + holdInvestment) - totalInvestmentValue) > 0.001) {
+                        console.warn("Adjusting investment split slightly due to rounding");
+                        // Assign remainder to hold (or swing, consistency matters)
+                        holdInvestment = totalInvestmentValue - swingInvestment;
+                     }
+                }
+
+                // Call update/create for Swing and Hold shares sequentially (safer than Promise.all for now)
+                await createOrUpdateWallet('Swing', calculatedSwingShares, swingInvestment);
+                await createOrUpdateWallet('Hold', calculatedHoldShares, holdInvestment);
+
+            } // End if (action === 'Buy') wallet logic
+            // ============================================================
+            // === END: UPDATED WALLET UPDATE/CREATE LOGIC ================
+            // ============================================================
+
+            // Reset form only on successful CREATE
+            setDate(getTodayDateString());
+            setAction(forceAction ?? defaultFormState.action);
+            setSignal(defaultFormState.signal);
+            setPrice(defaultFormState.price);
+            setInvestment(defaultFormState.investment);
+            setSharesInput(defaultFormState.sharesInput);
+            setCompletedTxnId(defaultFormState.completedTxnId);
+            setBuyType(defaultFormState.buyType);
+        }
+
+        // Call success callback if provided (outside create/update blocks)
+        console.log("[TransactionForm Edit] Finished wallet updates (if any). Calling onTransactionAdded callback...");
         onTransactionAdded?.();
-      }
-    } catch (err: any) { /* ... error handling ... */ }
-    finally {
-      setIsLoading(false);
+
+    } catch (err: any) {
+        console.error('Error saving transaction:', err);
+        // Attempt to parse Amplify errors which might be an array
+        const message = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || "An unknown error occurred.");
+        setError(message);
+        setSuccess(null); // Clear success message on error
+    } finally {
+        setIsLoading(false);
     }
-  }; // End handleSubmit
+}; // End handleSubmit
 
+
+  // --- JSX Rendering ---
+  // Includes all fields and buttons now
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '400px' }}>
-        {portfolioStockSymbol && !isEditMode}
-        {/* @ts-ignore - TS incorrectly thinks id might be missing on initialData */}
-        <h2>{isEditMode ? `Edit transaction (ID: ${initialData?.id ? initialData.id.substring(0, 5) + '...' : 'N/A'})` : 'Add transaction'}</h2>
-        {error && <p style={{ color: 'red' }}>Error: {error}</p>}
-        {success && <p style={{ color: 'green' }}>{success}</p>}
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxWidth: '450px', margin: 'auto' }}>
+        {/* Use passed symbol for title, fallback if needed */}
+        <h2>{isEditMode ? `Edit Transaction` : `Add Transaction${portfolioStockSymbol ? ` for ${portfolioStockSymbol.toUpperCase()}` : ''}`}</h2>
+        {/* Display messages */}
+        {error && <p style={{ color: '#ff4d4d', background: '#331a1a', padding: '8px', borderRadius: '4px', border: '1px solid #663333', margin: '0 0 10px 0', fontSize: '0.9em' }}>Error: {error}</p>}
+        {warning && <p style={{ color: 'red', background: 'red', padding: '8px', borderRadius: '4px', border: '1px solid #665500', margin: '0 0 10px 0', fontSize: '0.9em' }}>Warning: {warning}</p>}
+        {success && <p style={{ color: '#4dff4d', background: '#1a331a', padding: '8px', borderRadius: '4px', border: '1px solid #336633', margin: '0 0 10px 0', fontSize: '0.9em' }}>{success}</p>}
 
-        {/* --- Fields --- */}
-        <div><label htmlFor="date">Date:</label><input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required disabled={isLoading} style={{width: '100%'}} /></div>
+        {/* --- Input Fields --- */}
         <div>
-          <label htmlFor="action">Action:</label>
-          <select
-            id="action"
-            value={action}
-            // Disable changing action if forceAction is set or if editing
-            onChange={(e) => setAction(e.target.value as Schema['Transaction']['type']['action'])}
-            required
-            disabled={isLoading || !!forceAction || isEditMode} // <-- Disable if forceAction is true or editing
-            style={{ width: '100%' }}
-          >
-            {/* Conditionally render options or just the forced one */}
-            {forceAction ? (
-              <option value={forceAction}>{forceAction}</option>
-            ) : (
-              <>
-                  <option value="Buy">Buy</option>
-                  <option value="Sell">Sell</option>
-                  <option value="Div">Dividend</option>
-              </>
-            )}
-          </select>
+            <label htmlFor="date" style={{display:'block', marginBottom:'3px'}}>Date:</label>
+            <input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required disabled={isLoading} style={{width: '100%', padding: '8px'}} />
         </div>
 
-        {/* Signal - Conditional Options */}
+        <div>
+            <label htmlFor="action" style={{display:'block', marginBottom:'3px'}}>Action:</label>
+            <select id="action" value={action} onChange={(e) => setAction(e.target.value as any)} required disabled={isLoading || !!forceAction || isEditMode} style={{ width: '100%', padding: '8px' }}>
+                 {forceAction ? ( <option value={forceAction}>{forceAction}</option> ) : (
+                    <>
+                        <option value="Buy">Buy</option>
+                        <option value="Sell">Sell</option>
+                        <option value="Div">Dividend</option>
+                    </>
+                )}
+            </select>
+        </div>
+
+        {/* Buy Type Selection */}
+        {action === 'Buy' && !isEditMode && (
+             <div style={{marginTop: '5px', padding: '10px', border: '1px solid #444', borderRadius: '4px'}}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Buy Type:</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 15px' }}>
+                    <label style={{cursor: 'pointer'}}><input type="radio" name="buyType" value="Swing" checked={buyType === 'Swing'} onChange={(e) => setBuyType(e.target.value as BuyTypeValue)} disabled={isLoading} /> Swing</label>
+                    <label style={{cursor: 'pointer'}}><input type="radio" name="buyType" value="Hold" checked={buyType === 'Hold'} onChange={(e) => setBuyType(e.target.value as BuyTypeValue)} disabled={isLoading} /> Hold</label>
+                    <label style={{cursor: 'pointer'}}><input type="radio" name="buyType" value="Split" checked={buyType === 'Split'} onChange={(e) => setBuyType(e.target.value as BuyTypeValue)} disabled={isLoading} /> Split (Auto)</label>
+                </div>
+             </div>
+        )}
+
+        {/* Signal Field */}
         {(action === 'Buy' || action === 'Sell' || action === 'Div') && (
             <div>
-                <label htmlFor="signal">Signal:</label>
-                <select
-                    id="signal"
-                    value={signal ?? ''}
-                    onChange={(e) => setSignal(e.target.value as Schema['Transaction']['type']['signal'])}
-                    // Signal is required based on action type (as per your previous logic)
-                    required={(action === 'Buy' || action === 'Sell' || action === 'Div')}
-                    disabled={isLoading}
-                    style={{ width: '100%' }}
-                >
-                    <option value="">-- Select Signal --</option>
-                    {/* Dynamically filter options based on Action */}\
-                    {/* Ensure 'action' variable holds the correct value (forced or selected) */}
-                    {action === 'Buy' && <> <option value="_5DD">_5DD</option> <option value="Cust">Cust</option> <option value="Initial">Initial</option> <option value="EOM">EOM</option> <option value="LBD">LBD</option> </>}
-                    {action === 'Sell' && <> <option value="Cust">Cust</option> <option value="TPH">TPH</option> <option value="TPP">TPP</option> </>}
-                    {action === 'Div' && <> <option value="Div">Div</option> </>}
+                <label htmlFor="signal" style={{display:'block', marginBottom:'3px'}}>Signal:</label>
+                <select id="signal" value={signal ?? ''} onChange={(e) => setSignal(e.target.value as any)} required={true} disabled={isLoading} style={{ width: '100%', padding: '8px' }} >
+                     <option value="">-- Select Signal --</option>
+                     {action === 'Buy' && <> <option value="_5DD">_5DD</option> <option value="Cust">Cust</option> <option value="Initial">Initial</option> <option value="EOM">EOM</option> <option value="LBD">LBD</option> </>}
+                     {action === 'Sell' && <> <option value="Cust">Cust</option> <option value="TPH">TPH</option> <option value="TPP">TPP</option><option value="TP">TP</option> </>}
+                     {action === 'Div' && <> <option value="Div">Div</option> </>}
                 </select>
             </div>
         )}
 
-        {/* Price - Required for Buy/Sell */}
+        {/* Price Field */}
         {(action === 'Buy' || action === 'Sell') && (
-            <div><label htmlFor="price">Price:</label><input id="price" type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} required={true} placeholder={'e.g., 150.25'} disabled={isLoading} style={{width: '100%'}} /></div>
-        )}
-
-        {/* Investment/Amount - Required for Buy/Div */}
-        {(action === 'Buy' || action === 'Div') && (
-            <div><label htmlFor="investment">{action === 'Div' ? 'Amount:' : 'Investment:'}</label><input id="investment" type="number" step="0.01" value={investment} onChange={(e) => setInvestment(e.target.value)} required placeholder="e.g., 1000.00" disabled={isLoading} style={{width: '100%'}}/></div>
-        )}
-
-        {/* Shares - Required for Sell */}
-        {action === 'Sell' && (
             <div>
-              <label htmlFor="sharesInput">Shares:</label>
-              <input id="sharesInput" type="number" step="any" value={sharesInput} onChange={(e) => setSharesInput(e.target.value)} required placeholder="e.g., 10.5" disabled={isLoading} style={{width: '100%'}} />
-              
-              <div style={{marginTop: '0.5rem'}}>
-                <label htmlFor="sharesType">Shares Type:</label>
-                <select
-                  id="sharesType"
-                  value={sharesType}
-                  onChange={(e) => setSharesType(e.target.value as SharesTypeValue)}
-                  required // Required when selling
-                  disabled={isLoading}
-                  style={{ width: '100%' }}
-                >
-                  <option value="Play">Play Shares</option>
-                  <option value="Hold">Hold Shares</option>
-                </select>
-              </div>
+                <label htmlFor="price" style={{display:'block', marginBottom:'3px'}}>Price:</label>
+                <input id="price" type="number" step="any" value={price} onChange={(e) => setPrice(e.target.value)} required={true} placeholder="e.g., 150.25" disabled={isLoading} style={{width: '100%', padding: '8px'}} />
+            </div>
+        )}
 
-              <div>
-                <label htmlFor="completedTxnId">Completed Txn ID (Optional):</label>
-                <input id="completedTxnId" type="text" value={completedTxnId} onChange={(e) => setCompletedTxnId(e.target.value)} placeholder="ID of Buy transaction being closed" disabled={isLoading} style={{width: '100%'}}/>
-              </div>
+        {/* Investment Field */}
+        {(action === 'Buy' || action === 'Div') && (
+            <div>
+                <label htmlFor="investment" style={{display:'block', marginBottom:'3px'}}>{action === 'Div' ? 'Amount:' : 'Investment:'}</label>
+                <input id="investment" type="number" step="any" value={investment} onChange={(e) => setInvestment(e.target.value)} required placeholder="e.g., 1000.00" disabled={isLoading} style={{width: '100%', padding: '8px'}}/>
+            </div>
+        )}
+
+        {/* Shares Input (Only for Editing Sell action's quantity) */}
+        {isEditMode && action === 'Sell' && (
+             <div>
+                 <label htmlFor="sharesInput" style={{display:'block', marginBottom:'3px'}}>Shares (Quantity Sold):</label>
+                 <input id="sharesInput" type="number" step="any" value={sharesInput} onChange={(e) => setSharesInput(e.target.value)} required placeholder="e.g., 10.5" disabled={isLoading} style={{width: '100%', padding: '8px'}} />
+             </div>
+        )}
+
+        {/* CompletedTxnId Input (Only for Editing Sell action) */}
+         {isEditMode && action === 'Sell' && (
+            <div>
+                <label htmlFor="completedTxnId" style={{display:'block', marginBottom:'3px'}}>Completed Txn ID (Links to Buy/Wallet):</label>
+                <input id="completedTxnId" type="text" value={completedTxnId} onChange={(e) => setCompletedTxnId(e.target.value)} placeholder="ID of original Buy OR StockWallet" disabled={isLoading} style={{width: '100%', padding: '8px'}}/>
             </div>
         )}
 
         {/* Buttons */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '1rem' }}>
-          {/* Conditionally show Cancel button */}
-          {showCancelButton && onCancel && (
-              <button type="button" onClick={onCancel} disabled={isLoading}>
-                  Cancel
-              </button>
-          )}
-          <button type="submit" disabled={isLoading /* || other conditions */} style={{ marginLeft: showCancelButton ? '0' : 'auto' /* Align right if no cancel */ }}>
-              {isLoading ? (isEditMode ? 'Updating...' : 'Adding...') : (isEditMode ? 'Update Transaction' : 'Add Transaction')}
-          </button>
-      </div>
+            {showCancelButton && onCancel && (
+                <button type="button" onClick={onCancel} disabled={isLoading} style={{ padding: '8px 15px' }}>
+                    Cancel
+                </button>
+            )}
+            <button type="submit" disabled={isLoading} style={{ padding: '8px 15px', marginLeft: showCancelButton ? '0' : 'auto' }}>
+                {isLoading ? (isEditMode ? 'Updating...' : 'Adding...') : (isEditMode ? 'Update Transaction' : 'Add Transaction')}
+            </button>
+        </div>
     </form>
   );
-}
+} // End of component
