@@ -128,6 +128,7 @@ export default function StockWalletPage() {
                 const result = await client.models.StockWallet.list({
                     filter: { portfolioStockId: { eq: stockId } }, // Filter by stockId
                     selectionSet: selectionSetNeeded,
+                    limit: 1000
                 });
 
                 console.log(`[fetchWallets] Raw API result after edit/add:`, JSON.stringify(result, null, 2));
