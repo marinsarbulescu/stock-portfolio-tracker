@@ -9,6 +9,7 @@ import type { Schema } from '@/amplify/data/resource'; // Adjust path if needed
 import TransactionForm from '@/app/components/TransactionForm';
 import { FaEdit, FaTrashAlt, FaDollarSign } from 'react-icons/fa';
 import type { GraphQLError } from 'graphql';
+import { usePrices } from '@/app/contexts/PriceContext';
 
 // Define the type for the fetched wallet data (no longer needs nested stock)
 type StockWalletDataType = Schema['StockWallet']['type'];
@@ -29,13 +30,15 @@ const getTodayDateString = () => {
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
     const day = String(today.getDate()).padStart(2, '0');
-    return `<span class="math-inline">\{year\}\-</span>{month}-${day}`;
+    return `${year}-${month}-${day}`;
 };
 
 export default function StockWalletPage() {
     // --- Get stockId from URL ---
     const params = useParams();
     const stockId = params.stockId as string; // Get stockId from dynamic route
+
+    const { latestPrices } = usePrices(); // Add pricesLoading, pricesError if you want to display their states
 
     // --- State for Stock Symbol (for Title) ---
     const [stockSymbol, setStockSymbol] = useState<string | undefined>(undefined);
@@ -138,6 +141,15 @@ export default function StockWalletPage() {
                 const fetchedData = result.data || []; // Default to empty array if data is null/undefined
                 console.log(`[fetchWallets] Fetched ${fetchedData.length} wallets. Calling setWallets.`);
                 
+                // +++ ADD SORTING LOGIC HERE +++
+                fetchedData.sort((a, b) => {
+                        // Handle null/undefined tpValue - place them at the end
+                        const tpA = a.tpValue ?? Infinity;
+                        const tpB = b.tpValue ?? Infinity;
+                        return tpA - tpB; // Ascending sort (lowest TP first)
+                });
+                // +++ END SORTING LOGIC +++
+
                 setWallets(result.data as StockWalletDataType[]);
     
             } catch (err: any) {
@@ -998,6 +1010,28 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
     };
     // --- END: Formatting Helpers ---
 
+    // +++ Add TP Cell Styling Function +++
+    const getTpCellStyle = (
+        wallet: StockWalletDataType,
+        currentStockPrice: number | null | undefined // Pass current price in
+    ): React.CSSProperties => {
+        const remaining = wallet.remainingShares ?? 0;
+        const tp = wallet.tpValue;
+
+        // Conditions: Has shares AND TP is set AND TP >= Current Price
+        if (remaining > SHARE_EPSILON &&
+            typeof tp === 'number' &&
+            typeof currentStockPrice === 'number' &&
+            tp >= currentStockPrice
+           ) {
+             // Condition met: return green text style
+             return { color: 'lightgreen' };
+        }
+        // Condition not met: return default empty style object
+        return {};
+    };
+    // ++++++++++++++++++++++++++++++++
+
     // --- ADD FUNCTION to handle opening the modal ---
     const handleOpenSellModal = (wallet: StockWalletDataType) => {
         console.log("Opening sell modal for wallet:", wallet);
@@ -1008,7 +1042,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
         setSellPrice('');
         setSellError(null);
         setIsSelling(false);
-        setSellSignal('Cust');
+        setSellSignal('TP');
         setIsSellModalOpen(true);
     };
     // --- END FUNCTION ---
@@ -1306,72 +1340,79 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                             </td>
                         </tr>
                     ) : (
-                        // Map ONLY over the selected filtered list (swingWallets or holdWallets)
-                        (activeTab === 'Swing' ? swingWallets : holdWallets).map((wallet, index) => (
-                           // Directly return the table row for the current 'wallet'
-                           <tr
-                                key={wallet.id}
-                                style={{
-                                    backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent',
-                                }}
-                           >
-                                {/* Render cells using the 'wallet' object from the filtered list */}
-                                <td style={{ padding: '5px' }}>{formatCurrency(wallet.buyPrice)}</td>
-                                <td style={{ padding: '5px' }}>{formatCurrency(wallet.totalInvestment)}</td>
-                                <td style={{ padding: '5px' }}>{formatShares(wallet.totalSharesQty)}</td>
-                                <td style={{ padding: '5px' }}>{formatCurrency(wallet.tpValue)}</td>
-                                {/* <td style={{ padding: '5px' }}>{formatPercent(wallet.tpPercent)}</td> */}
-                                <td style={{ padding: '5px' }}>{wallet.sellTxnCount ?? 0}</td>
-                                <td style={{ padding: '5px' }}>{formatShares(wallet.sharesSold)}</td>
-                                <td style={{ padding: '5px' }}>{formatCurrency(wallet.realizedPl)}</td>
-                                <td style={{ padding: '5px' }}>{formatPercent(wallet.realizedPlPercent)}</td>
-                                <td style={{ padding: '5px' }}>{formatShares(wallet.remainingShares)}</td>
-                                <td style={{ padding: '5px', textAlign: 'center' }}>
-                                    {/* Sell button logic using the correct 'wallet' */}
-                                    {wallet.remainingShares && wallet.remainingShares > 0 ? (
-                                        <button
-                                            onClick={() => handleOpenSellModal(wallet)}
-                                            style={{
-                                                background: 'none', border: 'none', cursor: 'pointer',
-                                                padding: '5px', color: '#28a745', fontSize: '1.1em'
-                                            }}
-                                            title={`Sell from Wallet (Buy Price: ${formatCurrency(wallet.buyPrice)})`}
-                                            disabled={!wallet.remainingShares || wallet.remainingShares <= 0}
-                                        >
-                                            <FaDollarSign />
-                                        </button>
-                                    ) : (
-                                        '' // Show '-' if no remaining shares
-                                    )}
+                        (activeTab === 'Swing' ? swingWallets : holdWallets).map((wallet, index) => {
+                            const currentStockPrice = latestPrices[stockSymbol ?? '']?.currentPrice;
+                            return (
+                                // Directly return the table row for the current 'wallet'
+                                <tr
+                                    key={wallet.id}
+                                    style={{
+                                        backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent',
+                                    }}
+                                >
+                                    {/* Render cells using the 'wallet' object from the filtered list */}
+                                    <td style={{ padding: '5px' }}>{formatCurrency(wallet.buyPrice)}</td>
+                                    <td style={{ padding: '5px' }}>{formatCurrency(wallet.totalInvestment)}</td>
+                                    <td style={{ padding: '5px' }}>{formatShares(wallet.totalSharesQty)}</td>
+                                    <td style={{
+                                        padding: '5px',
+                                        ...getTpCellStyle(wallet, currentStockPrice) // Apply conditional style
+                                    }}>
+                                        {formatCurrency(wallet.tpValue)}
+                                    </td>
+                                    {/* <td style={{ padding: '5px' }}>{formatPercent(wallet.tpPercent)}</td> */}
+                                    <td style={{ padding: '5px' }}>{wallet.sellTxnCount ?? 0}</td>
+                                    <td style={{ padding: '5px' }}>{formatShares(wallet.sharesSold)}</td>
+                                    <td style={{ padding: '5px' }}>{formatCurrency(wallet.realizedPl)}</td>
+                                    <td style={{ padding: '5px' }}>{formatPercent(wallet.realizedPlPercent)}</td>
+                                    <td style={{ padding: '5px' }}>{formatShares(wallet.remainingShares)}</td>
+                                    <td style={{ padding: '5px', textAlign: 'center' }}>
+                                        {/* Sell button logic using the correct 'wallet' */}
+                                        {wallet.remainingShares && wallet.remainingShares > 0 ? (
+                                            <button
+                                                onClick={() => handleOpenSellModal(wallet)}
+                                                style={{
+                                                    background: 'none', border: 'none', cursor: 'pointer',
+                                                    padding: '5px', color: '#28a745', fontSize: '1.1em'
+                                                }}
+                                                title={`Sell from Wallet (Buy Price: ${formatCurrency(wallet.buyPrice)})`}
+                                                disabled={!wallet.remainingShares || wallet.remainingShares <= 0}
+                                            >
+                                                <FaDollarSign />
+                                            </button>
+                                        ) : (
+                                            '' // Show '-' if no remaining shares
+                                        )}
 
-                                    {/* --- ADD DELETE BUTTON --- */}
-                                    {wallet.remainingShares === 0 ? (
-                                        <button
-                                            onClick={() => handleDeleteWallet(wallet)} // <<< Call new handler
-                                            // Enable only if remaining shares are effectively zero
-                                            disabled={(wallet.remainingShares ?? 0) > 0.000001}
-                                            title={ (wallet.remainingShares ?? 0) > 0.000001 ? "Delete disabled (shares remain)" : `Delete Empty ${wallet.walletType} Wallet` }
-                                            style={{
-                                                background: 'none', border: 'none', cursor: 'pointer',
-                                                padding: '5px', marginLeft: '8px', // Add some space
-                                                // Grey out when disabled, make red when enabled?
-                                                color: 'gray', // Grey or Red
-                                                fontSize: '1.1em'
-                                            }}
-                                        >
-                                            <FaTrashAlt />
-                                        </button>
-                                    ) : (
-                                        '' // Show '-' if no remaining shares
-                                    )}
-                                    {/* --- END DELETE BUTTON --- */}
-                                </td>
-                           </tr>
-                        )) // End map over the CORRECT list
+                                        {/* --- ADD DELETE BUTTON --- */}
+                                        {wallet.remainingShares === 0 ? (
+                                            <button
+                                                onClick={() => handleDeleteWallet(wallet)} // <<< Call new handler
+                                                // Enable only if remaining shares are effectively zero
+                                                disabled={(wallet.remainingShares ?? 0) > 0.000001}
+                                                title={ (wallet.remainingShares ?? 0) > 0.000001 ? "Delete disabled (shares remain)" : `Delete Empty ${wallet.walletType} Wallet` }
+                                                style={{
+                                                    background: 'none', border: 'none', cursor: 'pointer',
+                                                    padding: '5px', marginLeft: '8px', // Add some space
+                                                    // Grey out when disabled, make red when enabled?
+                                                    color: 'gray', // Grey or Red
+                                                    fontSize: '1.1em'
+                                                }}
+                                            >
+                                                <FaTrashAlt />
+                                            </button>
+                                        ) : (
+                                            '' // Show '-' if no remaining shares
+                                        )}
+                                        {/* --- END DELETE BUTTON --- */}
+                                    </td>
+                                </tr>
+                            )
+                        }) // End map over the CORRECT list
                     )}
                 </tbody>
             </table>
-        
+            
             {isSellModalOpen && walletToSell && (
                 <div style={modalOverlayStyle}> {/* Outer overlay div */}
                     <div style={modalContentStyle}> {/* Modal content container */}
@@ -1390,13 +1431,13 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                                 <input id="sellDate" type="date" value={sellDate} onChange={(e) => setSellDate(e.target.value)} required disabled={isSelling} style={inputStyle} />
                             </div>
                             <div style={formGroupStyle}>
-                                <label htmlFor="sellQuantity" style={labelStyle}>Quantity:</label>
-                                <input id="sellQuantity" type="number" /*...*/ value={sellQuantity} onChange={(e) => setSellQuantity(e.target.value)} required disabled={isSelling} style={inputStyle} />
-                            </div>
-                            <div style={formGroupStyle}>
                                 <label htmlFor="sellPrice" style={labelStyle}>Sell Price ($):</label>
                                 <input id="sellPrice" type="number" /*...*/ value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} required disabled={isSelling} style={inputStyle} />
                             </div>
+                            <div style={formGroupStyle}>
+                                <label htmlFor="sellQuantity" style={labelStyle}>Quantity:</label>
+                                <input id="sellQuantity" type="number" /*...*/ value={sellQuantity} onChange={(e) => setSellQuantity(e.target.value)} required disabled={isSelling} style={inputStyle} />
+                            </div>                            
                             <div style={formGroupStyle}>
                                 <label htmlFor="sellSignal" style={labelStyle}>Signal:</label>
                                 <select
@@ -1410,8 +1451,6 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                                     <option value="">-- Select Signal --</option>
                                     <option value="Cust">Cust</option>
                                     <option value="TP">TP</option>
-                                    {/* <option value="TPH">TPH</option>
-                                    <option value="TPP">TPP</option> */}
                                 </select>
                             </div>
                             {/* End Form Fields */}
@@ -1444,7 +1483,6 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                             onCancel={handleCloseBuyModal} // Handle cancellation
                             // Do not pass edit mode props (isEditMode, initialData, onUpdate)
                         />
-
                     </div>
                 </div>
             )}

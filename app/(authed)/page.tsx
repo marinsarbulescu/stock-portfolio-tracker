@@ -53,14 +53,14 @@ export default function HomePage() {
         percentToBe: false,
         ltpiaTakeProfitPrice: true,
         percentToTp: true,
-        tpShares: false,
+        tpShares: true,
     });
 
     // Mapping from state keys to desired display labels
     const COLUMN_LABELS: Record<keyof ReportColumnVisibilityState, string> = {
         fiveDayDip: '5DD',      // Custom Label
         lbd: 'LBD',         // Custom Label
-        buys: 'Sw-Buys',
+        buys: 'Buys #',
         //incompleteBuys: 'I-Buys',
         sinceBuy: 'Last Buy',
         sinceSell: 'Last Sell',
@@ -68,7 +68,7 @@ export default function HomePage() {
         percentToBe: '%2BE',          // Custom Label
         ltpiaTakeProfitPrice: 'TP',
         percentToTp: '%2TP',          // Custom Label
-        tpShares: 'TP-Shs'        // Custom Label
+        tpShares: 'TP Shares'        // Custom Label
     };
     
     const [portfolioStocks, setPortfolioStocks] = useState<PortfolioStockDataType[]>([]);
@@ -516,8 +516,19 @@ export default function HomePage() {
     }, [reportColumnVisibility]);
     
     
-    type ReportColumnKey = 'symbol' | 'currentPrice' | 'fiveDayDip' | 'lbd' | 'sinceBuy' |
-         'sinceSell' | 'buys' | 'incompleteBuyCount' | 'percentToBe' | 'percentToTp' | 'ltpiaTakeProfitPrice' | 'tpShares';
+    type ReportColumnKey = 
+        'symbol' | 
+        'currentPrice' | 
+        'fiveDayDip' | 
+        'lbd' | 
+        'sinceBuy' |
+        'sinceSell' | 
+        'buys' | 
+        'incompleteBuyCount' | 
+        'percentToBe' | 
+        'percentToTp' | 
+        'ltpiaTakeProfitPrice' | 
+        'tpShares';
     const [sortConfig, setSortConfig] = useState<{ key: ReportColumnKey; direction: 'ascending' | 'descending' } | null>(null);
 
     const sortedTableData = useMemo(() => {
@@ -693,7 +704,7 @@ export default function HomePage() {
                         )}
                         {reportColumnVisibility.buys && (
                             <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('buys')}>
-                                Sw Buys {sortConfig?.key === 'buys' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                Buys {sortConfig?.key === 'buys' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                             </th>
                         )}
                         {/* {reportColumnVisibility.incompleteBuys && (
