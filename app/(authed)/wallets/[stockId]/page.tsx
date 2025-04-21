@@ -99,6 +99,7 @@ export default function StockWalletPage() {
     // Epsilon for checking closeness to zero, based on share precision
     const SHARE_EPSILON = 1 / (10**(SHARE_PRECISION + 2)); // e.g., 0.0000001 for 5 decimal places
 
+    const [isOverviewExpanded, setIsOverviewExpanded] = useState(false); // Collapsed by default
 
     // --- Function to fetch wallets FOR THIS STOCK ---
     const fetchWallets = useCallback(async () => {
@@ -1409,17 +1410,16 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
      if (error && !stockSymbol) return <p style={{ color: 'red' }}>Error: {error}</p>;
 
      console.log("[StockWalletPage Render] Component rendering. Wallets state length:", wallets.length, "Wallets state content:", wallets);
+     
+    const currentStockPriceForOverview = latestPrices[stockSymbol ?? '']?.currentPrice;
 
     return (
         <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                 <h3>{stockSymbol?.toUpperCase()}</h3>
-                {/* --- ADD BUTTON --- */}
-                <button onClick={handleOpenBuyModal} style={{ padding: '8px 15px' }}>
-                    Add Buy Transaction
-                </button>
-                {/* --- END BUTTON --- */}
-
+                
+                <button onClick={handleOpenBuyModal} style={{ padding: '8px 15px' }}>Add Buy Transaction</button>
+                
                 {/* --- ADD MIGRATION BUTTON --- */}
                 {/* <button
                     onClick={handleMigrateBuysToWallets} // We will create this function next
@@ -1429,155 +1429,176 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                     {isMigrating ? 'Processing...' : 'Generate Wallets from Buys'}
                  </button> */}
                  {/* --- END MIGRATION BUTTON --- */}
+
+                {/* Display Migration Feedback */}
+                {/* {migrationError && <p style={{ color: 'red', fontSize: '0.9em' }}>Migration Error: {migrationError}</p>} */}
+                {/* {migrationSuccess && <p style={{ color: 'lightgreen', fontSize: '0.9em' }}>{migrationSuccess}</p>} */}
             </div>
 
-            {/* Display Migration Feedback */}
-            {/* {migrationError && <p style={{ color: 'red', fontSize: '0.9em' }}>Migration Error: {migrationError}</p>} */}
-            {/* {migrationSuccess && <p style={{ color: 'lightgreen', fontSize: '0.9em' }}>{migrationSuccess}</p>} */}
-
-            {/* Budget Stats Section */}
             <div style={{
-                marginBottom: '1rem', padding: '10px 15px', border: '1px solid #444',
-                borderRadius: '4px', background: '#1f1f1f', fontSize: '0.9em'
+                marginBottom: '1rem',
+                border: '1px solid #444', // Keep border for the whole section
+                borderRadius: '4px',
+                background: '#1f1f1f'
             }}>
-                <h4 style={{ marginTop: 0, marginBottom: '10px', /*...*/ }}>
+                <h4
+                    style={{
+                        marginTop: 0, marginBottom: 0, // Remove bottom margin if collapsing
+                        padding: '10px 15px', // Keep padding on heading
+                        cursor: 'pointer', // Indicate clickable
+                        display: 'flex', // Use flex to align text and arrow
+                        justifyContent: 'space-between', // Push arrow to the right
+                        alignItems: 'center'
+                    }}
+                    onClick={() => setIsOverviewExpanded(prev => !prev)} // Toggle state on click
+                >                   
                     Stock Overview
+                    {/* Indicator Arrow */}
+                    <span style={{ fontSize: '0.8em' }}>{isOverviewExpanded ? '▼' : '▶'}</span>
                 </h4>
-                {/* Check if initial loading state for ANY value */}
-                {stockBudget === undefined || stockPdp === undefined || stockShr === undefined || stockPlr === undefined ? (
-                    <p>Loading details...</p>
-                ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0px 15px' }}> {/* Example 2-column grid */}
-                    {/* Column 1 */}
-                    <div>
-                        <p style={{ margin: '5px 0' }}>
-                                 Current Price:
-                                 <strong style={{ float: 'right' }}>
-                                     {typeof currentStockPriceForOverview === 'number'
-                                         ? formatCurrency(currentStockPriceForOverview)
-                                         : (pricesLoading ? 'Loading...' : 'N/A') // Show loading or N/A
-                                     }
-                                 </strong>
-                        </p>
-                        <p style={{ margin: '5px 0' }}>
-                            Stock Annual Budget (SAB):
-                            <strong style={{ float: 'right' }}>
-                                {typeof stockBudget === 'number' ? formatCurrency(stockBudget) : 'Not Set'}
-                            </strong>
-                        </p>
-                        <p style={{ margin: '5px 0' }}>
-                            Budget Left (BL):
-                            <strong style={{ float: 'right' }}>
-                                {typeof stockBudget === 'number'
-                                    ? formatCurrency(stockBudget - totalTiedUpInvestment)
-                                    : 'N/A'
-                                }
-                            </strong>
-                        </p>
-                        <p style={{ margin: '5px 0' }}>
-                            Price Dip Percent (PDP):
-                            <strong style={{ float: 'right' }}>
-                                {typeof stockPdp === 'number' ? `${stockPdp}%` : 'Not Set'}
-                            </strong>
-                        </p>
-                        <p style={{ margin: '5px 0' }}>
-                            Swing-Hold Ratio (SHR):
-                            <strong style={{ float: 'right' }}>
-                                {typeof stockShr === 'number' ? `${stockShr}% Swing` : 'Not Set'}
-                            </strong>
-                        </p>
-                        <p style={{ margin: '5px 0' }}>
-                            Profit-Loss Ratio (PLR):
-                            <strong style={{ float: 'right' }}>
-                                {typeof stockPlr === 'number' ? stockPlr : 'Not Set'}
-                            </strong>
-                        </p>
-                    </div>
 
-                    {/* Column 2 */}
-                    <div>
-                        {/* --- ADD NEW STATS --- */}
-                        <p style={{ margin: '5px 0' }}>
-                            Total Buy Txns:
-                            <strong style={{ float: 'right' }}>
-                                {transactionCounts.buys}
-                            </strong>
-                        </p>
-                        <p style={{ margin: '5px 0' }}>
-                            Swing Sell Txns:
-                            <strong style={{ float: 'right' }}>
-                                {transactionCounts.swingSells}
-                            </strong>
-                        </p>
-                        <p style={{ margin: '5px 0' }}>
-                            Hold Sell Txns:
-                            <strong style={{ float: 'right' }}>
-                                {transactionCounts.holdSells}
-                            </strong>
-                        </p>
-                        <p style={{ margin: '5px 0' }}>
-                            Total Sell Txns:
-                            <strong style={{ float: 'right' }}>
-                                {transactionCounts.totalSells}
-                            </strong>
-                        </p>
-                        <p style={{ margin: '5px 0', borderTop: '1px dashed #333', paddingTop: '5px' }}>
-                            Current Swing Shares:
-                            <strong style={{ float: 'right' }}>
-                                {formatShares(currentShares.swing)} {/* Use formatShares */}
-                            </strong>
-                        </p>
-                        <p style={{ margin: '5px 0' }}>
-                            Current Hold Shares:
-                            <strong style={{ float: 'right' }}>
-                                {formatShares(currentShares.hold)} {/* Use formatShares */}
-                            </strong>
-                        </p>
-                        <p style={{ margin: '5px 0' }}>
-                            Total Current Shares:
-                            <strong style={{ float: 'right' }}>
-                                {formatShares(currentShares.total)} {/* Use formatShares */}
-                            </strong>
-                        </p>
-                        <p style={{ margin: '5px 0', borderTop: '1px dashed #333', paddingTop: '5px' }}>
-                            Swing P/L ($):
-                            <strong style={{ float: 'right' }}>
-                                {formatCurrency(plStats.totalSwingPlDollars)}
-                            </strong>
-                        </p>
-                        <p style={{ margin: '5px 0' }}>
-                            Swing P/L Avg (%):
-                            <strong style={{ float: 'right' }}>
-                                {formatPercent(plStats.avgSwingPlPercent)} {/* formatPercent handles null */}
-                            </strong>
-                        </p>
-                        <p style={{ margin: '5px 0' }}>
-                            Hold P/L ($):
-                            <strong style={{ float: 'right' }}>
-                                {formatCurrency(plStats.totalHoldPlDollars)}
-                            </strong>
-                        </p>
-                        <p style={{ margin: '5px 0' }}>
-                            Hold P/L Avg (%):
-                            <strong style={{ float: 'right' }}>
-                                {formatPercent(plStats.avgHoldPlPercent)} {/* formatPercent handles null */}
-                            </strong>
-                        </p>
-                        <p style={{ margin: '5px 0', borderTop: '1px solid #555', paddingTop: '5px' }}>
-                            Stock P/L ($):
-                            <strong style={{ float: 'right' }}>
-                                {formatCurrency(plStats.totalStockPlDollars)}
-                            </strong>
-                        </p>
-                        <p style={{ margin: '5px 0' }}>
-                            Stock P/L Avg (%):
-                            <strong style={{ float: 'right' }}>
-                                {formatPercent(plStats.avgStockPlPercent)}
-                            </strong>
-                        </p>
-                        {/* --- END ADD --- */}
+                {/* Conditionally render the details based on state */}
+                {isOverviewExpanded && (
+                    <div style={{
+                        padding: '0px 15px 10px 15px', // Add padding back for content
+                        borderTop: '1px solid #444' // Add divider when expanded
+                    }}>
+                        {stockBudget === undefined || stockPdp === undefined || stockShr === undefined || stockPlr === undefined ? (
+                            <p>Loading details...</p>
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
+                                {/* Column 1 */}
+                                <div>
+                                    <p style={{ margin: '5px 0' }}>
+                                            Current Price:
+                                            <strong style={{ float: 'right' }}>
+                                                {typeof currentStockPriceForOverview === 'number'
+                                                    ? formatCurrency(currentStockPriceForOverview)
+                                                    : (pricesLoading ? 'Loading...' : 'N/A') // Show loading or N/A
+                                                }
+                                            </strong>
+                                    </p>
+                                    <p style={{ margin: '5px 0' }}>
+                                        Stock Annual Budget (SAB):
+                                        <strong style={{ float: 'right' }}>
+                                            {typeof stockBudget === 'number' ? formatCurrency(stockBudget) : 'Not Set'}
+                                        </strong>
+                                    </p>
+                                    <p style={{ margin: '5px 0' }}>
+                                        Budget Left (BL):
+                                        <strong style={{ float: 'right' }}>
+                                            {typeof stockBudget === 'number'
+                                                ? formatCurrency(stockBudget - totalTiedUpInvestment)
+                                                : 'N/A'
+                                            }
+                                        </strong>
+                                    </p>
+                                    <p style={{ margin: '5px 0' }}>
+                                        Price Dip Percent (PDP):
+                                        <strong style={{ float: 'right' }}>
+                                            {typeof stockPdp === 'number' ? `${stockPdp}%` : 'Not Set'}
+                                        </strong>
+                                    </p>
+                                    <p style={{ margin: '5px 0' }}>
+                                        Swing-Hold Ratio (SHR):
+                                        <strong style={{ float: 'right' }}>
+                                            {typeof stockShr === 'number' ? `${stockShr}% Swing` : 'Not Set'}
+                                        </strong>
+                                    </p>
+                                    <p style={{ margin: '5px 0' }}>
+                                        Profit-Loss Ratio (PLR):
+                                        <strong style={{ float: 'right' }}>
+                                            {typeof stockPlr === 'number' ? stockPlr : 'Not Set'}
+                                        </strong>
+                                    </p>
+                                </div>
+
+                                {/* Column 2 */}
+                                <div>
+                                    {/* --- ADD NEW STATS --- */}
+                                    <p style={{ margin: '5px 0' }}>
+                                        Total Buy Txns:
+                                        <strong style={{ float: 'right' }}>
+                                            {transactionCounts.buys}
+                                        </strong>
+                                    </p>
+                                    <p style={{ margin: '5px 0' }}>
+                                        Swing Sell Txns:
+                                        <strong style={{ float: 'right' }}>
+                                            {transactionCounts.swingSells}
+                                        </strong>
+                                    </p>
+                                    <p style={{ margin: '5px 0' }}>
+                                        Hold Sell Txns:
+                                        <strong style={{ float: 'right' }}>
+                                            {transactionCounts.holdSells}
+                                        </strong>
+                                    </p>
+                                    <p style={{ margin: '5px 0' }}>
+                                        Total Sell Txns:
+                                        <strong style={{ float: 'right' }}>
+                                            {transactionCounts.totalSells}
+                                        </strong>
+                                    </p>
+                                    <p style={{ margin: '5px 0', borderTop: '1px dashed #333', paddingTop: '5px' }}>
+                                        Current Swing Shares:
+                                        <strong style={{ float: 'right' }}>
+                                            {formatShares(currentShares.swing)} {/* Use formatShares */}
+                                        </strong>
+                                    </p>
+                                    <p style={{ margin: '5px 0' }}>
+                                        Current Hold Shares:
+                                        <strong style={{ float: 'right' }}>
+                                            {formatShares(currentShares.hold)} {/* Use formatShares */}
+                                        </strong>
+                                    </p>
+                                    <p style={{ margin: '5px 0' }}>
+                                        Total Current Shares:
+                                        <strong style={{ float: 'right' }}>
+                                            {formatShares(currentShares.total)} {/* Use formatShares */}
+                                        </strong>
+                                    </p>
+                                    <p style={{ margin: '5px 0', borderTop: '1px dashed #333', paddingTop: '5px' }}>
+                                        Swing P/L ($):
+                                        <strong style={{ float: 'right' }}>
+                                            {formatCurrency(plStats.totalSwingPlDollars)}
+                                        </strong>
+                                    </p>
+                                    <p style={{ margin: '5px 0' }}>
+                                        Swing P/L Avg (%):
+                                        <strong style={{ float: 'right' }}>
+                                            {formatPercent(plStats.avgSwingPlPercent)} {/* formatPercent handles null */}
+                                        </strong>
+                                    </p>
+                                    <p style={{ margin: '5px 0' }}>
+                                        Hold P/L ($):
+                                        <strong style={{ float: 'right' }}>
+                                            {formatCurrency(plStats.totalHoldPlDollars)}
+                                        </strong>
+                                    </p>
+                                    <p style={{ margin: '5px 0' }}>
+                                        Hold P/L Avg (%):
+                                        <strong style={{ float: 'right' }}>
+                                            {formatPercent(plStats.avgHoldPlPercent)} {/* formatPercent handles null */}
+                                        </strong>
+                                    </p>
+                                    <p style={{ margin: '5px 0', borderTop: '1px solid #555', paddingTop: '5px' }}>
+                                        Stock P/L ($):
+                                        <strong style={{ float: 'right' }}>
+                                            {formatCurrency(plStats.totalStockPlDollars)}
+                                        </strong>
+                                    </p>
+                                    <p style={{ margin: '5px 0' }}>
+                                        Stock P/L Avg (%):
+                                        <strong style={{ float: 'right' }}>
+                                            {formatPercent(plStats.avgStockPlPercent)}
+                                        </strong>
+                                    </p>
+                                    {/* --- END ADD --- */}
+                                </div>
+                            </div> // End grid layout
+                        )}
                     </div>
-                </div> // End grid layout
                 )}
             </div>
             {/* End Overview Section */}
