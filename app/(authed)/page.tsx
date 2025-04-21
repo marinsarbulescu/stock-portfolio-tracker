@@ -63,7 +63,7 @@ export default function HomePage() {
     const COLUMN_LABELS: Record<keyof ReportColumnVisibilityState, string> = {
         fiveDayDip: '5DD',      
         lbd: 'LBD',
-        swingWalletCount: 'Sw Wallets',         
+        swingWalletCount: 'Swing Wallets',         
         //buys: 'Sw Wallets',
         //incompleteBuys: 'I-Buys',
         sinceBuy: 'Last Buy',
@@ -713,7 +713,7 @@ export default function HomePage() {
                         )}
                         {reportColumnVisibility.swingWalletCount && (
                             <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('swingWalletCount')}>
-                                Sw Wallets {sortConfig?.key === 'swingWalletCount' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                Sw Wlts {sortConfig?.key === 'swingWalletCount' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                             </th>
                         )}
                         {/* {reportColumnVisibility.buys && (
