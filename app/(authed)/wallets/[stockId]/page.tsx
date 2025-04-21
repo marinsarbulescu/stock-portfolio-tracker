@@ -1022,7 +1022,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
         if (remaining > SHARE_EPSILON &&
             typeof tp === 'number' &&
             typeof currentStockPrice === 'number' &&
-            tp >= currentStockPrice
+            tp <= currentStockPrice
            ) {
              // Condition met: return green text style
              return { color: 'lightgreen' };
