@@ -206,7 +206,7 @@ export default function StocksListingPage() {
                 // --- Check for TS errors accessing stock properties below ---
                 <tr key={stock.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
                   {/* Symbol Link */}
-                  <td><Link href={`/txns/${stock.id}/add`} /*...*/ >{stock.symbol?.toUpperCase()}</Link></td>
+                  <td><Link href={`/wallets/${stock.id}`}>{stock.symbol?.toUpperCase()}</Link></td>
                   {/* Other Data Cells */}
                   <td>{stock.name ?? '-'}</td>
                   <td>{stock.stockType}</td>

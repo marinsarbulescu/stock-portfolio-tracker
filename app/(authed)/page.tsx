@@ -30,7 +30,8 @@ export default function HomePage() {
     interface ReportColumnVisibilityState {
         fiveDayDip: boolean;
         lbd: boolean;
-        buys: boolean;
+        swingWalletCount: boolean;
+        //buys: boolean;
         //incompleteBuys: boolean;
         sinceBuy: boolean;
         sinceSell: boolean;
@@ -39,13 +40,15 @@ export default function HomePage() {
         ltpiaTakeProfitPrice: boolean,
         percentToTp: boolean;
         tpShares: boolean;
+        
     }
     
     // Initialize the state (decide defaults - here all are visible initially)
     const [reportColumnVisibility, setReportColumnVisibility] = useState<ReportColumnVisibilityState>({
         fiveDayDip: true,
         lbd: true,
-        buys: false,
+        swingWalletCount: true,
+        //buys: false,
         //incompleteBuys: true,
         sinceBuy: true,
         sinceSell: false,
@@ -58,17 +61,18 @@ export default function HomePage() {
 
     // Mapping from state keys to desired display labels
     const COLUMN_LABELS: Record<keyof ReportColumnVisibilityState, string> = {
-        fiveDayDip: '5DD',      // Custom Label
-        lbd: 'LBD',         // Custom Label
-        buys: 'Buys #',
+        fiveDayDip: '5DD',      
+        lbd: 'LBD',
+        swingWalletCount: 'Sw Wallets',         
+        //buys: 'Sw Wallets',
         //incompleteBuys: 'I-Buys',
         sinceBuy: 'Last Buy',
         sinceSell: 'Last Sell',
         currentPrice: 'Price',
-        percentToBe: '%2BE',          // Custom Label
+        percentToBe: '%2BE',          
         ltpiaTakeProfitPrice: 'TP',
-        percentToTp: '%2TP',          // Custom Label
-        tpShares: 'TP Shares'        // Custom Label
+        percentToTp: '%2TP',          
+        tpShares: 'TP Shares',
     };
     
     const [portfolioStocks, setPortfolioStocks] = useState<PortfolioStockDataType[]>([]);
@@ -382,6 +386,7 @@ export default function HomePage() {
         lbd: number | null;        // Calculated LBD percentage
         sinceBuy: number | null;   // Days
         sinceSell: number | null;  // Days
+        swingWalletCount: number;
         buys: number;            // Count
         percentToBe: number | null;
         ltpiaTakeProfitPrice: number | null;
@@ -389,6 +394,7 @@ export default function HomePage() {
         tpShares: number | null;
         totalCurrentShares: number;
         incompleteBuyCount: number;
+        
       }
 
     function calculateDaysAgo(dateString: string | null | undefined): number | null {
@@ -482,6 +488,7 @@ export default function HomePage() {
             const swingBuyCountValue = procData.swingBuyCount;
             // Calculate total shares from processed data
             const totalShares = procData.totalCurrentSwingShares + procData.totalCurrentHoldShares;
+            const swingWalletCountValue = procData.activeSwingWallets.length;
 
             // Return combined data object for the report row
             return {
@@ -500,6 +507,7 @@ export default function HomePage() {
                 buys: swingBuyCountValue, // Now represents SWING buys
                 totalCurrentShares: totalShares, // Keep total if needed
                 incompleteBuyCount: 0, // No longer calculated/used
+                swingWalletCount: swingWalletCountValue,
             };
         });
     // Update dependencies
@@ -523,7 +531,8 @@ export default function HomePage() {
         'lbd' | 
         'sinceBuy' |
         'sinceSell' | 
-        'buys' | 
+        'swingWalletCount' |
+        //'buys' | 
         'incompleteBuyCount' | 
         'percentToBe' | 
         'percentToTp' | 
@@ -702,11 +711,16 @@ export default function HomePage() {
                                 LBD (%) {sortConfig?.key === 'lbd' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                             </th>
                         )}
-                        {reportColumnVisibility.buys && (
-                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('buys')}>
-                                Buys {sortConfig?.key === 'buys' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                        {reportColumnVisibility.swingWalletCount && (
+                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('swingWalletCount')}>
+                                Sw Wallets {sortConfig?.key === 'swingWalletCount' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                             </th>
                         )}
+                        {/* {reportColumnVisibility.buys && (
+                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('buys')}>
+                                S Wallets {sortConfig?.key === 'buys' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                            </th>
+                        )} */}
                         {/* {reportColumnVisibility.incompleteBuys && (
                         <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('incompleteBuyCount')}>
                             I-Buys {sortConfig?.key === 'incompleteBuyCount' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
@@ -793,9 +807,12 @@ export default function HomePage() {
                                         {typeof item.lbd === 'number' ? `${item.lbd.toFixed(2)}%` : '-'}
                                     </td>
                                 )}
-                                {reportColumnVisibility.buys && (
-                                    <td style={{ padding: '5px' }}>{item.buys}</td>
+                                {reportColumnVisibility.swingWalletCount  && (
+                                    <td style={{ padding: '5px' }}>{item.swingWalletCount }</td>
                                 )}
+                                {/* {reportColumnVisibility.buys && (
+                                    <td style={{ padding: '5px' }}>{item.buys}</td>
+                                )} */}
                                 {/* {reportColumnVisibility.incompleteBuys && (
                                         <td style={{ padding: '5px' }}>{item.incompleteBuyCount}</td>
                                 )} */}
