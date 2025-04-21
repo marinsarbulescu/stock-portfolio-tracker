@@ -38,10 +38,12 @@ export default function StockWalletPage() {
     const params = useParams();
     const stockId = params.stockId as string; // Get stockId from dynamic route
 
-    const { latestPrices } = usePrices(); // Add pricesLoading, pricesError if you want to display their states
+    //const { latestPrices } = usePrices(); // Add pricesLoading, pricesError if you want to display their states
 
     // --- State for Stock Symbol (for Title) ---
     const [stockSymbol, setStockSymbol] = useState<string | undefined>(undefined);
+
+    const [stockBudget, setStockBudget] = useState<number | null | undefined>(undefined); // undefined: not loaded, null: no budget set, number: budget value
 
     // --- ADD STATE for Migration ---
     const [isMigrating, setIsMigrating] = useState(false);
@@ -58,6 +60,8 @@ export default function StockWalletPage() {
     const [error, setError] = useState<string | null>(null);
     // State for table sorting
     const [sortConfig, setSortConfig] = useState<{ key: SortableWalletKey; direction: 'ascending' | 'descending' } | null>(null);
+
+    const { latestPrices, pricesLoading, pricesError, lastPriceFetchTimestamp } = usePrices(); // <<< Ensure lastPriceFetchTimestamp is included
 
     // --- ADD STATE for Transaction List ---
     const [transactions, setTransactions] = useState<TransactionDataType[]>([]);
@@ -82,6 +86,10 @@ export default function StockWalletPage() {
     const [sellError, setSellError] = useState<string | null>(null); // For errors within the modal
     const [isSelling, setIsSelling] = useState(false); // Loading state for submission
     // --- END NEW STATE ---
+
+    const [stockPdp, setStockPdp] = useState<number | null | undefined>(undefined);
+    const [stockShr, setStockShr] = useState<number | null | undefined>(undefined); // Swing-Hold Ratio
+    const [stockPlr, setStockPlr] = useState<number | null | undefined>(undefined);
 
     const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
 
@@ -185,7 +193,8 @@ export default function StockWalletPage() {
             // --- 1. Get Stock Details (Ratio, PDP, PLR) ---
             console.log("[MIGRATE] Fetching stock details...");
             const { data: stockData, errors: stockErrors } = await client.models.PortfolioStock.get(
-                { id: stockId }, { selectionSet: ['swingHoldRatio', 'pdp', 'plr'] }
+                { id: stockId }, 
+                { selectionSet: ['swingHoldRatio', 'pdp', 'plr'] }
             );
             if (stockErrors) throw stockErrors;
             if (!stockData) throw new Error("Could not fetch stock details.");
@@ -844,24 +853,46 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
     useEffect(() => {
         if (stockId) {
             //console.log(`Workspaceing symbol for stockId: ${stockId}`);
-            client.models.PortfolioStock.get({ id: stockId }, { selectionSet: ['symbol'] })
+            client.models.PortfolioStock.get(
+                { id: stockId }, 
+                { selectionSet: ['symbol', 'budget', 'pdp', 'swingHoldRatio', 'plr'] })
                 .then(({ data, errors }) => {
                     if (errors) {
-                         console.error("Error fetching stock symbol:", errors);
-                         setError(prev => prev ? `${prev} | Failed to fetch symbol.` : 'Failed to fetch symbol.');
-                         setStockSymbol("Error");
+                        console.error("Error fetching stock symbol:", errors);
+                        setError(prev => prev ? `${prev} | Failed to fetch symbol.` : 'Failed to fetch symbol.');
+                        setStockSymbol("Error");
+                        setStockBudget(null);
+                        setStockPdp(null);
+                        setStockShr(null);
+                        setStockPlr(null);
                     } else if (data) {
-                         setStockSymbol(data.symbol ?? "Unknown");
+                        setStockSymbol(data.symbol ?? "Unknown");
+                        setStockBudget(data.budget);
+                        setStockPdp(data.pdp);       // <<< Set PDP state
+                        setStockShr(data.swingHoldRatio); // <<< Set SHR state
+                        setStockPlr(data.plr);       // <<< Set PLR state
                     } else {
-                         setStockSymbol("Not Found");
+                        setStockSymbol("Not Found");
+                        setStockBudget(null);
+                        setStockPdp(null); // Set related state to null if not found
+                        setStockShr(null);
+                        setStockPlr(null);
                     }
                 }).catch(err => {
-                     console.error("Error fetching stock symbol:", err);
-                     setError(prev => prev ? `${prev} | Failed to fetch symbol.` : 'Failed to fetch symbol.');
-                     setStockSymbol("Error");
+                    console.error("Error fetching stock symbol:", err);
+                    setError(prev => prev ? `${prev} | Failed to fetch symbol.` : 'Failed to fetch symbol.');
+                    setStockSymbol("Error");
+                    setStockBudget(null);
+                    setStockPdp(null); // Set related state to null on catch
+                    setStockShr(null);
+                    setStockPlr(null);
                 });
         } else {
             setStockSymbol(undefined);
+            setStockBudget(undefined);
+            setStockPdp(undefined);
+            setStockShr(undefined);
+            setStockPlr(undefined);
         }
     }, [stockId]); // Dependency on stockId
 
@@ -870,6 +901,104 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
     useEffect(() => {
         fetchWallets();
     }, [fetchWallets]); // fetchWallets dependency includes stockId
+
+    // --- Add Calculations using useMemo ---
+    const transactionCounts = useMemo(() => {
+        if (!transactions) return { buys: 0, swingSells: 0, holdSells: 0, totalSells: 0 };
+
+        const buys = transactions.filter(t => t.action === 'Buy').length;
+        const swingSells = transactions.filter(t => t.action === 'Sell' && t.txnType === 'Swing').length;
+        const holdSells = transactions.filter(t => t.action === 'Sell' && t.txnType === 'Hold').length;
+        // Note: This assumes sells always have a txnType matching the wallet they came from.
+        // If a 'Sell' could have a null/undefined txnType, adjust filter as needed.
+        const totalSells = swingSells + holdSells;
+
+        return { buys, swingSells, holdSells, totalSells };
+    }, [transactions]); // Depends on the transactions state
+
+    const currentShares = useMemo(() => {
+        if (!wallets) return { swing: 0, hold: 0, total: 0 };
+
+        const epsilon = SHARE_EPSILON; // Use defined epsilon
+
+        const swing = wallets
+            .filter(w => w.walletType === 'Swing' && (w.remainingShares ?? 0) > epsilon)
+            .reduce((sum, w) => sum + (w.remainingShares ?? 0), 0);
+
+        const hold = wallets
+            .filter(w => w.walletType === 'Hold' && (w.remainingShares ?? 0) > epsilon)
+            .reduce((sum, w) => sum + (w.remainingShares ?? 0), 0);
+
+        const total = swing + hold;
+
+        // Apply rounding to the final sums for display consistency
+        const roundedSwing = parseFloat(swing.toFixed(SHARE_PRECISION));
+        const roundedHold = parseFloat(hold.toFixed(SHARE_PRECISION));
+        const roundedTotal = parseFloat(total.toFixed(SHARE_PRECISION));
+
+
+        return {
+            swing: (Math.abs(roundedSwing) < epsilon) ? 0 : roundedSwing,
+            hold: (Math.abs(roundedHold) < epsilon) ? 0 : roundedHold,
+            total: (Math.abs(roundedTotal) < epsilon) ? 0 : roundedTotal
+        };
+    }, [wallets]); // Depends on the wallets state
+
+    // --- ADD P/L Calculation Memo ---
+    const plStats = useMemo(() => {
+        if (!transactions) {
+            return {
+                totalSwingPlDollars: 0, avgSwingPlPercent: null,
+                totalHoldPlDollars: 0, avgHoldPlPercent: null,
+                totalStockPlDollars: 0, avgStockPlPercent: null
+            };
+        }
+
+        // --- Swing P/L ---
+        const swingSells = transactions.filter(t => t.action === 'Sell' && t.txnType === 'Swing');
+        const totalSwingPlDollars = swingSells.reduce((sum, t) => sum + (t.txnProfit ?? 0), 0);
+
+        // Calculate average Swing P/L % (only average non-null percentages)
+        const validSwingPercentTxns = swingSells.filter(t => typeof t.txnProfitPercent === 'number');
+        const sumSwingPlPercent = validSwingPercentTxns.reduce((sum, t) => sum + (t.txnProfitPercent ?? 0), 0);
+        const avgSwingPlPercent = validSwingPercentTxns.length > 0
+            ? sumSwingPlPercent / validSwingPercentTxns.length
+            : null; // Avoid division by zero
+
+        // --- Hold P/L ---
+        const holdSells = transactions.filter(t => t.action === 'Sell' && t.txnType === 'Hold');
+        const totalHoldPlDollars = holdSells.reduce((sum, t) => sum + (t.txnProfit ?? 0), 0);
+
+        // Calculate average Hold P/L %
+        const validHoldPercentTxns = holdSells.filter(t => typeof t.txnProfitPercent === 'number');
+        const sumHoldPlPercent = validHoldPercentTxns.reduce((sum, t) => sum + (t.txnProfitPercent ?? 0), 0);
+        const avgHoldPlPercent = validHoldPercentTxns.length > 0
+            ? sumHoldPlPercent / validHoldPercentTxns.length
+            : null; // Avoid division by zero
+
+        const totalStockPlDollars = totalSwingPlDollars + totalHoldPlDollars;
+        const allValidPercentSells = transactions.filter(t => t.action === 'Sell' && typeof t.txnProfitPercent === 'number');
+        const sumAllPlPercent = allValidPercentSells.reduce((sum, t) => sum + (t.txnProfitPercent ?? 0), 0);
+        const avgStockPlPercent = allValidPercentSells.length > 0
+            ? sumAllPlPercent / allValidPercentSells.length
+            : null; // Avoid division by zero
+
+        // Round currency values for display consistency
+        const roundedTotalSwingPl = parseFloat(totalSwingPlDollars.toFixed(CURRENCY_PRECISION));
+        const roundedTotalHoldPl = parseFloat(totalHoldPlDollars.toFixed(CURRENCY_PRECISION));
+        const roundedTotalStockPl = parseFloat(totalStockPlDollars.toFixed(CURRENCY_PRECISION)); // Round overall P/L $
+
+        return {
+            totalSwingPlDollars: roundedTotalSwingPl,
+            avgSwingPlPercent: avgSwingPlPercent, // Percentage is usually fine as is for formatting
+            totalHoldPlDollars: roundedTotalHoldPl,
+            avgHoldPlPercent: avgHoldPlPercent,
+            totalStockPlDollars: roundedTotalStockPl, // <<< Add overall $
+            avgStockPlPercent: avgStockPlPercent
+        };
+
+    }, [transactions]); // Depends on transactions state
+    // --- End P/L Calc Memo ---
 
     // --- Client-Side Sorting Logic (Removed Symbol Sort) ---
     const sortedWallets = useMemo(() => {
@@ -983,6 +1112,30 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
     };
     // --- End Sorting Logic ---
 
+    const totalTiedUpInvestment = useMemo(() => {
+        // Ensure wallets data is loaded
+        if (!wallets || wallets.length === 0) {
+            return 0;
+        }
+    
+        //const epsilon = 0.000001; // Tolerance
+    
+        return wallets.reduce((totalTiedUp, wallet) => {
+            const totalInvestment = wallet.totalInvestment ?? 0;
+            const totalShares = wallet.totalSharesQty ?? 0;
+            const remainingShares = wallet.remainingShares ?? 0;
+    
+            // Calculate investment per share for this wallet (handle division by zero)
+            const investmentPerShare = (totalShares > SHARE_EPSILON) ? (totalInvestment / totalShares) : 0;
+    
+            // Calculate investment tied up in remaining shares for this wallet
+            const tiedUpInWallet = investmentPerShare * remainingShares;
+    
+            return totalTiedUp + tiedUpInWallet;
+        }, 0); // Start sum at 0
+    
+    }, [wallets]); // Recalculate when the wallets data changes
+
 
     // --- START: Replace your existing Formatting Helpers with this block ---
     const formatCurrency = (value: number | null | undefined): string => {
@@ -1009,6 +1162,25 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
         return value.toFixed(decimals);
     };
     // --- END: Formatting Helpers ---
+
+    const formatTimestamp = (date: Date | null): string => {
+        if (!date) return "N/A";
+        // Options for formatting like "Apr 21st 3:54 PM PDT"
+        // Intl.DateTimeFormat provides good browser-native formatting.
+        try {
+            return new Intl.DateTimeFormat('en-US', {
+                month: 'short',    // Apr
+                day: 'numeric',    // 21
+                hour: 'numeric',   // 3 PM
+                minute: '2-digit', // 54
+                hour12: true,      // Use AM/PM
+                timeZoneName: 'short' // Attempts to get PDT/PST etc. based on user's browser timezone
+            }).format(date);
+        } catch (e) {
+            console.error("Error formatting date:", e);
+            return date.toLocaleDateString(); // Fallback
+        }
+    };
 
     // +++ Add TP Cell Styling Function +++
     const getTpCellStyle = (
@@ -1249,20 +1421,167 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                 {/* --- END BUTTON --- */}
 
                 {/* --- ADD MIGRATION BUTTON --- */}
-                <button
+                {/* <button
                     onClick={handleMigrateBuysToWallets} // We will create this function next
                     disabled={isMigrating || isLoading || isTxnLoading} // Disable while loading/migrating
                     style={{ padding: '5px 10px', fontSize: '0.8em' }}
                  >
                     {isMigrating ? 'Processing...' : 'Generate Wallets from Buys'}
-                 </button>
+                 </button> */}
                  {/* --- END MIGRATION BUTTON --- */}
             </div>
 
             {/* Display Migration Feedback */}
-            {migrationError && <p style={{ color: 'red', fontSize: '0.9em' }}>Migration Error: {migrationError}</p>}
-             {migrationSuccess && <p style={{ color: 'lightgreen', fontSize: '0.9em' }}>{migrationSuccess}</p>}
+            {/* {migrationError && <p style={{ color: 'red', fontSize: '0.9em' }}>Migration Error: {migrationError}</p>} */}
+            {/* {migrationSuccess && <p style={{ color: 'lightgreen', fontSize: '0.9em' }}>{migrationSuccess}</p>} */}
 
+            {/* Budget Stats Section */}
+            <div style={{
+                marginBottom: '1rem', padding: '10px 15px', border: '1px solid #444',
+                borderRadius: '4px', background: '#1f1f1f', fontSize: '0.9em'
+            }}>
+                <h4 style={{ marginTop: 0, marginBottom: '10px', /*...*/ }}>
+                    Stock Overview
+                </h4>
+                {/* Check if initial loading state for ANY value */}
+                {stockBudget === undefined || stockPdp === undefined || stockShr === undefined || stockPlr === undefined ? (
+                    <p>Loading details...</p>
+                ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0px 15px' }}> {/* Example 2-column grid */}
+                    {/* Column 1 */}
+                    <div>
+                        <p style={{ margin: '5px 0' }}>
+                                 Current Price:
+                                 <strong style={{ float: 'right' }}>
+                                     {typeof currentStockPriceForOverview === 'number'
+                                         ? formatCurrency(currentStockPriceForOverview)
+                                         : (pricesLoading ? 'Loading...' : 'N/A') // Show loading or N/A
+                                     }
+                                 </strong>
+                        </p>
+                        <p style={{ margin: '5px 0' }}>
+                            Stock Annual Budget (SAB):
+                            <strong style={{ float: 'right' }}>
+                                {typeof stockBudget === 'number' ? formatCurrency(stockBudget) : 'Not Set'}
+                            </strong>
+                        </p>
+                        <p style={{ margin: '5px 0' }}>
+                            Budget Left (BL):
+                            <strong style={{ float: 'right' }}>
+                                {typeof stockBudget === 'number'
+                                    ? formatCurrency(stockBudget - totalTiedUpInvestment)
+                                    : 'N/A'
+                                }
+                            </strong>
+                        </p>
+                        <p style={{ margin: '5px 0' }}>
+                            Price Dip Percent (PDP):
+                            <strong style={{ float: 'right' }}>
+                                {typeof stockPdp === 'number' ? `${stockPdp}%` : 'Not Set'}
+                            </strong>
+                        </p>
+                        <p style={{ margin: '5px 0' }}>
+                            Swing-Hold Ratio (SHR):
+                            <strong style={{ float: 'right' }}>
+                                {typeof stockShr === 'number' ? `${stockShr}% Swing` : 'Not Set'}
+                            </strong>
+                        </p>
+                        <p style={{ margin: '5px 0' }}>
+                            Profit-Loss Ratio (PLR):
+                            <strong style={{ float: 'right' }}>
+                                {typeof stockPlr === 'number' ? stockPlr : 'Not Set'}
+                            </strong>
+                        </p>
+                    </div>
+
+                    {/* Column 2 */}
+                    <div>
+                        {/* --- ADD NEW STATS --- */}
+                        <p style={{ margin: '5px 0' }}>
+                            Total Buy Txns:
+                            <strong style={{ float: 'right' }}>
+                                {transactionCounts.buys}
+                            </strong>
+                        </p>
+                        <p style={{ margin: '5px 0' }}>
+                            Swing Sell Txns:
+                            <strong style={{ float: 'right' }}>
+                                {transactionCounts.swingSells}
+                            </strong>
+                        </p>
+                        <p style={{ margin: '5px 0' }}>
+                            Hold Sell Txns:
+                            <strong style={{ float: 'right' }}>
+                                {transactionCounts.holdSells}
+                            </strong>
+                        </p>
+                        <p style={{ margin: '5px 0' }}>
+                            Total Sell Txns:
+                            <strong style={{ float: 'right' }}>
+                                {transactionCounts.totalSells}
+                            </strong>
+                        </p>
+                        <p style={{ margin: '5px 0', borderTop: '1px dashed #333', paddingTop: '5px' }}>
+                            Current Swing Shares:
+                            <strong style={{ float: 'right' }}>
+                                {formatShares(currentShares.swing)} {/* Use formatShares */}
+                            </strong>
+                        </p>
+                        <p style={{ margin: '5px 0' }}>
+                            Current Hold Shares:
+                            <strong style={{ float: 'right' }}>
+                                {formatShares(currentShares.hold)} {/* Use formatShares */}
+                            </strong>
+                        </p>
+                        <p style={{ margin: '5px 0' }}>
+                            Total Current Shares:
+                            <strong style={{ float: 'right' }}>
+                                {formatShares(currentShares.total)} {/* Use formatShares */}
+                            </strong>
+                        </p>
+                        <p style={{ margin: '5px 0', borderTop: '1px dashed #333', paddingTop: '5px' }}>
+                            Swing P/L ($):
+                            <strong style={{ float: 'right' }}>
+                                {formatCurrency(plStats.totalSwingPlDollars)}
+                            </strong>
+                        </p>
+                        <p style={{ margin: '5px 0' }}>
+                            Swing P/L Avg (%):
+                            <strong style={{ float: 'right' }}>
+                                {formatPercent(plStats.avgSwingPlPercent)} {/* formatPercent handles null */}
+                            </strong>
+                        </p>
+                        <p style={{ margin: '5px 0' }}>
+                            Hold P/L ($):
+                            <strong style={{ float: 'right' }}>
+                                {formatCurrency(plStats.totalHoldPlDollars)}
+                            </strong>
+                        </p>
+                        <p style={{ margin: '5px 0' }}>
+                            Hold P/L Avg (%):
+                            <strong style={{ float: 'right' }}>
+                                {formatPercent(plStats.avgHoldPlPercent)} {/* formatPercent handles null */}
+                            </strong>
+                        </p>
+                        <p style={{ margin: '5px 0', borderTop: '1px solid #555', paddingTop: '5px' }}>
+                            Stock P/L ($):
+                            <strong style={{ float: 'right' }}>
+                                {formatCurrency(plStats.totalStockPlDollars)}
+                            </strong>
+                        </p>
+                        <p style={{ margin: '5px 0' }}>
+                            Stock P/L Avg (%):
+                            <strong style={{ float: 'right' }}>
+                                {formatPercent(plStats.avgStockPlPercent)}
+                            </strong>
+                        </p>
+                        {/* --- END ADD --- */}
+                    </div>
+                </div> // End grid layout
+                )}
+            </div>
+            {/* End Overview Section */}
+            
             <h3>Wallets</h3>
 
             {/* --- ADD TABS --- */}
@@ -1487,7 +1806,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                 </div>
             )}
 
-            <div style={{ marginTop: '3rem', borderTop: '1px solid #ccc', paddingTop: '1.5rem' }}>
+            <div style={{ marginTop: '3rem', paddingTop: '1.5rem' }}>
                 <h3>Transaction</h3>
 
                 {/* Loading/Error Display */}
