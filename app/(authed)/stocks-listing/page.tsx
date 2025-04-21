@@ -86,7 +86,8 @@ export default function StocksListingPage() {
             'pdp',
             'plr',
             'budget',
-            'isHidden'  // <<< Ensure isHidden is included here
+            'isHidden',  // <<< Ensure isHidden is included here
+            'swingHoldRatio',
         ]
       });
       // --- End Fetch ---
@@ -192,7 +193,7 @@ export default function StocksListingPage() {
               <th>Last Price</th>
               <th>PDP (%)</th>
               <th>PLR (%)</th>
-              <th>Budget ($)</th>
+              <th>Budget</th>
               <th>Actions</th>
             </tr>
           </thead>

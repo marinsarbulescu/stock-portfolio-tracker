@@ -1,4 +1,4 @@
-// app/components/AddStockForm.tsx - Refactored for ["type"] pattern
+// app/components/AddStockForm.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -7,48 +7,46 @@ import { generateClient } from 'aws-amplify/data';
 
 const client = generateClient<Schema>();
 
-//type PortfolioStockModel = Schema['PortfolioStock'];
-//type StockTypeValue = PortfolioStockModel['stockType'];
-
-
 type PortfolioStockDataType = Schema["PortfolioStock"]["type"];
 type PortfolioStockUpdateInput = Partial<PortfolioStockDataType> & { id: string };
-type PortfolioStockCreateInput = Omit<PortfolioStockDataType, 'id' | 'createdAt' | 'updatedAt' | 'owner' | 'transactions'>; // Adjust Omit as needed
-
-
-// Define props for the component using the simpler types
-interface AddStockFormProps {
-  onStockAdded?: () => void; // For Add mode success
-  isEditMode?: boolean;
-  initialData?: Partial<PortfolioStockDataType> | null; // Expect partial simple type for editing
-  onUpdate?: (updatedData: PortfolioStockUpdateInput) => Promise<void>; // Expect ID + partial simple type
-  onCancel?: () => void;
-}
-
-// Add this interface definition
-interface DefaultFormStateType {
-  symbol: string;
-  stockType: StockTypeValue; // Use your type alias
-  region: RegionValue;  // Use your type alias
-  name: string;
-  pdp: string;
-  plr: string;
-  budget: string;
-}
+// Omit 'transactions' and 'stockWallets' as they are relationships, not direct inputs
+type PortfolioStockCreateInput = Omit<PortfolioStockDataType, 'id' | 'createdAt' | 'updatedAt' | 'owner' | 'transactions' | 'stockWallets'>;
 
 // Define specific types for dropdowns/enums based on schema
 type StockTypeValue = PortfolioStockDataType['stockType'];
 type RegionValue = PortfolioStockDataType['region'];
 
-// Default values for resetting the form
+// --- Interface for form state ---
+interface DefaultFormStateType {
+  symbol: string;
+  stockType: StockTypeValue;
+  region: RegionValue;
+  name: string;
+  pdp: string;
+  plr: string;
+  budget: string;
+  swingHoldRatio: string; // <<< ADDED SHR state field
+}
+
+// --- Props for the component ---
+interface AddStockFormProps {
+  onStockAdded?: () => void;
+  isEditMode?: boolean;
+  initialData?: Partial<PortfolioStockDataType> | null;
+  onUpdate?: (updatedData: PortfolioStockUpdateInput) => Promise<void>;
+  onCancel?: () => void;
+}
+
+// --- Default values for resetting the form ---
 const defaultFormState: DefaultFormStateType = {
   symbol: '',
-  stockType: 'Stock', // Use type assertion for default
-  region: 'US',   // Use type assertion for default
+  stockType: 'Stock',
+  region: 'US',
   name: '',
   pdp: '',
   plr: '',
   budget: '',
+  swingHoldRatio: '', // <<< ADDED SHR default
 };
 
 export default function AddStockForm({
@@ -57,9 +55,9 @@ export default function AddStockForm({
   initialData,
   onUpdate,
   onCancel
-}: AddStockFormProps) { // Props are now correctly typed
+}: AddStockFormProps) {
 
-  // State for each form field (using string/basic types for input binding)
+  // --- State for each form field ---
   const [symbol, setSymbol] = useState(defaultFormState.symbol);
   const [stockType, setStockType] = useState<StockTypeValue>(defaultFormState.stockType);
   const [region, setRegion] = useState<RegionValue>(defaultFormState.region);
@@ -67,16 +65,16 @@ export default function AddStockForm({
   const [pdp, setPdp] = useState(defaultFormState.pdp);
   const [plr, setPlr] = useState(defaultFormState.plr);
   const [budget, setBudget] = useState(defaultFormState.budget);
+  const [swingHoldRatio, setSwingHoldRatio] = useState(defaultFormState.swingHoldRatio); // <<< ADDED SHR state
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Removed success state, parent page handles success feedback after refresh/callback
 
-  // --- CORRECTED: Effect to populate form using Partial<PortfolioStockDataType> ---
+  // --- Effect to populate form using Partial<PortfolioStockDataType> ---
   useEffect(() => {
-    setError(null); // Clear errors when switching modes/data
+    setError(null);
     if (isEditMode && initialData) {
-      // Populate state from initialData. Properties should exist on PortfolioStockDataType.
+      // Populate state from initialData
       setSymbol(initialData.symbol ?? defaultFormState.symbol);
       setName(initialData.name ?? defaultFormState.name);
       setStockType(initialData.stockType ?? defaultFormState.stockType);
@@ -84,6 +82,7 @@ export default function AddStockForm({
       setPdp(initialData.pdp?.toString() ?? defaultFormState.pdp);
       setPlr(initialData.plr?.toString() ?? defaultFormState.plr);
       setBudget(initialData.budget?.toString() ?? defaultFormState.budget);
+      setSwingHoldRatio(initialData.swingHoldRatio?.toString() ?? defaultFormState.swingHoldRatio); // <<< ADDED Populating SHR
     } else {
       // Reset form for Add mode
       setSymbol(defaultFormState.symbol);
@@ -93,9 +92,10 @@ export default function AddStockForm({
       setPdp(defaultFormState.pdp);
       setPlr(defaultFormState.plr);
       setBudget(defaultFormState.budget);
+      setSwingHoldRatio(defaultFormState.swingHoldRatio); // <<< ADDED Resetting SHR
     }
   }, [isEditMode, initialData]);
-  // --- End CORRECTED Effect ---
+  // --- End Effect ---
 
   // Handle form submission
   const handleSubmit = async (event: React.FormEvent) => {
@@ -104,21 +104,26 @@ export default function AddStockForm({
     setError(null);
 
     // --- Basic Validation ---
-    if (!symbol || !stockType || !region) {
-      setError('Symbol, Type, and Region are required.');
-      setIsLoading(false); return;
-    }
-    // Add more validation if needed
+    if (!symbol || !stockType || !region) { /* ... */ }
+    // Optional: Add validation for SHR (e.g., must be between 0 and 100)
+    const shrValue = swingHoldRatio ? parseFloat(swingHoldRatio) : null;
+    if (shrValue !== null && (isNaN(shrValue) || shrValue < 0 || shrValue > 100)) {
+         setError('Swing-Hold Ratio must be a number between 0 and 100.');
+         setIsLoading(false); return;
+     }
+    // --- End Validation ---
 
     // --- Prepare data payload (plain object with correct types) ---
     const stockDataPayload = {
       symbol: symbol.toUpperCase(),
       stockType: stockType as StockTypeValue,
       region: region as RegionValue,
-      name: name || undefined, // Use undefined for optional empty strings
-      pdp: pdp ? parseFloat(pdp) : null, // Use null for optional empty numbers
+      name: name || undefined,
+      pdp: pdp ? parseFloat(pdp) : null,
       plr: plr ? parseFloat(plr) : null,
       budget: budget ? parseFloat(budget) : null,
+      swingHoldRatio: shrValue, // <<< ADDED SHR value (already parsed or null)
+      // isHidden will default to false based on schema if not provided
     };
     // --- End Payload Prep ---
 
@@ -150,8 +155,14 @@ export default function AddStockForm({
 
         console.log('Stock added successfully!');
         // Reset form fields only on successful ADD using default state values
-        setSymbol(defaultFormState.symbol); setStockType(defaultFormState.stockType); setRegion(defaultFormState.region);
-        setName(defaultFormState.name); setPdp(defaultFormState.pdp); setPlr(defaultFormState.plr); setBudget(defaultFormState.budget);
+        setSymbol(defaultFormState.symbol);
+        setStockType(defaultFormState.stockType);
+        setRegion(defaultFormState.region);
+        setName(defaultFormState.name);
+        setPdp(defaultFormState.pdp);
+        setPlr(defaultFormState.plr);
+        setBudget(defaultFormState.budget);
+        setSwingHoldRatio(defaultFormState.swingHoldRatio);
         onStockAdded?.(); // Notify parent
       }
     } catch (err: any) {
@@ -172,12 +183,27 @@ export default function AddStockForm({
 
       {/* --- Form Fields --- */}
       {/* Use same inputs as before, bound to state */}
-      <div><label>Stock Symbol:</label><input id="symbol" value={symbol} onChange={(e) => setSymbol(e.target.value)} required disabled={isLoading} /></div>
-      <div style={{ marginTop: '0.5rem' }}><label>Type:</label><select id="type" value={stockType} onChange={(e) => setStockType(e.target.value as StockTypeValue)} required disabled={isLoading}><option value="Stock">Stock</option><option value="ETF">ETF</option><option value="Crypto">Crypto</option></select></div>
-      <div style={{ marginTop: '0.5rem' }}><label>Region:</label><select id="region" value={region} onChange={(e) => setRegion(e.target.value as RegionValue)} required disabled={isLoading}><option value="US">US</option><option value="EU">EU</option><option value="APAC">APAC</option></select></div>
-      <div style={{ marginTop: '0.5rem' }}><label>Stock Name (Optional):</label><input id="name" value={name} onChange={(e) => setName(e.target.value)} disabled={isLoading} /></div>
-      <div style={{ marginTop: '0.5rem' }}><label>PDP (%):</label><input id="pdp" type="number" step="any" value={pdp} onChange={(e) => setPdp(e.target.value)} disabled={isLoading} /></div>
+      <div><label>Ticker: </label><input id="symbol" value={symbol} onChange={(e) => setSymbol(e.target.value)} required disabled={isLoading} /></div>
+      <div style={{ marginTop: '0.5rem' }}><label>Type: </label><select id="type" value={stockType} onChange={(e) => setStockType(e.target.value as StockTypeValue)} required disabled={isLoading}><option value="Stock">Stock</option><option value="ETF">ETF</option><option value="Crypto">Crypto</option></select></div>
+      <div style={{ marginTop: '0.5rem' }}><label>Region: </label><select id="region" value={region} onChange={(e) => setRegion(e.target.value as RegionValue)} required disabled={isLoading}><option value="US">US</option><option value="EU">EU</option><option value="APAC">APAC</option></select></div>
+      <div style={{ marginTop: '0.5rem' }}><label>Stock Name (Optional): </label><input id="name" value={name} onChange={(e) => setName(e.target.value)} disabled={isLoading} /></div>
+      <div style={{ marginTop: '0.5rem' }}><label>PDP (%): </label><input id="pdp" type="number" step="any" value={pdp} onChange={(e) => setPdp(e.target.value)} disabled={isLoading} /></div>
       <div style={{ marginTop: '0.5rem' }}><label>PLR:</label><input id="plr" type="number" step="any" value={plr} onChange={(e) => setPlr(e.target.value)} disabled={isLoading} /></div>
+      <div style={{ marginTop: '0.5rem' }}>
+          <label htmlFor="shr">SHR (%):</label> {/* Swing-Hold Ratio */}
+          <input
+              id="shr"
+              type="number"
+              step="any" // Allow decimals if needed, or "1" for whole numbers
+              min="0"   // Minimum value
+              max="100" // Maximum value
+              value={swingHoldRatio}
+              onChange={(e) => setSwingHoldRatio(e.target.value)}
+              placeholder="0-100 (e.g., 70 = 70% Swing)"
+              disabled={isLoading}
+              style={{width: '100%', padding: '8px'}} // Example style
+          />
+      </div>
       <div style={{ marginTop: '0.5rem' }}><label>Annual Budget:</label><input id="budget" type="number" step="any" value={budget} onChange={(e) => setBudget(e.target.value)} disabled={isLoading} /></div>
       {/* --- End Form Fields --- */}
 
