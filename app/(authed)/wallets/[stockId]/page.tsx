@@ -1410,7 +1410,7 @@ const totalSwingYtdPL = useMemo(() => {
                                 </div>
 
                                 <div>
-                                    <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Unrealized P/L</p>
+                                    <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>YTD P/L</p>
 
                                     {/* +++ ADD TOTAL SWING YTD P/L +++ */}
                                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Total Swing YTD P/L</p>
