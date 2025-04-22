@@ -924,43 +924,42 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
 
     
     // --- ADD Memo for Total SWING YTD P/L Calculation ---
+// --- UPDATED Memo for Total SWING YTD P/L ($ and %) ---
 const totalSwingYtdPL = useMemo(() => {
-    console.log("[Memo] Calculating totalSwingYtdPL"); // Log when hook runs
-
-    // Calculation needs transactions, wallets, current price info
+    console.log("[Memo] Calculating totalSwingYtdPL ($ and %)");
+    // Depends on transactions, wallets, price data
     if (!transactions || !wallets || !stockSymbol) {
-        return null; // Indicate calculation cannot proceed yet
+        return { dollars: null, percent: null }; // Return object for consistency
     }
 
     // --- Create Wallet Map INSIDE this hook ---
-    // Required to look up buyPrice for realized P/L calculation
-    const walletBuyPriceMap = new Map<string, number>();
+    console.log("[Memo] Creating internal wallet buy price map for YTD calc");
+    const walletBuyPriceMap = new Map<string, number>(); // Map<walletId, buyPrice>
     wallets.forEach(w => {
+        // Ensure wallet has an ID and a valid buy price number
         if (w.id && typeof w.buyPrice === 'number') {
             walletBuyPriceMap.set(w.id, w.buyPrice);
         }
     });
+    console.log(`[Memo] Internal map created with ${walletBuyPriceMap.size} entries.`);
     // --- End Wallet Map ---
 
     const currentYear = new Date().getFullYear();
-    const startOfYear = `${currentYear}-01-01`; // YYYY-MM-DD format for comparison
-    // Get current price from context, default to null if missing
+    const startOfYear = `${currentYear}-01-01`;
     const currentPrice = latestPrices[stockSymbol]?.currentPrice ?? null;
 
     let ytdRealizedSwingPL = 0;
     let currentUnrealizedSwingPL = 0;
+    let currentSwingCostBasis = 0; // <<< ADDED: Accumulator for cost basis
     let warnings = 0;
 
     // --- Calculate YTD Realized P/L for SWING Sells ---
     transactions.forEach(txn => {
-        // Filter for SWING Sell transactions within the current year
         if (txn.action === 'Sell' && txn.txnType === 'Swing' &&
             txn.date && txn.date >= startOfYear && txn.completedTxnId &&
-            typeof txn.quantity === 'number' && typeof txn.price === 'number')
-        {
+            typeof txn.quantity === 'number' && typeof txn.price === 'number') {
             const walletBuyPrice = walletBuyPriceMap.get(txn.completedTxnId);
             if (typeof walletBuyPrice === 'number') {
-                // Calculate P/L for this specific transaction
                 const profitForTxn = (txn.price - walletBuyPrice) * txn.quantity;
                 ytdRealizedSwingPL += profitForTxn;
             } else {
@@ -971,38 +970,54 @@ const totalSwingYtdPL = useMemo(() => {
         }
     });
 
-    // --- Calculate Current Unrealized P/L for SWING Wallets ---
-    // This part requires the current price to be available
+    // --- Calculate Current Unrealized P/L AND Cost Basis for SWING Wallets ---
     if (typeof currentPrice === 'number') {
-         wallets.forEach(wallet => {
-             // Filter for SWING wallets with remaining shares and valid buy price
-             if (wallet.walletType === 'Swing' &&
-                 (wallet.remainingShares ?? 0) > SHARE_EPSILON && // Use SHARE_EPSILON constant
-                 typeof wallet.buyPrice === 'number')
-             {
-                  // Calculate unrealized P/L for this wallet's remaining shares
-                  currentUnrealizedSwingPL += (currentPrice - wallet.buyPrice) * wallet.remainingShares!;
-             }
-         });
-    } else {
-        // If current price is unavailable, we cannot calculate the unrealized portion
-        console.warn("[Swing YTD P/L] Cannot calculate unrealized P/L: Current price unavailable.");
-        // Return null to indicate the total calculation is incomplete due to missing price
-        return null;
-    }
+        wallets.forEach(wallet => {
+            if (wallet.walletType === 'Swing' &&
+                (wallet.remainingShares ?? 0) > SHARE_EPSILON &&
+                typeof wallet.buyPrice === 'number') // Make sure buyPrice exists
+            {
+                 // Unrealized P/L calculation
+                 currentUnrealizedSwingPL += (currentPrice - wallet.buyPrice) * wallet.remainingShares!;
+                 // Accumulate Cost Basis for current holdings
+                 currentSwingCostBasis += wallet.buyPrice * wallet.remainingShares!; // <<< ADDED
+            }
+        });
+   } else {
+       console.warn("[Swing YTD P/L] Cannot calculate P/L: Current price unavailable.");
+       return { dollars: null, percent: null }; // Return nulls if price missing
+   }
 
-    if (warnings > 0) {
+   // Sum the dollar components
+   const totalPL_dollars = ytdRealizedSwingPL + currentUnrealizedSwingPL;
+   const roundedTotalPL_dollars = parseFloat(totalPL_dollars.toFixed(CURRENCY_PRECISION));
+
+   // --- Calculate Percentage ---
+   let calculatedPercent: number | null = null;
+   // Only calculate if the cost basis is positive to avoid division by zero/weird results
+   if (currentSwingCostBasis > SHARE_EPSILON) {
+        calculatedPercent = (totalPL_dollars / currentSwingCostBasis) * 100;
+   } else if (Math.abs(totalPL_dollars) < 0.001) {
+        // If cost basis is zero (or near zero) and P/L is also zero, return 0%
+        calculatedPercent = 0;
+   } // Otherwise, percent remains null (e.g., profit/loss with zero cost basis is undefined)
+
+   const roundedPercent = typeof calculatedPercent === 'number'
+       ? parseFloat(calculatedPercent.toFixed(PERCENT_PRECISION)) // Use PERCENT_PRECISION
+       : null;
+   // --- End Percentage Calculation ---
+
+   if (warnings > 0) {
          console.warn(`[Swing YTD P/L] Calculation finished with ${warnings} warnings (missing data). Realized P/L part might be incomplete.`);
     }
 
-    // Sum the two components
-    const totalPL = ytdRealizedSwingPL + currentUnrealizedSwingPL;
+    console.log(`[Swing YTD P/L] $,%: ${roundedTotalPL_dollars}, ${roundedPercent}% (Basis: ${currentSwingCostBasis.toFixed(2)})`);
 
-    // Round the final total to currency precision
-    const roundedTotalPL = parseFloat(totalPL.toFixed(CURRENCY_PRECISION));
-
-    console.log(`[Swing YTD P/L] Realized: ${ytdRealizedSwingPL.toFixed(2)}, Unrealized: ${currentUnrealizedSwingPL.toFixed(2)}, Total: ${roundedTotalPL}`);
-    return roundedTotalPL;
+    // Return object with both values
+    return {
+        dollars: roundedTotalPL_dollars,
+        percent: roundedPercent
+    };
 
 // Correct dependencies for this specific calculation
 }, [transactions, wallets, latestPrices, stockSymbol]); // Removed walletBuyPriceMap as it's internal now
@@ -1390,9 +1405,17 @@ const totalSwingYtdPL = useMemo(() => {
                                     {/* +++ ADD TOTAL SWING YTD P/L +++ */}
                                     <p style={{ fontWeight: 'bold', marginTop: '30px' }}>Total Swing YTD P/L</p>
                                     <p>
-                                        {totalSwingYtdPL === null // Check if calculation was possible
+                                        {totalSwingYtdPL?.dollars === null // Check if calculation was possible
                                             ? (pricesLoading ? 'Loading Price...' : 'N/A') // Show loading or N/A if price missing
-                                            : formatCurrency(totalSwingYtdPL) // Display formatted result
+                                            : formatCurrency(totalSwingYtdPL.dollars) // Display formatted result
+                                        }
+                                    </p>
+
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Swing YTD P/L (%)</p>
+                                    <p>
+                                        {totalSwingYtdPL?.percent === null // Check if percent value is null
+                                            ? (pricesLoading ? 'Loading Price...' : 'N/A')
+                                            : formatPercent(totalSwingYtdPL.percent) // Display percent
                                         }
                                     </p>
                                 </div>
