@@ -1436,7 +1436,7 @@ const totalSwingYtdPL = useMemo(() => {
             </div>
             {/* End Overview Section */}
             
-            <h3>Wallets</h3>
+            <p style={{ fontSize: '1.3em', marginTop: '40px' }}>Wallets</p>
 
             {/* --- ADD TABS --- */}
              <div style={{ marginBottom: '1rem', borderBottom: '1px solid #555', paddingBottom: '0.5rem' }}>
@@ -1660,8 +1660,8 @@ const totalSwingYtdPL = useMemo(() => {
                 </div>
             )}
 
-            <div style={{ marginTop: '3rem', paddingTop: '1.5rem' }}>
-                <h3>Transaction</h3>
+            <div style={{ marginTop: '2rem' }}>
+                <p style={{ fontSize: '1.3em' }}>Transactions</p>
 
                 {/* Loading/Error Display */}
                 {isTxnLoading && <p>Loading transaction history...</p>}
