@@ -1345,92 +1345,75 @@ const totalSwingYtdPL = useMemo(() => {
                                 <div>
                                     <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Settings</p>
                                     
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Annual budget</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Annual budget</p>
                                     <p>{typeof stockBudget === 'number' ? formatCurrency(stockBudget) : 'Not set'}</p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Budget available</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Budget available</p>
                                     <p>{typeof stockBudget === 'number' ? formatCurrency(stockBudget - totalTiedUpInvestment) : 'N/A'}</p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Price Dip Percent (PDP)</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Price Dip Percent (PDP)</p>
                                     <p>{typeof stockPdp === 'number' ? `${stockPdp}%` : 'Not set'}</p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Swing-Hold Ratio (SHR)</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing-Hold Ratio (SHR)</p>
                                     <p>{typeof stockShr === 'number' ? `${stockShr}% Swing` : 'Not set'}</p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Profit-Loss Ratio (PLR)</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Profit-Loss Ratio (PLR)</p>
                                     <p>{typeof stockPlr === 'number' ? stockPlr : 'Not set'}</p>                                    
                                 </div>
 
                                 {/* Column 2 */}
                                 <div>
-                                    <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Transactions</p>
+                                    <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Txns &</p>
                                     
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Total Buys</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Total Buys</p>
                                     <p>{transactionCounts.buys}</p>
                                     
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Swing Sells</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing Sells</p>
                                     <p>{transactionCounts.swingSells}</p>
                                     
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Hold Sells</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold Sells</p>
                                     <p>{transactionCounts.holdSells}</p>
                                     
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Total Sells</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Total Sells</p>
                                     <p>{transactionCounts.totalSells}</p>
                                     
-                                    <p style={{ fontWeight: 'bold', marginTop: '30px' }}>Swing shares</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing shares</p>
                                     <p>{formatShares(currentShares.swing)}</p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Hold shares</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold shares</p>
                                     <p>{formatShares(currentShares.hold)}</p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Total shares</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Total shares</p>
                                     <p>{formatShares(currentShares.total)}</p>
                                 </div>
 
                                 <div>
                                     <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Realized P/L</p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Swing P/L</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing P/L</p>
                                     <p>{formatCurrency(plStats.totalSwingPlDollars)}</p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Swing P/L Avg (%)</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing P/L Avg (%)</p>
                                     <p>{formatPercent(plStats.avgSwingPlPercent)}</p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Hold P/L</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold P/L</p>
                                     <p>{formatCurrency(plStats.totalHoldPlDollars)}</p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Hold P/L Avg (%)</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold P/L Avg (%)</p>
                                     <p>{formatPercent(plStats.avgHoldPlPercent)}</p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '30px' }}>Stock P/L</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock P/L</p>
                                     <p>{formatCurrency(plStats.totalStockPlDollars)}</p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Stock P/L Avg (%)</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock P/L Avg (%)</p>
                                     <p>{formatPercent(plStats.avgStockPlPercent)}</p>
-
-                                    {/* +++ ADD TOTAL SWING YTD P/L +++ */}
-                                    <p style={{ fontWeight: 'bold', marginTop: '30px' }}>Total Swing YTD P/L</p>
-                                    <p>
-                                        {totalSwingYtdPL?.dollars === null // Check if calculation was possible
-                                            ? (pricesLoading ? 'Loading Price...' : 'N/A') // Show loading or N/A if price missing
-                                            : formatCurrency(totalSwingYtdPL.dollars) // Display formatted result
-                                        }
-                                    </p>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Swing YTD P/L (%)</p>
-                                    <p>
-                                        {totalSwingYtdPL?.percent === null // Check if percent value is null
-                                            ? (pricesLoading ? 'Loading Price...' : 'N/A')
-                                            : formatPercent(totalSwingYtdPL.percent) // Display percent
-                                        }
-                                    </p>
                                 </div>
 
                                 <div>
                                     <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Unrealized P/L</p>
 
                                     {/* +++ ADD TOTAL SWING YTD P/L +++ */}
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Total Swing YTD P/L</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Total Swing YTD P/L</p>
                                     <p>
                                         {totalSwingYtdPL?.dollars === null // Check if calculation was possible
                                             ? (pricesLoading ? 'Loading Price...' : 'N/A') // Show loading or N/A if price missing
@@ -1438,7 +1421,7 @@ const totalSwingYtdPL = useMemo(() => {
                                         }
                                     </p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Swing YTD P/L (%)</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing YTD P/L (%)</p>
                                     <p>
                                         {totalSwingYtdPL?.percent === null // Check if percent value is null
                                             ? (pricesLoading ? 'Loading Price...' : 'N/A')
