@@ -54,9 +54,9 @@ export default function StockWalletPage() {
     // --- END Migration State ---
 
     // --- State for Backfill Script ---
-    const [isBackfilling, setIsBackfilling] = useState(false);
-    const [backfillError, setBackfillError] = useState<string | null>(null);
-    const [backfillSuccess, setBackfillSuccess] = useState<string | null>(null);
+    // const [isBackfilling, setIsBackfilling] = useState(false);
+    // const [backfillError, setBackfillError] = useState<string | null>(null);
+    // const [backfillSuccess, setBackfillSuccess] = useState<string | null>(null);
     // --- End Backfill State ---
 
     const [activeTab, setActiveTab] = useState<'Swing' | 'Hold'>('Swing');
@@ -513,133 +513,133 @@ export default function StockWalletPage() {
     }, [stockId]);
     // --- END Fetch Transactions ---
 
-    // Add this new handler function within the StockWalletPage component
-    const handleBackfillSellProfit = useCallback(async () => {
-        if (!stockId) { setBackfillError("Stock ID missing."); return; }
-        if (!transactions || transactions.length === 0) { setBackfillError("No transactions loaded to process."); return; }
+    // // Add this new handler function within the StockWalletPage component
+    // const handleBackfillSellProfit = useCallback(async () => {
+    //     if (!stockId) { setBackfillError("Stock ID missing."); return; }
+    //     if (!transactions || transactions.length === 0) { setBackfillError("No transactions loaded to process."); return; }
 
-        setIsBackfilling(true);
-        setBackfillError(null);
-        setBackfillSuccess(null);
-        console.log(`[BACKFILL_PL] Starting P/L backfill for stockId: ${stockId}`);
+    //     setIsBackfilling(true);
+    //     setBackfillError(null);
+    //     setBackfillSuccess(null);
+    //     console.log(`[BACKFILL_PL] Starting P/L backfill for stockId: ${stockId}`);
 
-        let transactionsToUpdateCount = 0;
-        let updateSuccessCount = 0;
-        let updateFailCount = 0;
-        let warningsCount = 0;
+    //     let transactionsToUpdateCount = 0;
+    //     let updateSuccessCount = 0;
+    //     let updateFailCount = 0;
+    //     let warningsCount = 0;
 
-        try {
-            // 1. Fetch all wallets for this stock into a Map for quick lookup by ID
-            console.log("[BACKFILL_PL] Fetching all wallets for lookup...");
-            const { data: allStockWalletsData, errors: walletErrors } = await client.models.StockWallet.list({
-                filter: { portfolioStockId: { eq: stockId } },
-                selectionSet: ['id', 'buyPrice'], // Only need ID and buyPrice
-                limit: 1000 // Should be enough for wallets per stock
-            });
-            if (walletErrors) throw walletErrors;
-            const walletMap = new Map<string, { buyPrice: number | null }>();
-            (allStockWalletsData || []).forEach(w => {
-                if (w.id) { // Ensure wallet has an ID
-                walletMap.set(w.id, { buyPrice: w.buyPrice ?? null });
-                }
-            });
-            console.log(`[BACKFILL_PL] Created lookup map with ${walletMap.size} wallets.`);
+    //     try {
+    //         // 1. Fetch all wallets for this stock into a Map for quick lookup by ID
+    //         console.log("[BACKFILL_PL] Fetching all wallets for lookup...");
+    //         const { data: allStockWalletsData, errors: walletErrors } = await client.models.StockWallet.list({
+    //             filter: { portfolioStockId: { eq: stockId } },
+    //             selectionSet: ['id', 'buyPrice'], // Only need ID and buyPrice
+    //             limit: 1000 // Should be enough for wallets per stock
+    //         });
+    //         if (walletErrors) throw walletErrors;
+    //         const walletMap = new Map<string, { buyPrice: number | null }>();
+    //         (allStockWalletsData || []).forEach(w => {
+    //             if (w.id) { // Ensure wallet has an ID
+    //             walletMap.set(w.id, { buyPrice: w.buyPrice ?? null });
+    //             }
+    //         });
+    //         console.log(`[BACKFILL_PL] Created lookup map with ${walletMap.size} wallets.`);
 
-            // 2. Filter transactions: Find 'Sell' txns where txnProfit is null/undefined
-            const sellTxnsToProcess = transactions.filter(txn =>
-                txn.action === 'Sell' &&
-                txn.completedTxnId != null && // Need the link to the wallet
-                (txn.txnProfit == null || txn.txnProfitPercent == null) // Check if P/L is missing
-            );
-            transactionsToUpdateCount = sellTxnsToProcess.length;
-            console.log(`[BACKFILL_PL] Found ${transactionsToUpdateCount} Sell transactions potentially needing P/L backfill.`);
+    //         // 2. Filter transactions: Find 'Sell' txns where txnProfit is null/undefined
+    //         const sellTxnsToProcess = transactions.filter(txn =>
+    //             txn.action === 'Sell' &&
+    //             txn.completedTxnId != null && // Need the link to the wallet
+    //             (txn.txnProfit == null || txn.txnProfitPercent == null) // Check if P/L is missing
+    //         );
+    //         transactionsToUpdateCount = sellTxnsToProcess.length;
+    //         console.log(`[BACKFILL_PL] Found ${transactionsToUpdateCount} Sell transactions potentially needing P/L backfill.`);
 
-            if (transactionsToUpdateCount === 0) {
-                setBackfillSuccess("No Sell transactions found needing P/L backfill.");
-                setIsBackfilling(false);
-                return;
-            }
+    //         if (transactionsToUpdateCount === 0) {
+    //             setBackfillSuccess("No Sell transactions found needing P/L backfill.");
+    //             setIsBackfilling(false);
+    //             return;
+    //         }
 
-            // 3. Loop, Calculate, Update (sequentially for simplicity given low volume)
-            for (const txn of sellTxnsToProcess) {
-                console.log(`[BACKFILL_PL] Processing Txn ID: ${txn.id}, Wallet Link ID: ${txn.completedTxnId}`);
-                const walletData = walletMap.get(txn.completedTxnId!); // Get wallet data using the link ID
+    //         // 3. Loop, Calculate, Update (sequentially for simplicity given low volume)
+    //         for (const txn of sellTxnsToProcess) {
+    //             console.log(`[BACKFILL_PL] Processing Txn ID: ${txn.id}, Wallet Link ID: ${txn.completedTxnId}`);
+    //             const walletData = walletMap.get(txn.completedTxnId!); // Get wallet data using the link ID
 
-                if (!walletData) {
-                    console.warn(`[BACKFILL_PL] Wallet (ID: ${txn.completedTxnId}) not found for Txn ID: ${txn.id}. Skipping.`);
-                    warningsCount++;
-                    continue;
-                }
+    //             if (!walletData) {
+    //                 console.warn(`[BACKFILL_PL] Wallet (ID: ${txn.completedTxnId}) not found for Txn ID: ${txn.id}. Skipping.`);
+    //                 warningsCount++;
+    //                 continue;
+    //             }
 
-                const buyPrice = walletData.buyPrice;
-                const sellPrice = txn.price;
-                const quantitySold = txn.quantity;
+    //             const buyPrice = walletData.buyPrice;
+    //             const sellPrice = txn.price;
+    //             const quantitySold = txn.quantity;
 
-                if (typeof buyPrice !== 'number' || typeof sellPrice !== 'number' || typeof quantitySold !== 'number' || quantitySold <= 0) {
-                    console.warn(`[BACKFILL_PL] Invalid data for calculation on Txn ID: ${txn.id} (Buy: ${buyPrice}, Sell: ${sellPrice}, Qty: ${quantitySold}). Skipping.`);
-                    warningsCount++;
-                    continue;
-                }
+    //             if (typeof buyPrice !== 'number' || typeof sellPrice !== 'number' || typeof quantitySold !== 'number' || quantitySold <= 0) {
+    //                 console.warn(`[BACKFILL_PL] Invalid data for calculation on Txn ID: ${txn.id} (Buy: ${buyPrice}, Sell: ${sellPrice}, Qty: ${quantitySold}). Skipping.`);
+    //                 warningsCount++;
+    //                 continue;
+    //             }
 
-                // Calculate P/L $ and % for this specific transaction
-                const profitDollars = (sellPrice - buyPrice) * quantitySold;
-                const costBasis = buyPrice * quantitySold;
-                let profitPercent: number | null = null;
-                if (costBasis !== 0) {
-                    profitPercent = (profitDollars / costBasis) * 100;
-                } else if (profitDollars === 0) {
-                    profitPercent = 0;
-                }
+    //             // Calculate P/L $ and % for this specific transaction
+    //             const profitDollars = (sellPrice - buyPrice) * quantitySold;
+    //             const costBasis = buyPrice * quantitySold;
+    //             let profitPercent: number | null = null;
+    //             if (costBasis !== 0) {
+    //                 profitPercent = (profitDollars / costBasis) * 100;
+    //             } else if (profitDollars === 0) {
+    //                 profitPercent = 0;
+    //             }
 
-                // Round calculated values
-                const roundedProfit = parseFloat(profitDollars.toFixed(CURRENCY_PRECISION));
-                const roundedPercent = typeof profitPercent === 'number'
-                    ? parseFloat(profitPercent.toFixed(PERCENT_PRECISION))
-                    : null;
+    //             // Round calculated values
+    //             const roundedProfit = parseFloat(profitDollars.toFixed(CURRENCY_PRECISION));
+    //             const roundedPercent = typeof profitPercent === 'number'
+    //                 ? parseFloat(profitPercent.toFixed(PERCENT_PRECISION))
+    //                 : null;
 
-                console.log(`[BACKFILL_PL] Txn ID: ${txn.id} - Calculated P/L: $${roundedProfit}, ${roundedPercent}%`);
+    //             console.log(`[BACKFILL_PL] Txn ID: ${txn.id} - Calculated P/L: $${roundedProfit}, ${roundedPercent}%`);
 
-                // Prepare update payload
-                const updatePayload = {
-                    id: txn.id,
-                    txnProfit: roundedProfit,
-                    txnProfitPercent: roundedPercent
-                };
+    //             // Prepare update payload
+    //             const updatePayload = {
+    //                 id: txn.id,
+    //                 txnProfit: roundedProfit,
+    //                 txnProfitPercent: roundedPercent
+    //             };
 
-                // Update the transaction
-                try {
-                    const { errors: updateErrors } = await client.models.Transaction.update(updatePayload);
-                    if (updateErrors) throw updateErrors;
-                    console.log(`[BACKFILL_PL] Successfully updated Txn ID: ${txn.id}`);
-                    updateSuccessCount++;
-                } catch (updateErr: any) {
-                    console.error(`[BACKFILL_PL] FAILED to update Txn ID: ${txn.id}`, updateErr?.errors || updateErr);
-                    updateFailCount++;
-                    // Optionally collect specific errors
-                    if (!backfillError) setBackfillError(`Failed on Txn ID ${txn.id}: ${updateErr.message}`); // Show first error
-                }
-            } // End loop
+    //             // Update the transaction
+    //             try {
+    //                 const { errors: updateErrors } = await client.models.Transaction.update(updatePayload);
+    //                 if (updateErrors) throw updateErrors;
+    //                 console.log(`[BACKFILL_PL] Successfully updated Txn ID: ${txn.id}`);
+    //                 updateSuccessCount++;
+    //             } catch (updateErr: any) {
+    //                 console.error(`[BACKFILL_PL] FAILED to update Txn ID: ${txn.id}`, updateErr?.errors || updateErr);
+    //                 updateFailCount++;
+    //                 // Optionally collect specific errors
+    //                 if (!backfillError) setBackfillError(`Failed on Txn ID ${txn.id}: ${updateErr.message}`); // Show first error
+    //             }
+    //         } // End loop
 
-            // 4. Set final status message
-            let finalMessage = `Backfill complete. Processed: ${transactionsToUpdateCount}, Updated: ${updateSuccessCount}, Failed: ${updateFailCount}`;
-            if (warningsCount > 0) finalMessage += `, Warnings: ${warningsCount}`;
-            if (updateFailCount > 0) {
-                setBackfillError(finalMessage + ". Check console for details.");
-            } else {
-                setBackfillSuccess(finalMessage);
-            }
+    //         // 4. Set final status message
+    //         let finalMessage = `Backfill complete. Processed: ${transactionsToUpdateCount}, Updated: ${updateSuccessCount}, Failed: ${updateFailCount}`;
+    //         if (warningsCount > 0) finalMessage += `, Warnings: ${warningsCount}`;
+    //         if (updateFailCount > 0) {
+    //             setBackfillError(finalMessage + ". Check console for details.");
+    //         } else {
+    //             setBackfillSuccess(finalMessage);
+    //         }
 
-            // 5. Refresh transactions list in UI
-            fetchTransactions();
+    //         // 5. Refresh transactions list in UI
+    //         fetchTransactions();
 
-        } catch (error: any) {
-            console.error("[BACKFILL_PL] Critical error during backfill process:", error);
-            const message = Array.isArray(error?.errors) ? error.errors[0].message : error.message;
-            setBackfillError(message || "An unexpected error occurred during backfill.");
-        } finally {
-            setIsBackfilling(false);
-        }
-    }, [stockId, transactions, fetchTransactions]); // Dependencies
+    //     } catch (error: any) {
+    //         console.error("[BACKFILL_PL] Critical error during backfill process:", error);
+    //         const message = Array.isArray(error?.errors) ? error.errors[0].message : error.message;
+    //         setBackfillError(message || "An unexpected error occurred during backfill.");
+    //     } finally {
+    //         setIsBackfilling(false);
+    //     }
+    // }, [stockId, transactions, fetchTransactions]); // Dependencies
 
     // --- Add useEffect to Fetch Transactions ---
     useEffect(() => {
@@ -1086,9 +1086,10 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
         };
     }, [wallets]); // Depends on the wallets state
 
-    // --- ADD P/L Calculation Memo ---
+    // --- UPDATED P/L Calculation Memo (Method 2: Total P/L / Total Cost Basis) ---
     const plStats = useMemo(() => {
-        if (!transactions) {
+        // Need both transactions and wallets for this calculation
+        if (!transactions || !wallets) {
             return {
                 totalSwingPlDollars: 0, avgSwingPlPercent: null,
                 totalHoldPlDollars: 0, avgHoldPlPercent: null,
@@ -1096,51 +1097,98 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
             };
         }
 
-        // --- Swing P/L ---
-        const swingSells = transactions.filter(t => t.action === 'Sell' && t.txnType === 'Swing');
-        const totalSwingPlDollars = swingSells.reduce((sum, t) => sum + (t.txnProfit ?? 0), 0);
+        // 1. Create a Wallet Map for efficient buyPrice lookup
+        const walletBuyPriceMap = new Map<string, number>(); // Map<walletId, buyPrice>
+        wallets.forEach(w => {
+            if (w.id && typeof w.buyPrice === 'number') {
+                walletBuyPriceMap.set(w.id, w.buyPrice);
+            }
+        });
 
-        // Calculate average Swing P/L % (only average non-null percentages)
-        const validSwingPercentTxns = swingSells.filter(t => typeof t.txnProfitPercent === 'number');
-        const sumSwingPlPercent = validSwingPercentTxns.reduce((sum, t) => sum + (t.txnProfitPercent ?? 0), 0);
-        const avgSwingPlPercent = validSwingPercentTxns.length > 0
-            ? sumSwingPlPercent / validSwingPercentTxns.length
-            : null; // Avoid division by zero
+        // 2. Initialize aggregators
+        let totalSwingPlDollars = 0;
+        let totalSwingCostBasis = 0;
+        let totalHoldPlDollars = 0;
+        let totalHoldCostBasis = 0;
+        let warnings = 0;
 
-        // --- Hold P/L ---
-        const holdSells = transactions.filter(t => t.action === 'Sell' && t.txnType === 'Hold');
-        const totalHoldPlDollars = holdSells.reduce((sum, t) => sum + (t.txnProfit ?? 0), 0);
+        // 3. Iterate through ALL transactions to find Sells and aggregate
+        transactions.forEach(txn => {
+            if (txn.action === 'Sell' && txn.completedTxnId && typeof txn.quantity === 'number' && typeof txn.price === 'number') {
+                const walletBuyPrice = walletBuyPriceMap.get(txn.completedTxnId);
 
-        // Calculate average Hold P/L %
-        const validHoldPercentTxns = holdSells.filter(t => typeof t.txnProfitPercent === 'number');
-        const sumHoldPlPercent = validHoldPercentTxns.reduce((sum, t) => sum + (t.txnProfitPercent ?? 0), 0);
-        const avgHoldPlPercent = validHoldPercentTxns.length > 0
-            ? sumHoldPlPercent / validHoldPercentTxns.length
-            : null; // Avoid division by zero
+                // Check if we found the wallet and its buy price
+                if (typeof walletBuyPrice === 'number') {
+                    const costBasisForTxn = walletBuyPrice * txn.quantity;
+                    const profitForTxn = (txn.price - walletBuyPrice) * txn.quantity; // Recalculate for accuracy here
+
+                    // Aggregate based on txnType
+                    if (txn.txnType === 'Swing') {
+                        totalSwingPlDollars += profitForTxn;
+                        totalSwingCostBasis += costBasisForTxn;
+                    } else if (txn.txnType === 'Hold') {
+                        totalHoldPlDollars += profitForTxn;
+                        totalHoldCostBasis += costBasisForTxn;
+                    } else {
+                        // Handle sells with missing/unexpected txnType if necessary
+                        console.warn(`Sell transaction ${txn.id} has unexpected/missing txnType: ${txn.txnType}`);
+                        warnings++;
+                    }
+                } else {
+                    console.warn(`Could not find wallet buy price for Sell transaction ${txn.id} (linked wallet ID: ${txn.completedTxnId}). Cannot include in P/L % calculation.`);
+                    warnings++;
+                    // Optionally, still add its profit to the dollar totals if txnProfit exists?
+                    // if (txn.txnType === 'Swing') totalSwingPlDollars += (txn.txnProfit ?? 0);
+                    // if (txn.txnType === 'Hold') totalHoldPlDollars += (txn.txnProfit ?? 0);
+                }
+            }
+        });
+
+        // 4. Calculate final averages (handle division by zero)
+        const avgSwingPlPercent = (totalSwingCostBasis !== 0)
+            ? (totalSwingPlDollars / totalSwingCostBasis) * 100
+            : (totalSwingPlDollars === 0 ? 0 : null); // If cost is 0, % is 0 only if P/L is also 0
+
+        const avgHoldPlPercent = (totalHoldCostBasis !== 0)
+            ? (totalHoldPlDollars / totalHoldCostBasis) * 100
+            : (totalHoldPlDollars === 0 ? 0 : null);
 
         const totalStockPlDollars = totalSwingPlDollars + totalHoldPlDollars;
-        const allValidPercentSells = transactions.filter(t => t.action === 'Sell' && typeof t.txnProfitPercent === 'number');
-        const sumAllPlPercent = allValidPercentSells.reduce((sum, t) => sum + (t.txnProfitPercent ?? 0), 0);
-        const avgStockPlPercent = allValidPercentSells.length > 0
-            ? sumAllPlPercent / allValidPercentSells.length
-            : null; // Avoid division by zero
+        const totalStockCostBasis = totalSwingCostBasis + totalHoldCostBasis;
+        const avgStockPlPercent = (totalStockCostBasis !== 0)
+            ? (totalStockPlDollars / totalStockCostBasis) * 100
+            : (totalStockPlDollars === 0 ? 0 : null);
 
-        // Round currency values for display consistency
+        // 5. Round final values
         const roundedTotalSwingPl = parseFloat(totalSwingPlDollars.toFixed(CURRENCY_PRECISION));
         const roundedTotalHoldPl = parseFloat(totalHoldPlDollars.toFixed(CURRENCY_PRECISION));
-        const roundedTotalStockPl = parseFloat(totalStockPlDollars.toFixed(CURRENCY_PRECISION)); // Round overall P/L $
+        const roundedTotalStockPl = parseFloat(totalStockPlDollars.toFixed(CURRENCY_PRECISION));
+
+        const finalAvgSwingPlPercent = typeof avgSwingPlPercent === 'number'
+            ? parseFloat(avgSwingPlPercent.toFixed(PERCENT_PRECISION))
+            : null;
+        const finalAvgHoldPlPercent = typeof avgHoldPlPercent === 'number'
+            ? parseFloat(avgHoldPlPercent.toFixed(PERCENT_PRECISION))
+            : null;
+        const finalAvgStockPlPercent = typeof avgStockPlPercent === 'number'
+            ? parseFloat(avgStockPlPercent.toFixed(PERCENT_PRECISION))
+            : null;
+
+        if (warnings > 0) {
+            console.warn(`[plStats] Calculation finished with ${warnings} warnings (missing data). Results might be incomplete.`);
+        }
 
         return {
             totalSwingPlDollars: roundedTotalSwingPl,
-            avgSwingPlPercent: avgSwingPlPercent, // Percentage is usually fine as is for formatting
+            avgSwingPlPercent: finalAvgSwingPlPercent,
             totalHoldPlDollars: roundedTotalHoldPl,
-            avgHoldPlPercent: avgHoldPlPercent,
-            totalStockPlDollars: roundedTotalStockPl, // <<< Add overall $
-            avgStockPlPercent: avgStockPlPercent
+            avgHoldPlPercent: finalAvgHoldPlPercent,
+            totalStockPlDollars: roundedTotalStockPl,
+            avgStockPlPercent: finalAvgStockPlPercent
         };
 
-    }, [transactions]); // Depends on transactions state
-    // --- End P/L Calc Memo ---
+    }, [transactions, wallets]); // <<< Now depends on BOTH transactions and wallets
+    // --- End UPDATED P/L Calc Memo ---
 
     // --- Client-Side Sorting Logic (Removed Symbol Sort) ---
     const sortedWallets = useMemo(() => {
@@ -1599,7 +1647,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                 {/* {migrationSuccess && <p style={{ color: 'lightgreen', fontSize: '0.9em' }}>{migrationSuccess}</p>} */}
 
                 {/* +++ ADD BACKFILL BUTTON +++ */}
-                <button
+                {/* <button
                     onClick={() => handleBackfillSellProfit()} // Wire up the new handler
                     disabled={isBackfilling || isLoading || isTxnLoading} // Disable if busy
                     style={{ padding: '5px 10px', fontSize: '0.8em', marginLeft: 'auto' }} // Align right maybe
@@ -1608,8 +1656,8 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                 </button>
                 {/* +++++++++++++++++++++++++ */}
                 {/* Display Backfill Feedback */}
-                {backfillError && <p style={{ color: 'red', fontSize: '0.9em' }}>Backfill Error: {backfillError}</p>}
-                {backfillSuccess && <p style={{ color: 'lightgreen', fontSize: '0.9em' }}>{backfillSuccess}</p>}
+                {/*backfillError && <p style={{ color: 'red', fontSize: '0.9em' }}>Backfill Error: {backfillError}</p>*/}
+                {/*backfillSuccess && <p style={{ color: 'lightgreen', fontSize: '0.9em' }}>{backfillSuccess}</p>} */}
             </div>
 
             <div style={{
