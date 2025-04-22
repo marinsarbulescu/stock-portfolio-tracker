@@ -37,7 +37,17 @@ export default function NavBar() {
       <Link href="/" style={linkStyles}>Home</Link>
       {/* <Link href="/add-stocks" style={linkStyles}>Add Stocks</Link> */}
       <Link href="/stocks-listing" style={linkStyles}>Portfolio</Link>
-      
+
+      {/* <button
+        onClick={sendNotificationEmail}
+        disabled={notifyStatus === 'sending' || pricesLoading} // Disable if sending OR fetching prices
+        style={{ marginLeft: '10px', cursor: 'pointer' }}
+      >
+        {notifyStatus === 'sending' ? 'Sending...' : 'Notify'}
+      </button> */}
+
+      <Link href="/goals" style={linkStyles}>Goals</Link>
+      <Link href="/account" style={linkStyles}>Account</Link>
       <button
         onClick={fetchLatestPricesForAllStocks}
         disabled={pricesLoading}
@@ -45,17 +55,6 @@ export default function NavBar() {
       >
         {pricesLoading ? 'Fetching Prices...' : 'Fetch Prices'}
       </button>
-
-      <button
-        onClick={sendNotificationEmail}
-        disabled={notifyStatus === 'sending' || pricesLoading} // Disable if sending OR fetching prices
-        style={{ marginLeft: '10px', cursor: 'pointer' }}
-      >
-        {notifyStatus === 'sending' ? 'Sending...' : 'Notify'}
-      </button>
-
-      <Link href="/goals" style={linkStyles}>Goals</Link>
-      <Link href="/account" style={linkStyles}>Account</Link>
       {/* Optional: Add user info or sign out here */}
       {/* {user && <span style={{ color: 'grey', marginLeft: '2rem' }}>Welcome, {user.username}</span>} */}
       {/* {user && <button onClick={signOut} style={{ marginLeft: '1rem'}}>Sign Out (Nav)</button>} */}

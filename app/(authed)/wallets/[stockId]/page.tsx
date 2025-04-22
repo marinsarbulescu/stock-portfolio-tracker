@@ -1340,16 +1340,18 @@ const totalSwingYtdPL = useMemo(() => {
                         {stockBudget === undefined || stockPdp === undefined || stockShr === undefined || stockPlr === undefined ? (
                             <p>Loading details...</p>
                         ) : (
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
                                 {/* Column 1 */}
                                 <div>
-                                    <p style={{ fontWeight: 'bold' }}>Annual budget</p>
+                                    <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Settings</p>
+                                    
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Annual budget</p>
                                     <p>{typeof stockBudget === 'number' ? formatCurrency(stockBudget) : 'Not set'}</p>
 
                                     <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Budget available</p>
                                     <p>{typeof stockBudget === 'number' ? formatCurrency(stockBudget - totalTiedUpInvestment) : 'N/A'}</p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '30px' }}>Price Dip Percent (PDP)</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Price Dip Percent (PDP)</p>
                                     <p>{typeof stockPdp === 'number' ? `${stockPdp}%` : 'Not set'}</p>
 
                                     <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Swing-Hold Ratio (SHR)</p>
@@ -1361,7 +1363,9 @@ const totalSwingYtdPL = useMemo(() => {
 
                                 {/* Column 2 */}
                                 <div>
-                                    <p style={{ fontWeight: 'bold' }}>Total Buys</p>
+                                    <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Transactions</p>
+                                    
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Total Buys</p>
                                     <p>{transactionCounts.buys}</p>
                                     
                                     <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Swing Sells</p>
@@ -1384,7 +1388,9 @@ const totalSwingYtdPL = useMemo(() => {
                                 </div>
 
                                 <div>
-                                    <p style={{ fontWeight: 'bold' }}>Swing P/L</p>
+                                    <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Realized P/L</p>
+
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Swing P/L</p>
                                     <p>{formatCurrency(plStats.totalSwingPlDollars)}</p>
 
                                     <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Swing P/L Avg (%)</p>
@@ -1404,6 +1410,27 @@ const totalSwingYtdPL = useMemo(() => {
 
                                     {/* +++ ADD TOTAL SWING YTD P/L +++ */}
                                     <p style={{ fontWeight: 'bold', marginTop: '30px' }}>Total Swing YTD P/L</p>
+                                    <p>
+                                        {totalSwingYtdPL?.dollars === null // Check if calculation was possible
+                                            ? (pricesLoading ? 'Loading Price...' : 'N/A') // Show loading or N/A if price missing
+                                            : formatCurrency(totalSwingYtdPL.dollars) // Display formatted result
+                                        }
+                                    </p>
+
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Swing YTD P/L (%)</p>
+                                    <p>
+                                        {totalSwingYtdPL?.percent === null // Check if percent value is null
+                                            ? (pricesLoading ? 'Loading Price...' : 'N/A')
+                                            : formatPercent(totalSwingYtdPL.percent) // Display percent
+                                        }
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Unrealized P/L</p>
+
+                                    {/* +++ ADD TOTAL SWING YTD P/L +++ */}
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Total Swing YTD P/L</p>
                                     <p>
                                         {totalSwingYtdPL?.dollars === null // Check if calculation was possible
                                             ? (pricesLoading ? 'Loading Price...' : 'N/A') // Show loading or N/A if price missing
