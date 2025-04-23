@@ -923,7 +923,6 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
     }, [wallets]); // Recalculate when the wallets data changes
 
     
-    // --- ADD Memo for Total SWING YTD P/L Calculation ---
 // --- UPDATED Memo for Total SWING YTD P/L ($ and %) ---
 const totalSwingYtdPL = useMemo(() => {
     console.log("[Memo] Calculating totalSwingYtdPL ($ and %)");
@@ -1022,6 +1021,105 @@ const totalSwingYtdPL = useMemo(() => {
 // Correct dependencies for this specific calculation
 }, [transactions, wallets, latestPrices, stockSymbol]); // Removed walletBuyPriceMap as it's internal now
 // --- End Total Swing YTD P/L Calc Memo ---
+
+// --- ADD Memo for Total HOLD YTD P/L Calculation ---
+const totalHoldYtdPL = useMemo(() => {
+    console.log("[Memo] Calculating totalHoldYtdPL ($ and %)");
+    // Depends on transactions, wallets, price data
+    if (!transactions || !wallets || !stockSymbol) {
+        return { dollars: null, percent: null }; // Return object for consistency
+    }
+
+    // --- Create Wallet Map INSIDE this hook ---
+    console.log("[Memo] Creating internal wallet buy price map for YTD calc");
+    const walletBuyPriceMap = new Map<string, number>(); // Map<walletId, buyPrice>
+    wallets.forEach(w => {
+        // Ensure wallet has an ID and a valid buy price number
+        if (w.id && typeof w.buyPrice === 'number') {
+            walletBuyPriceMap.set(w.id, w.buyPrice);
+        }
+    });
+    console.log(`[Memo] Internal map created with ${walletBuyPriceMap.size} entries.`);
+    // --- End Wallet Map ---
+
+    const currentYear = new Date().getFullYear();
+    const startOfYear = `${currentYear}-01-01`;
+    const currentPrice = latestPrices[stockSymbol]?.currentPrice ?? null;
+
+    let ytdRealizedHoldPL = 0;
+    let currentUnrealizedHoldPL = 0;
+    let currentHoldCostBasis = 0; // <<< ADDED: Accumulator for cost basis
+    let warnings = 0;
+
+    // --- Calculate YTD Realized P/L for HOLD Sells ---
+    transactions.forEach(txn => {
+        if (txn.action === 'Sell' && txn.txnType === 'Hold' &&
+            txn.date && txn.date >= startOfYear && txn.completedTxnId &&
+            typeof txn.quantity === 'number' && typeof txn.price === 'number') {
+            const walletBuyPrice = walletBuyPriceMap.get(txn.completedTxnId);
+            if (typeof walletBuyPrice === 'number') {
+                const profitForTxn = (txn.price - walletBuyPrice) * txn.quantity;
+                ytdRealizedHoldPL += profitForTxn;
+            } else {
+                // Wallet link or buy price was missing for a YTD Hold Sell
+                warnings++;
+                console.warn(`[Hold YTD P/L] Could not find wallet buy price for YTD Hold Sell Txn ${txn.id}`);
+            }
+        }
+    });
+
+    // --- Calculate Current Unrealized P/L AND Cost Basis for HOLD Wallets ---
+    if (typeof currentPrice === 'number') {
+        wallets.forEach(wallet => {
+            if (wallet.walletType === 'Hold' &&
+                (wallet.remainingShares ?? 0) > SHARE_EPSILON &&
+                typeof wallet.buyPrice === 'number') // Make sure buyPrice exists
+            {
+                 // Unrealized P/L calculation
+                 currentUnrealizedHoldPL += (currentPrice - wallet.buyPrice) * wallet.remainingShares!;
+                 // Accumulate Cost Basis for current holdings
+                 currentHoldCostBasis += wallet.buyPrice * wallet.remainingShares!; // <<< ADDED
+            }
+        });
+   } else {
+       console.warn("[Hold YTD P/L] Cannot calculate P/L: Current price unavailable.");
+       return { dollars: null, percent: null }; // Return nulls if price missing
+   }
+
+   // Sum the dollar components
+   const totalPL_dollars = ytdRealizedHoldPL + currentUnrealizedHoldPL;
+   const roundedTotalPL_dollars = parseFloat(totalPL_dollars.toFixed(CURRENCY_PRECISION));
+
+   // --- Calculate Percentage ---
+   let calculatedPercent: number | null = null;
+   // Only calculate if the cost basis is positive to avoid division by zero/weird results
+   if (currentHoldCostBasis > SHARE_EPSILON) {
+        calculatedPercent = (totalPL_dollars / currentHoldCostBasis) * 100;
+   } else if (Math.abs(totalPL_dollars) < 0.001) {
+        // If cost basis is zero (or near zero) and P/L is also zero, return 0%
+        calculatedPercent = 0;
+   } // Otherwise, percent remains null (e.g., profit/loss with zero cost basis is undefined)
+
+   const roundedPercent = typeof calculatedPercent === 'number'
+       ? parseFloat(calculatedPercent.toFixed(PERCENT_PRECISION)) // Use PERCENT_PRECISION
+       : null;
+   // --- End Percentage Calculation ---
+
+   if (warnings > 0) {
+         console.warn(`[Hold YTD P/L] Calculation finished with ${warnings} warnings (missing data). Realized P/L part might be incomplete.`);
+    }
+
+    console.log(`[Hold YTD P/L] $,%: ${roundedTotalPL_dollars}, ${roundedPercent}% (Basis: ${currentHoldCostBasis.toFixed(2)})`);
+
+    // Return object with both values
+    return {
+        dollars: roundedTotalPL_dollars,
+        percent: roundedPercent
+    };
+
+// Correct dependencies for this specific calculation
+}, [transactions, wallets, latestPrices, stockSymbol]); // Removed walletBuyPriceMap as it's internal now
+// --- End Total Hold YTD P/L Calc Memo ---
 
     // --- START: Replace your existing Formatting Helpers with this block ---
     const formatCurrency = (value: number | null | undefined): string => {
@@ -1426,6 +1524,21 @@ const totalSwingYtdPL = useMemo(() => {
                                         {totalSwingYtdPL?.percent === null // Check if percent value is null
                                             ? (pricesLoading ? 'Loading Price...' : 'N/A')
                                             : formatPercent(totalSwingYtdPL.percent) // Display percent
+                                        }
+                                    </p>
+
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Total Hold YTD P/L ($)</p>
+                                    <p>
+                                        {totalHoldYtdPL?.dollars === null // <<< Use totalHoldYtdPL
+                                            ? (pricesLoading ? 'Loading Price...' : 'N/A')
+                                            : formatCurrency(totalHoldYtdPL.dollars) // <<< Use totalHoldYtdPL
+                                        }
+                                    </p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Hold YTD P/L (%)</p>
+                                    <p>
+                                        {totalHoldYtdPL?.percent === null // <<< Use totalHoldYtdPL
+                                            ? (pricesLoading ? 'Loading Price...' : 'N/A')
+                                            : formatPercent(totalHoldYtdPL.percent) // <<< Use totalHoldYtdPL
                                         }
                                     </p>
                                 </div>
