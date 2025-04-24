@@ -1456,12 +1456,21 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
                                 <div>
                                     <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Settings</p>
                                     
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Ann budget | available</p>
-                                    <p>
-                                        {typeof stockBudget === 'number' ? formatCurrency(stockBudget) : 'Not set'}
-                                        &nbsp;|&nbsp;
-                                        {typeof stockBudget === 'number' ? formatCurrency(stockBudget - totalTiedUpInvestment) : 'N/A'}
-                                    </p>
+                                    
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                                        <div>
+                                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Budget</p>
+                                            <p>
+                                                {typeof stockBudget === 'number' ? formatCurrency(stockBudget) : 'Not set'}
+                                            </p>
+                                        </div>
+                                        <div>    
+                                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Available</p>
+                                            <p>
+                                                {typeof stockBudget === 'number' ? formatCurrency(stockBudget - totalTiedUpInvestment) : 'N/A'}
+                                            </p>
+                                        </div>
+                                    </div>
 
                                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Price Dip Percent (PDP)</p>
                                     <p>{typeof stockPdp === 'number' ? `${stockPdp}%` : 'Not set'}</p>
@@ -1477,26 +1486,41 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
                                 <div>
                                     <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Txns & Shs</p>
                                     
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Buys | Sells</p>
-                                    <p>
-                                        {transactionCounts.buys}
-                                        &nbsp;|&nbsp;
-                                        {transactionCounts.totalSells}
-                                    </p>
                                     
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing | Hold Sells</p>
-                                    <p>
-                                        {transactionCounts.swingSells}
-                                        &nbsp;|&nbsp;
-                                        {transactionCounts.holdSells}
-                                    </p>
-                                    
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing | Hold shs</p>
-                                    <p>
-                                        {formatShares(currentShares.swing)}
-                                        &nbsp;|&nbsp;
-                                        {formatShares(currentShares.hold)}
-                                    </p>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                                        <div>
+                                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Buys</p>
+                                            <p>
+                                                {transactionCounts.buys}
+                                            </p>
+
+                                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing Sells</p>
+                                            <p>
+                                                {transactionCounts.swingSells}
+                                            </p>
+
+                                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing shs</p>
+                                            <p>
+                                                {formatShares(currentShares.swing)}
+                                            </p>
+                                        </div>
+                                        <div>    
+                                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Sells</p>
+                                            <p>
+                                                {transactionCounts.totalSells}
+                                            </p>
+                                            
+                                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold Sells</p>
+                                            <p>
+                                                {transactionCounts.holdSells}
+                                            </p>
+
+                                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold shs</p>
+                                            <p>
+                                                {formatShares(currentShares.hold)}
+                                            </p>
+                                        </div>
+                                    </div>
 
                                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Total shs</p>
                                     <p>{formatShares(currentShares.total)}</p>

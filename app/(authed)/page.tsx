@@ -859,31 +859,51 @@ export default function HomePage() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
                             <div>
                                 <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Budget</p>
-                                
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Annual | Available</p>
+
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Annual</p>
                                 <p>
-                                    ${portfolioBudgetStats.totalBudget.toFixed(CURRENCY_PRECISION)}
-                                    &nbsp;|&nbsp;
-                                    ${portfolioBudgetStats.budgetLeft.toFixed(CURRENCY_PRECISION)}
+                                    ${portfolioBudgetStats.totalBudget.toLocaleString(undefined, {
+                                        minimumFractionDigits: CURRENCY_PRECISION,
+                                        maximumFractionDigits: CURRENCY_PRECISION,
+                                    })}
                                 </p>
+                                
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Available</p>
+                                <p>
+                                    ${portfolioBudgetStats.budgetLeft.toLocaleString(undefined, {
+                                        minimumFractionDigits: CURRENCY_PRECISION,
+                                        maximumFractionDigits: CURRENCY_PRECISION,
+                                    })}
+                                </p>                             
                             </div>
 
                             <div>
-                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Txns</p>
+                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Transactions</p>
                                     
-                                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Buys | Sells</p>
-                                <p>
-                                    {portfolioTransactionCounts.buys}
-                                    &nbsp;|&nbsp;
-                                    {portfolioTransactionCounts.totalSells}
-                                </p>
-                                    
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing | Hold Sells</p>
-                                <p>
-                                    {portfolioTransactionCounts.swingSells}
-                                    &nbsp;|&nbsp;
-                                    {portfolioTransactionCounts.holdSells}
-                                </p>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                                    <div>
+                                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Buys</p>
+                                        <p>
+                                            {portfolioTransactionCounts.buys}
+                                        </p>
+
+                                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing Sells</p>
+                                        <p>
+                                            {portfolioTransactionCounts.swingSells}
+                                        </p>
+                                    </div>
+                                    <div>    
+                                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Sells</p>
+                                        <p>
+                                            {portfolioTransactionCounts.totalSells}
+                                        </p>
+                                        
+                                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold Sells</p>
+                                        <p>
+                                            {portfolioTransactionCounts.holdSells}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
                             <div>
