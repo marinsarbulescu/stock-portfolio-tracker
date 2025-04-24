@@ -1073,26 +1073,20 @@ export default function HomePage() {
                                 {reportColumnVisibility.swingWalletCount  && (
                                     <td style={{ padding: '5px' }}>{item.swingWalletCount }</td>
                                 )}
-                                {/* {reportColumnVisibility.buys && (
-                                    <td style={{ padding: '5px' }}>{item.buys}</td>
-                                )} */}
-                                {/* {reportColumnVisibility.incompleteBuys && (
-                                        <td style={{ padding: '5px' }}>{item.incompleteBuyCount}</td>
-                                )} */}
                                 {reportColumnVisibility.sinceBuy && (
                                     <td style={{
                                         padding: '5px', // Keep existing padding
                                         ...getSinceBuyCellStyle(item.sinceBuy) // Merge conditional styles
                                         }}>
-                                        {item.sinceBuy ?? '-'}
+                                        {item.sinceBuy != null ? `${item.sinceBuy} d` : '-'}
                                     </td>
                                 )}
                                 {reportColumnVisibility.sinceSell && (
-                                    <td style={{ padding: '5px' }}>{item.sinceSell ?? '-'}</td>
+                                    <td style={{ padding: '5px' }}>{item.sinceSell != null ? `${item.sinceSell} d` : '-'}</td>
                                 )}
                                 {reportColumnVisibility.currentPrice && (
                                     <td style={{ padding: '5px' }}>
-                                        {typeof item.currentPrice === 'number' ? item.currentPrice.toFixed(2) : '-'}
+                                        {typeof item.currentPrice === 'number' ? `$${item.currentPrice.toFixed(2)}` : '-'}
                                     </td>
                                 )}
                                 {reportColumnVisibility.percentToBe && (
@@ -1104,7 +1098,7 @@ export default function HomePage() {
                                 )}
                                 {reportColumnVisibility.ltpiaTakeProfitPrice && (
                                     <td style={{ padding: '5px' }}>
-                                        {typeof item.ltpiaTakeProfitPrice === 'number' ? item.ltpiaTakeProfitPrice.toFixed(2) : '-'}
+                                        {typeof item.ltpiaTakeProfitPrice === 'number' ? `$${item.ltpiaTakeProfitPrice.toFixed(2)}` : '-'}
                                     </td>
                                 )}
                                 {reportColumnVisibility.percentToTp && (
