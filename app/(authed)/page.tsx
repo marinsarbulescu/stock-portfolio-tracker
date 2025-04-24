@@ -7,12 +7,17 @@ import type { Schema } from '@/amplify/data/resource';
 import { usePrices } from '@/app/contexts/PriceContext'; // Import context hook
 import Link from 'next/link';
 
+const SHARE_EPSILON = 0.00001; // Example value, adjust as needed
+const CURRENCY_PRECISION = 2;  // Example value (e.g., for dollars and cents)
+const PERCENT_PRECISION = 2;   // Example value (e.g., 12.34%)
+
 // Define types locally matching schema if needed (or import if shared)
 type PortfolioStockDataType = { // Simplified representation needed for this page
     id: string;
     symbol: string;
     pdp: number | null | undefined;
     name?: string | null | undefined;
+    budget?: number | null | undefined;
     // Add other fields if needed by the table/sort
 }
 
@@ -75,6 +80,8 @@ export default function HomePage() {
         tpShares: 'TP Shares',
     };
     
+    const [isOverviewExpanded, setIsOverviewExpanded] = useState(false); // Collapsed by default
+    
     const [portfolioStocks, setPortfolioStocks] = useState<PortfolioStockDataType[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -83,9 +90,6 @@ export default function HomePage() {
 
     // Add state for all transactions
     const [allTransactions, setAllTransactions] = useState<Schema['Transaction'][]>([]);
-    // Add loading/error state specifically for transactions if desired
-    //const [isTxnLoading, setIsTxnLoading] = useState(true);
-    //const [txnError, setTxnError] = useState<string | null>(null);
 
     // Get price data from context
     const { latestPrices, pricesLoading, pricesError, lastPriceFetchTimestamp } = usePrices(); // <-- Add timestamp
@@ -193,7 +197,7 @@ export default function HomePage() {
             // Fetch stocks AND use the pagination helper for transactions
             const [stockResult, allTxnsData, walletResult] = await Promise.all([
                 client.models.PortfolioStock.list({
-                    selectionSet: ['id', 'symbol', 'pdp', 'name'], // Fields needed for report
+                    selectionSet: ['id', 'symbol', 'pdp', 'name', 'budget'], // Fields needed for report
                     filter: {
                         isHidden: { ne: true } // ne: not equal to true (i.e., fetch if false or null/undefined)
                         // Or you could use: isHidden: { eq: false } if you are sure all items will have the field set
@@ -514,6 +518,159 @@ export default function HomePage() {
     }, [portfolioStocks, latestPrices, processedData]);
 
 
+    // --- Portfolio Overview Calculations ---
+
+    // Calculate Budget Stats
+    const portfolioBudgetStats = useMemo(() => {
+        const totalBudget = portfolioStocks.reduce((sum, stock) => sum + (stock.budget ?? 0), 0);
+
+        // Calculate total tied-up investment across ALL wallets
+        const totalTiedUpInvestment = allWallets.reduce((totalTiedUp, wallet) => {
+            const totalInvestment = wallet.totalInvestment ?? 0;
+            const totalShares = wallet.totalSharesQty ?? 0;
+            const remainingShares = wallet.remainingShares ?? 0;
+            const investmentPerShare = (totalShares > SHARE_EPSILON) ? (totalInvestment / totalShares) : 0;
+            const tiedUpInWallet = investmentPerShare * remainingShares;
+            return totalTiedUp + tiedUpInWallet;
+        }, 0);
+
+        const budgetLeft = totalBudget - totalTiedUpInvestment;
+
+        return {
+            totalBudget: parseFloat(totalBudget.toFixed(CURRENCY_PRECISION)),
+            budgetLeft: parseFloat(budgetLeft.toFixed(CURRENCY_PRECISION)),
+        };
+    }, [portfolioStocks, allWallets]); // Depends on stocks and wallets
+
+    // Calculate Transaction Counts
+    const portfolioTransactionCounts = useMemo(() => {
+        const buys = allTransactions.filter(t => (t as any).action === 'Buy').length;
+        const swingSells = allTransactions.filter(t => (t as any).action === 'Sell' && (t as any).txnType === 'Swing').length;
+        const holdSells = allTransactions.filter(t => (t as any).action === 'Sell' && (t as any).txnType === 'Hold').length;
+        const totalSells = swingSells + holdSells;
+        return { buys, swingSells, holdSells, totalSells };
+    }, [allTransactions]);
+
+    // Calculate Realized P/L Stats (Method 2)
+    const portfolioRealizedPL = useMemo(() => {
+        const walletBuyPriceMap = new Map<string, number>();
+        allWallets.forEach(w => {
+            if (w.id && typeof w.buyPrice === 'number') {
+                walletBuyPriceMap.set(w.id, w.buyPrice);
+            }
+        });
+    
+        let totalSwingPlDollars = 0, totalSwingCostBasis = 0;
+        let totalHoldPlDollars = 0, totalHoldCostBasis = 0;
+    
+        // Use '(txn as any)' to access properties we know exist via selectionSet
+        allTransactions.forEach(txn => {
+            // Access properties using 'as any'
+            if ((txn as any).action === 'Sell' && (txn as any).completedTxnId && typeof (txn as any).quantity === 'number' && typeof (txn as any).price === 'number') {
+                // Access completedTxnId using 'as any'
+                const walletBuyPrice = walletBuyPriceMap.get((txn as any).completedTxnId);
+                if (typeof walletBuyPrice === 'number') {
+                    // Access quantity using 'as any'
+                    const costBasisForTxn = walletBuyPrice * (txn as any).quantity;
+                     // Access price and quantity using 'as any'
+                    const profitForTxn = ((txn as any).price - walletBuyPrice) * (txn as any).quantity;
+    
+                    // Access txnType using 'as any'
+                    if ((txn as any).txnType === 'Swing') {
+                        totalSwingPlDollars += profitForTxn;
+                        totalSwingCostBasis += costBasisForTxn;
+                    // Access txnType using 'as any'
+                    } else if ((txn as any).txnType === 'Hold') {
+                        totalHoldPlDollars += profitForTxn;
+                        totalHoldCostBasis += costBasisForTxn;
+                    }
+                }
+            }
+        });
+
+        const avgSwingPlPercent = (totalSwingCostBasis !== 0) ? (totalSwingPlDollars / totalSwingCostBasis) * 100 : (totalSwingPlDollars === 0 ? 0 : null);
+        const avgHoldPlPercent = (totalHoldCostBasis !== 0) ? (totalHoldPlDollars / totalHoldCostBasis) * 100 : (totalHoldPlDollars === 0 ? 0 : null);
+        const totalStockPlDollars = totalSwingPlDollars + totalHoldPlDollars;
+        const totalStockCostBasis = totalSwingCostBasis + totalHoldCostBasis;
+        const avgStockPlPercent = (totalStockCostBasis !== 0) ? (totalStockPlDollars / totalStockCostBasis) * 100 : (totalStockPlDollars === 0 ? 0 : null);
+
+        return {
+            totalSwingPlDollars: parseFloat(totalSwingPlDollars.toFixed(CURRENCY_PRECISION)),
+            avgSwingPlPercent: typeof avgSwingPlPercent === 'number' ? parseFloat(avgSwingPlPercent.toFixed(PERCENT_PRECISION)) : null,
+            totalHoldPlDollars: parseFloat(totalHoldPlDollars.toFixed(CURRENCY_PRECISION)),
+            avgHoldPlPercent: typeof avgHoldPlPercent === 'number' ? parseFloat(avgHoldPlPercent.toFixed(PERCENT_PRECISION)) : null,
+            totalStockPlDollars: parseFloat(totalStockPlDollars.toFixed(CURRENCY_PRECISION)),
+            avgStockPlPercent: typeof avgStockPlPercent === 'number' ? parseFloat(avgStockPlPercent.toFixed(PERCENT_PRECISION)) : null,
+        };
+    }, [allTransactions, allWallets]);
+
+    // Calculate YTD P/L Stats
+    const portfolioYtdPL = useMemo(() => {
+        const walletBuyPriceMap = new Map<string, number>();
+        allWallets.forEach(w => { if (w.id && typeof w.buyPrice === 'number') walletBuyPriceMap.set(w.id, w.buyPrice); });
+
+        const currentYear = new Date().getFullYear();
+        const startOfYear = `${currentYear}-01-01`;
+
+        let ytdRealizedSwingPL = 0, ytdRealizedHoldPL = 0;
+        let currentUnrealizedSwingPL = 0, currentSwingCostBasis = 0;
+        let currentUnrealizedHoldPL = 0, currentHoldCostBasis = 0;
+        let priceAvailable = true;
+
+        // YTD Realized
+        allTransactions.forEach(txn => {
+            if ((txn as any).action === 'Sell' && (txn as any).date && (txn as any).date >= startOfYear && (txn as any).completedTxnId && typeof (txn as any).quantity === 'number' && typeof (txn as any).price === 'number') {
+                const walletBuyPrice = walletBuyPriceMap.get((txn as any).completedTxnId);
+                if (typeof walletBuyPrice === 'number') {
+                    const profitForTxn = ((txn as any).price - walletBuyPrice) * (txn as any).quantity;
+                    if ((txn as any).txnType === 'Swing') ytdRealizedSwingPL += profitForTxn;
+                    else if ((txn as any).txnType === 'Hold') ytdRealizedHoldPL += profitForTxn;
+                }
+            }
+        });
+
+        // Current Unrealized and Cost Basis
+        allWallets.forEach(wallet => {
+            const currentPrice = latestPrices[portfolioStocks.find(s => s.id === wallet.portfolioStockId)?.symbol ?? '']?.currentPrice ?? null;
+            if (currentPrice === null) priceAvailable = false; // Mark if any price is missing
+
+            if ((wallet.remainingShares ?? 0) > SHARE_EPSILON && typeof wallet.buyPrice === 'number' && typeof currentPrice === 'number') {
+                const unrealizedForWallet = (currentPrice - wallet.buyPrice) * wallet.remainingShares!;
+                const costBasisForWallet = wallet.buyPrice * wallet.remainingShares!;
+                if (wallet.walletType === 'Swing') {
+                    currentUnrealizedSwingPL += unrealizedForWallet;
+                    currentSwingCostBasis += costBasisForWallet;
+                } else if (wallet.walletType === 'Hold') {
+                    currentUnrealizedHoldPL += unrealizedForWallet;
+                    currentHoldCostBasis += costBasisForWallet;
+                }
+            }
+        });
+
+        if (!priceAvailable) {
+            console.warn("[Portfolio YTD P/L] Cannot calculate full unrealized P/L: One or more current prices unavailable.");
+            // Return nulls for values depending on unrealized P/L
+            return { totalSwingYtdPL_dollars: null, totalSwingYtdPL_percent: null, totalHoldYtdPL_dollars: null, totalHoldYtdPL_percent: null };
+        }
+
+        const totalSwingYtdPL_dollars = ytdRealizedSwingPL + currentUnrealizedSwingPL;
+        const totalHoldYtdPL_dollars = ytdRealizedHoldPL + currentUnrealizedHoldPL;
+
+        const totalSwingYtdPL_percent = (currentSwingCostBasis > SHARE_EPSILON) ? (totalSwingYtdPL_dollars / currentSwingCostBasis) * 100 : (totalSwingYtdPL_dollars === 0 ? 0 : null);
+        const totalHoldYtdPL_percent = (currentHoldCostBasis > SHARE_EPSILON) ? (totalHoldYtdPL_dollars / currentHoldCostBasis) * 100 : (totalHoldYtdPL_dollars === 0 ? 0 : null);
+
+        return {
+            totalSwingYtdPL_dollars: parseFloat(totalSwingYtdPL_dollars.toFixed(CURRENCY_PRECISION)),
+            totalSwingYtdPL_percent: typeof totalSwingYtdPL_percent === 'number' ? parseFloat(totalSwingYtdPL_percent.toFixed(PERCENT_PRECISION)) : null,
+            totalHoldYtdPL_dollars: parseFloat(totalHoldYtdPL_dollars.toFixed(CURRENCY_PRECISION)),
+            totalHoldYtdPL_percent: typeof totalHoldYtdPL_percent === 'number' ? parseFloat(totalHoldYtdPL_percent.toFixed(PERCENT_PRECISION)) : null,
+        };
+
+    }, [allTransactions, allWallets, portfolioStocks, latestPrices]); // Dependencies
+
+    // --- End Portfolio Overview Calculations ---
+
+
     // Calculate the number of currently visible columns
     const visibleColumnCount = useMemo(() => {
         // Start with columns that are always visible (e.g., Ticker)
@@ -671,6 +828,110 @@ export default function HomePage() {
                 }
             </div>
             {pricesError && <p style={{ color: 'red' }}>Price Error: {pricesError}</p>}
+
+            <div style={{
+                marginBottom: '1rem',
+                border: '1px solid #444', // Keep border for the whole section
+            }}>
+                <p
+                    style={{
+                        marginTop: 0, marginBottom: 0, // Remove bottom margin if collapsing
+                        padding: '10px 15px', // Keep padding on heading
+                        cursor: 'pointer', // Indicate clickable
+                        display: 'flex', // Use flex to align text and arrow
+                        justifyContent: 'space-between', // Push arrow to the right
+                        alignItems: 'center'
+                    }}
+                    onClick={() => setIsOverviewExpanded(prev => !prev)} // Toggle state on click
+                >                   
+                    Overview
+                    {/* Indicator Arrow */}
+                    <span style={{ fontSize: '0.8em' }}>{isOverviewExpanded ? '▼' : '▶'}</span>
+                </p>
+
+                {/* Conditionally render the details based on state */}
+                {isOverviewExpanded && (
+                    <div style={{
+                        padding: '0px 15px 10px 15px', // Add padding back for content
+                        borderTop: '1px solid #444', // Add divider when expanded
+                        fontSize: '0.8em'
+                    }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
+                            <div>
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Ann budget | available</p>
+                                <p>
+                                    ${portfolioBudgetStats.totalBudget.toFixed(CURRENCY_PRECISION)}
+                                    &nbsp;|&nbsp;
+                                    ${portfolioBudgetStats.budgetLeft.toFixed(CURRENCY_PRECISION)}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Txns</p>
+                                    
+                                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Buys | Sells</p>
+                                <p>
+                                    {portfolioTransactionCounts.buys}
+                                    &nbsp;|&nbsp;
+                                    {portfolioTransactionCounts.totalSells}
+                                </p>
+                                    
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing | Hold Sells</p>
+                                <p>
+                                    {portfolioTransactionCounts.swingSells}
+                                    &nbsp;|&nbsp;
+                                    {portfolioTransactionCounts.holdSells}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Realized P/L</p>
+
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing P/L</p>
+                                <p>
+                                    ${portfolioRealizedPL.totalSwingPlDollars.toFixed(CURRENCY_PRECISION)}
+                                    &nbsp;
+                                    ({portfolioRealizedPL.avgSwingPlPercent !== null ? `${portfolioRealizedPL.avgSwingPlPercent.toFixed(PERCENT_PRECISION)}%` : 'N/A'})
+                                </p>
+
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold P/L</p>
+                                <p>
+                                    ${portfolioRealizedPL.totalHoldPlDollars.toFixed(CURRENCY_PRECISION)}
+                                    &nbsp;
+                                    ({portfolioRealizedPL.avgHoldPlPercent !== null ? `${portfolioRealizedPL.avgHoldPlPercent.toFixed(PERCENT_PRECISION)}%` : 'N/A'})
+                                </p>
+
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock P/L</p>
+                                <p>
+                                    ${portfolioRealizedPL.totalStockPlDollars.toFixed(CURRENCY_PRECISION)}
+                                    &nbsp;
+                                    ({portfolioRealizedPL.avgStockPlPercent !== null ? `${portfolioRealizedPL.avgStockPlPercent.toFixed(PERCENT_PRECISION)}%` : 'N/A'})
+                                </p>
+                            </div>
+                            <div>
+                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>YTD P/L</p>
+
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing YTD P/L</p>
+                                <p>
+                                    {portfolioYtdPL.totalSwingYtdPL_dollars !== null
+                                        ? `$${portfolioYtdPL.totalSwingYtdPL_dollars.toFixed(CURRENCY_PRECISION)} (${portfolioYtdPL.totalSwingYtdPL_percent !== null ? `${portfolioYtdPL.totalSwingYtdPL_percent.toFixed(PERCENT_PRECISION)}%` : 'N/A %'})`
+                                        : 'Calculating...'
+                                    }
+                                    
+                                </p>
+
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold YTD P/L</p>
+                                <p>
+                                    {portfolioYtdPL.totalHoldYtdPL_dollars !== null
+                                        ? `$${portfolioYtdPL.totalHoldYtdPL_dollars.toFixed(CURRENCY_PRECISION)} (${portfolioYtdPL.totalHoldYtdPL_percent !== null ? `${portfolioYtdPL.totalHoldYtdPL_percent.toFixed(PERCENT_PRECISION)}%` : 'N/A %'})`
+                                        : 'Calculating...'
+                                    }
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
             
             {/* --- Add Column Toggle Checkboxes --- */}
             <div style={{ marginBottom: '1rem', marginTop: '1rem', padding: '10px', border: '1px solid #353535', fontSize: '0.7em', color: "gray" }}>

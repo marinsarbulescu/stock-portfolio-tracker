@@ -178,17 +178,17 @@ export default function AddStockForm({
     <form onSubmit={handleSubmit} style={{ marginTop: '1rem', borderTop: '1px dashed #eee', paddingTop: '1rem' }}>
       {/* Conditional Title */}
       <h2>{isEditMode ? `Edit ${initialData?.symbol ?? 'Stock'}` : 'Add New Stock to Portfolio'}</h2>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p style={{ color: 'red' }} role="alert">{error}</p>}
       {/* Removed success message - parent page should handle feedback after successful save/refresh */}
 
       {/* --- Form Fields --- */}
       {/* Use same inputs as before, bound to state */}
-      <div><label>Ticker: </label><input id="symbol" value={symbol} onChange={(e) => setSymbol(e.target.value)} required disabled={isLoading} /></div>
-      <div style={{ marginTop: '0.5rem' }}><label>Type: </label><select id="type" value={stockType} onChange={(e) => setStockType(e.target.value as StockTypeValue)} required disabled={isLoading}><option value="Stock">Stock</option><option value="ETF">ETF</option><option value="Crypto">Crypto</option></select></div>
-      <div style={{ marginTop: '0.5rem' }}><label>Region: </label><select id="region" value={region} onChange={(e) => setRegion(e.target.value as RegionValue)} required disabled={isLoading}><option value="US">US</option><option value="EU">EU</option><option value="APAC">APAC</option></select></div>
-      <div style={{ marginTop: '0.5rem' }}><label>Stock Name (Optional): </label><input id="name" value={name} onChange={(e) => setName(e.target.value)} disabled={isLoading} /></div>
-      <div style={{ marginTop: '0.5rem' }}><label>PDP (%): </label><input id="pdp" type="number" step="any" value={pdp} onChange={(e) => setPdp(e.target.value)} disabled={isLoading} /></div>
-      <div style={{ marginTop: '0.5rem' }}><label>PLR:</label><input id="plr" type="number" step="any" value={plr} onChange={(e) => setPlr(e.target.value)} disabled={isLoading} /></div>
+      <div><label htmlFor="symbol">Ticker: </label><input id="symbol" value={symbol} onChange={(e) => setSymbol(e.target.value)} required disabled={isLoading} /></div>
+      <div style={{ marginTop: '0.5rem' }}><label htmlFor="type">Type: </label><select id="type" value={stockType} onChange={(e) => setStockType(e.target.value as StockTypeValue)} required disabled={isLoading}><option value="Stock">Stock</option><option value="ETF">ETF</option><option value="Crypto">Crypto</option></select></div>
+      <div style={{ marginTop: '0.5rem' }}><label htmlFor="region">Region: </label><select id="region" value={region} onChange={(e) => setRegion(e.target.value as RegionValue)} required disabled={isLoading}><option value="US">US</option><option value="EU">EU</option><option value="APAC">APAC</option></select></div>
+      <div style={{ marginTop: '0.5rem' }}><label htmlFor="name">Stock Name (Optional): </label><input id="name" value={name} onChange={(e) => setName(e.target.value)} disabled={isLoading} /></div>
+      <div style={{ marginTop: '0.5rem' }}><label htmlFor="pdp">PDP (%): </label><input id="pdp" type="number" step="any" value={pdp} onChange={(e) => setPdp(e.target.value)} disabled={isLoading} /></div>
+      <div style={{ marginTop: '0.5rem' }}><label htmlFor="plr">PLR:</label><input id="plr" type="number" step="any" value={plr} onChange={(e) => setPlr(e.target.value)} disabled={isLoading} /></div>
       <div style={{ marginTop: '0.5rem' }}>
           <label htmlFor="shr">SHR (%):</label> {/* Swing-Hold Ratio */}
           <input
@@ -204,7 +204,7 @@ export default function AddStockForm({
               style={{width: '100%', padding: '8px'}} // Example style
           />
       </div>
-      <div style={{ marginTop: '0.5rem' }}><label>Annual Budget:</label><input id="budget" type="number" step="any" value={budget} onChange={(e) => setBudget(e.target.value)} disabled={isLoading} /></div>
+      <div style={{ marginTop: '0.5rem' }}><label htmlFor="budget">Annual Budget:</label><input id="budget" type="number" step="any" value={budget} onChange={(e) => setBudget(e.target.value)} disabled={isLoading} /></div>
       {/* --- End Form Fields --- */}
 
       {/* Conditional Buttons */}

@@ -1121,6 +1121,19 @@ const totalHoldYtdPL = useMemo(() => {
 }, [transactions, wallets, latestPrices, stockSymbol]); // Removed walletBuyPriceMap as it's internal now
 // --- End Total Hold YTD P/L Calc Memo ---
 
+// Helper to truncate long IDs for display
+const truncateId = (id: string | null | undefined, length = 8): string => {
+    // If no ID, return a dash
+    if (!id) return '-';
+    // If ID is already short enough, return it as is
+    if (id.length <= length) return id;
+    // Otherwise, show the first few chars, ellipsis, and last few chars
+    const startLength = Math.floor(length / 2);
+    const endLength = length - startLength;
+    //return `${id.substring(0, startLength)}...${id.substring(id.length - endLength)}`;
+    return `${id.substring(0, startLength)}...`;
+};
+
     // --- START: Replace your existing Formatting Helpers with this block ---
     const formatCurrency = (value: number | null | undefined): string => {
         if (typeof value !== 'number') {
@@ -1443,11 +1456,12 @@ const totalHoldYtdPL = useMemo(() => {
                                 <div>
                                     <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Settings</p>
                                     
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Annual budget</p>
-                                    <p>{typeof stockBudget === 'number' ? formatCurrency(stockBudget) : 'Not set'}</p>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Budget available</p>
-                                    <p>{typeof stockBudget === 'number' ? formatCurrency(stockBudget - totalTiedUpInvestment) : 'N/A'}</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Ann budget | available</p>
+                                    <p>
+                                        {typeof stockBudget === 'number' ? formatCurrency(stockBudget) : 'Not set'}
+                                        &nbsp;|&nbsp;
+                                        {typeof stockBudget === 'number' ? formatCurrency(stockBudget - totalTiedUpInvestment) : 'N/A'}
+                                    </p>
 
                                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Price Dip Percent (PDP)</p>
                                     <p>{typeof stockPdp === 'number' ? `${stockPdp}%` : 'Not set'}</p>
@@ -1461,27 +1475,30 @@ const totalHoldYtdPL = useMemo(() => {
 
                                 {/* Column 2 */}
                                 <div>
-                                    <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Txns &</p>
+                                    <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Txns & Shs</p>
                                     
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Total Buys</p>
-                                    <p>{transactionCounts.buys}</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Buys | Sells</p>
+                                    <p>
+                                        {transactionCounts.buys}
+                                        &nbsp;|&nbsp;
+                                        {transactionCounts.totalSells}
+                                    </p>
                                     
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing Sells</p>
-                                    <p>{transactionCounts.swingSells}</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing | Hold Sells</p>
+                                    <p>
+                                        {transactionCounts.swingSells}
+                                        &nbsp;|&nbsp;
+                                        {transactionCounts.holdSells}
+                                    </p>
                                     
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold Sells</p>
-                                    <p>{transactionCounts.holdSells}</p>
-                                    
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Total Sells</p>
-                                    <p>{transactionCounts.totalSells}</p>
-                                    
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing shares</p>
-                                    <p>{formatShares(currentShares.swing)}</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing | Hold shs</p>
+                                    <p>
+                                        {formatShares(currentShares.swing)}
+                                        &nbsp;|&nbsp;
+                                        {formatShares(currentShares.hold)}
+                                    </p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold shares</p>
-                                    <p>{formatShares(currentShares.hold)}</p>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Total shares</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Total shs</p>
                                     <p>{formatShares(currentShares.total)}</p>
                                 </div>
 
@@ -1489,57 +1506,53 @@ const totalHoldYtdPL = useMemo(() => {
                                     <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Realized P/L</p>
 
                                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing P/L</p>
-                                    <p>{formatCurrency(plStats.totalSwingPlDollars)}</p>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing P/L Avg (%)</p>
-                                    <p>{formatPercent(plStats.avgSwingPlPercent)}</p>
+                                    <p>
+                                        {formatCurrency(plStats.totalSwingPlDollars)}
+                                        &nbsp;
+                                        ({formatPercent(plStats.avgSwingPlPercent)})
+                                    </p>
 
                                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold P/L</p>
-                                    <p>{formatCurrency(plStats.totalHoldPlDollars)}</p>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold P/L Avg (%)</p>
-                                    <p>{formatPercent(plStats.avgHoldPlPercent)}</p>
+                                    <p>
+                                        {formatCurrency(plStats.totalHoldPlDollars)}
+                                        &nbsp;
+                                        ({formatPercent(plStats.avgHoldPlPercent)})
+                                    </p>
 
                                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock P/L</p>
-                                    <p>{formatCurrency(plStats.totalStockPlDollars)}</p>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock P/L Avg (%)</p>
-                                    <p>{formatPercent(plStats.avgStockPlPercent)}</p>
+                                    <p>
+                                        {formatCurrency(plStats.totalStockPlDollars)}
+                                        &nbsp;
+                                        ({formatPercent(plStats.avgStockPlPercent)})
+                                    </p>
                                 </div>
 
                                 <div>
                                     <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>YTD P/L</p>
 
                                     {/* +++ ADD TOTAL SWING YTD P/L +++ */}
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Total Swing YTD P/L</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing YTD P/L</p>
                                     <p>
                                         {totalSwingYtdPL?.dollars === null // Check if calculation was possible
                                             ? (pricesLoading ? 'Loading Price...' : 'N/A') // Show loading or N/A if price missing
                                             : formatCurrency(totalSwingYtdPL.dollars) // Display formatted result
-                                        }
+                                        }&nbsp;
+                                        ({totalSwingYtdPL?.percent === null // Check if percent value is null
+                                                ? (pricesLoading ? 'Loading Price...' : 'N/A')
+                                                : formatPercent(totalSwingYtdPL.percent) // Display percent
+                                        })
                                     </p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing YTD P/L (%)</p>
-                                    <p>
-                                        {totalSwingYtdPL?.percent === null // Check if percent value is null
-                                            ? (pricesLoading ? 'Loading Price...' : 'N/A')
-                                            : formatPercent(totalSwingYtdPL.percent) // Display percent
-                                        }
-                                    </p>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Total Hold YTD P/L ($)</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold YTD P/L</p>
                                     <p>
                                         {totalHoldYtdPL?.dollars === null // <<< Use totalHoldYtdPL
                                             ? (pricesLoading ? 'Loading Price...' : 'N/A')
                                             : formatCurrency(totalHoldYtdPL.dollars) // <<< Use totalHoldYtdPL
-                                        }
-                                    </p>
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px' }}>Hold YTD P/L (%)</p>
-                                    <p>
-                                        {totalHoldYtdPL?.percent === null // <<< Use totalHoldYtdPL
+                                        }&nbsp;                                    
+                                        ({totalHoldYtdPL?.percent === null // <<< Use totalHoldYtdPL
                                             ? (pricesLoading ? 'Loading Price...' : 'N/A')
                                             : formatPercent(totalHoldYtdPL.percent) // <<< Use totalHoldYtdPL
-                                        }
+                                        })
                                     </p>
                                 </div>
                             </div> // End grid layout
@@ -1583,7 +1596,7 @@ const totalHoldYtdPL = useMemo(() => {
             <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
                 <thead>
                     <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
-                        {/* --- Removed Symbol Header --- */}
+                        <th style={{ padding: '5px', fontSize: '0.9em', color: 'grey'}}>Wallet ID</th>
                         <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('buyPrice')}>
                             Buy Price {sortConfig?.key === 'buyPrice' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                         </th>
@@ -1621,7 +1634,7 @@ const totalHoldYtdPL = useMemo(() => {
                     {/* Check if the selected filtered list is empty */}
                     {(activeTab === 'Swing' ? swingWallets : holdWallets).length === 0 ? (
                         <tr>
-                            <td colSpan={10} style={{ textAlign: 'center', padding: '1rem' }}>
+                            <td colSpan={11} style={{ textAlign: 'center', padding: '1rem' }}>
                                 No {activeTab} wallets found for this stock.
                             </td>
                         </tr>
@@ -1629,7 +1642,6 @@ const totalHoldYtdPL = useMemo(() => {
                         (activeTab === 'Swing' ? swingWallets : holdWallets).map((wallet, index) => {
                             const currentStockPrice = latestPrices[stockSymbol ?? '']?.currentPrice;
                             return (
-                                // Directly return the table row for the current 'wallet'
                                 <tr
                                     key={wallet.id}
                                     style={{
@@ -1637,6 +1649,7 @@ const totalHoldYtdPL = useMemo(() => {
                                     }}
                                 >
                                     {/* Render cells using the 'wallet' object from the filtered list */}
+                                    <td style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>{truncateId(wallet.id)}</td>
                                     <td style={{ padding: '5px' }}>{formatCurrency(wallet.buyPrice)}</td>
                                     <td style={{ padding: '5px' }}>{formatCurrency(wallet.totalInvestment)}</td>
                                     <td style={{ padding: '5px' }}>{formatShares(wallet.totalSharesQty)}</td>
@@ -1794,13 +1807,14 @@ const totalHoldYtdPL = useMemo(() => {
                                 <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('investment')}>Inv</th>
                                 <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('quantity')}>Quantity</th>
                                 <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('lbd')}>LBD</th>
+                                <th style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>Wallet ID</th>
                                 <th style={{ padding: '5px' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {sortedTransactions.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} style={{ textAlign: 'center', padding: '1rem' }}> {/* Adjust colspan */}
+                                    <td colSpan={10} style={{ textAlign: 'center', padding: '1rem' }}> {/* Adjust colspan */}
                                         No transactions found for this stock.
                                     </td>
                                 </tr>
@@ -1822,6 +1836,9 @@ const totalHoldYtdPL = useMemo(() => {
                                         <td style={{ padding: '5px' }}>{formatShares(txn.quantity)}</td>
                                         {/* Show LBD only if Buy */}
                                         <td style={{ padding: '5px' }}>{txn.action === 'Buy' ? formatCurrency(txn.lbd) : '-'}</td>
+                                        <td style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>
+                                            {txn.action === 'Sell' ? truncateId(txn.completedTxnId) : '-'}
+                                        </td>
                                         <td style={{ padding: '5px', textAlign: 'center' }}>
                                             <button onClick={() => handleEditTxnClick(txn)} title="Edit Transaction" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray', marginRight: '5px' }}><FaEdit /></button>
                                             <button onClick={() => handleDeleteTransaction(txn)} title="Delete Transaction" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray' }}><FaTrashAlt /></button>

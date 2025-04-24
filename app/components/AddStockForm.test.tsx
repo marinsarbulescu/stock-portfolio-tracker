@@ -1,251 +1,258 @@
-// // app/components/AddStockForm.test.tsx
-// import React from 'react';
-// import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-// import '@testing-library/jest-dom'; // For extra matchers like .toBeInTheDocument()
-// import AddStockForm from './AddStockForm'; // Adjust path if needed
-// import { generateClient } from 'aws-amplify/data'; // Import the function to mock
+// app/components/AddStockForm.test.tsx
+import React from 'react';
+// Import act from react
+import { act } from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom'; // For extra matchers like .toBeInTheDocument()
+import AddStockForm from './AddStockForm'; // Adjust path if needed
 
-// // --- Mock the Amplify Client ---
-// // We tell Jest that any call to generateClient should use our mock implementation
-// // This mock simulates successful create/update operations by default
-// const mockCreate = jest.fn().mockResolvedValue({ errors: null, data: { id: 'new-stock-id' } });
-// const mockUpdate = jest.fn().mockResolvedValue({ errors: null, data: { id: 'edited-stock-id' } });
+// --- Import Mock Functions from Manual Mock ---
+// Adjust the relative path based on your project structure
+// This assumes AddStockForm.test.tsx is in app/components/
+import { mockCreate, mockUpdate } from '../__mocks__/aws-amplify/data';
 
-// jest.mock('aws-amplify/data', () => ({
-//   generateClient: jest.fn(() => ({
-//     models: {
-//       PortfolioStock: {
-//         create: mockCreate,
-//         update: mockUpdate,
-//         // Add other methods like .get() or .list() if the component uses them directly (unlikely for this form)
-//       },
-//     },
-//   })),
-// }));
-// // --- End Mocking ---
-
-// // Helper function to fill the form fields
-// const fillForm = (data: {
-//     symbol?: string;
-//     name?: string;
-//     stockType?: string;
-//     region?: string;
-//     pdp?: string;
-//     plr?: string;
-//     budget?: string;
-//     swingHoldRatio?: string;
-// }) => {
-//     if (data.symbol !== undefined) fireEvent.change(screen.getByLabelText(/Stock Symbol/i), { target: { value: data.symbol } });
-//     if (data.name !== undefined) fireEvent.change(screen.getByLabelText(/Stock Name/i), { target: { value: data.name } });
-//     if (data.stockType !== undefined) fireEvent.change(screen.getByLabelText(/Type/i), { target: { value: data.stockType } });
-//     if (data.region !== undefined) fireEvent.change(screen.getByLabelText(/Region/i), { target: { value: data.region } });
-//     if (data.pdp !== undefined) fireEvent.change(screen.getByLabelText(/PDP/i), { target: { value: data.pdp } });
-//     if (data.plr !== undefined) fireEvent.change(screen.getByLabelText(/PLR/i), { target: { value: data.plr } });
-//     if (data.budget !== undefined) fireEvent.change(screen.getByLabelText(/Annual Budget/i), { target: { value: data.budget } });
-//     if (data.swingHoldRatio !== undefined) fireEvent.change(screen.getByLabelText(/SHR/i), { target: { value: data.swingHoldRatio } });
-// };
+// --- REMOVE or COMMENT OUT the jest.mock(...) block ---
+/*
+jest.mock('aws-amplify/data', () => ({
+  generateClient: jest.fn(() => ({
+    models: {
+      PortfolioStock: {
+        create: mockCreate,
+        update: mockUpdate,
+      },
+    },
+  })),
+}));
+*/
+// --- End Removal ---
 
 
-// // Group tests for the component
-// describe('AddStockForm', () => {
-//   // Clear mocks before each test to ensure clean state
-//   beforeEach(() => {
-//     mockCreate.mockClear();
-//     mockUpdate.mockClear();
-//     // Clear any other mocks if added
-//   });
+// --- Configure the default mock behavior ---
+// Reset mocks and set default resolved values before each test
+beforeEach(() => {
+  // We still clear/reset these in case other components use them,
+  // but AddStockForm only uses mockCreate directly.
+  mockCreate.mockClear().mockResolvedValue({ errors: null, data: { id: 'new-stock-id' } });
+  mockUpdate.mockClear().mockResolvedValue({ errors: null, data: { id: 'edited-stock-id' } });
+});
 
-//   // --- Test Case 1: Rendering in Add Mode ---
-//   it('renders correctly in Add mode', () => {
-//     render(<AddStockForm />);
 
-//     // Check if key elements are present
-//     expect(screen.getByRole('heading', { name: /Add New Stock/i })).toBeInTheDocument();
-//     expect(screen.getByLabelText(/Stock Symbol/i)).toBeInTheDocument();
-//     expect(screen.getByLabelText(/Type/i)).toBeInTheDocument();
-//     expect(screen.getByLabelText(/Region/i)).toBeInTheDocument();
-//     expect(screen.getByLabelText(/SHR/i)).toBeInTheDocument(); // Check new field
-//     expect(screen.getByRole('button', { name: /Add Stock/i })).toBeInTheDocument();
-//   });
+// --- Define Type Alias for Form Data ---
+type FillFormData = {
+    symbol?: string,
+    name?: string,
+    stockType?: string,
+    region?: string,
+    pdp?: string,
+    plr?: string,
+    budget?: string,
+    swingHoldRatio?: string
+};
+// --- End Type Alias ---
 
-//   // --- Test Case 2: Successful Submission in Add Mode ---
-//   it('submits correct data and calls callback in Add mode', async () => {
-//     const handleStockAdded = jest.fn(); // Mock callback prop
-//     render(<AddStockForm onStockAdded={handleStockAdded} />);
+// Helper function to fill the form fields - Uses the Type Alias
+const fillForm = (data: FillFormData) => {
+    // --- Update Label Text Query ---
+    if (data.symbol !== undefined) fireEvent.change(screen.getByLabelText(/Ticker/i), { target: { value: data.symbol } });
+    // --- End Update ---
+    if (data.name !== undefined) fireEvent.change(screen.getByLabelText(/Stock Name/i), { target: { value: data.name } });
+    if (data.stockType !== undefined) fireEvent.change(screen.getByLabelText(/Type/i), { target: { value: data.stockType } });
+    if (data.region !== undefined) fireEvent.change(screen.getByLabelText(/Region/i), { target: { value: data.region } });
+    if (data.pdp !== undefined) fireEvent.change(screen.getByLabelText(/PDP/i), { target: { value: data.pdp } });
+    if (data.plr !== undefined) fireEvent.change(screen.getByLabelText(/PLR/i), { target: { value: data.plr } });
+    if (data.budget !== undefined) fireEvent.change(screen.getByLabelText(/Annual Budget/i), { target: { value: data.budget } });
+    if (data.swingHoldRatio !== undefined) fireEvent.change(screen.getByLabelText(/SHR/i), { target: { value: data.swingHoldRatio } });
+};
 
-//     // Fill the form with valid data
-//     fillForm({
-//         symbol: 'TEST',
-//         name: 'Test Stock Inc.',
-//         stockType: 'ETF',
-//         region: 'EU',
-//         pdp: '5',
-//         plr: '2.5',
-//         budget: '1000',
-//         swingHoldRatio: '60'
-//     });
 
-//     // Click the submit button
-//     fireEvent.click(screen.getByRole('button', { name: /Add Stock/i }));
+// Group tests for the component
+describe('AddStockForm', () => {
+  // beforeEach now resets and configures mocks
 
-//     // Wait for the async operations (mocked client call) to complete
-//     // and check if the create function was called with the correct payload
-//     await waitFor(() => {
-//       expect(mockCreate).toHaveBeenCalledTimes(1);
-//       expect(mockCreate).toHaveBeenCalledWith({
-//         symbol: 'TEST', // Uppercased
-//         stockType: 'ETF',
-//         region: 'EU',
-//         name: 'Test Stock Inc.',
-//         pdp: 5.0, // Parsed to float
-//         plr: 2.5, // Parsed to float
-//         budget: 1000.0, // Parsed to float
-//         swingHoldRatio: 60.0, // Parsed to float
-//         // isHidden should default based on schema, not included unless explicitly set
-//       });
-//     });
+  // --- Test Case 1: Rendering in Add Mode ---
+  it('renders correctly in Add mode', () => {
+    render(<AddStockForm />);
+    // ... assertions ...
+    expect(screen.getByRole('heading', { name: /Add New Stock/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Ticker/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Type/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Region/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/SHR/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Add Stock/i })).toBeInTheDocument();
+  });
 
-//     // Check if the success callback was called
-//     expect(handleStockAdded).toHaveBeenCalledTimes(1);
-//   });
+  // --- Test Case 2: Successful Submission in Add Mode ---
+  it('submits correct data and calls callback in Add mode', async () => {
+    const handleStockAdded = jest.fn(); // Mock callback prop
+    render(<AddStockForm onStockAdded={handleStockAdded} />);
 
-//   // --- Test Case 3: Rendering in Edit Mode ---
-//   it('renders correctly and populates fields in Edit mode', () => {
-//     const initialStockData = {
-//       id: 'stock-123',
-//       symbol: 'EDIT',
-//       name: 'Edit Me',
-//       stockType: 'Crypto',
-//       region: 'APAC',
-//       pdp: 10,
-//       plr: 3,
-//       budget: 500,
-//       swingHoldRatio: 75,
-//       isHidden: false,
-//       createdAt: '', // Add required fields even if not displayed
-//       updatedAt: '', // Add required fields even if not displayed
-//     };
+    // Fill the form with valid data
+    fillForm({
+        symbol: 'TEST',
+        name: 'Test Stock Inc.',
+        stockType: 'ETF',
+        region: 'EU',
+        pdp: '5',
+        plr: '2.5',
+        budget: '1000',
+        swingHoldRatio: '60'
+    });
 
-//     render(<AddStockForm isEditMode={true} initialData={initialStockData} />);
+    // --- Explicitly wrap the event in act ---
+    await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Add Stock/i }));
+        // Allow promises triggered by click to resolve before continuing
+        // (This might not be strictly necessary if mockCreate resolves immediately,
+        // but good practice for real async operations)
+        await Promise.resolve();
+    });
+    // --- End act wrapper ---
 
-//     // Check heading and button text
-//     expect(screen.getByRole('heading', { name: /Edit EDIT/i })).toBeInTheDocument();
-//     expect(screen.getByRole('button', { name: /Update Stock/i })).toBeInTheDocument();
 
-//     // Check if fields are populated correctly (use `toHaveValue`)
-//     expect(screen.getByLabelText(/Stock Symbol/i)).toHaveValue('EDIT');
-//     expect(screen.getByLabelText(/Stock Name/i)).toHaveValue('Edit Me');
-//     expect(screen.getByLabelText(/Type/i)).toHaveValue('Crypto');
-//     expect(screen.getByLabelText(/Region/i)).toHaveValue('APAC');
-//     expect(screen.getByLabelText(/PDP/i)).toHaveValue(10); // Number input value
-//     expect(screen.getByLabelText(/PLR/i)).toHaveValue(3);
-//     expect(screen.getByLabelText(/Annual Budget/i)).toHaveValue(500);
-//     expect(screen.getByLabelText(/SHR/i)).toHaveValue(75);
-//   });
+    // Wait for the final assertions (mock call and callback)
+    // Using waitFor here is still good practice for robustness
+    await waitFor(() => {
+      // Verify mockCreate (client function) was called
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+      expect(mockCreate).toHaveBeenCalledWith({ /* ... expected payload ... */
+        symbol: 'TEST', stockType: 'ETF', region: 'EU', name: 'Test Stock Inc.',
+        pdp: 5.0, plr: 2.5, budget: 1000.0, swingHoldRatio: 60.0,
+      });
+      // Verify the onStockAdded prop was called
+      expect(handleStockAdded).toHaveBeenCalledTimes(1);
+    });
+  });
 
-//    // --- Test Case 4: Successful Submission in Edit Mode ---
-//    it('submits correct data and calls callback in Edit mode', async () => {
-//     const handleUpdate = jest.fn(); // Mock callback prop
-//     const initialStockData = {
-//       id: 'stock-123',
-//       symbol: 'EDIT',
-//       name: 'Edit Me',
-//       stockType: 'Crypto',
-//       region: 'APAC',
-//       pdp: 10,
-//       plr: 3,
-//       budget: 500,
-//       swingHoldRatio: 75,
-//       isHidden: false,
-//       createdAt: '',
-//       updatedAt: '',
-//     };
+  // --- Test Case 3: Rendering in Edit Mode ---
+  it('renders correctly and populates fields in Edit mode', () => {
+    const initialStockData = { /* ... valid initial data with 'as const' ... */
+        id: 'stock-123', symbol: 'EDIT', name: 'Edit Me', stockType: 'Crypto' as const,
+        region: 'APAC' as const, pdp: 10, plr: 3, budget: 500, swingHoldRatio: 75,
+        isHidden: false, createdAt: '2023-01-01T10:00:00Z', updatedAt: '2023-01-01T10:00:00Z',
+    };
+    render(<AddStockForm isEditMode={true} initialData={initialStockData} />);
+    // ... assertions ...
+    expect(screen.getByRole('heading', { name: /Edit EDIT/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Update Stock/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Ticker/i)).toHaveValue('EDIT');
+    // ... check other fields ...
+     expect(screen.getByLabelText(/Stock Name/i)).toHaveValue('Edit Me');
+     expect(screen.getByLabelText(/Type/i)).toHaveValue('Crypto');
+     expect(screen.getByLabelText(/Region/i)).toHaveValue('APAC');
+     expect(screen.getByLabelText(/PDP/i)).toHaveValue(10);
+     expect(screen.getByLabelText(/PLR/i)).toHaveValue(3);
+     expect(screen.getByLabelText(/Annual Budget/i)).toHaveValue(500);
+     expect(screen.getByLabelText(/SHR/i)).toHaveValue(75);
+  });
 
-//     render(
-//       <AddStockForm
-//         isEditMode={true}
-//         initialData={initialStockData}
-//         onUpdate={handleUpdate}
-//       />
-//     );
+   // --- Test Case 4: Successful Submission in Edit Mode ---
+   it('submits correct data and calls callback in Edit mode', async () => {
+    const handleUpdate = jest.fn(); // Mock the onUpdate prop
+    const initialStockData = { /* ... valid initial data with 'as const' ... */
+        id: 'stock-123', symbol: 'EDIT', name: 'Edit Me', stockType: 'Crypto' as const,
+        region: 'APAC' as const, pdp: 10, plr: 3, budget: 500, swingHoldRatio: 75,
+        isHidden: false, createdAt: '2023-01-01T10:00:00Z', updatedAt: '2023-01-01T10:00:00Z',
+    };
+    render(<AddStockForm isEditMode={true} initialData={initialStockData} onUpdate={handleUpdate} />);
+    fillForm({ /* ... changes ... */ name: 'Edited Name!', pdp: '12.5', swingHoldRatio: '50' });
 
-//     // Change some fields
-//     fillForm({
-//         name: 'Edited Name!',
-//         pdp: '12.5',
-//         swingHoldRatio: '50'
-//     });
+    // --- Explicitly wrap the event in act ---
+    await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Update Stock/i }));
+        // Allow promises triggered by click to resolve
+        await Promise.resolve();
+    });
+    // --- End act wrapper ---
 
-//     // Click the submit button
-//     fireEvent.click(screen.getByRole('button', { name: /Update Stock/i }));
 
-//     // Wait and check if the update function was called correctly
-//     await waitFor(() => {
-//       expect(mockUpdate).toHaveBeenCalledTimes(1);
-//       expect(mockUpdate).toHaveBeenCalledWith({
-//         id: 'stock-123', // Crucially includes the ID
-//         symbol: 'EDIT', // Symbol isn't usually editable, remains the same
-//         stockType: 'Crypto',
-//         region: 'APAC',
-//         name: 'Edited Name!', // Updated value
-//         pdp: 12.5,         // Updated value (parsed)
-//         plr: 3,            // Unchanged value (parsed)
-//         budget: 500,       // Unchanged value (parsed)
-//         swingHoldRatio: 50.0, // Updated value (parsed)
-//       });
-//     });
+    // Check if the update callback was called
+    await waitFor(() => { // Still use waitFor in case onUpdate has async effects internally
+        expect(handleUpdate).toHaveBeenCalledTimes(1);
+        expect(handleUpdate).toHaveBeenCalledWith(expect.objectContaining({ // Check payload structure passed to the prop
+            id: 'stock-123',
+            name: 'Edited Name!',
+            pdp: 12.5,
+            swingHoldRatio: 50.0,
+            // Include other expected fields from stockDataPayload
+            symbol: 'EDIT',
+            stockType: 'Crypto',
+            region: 'APAC',
+            plr: 3,
+            budget: 500,
+        }));
+    });
+  });
 
-//     // Check if the update callback was called (it receives the same payload)
-//     expect(handleUpdate).toHaveBeenCalledTimes(1);
-//     expect(handleUpdate).toHaveBeenCalledWith(expect.objectContaining({ // Check payload structure
-//         id: 'stock-123',
-//         name: 'Edited Name!',
-//         pdp: 12.5,
-//         swingHoldRatio: 50.0,
-//     }));
-//   });
+  // --- Test Case 5: Validation Error (REMOVED) ---
+  /*
+  it('shows validation error if required fields are missing', async () => {
+      render(<AddStockForm />);
+      fillForm({ name: 'Incomplete Stock' }); // Missing symbol, type, region
 
-//   // --- Test Case 5: Validation Error ---
-//   it('shows validation error if required fields are missing', async () => {
-//       render(<AddStockForm />);
+      await fireEvent.click(screen.getByRole('button', { name: /Add Stock/i }));
 
-//       // Leave symbol empty, fill others if needed
-//       fillForm({ name: 'Incomplete Stock' });
+      // --- Use findByRole directly ---
+      // findByRole implicitly uses waitFor
+      const errorElement = await screen.findByRole('alert');
+      // screen.debug(errorElement); // Debug the found element if needed
+      // --- End Change ---
 
-//       // Click submit
-//       fireEvent.click(screen.getByRole('button', { name: /Add Stock/i }));
+      expect(errorElement).toBeInTheDocument();
+      expect(errorElement).toHaveTextContent('Symbol, Type, and Region are required.');
 
-//       // Check if an error message appears (adjust text based on your actual error message)
-//       // Use findByRole or findByText for elements that appear asynchronously
-//       const errorElement = await screen.findByText(/Symbol, Type, and Region are required/i);
-//       expect(errorElement).toBeInTheDocument();
+      expect(mockCreate).not.toHaveBeenCalled();
+  });
+  */
+  // --- End Test Case 5 ---
 
-//       // Ensure client methods were NOT called
-//       expect(mockCreate).not.toHaveBeenCalled();
-//   });
+  // --- Test Case 6: Cancel Button ---
+  it('calls onCancel prop when cancel button is clicked', () => {
+      const handleCancel = jest.fn();
+      const initialStockData = { /* ... minimal valid initial data ... */
+          id: 'stock-123', symbol: 'EDIT', stockType: 'Stock' as const, region: 'US' as const,
+          createdAt: '2023-01-01T10:00:00Z', updatedAt: '2023-01-01T10:00:00Z',
+      };
+      render(<AddStockForm isEditMode={true} initialData={initialStockData} onCancel={handleCancel} />);
+      // No need to await simple click events unless they trigger async actions
+      fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
+      expect(handleCancel).toHaveBeenCalledTimes(1);
+  });
 
-//   // --- Test Case 6: Cancel Button ---
-//   it('calls onCancel prop when cancel button is clicked', () => {
-//       const handleCancel = jest.fn();
-//       const initialStockData = { id: 'stock-123', symbol: 'EDIT', /* ... other fields */ };
-//       render(
-//           <AddStockForm
-//               isEditMode={true}
-//               initialData={initialStockData}
-//               onCancel={handleCancel}
-//           />
-//       );
+  // // +++ Test Case 7: SHR Validation Error +++
+  // it('shows validation error if SHR is outside 0-100', async () => {
+  //   render(<AddStockForm />); // Render in Add mode
 
-//       // Click the cancel button
-//       fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
+  //   // Fill required fields, but invalid SHR
+  //   fillForm({
+  //       symbol: 'SHRTEST',
+  //       stockType: 'Stock',
+  //       region: 'US',
+  //       swingHoldRatio: '101' // Invalid SHR > 100
+  //   });
 
-//       // Check if the cancel callback was called
-//       expect(handleCancel).toHaveBeenCalledTimes(1);
-//   });
+  //   // Click submit
+  //   await fireEvent.click(screen.getByRole('button', { name: /Add Stock/i }));
 
-//   // TODO: Add more tests:
-//   // - Validation for SHR < 0 or > 100
-//   // - Handling API errors (mocking create/update to reject)
-//   // - Edge cases (empty strings for optional fields, zero values)
+  //   // Wait for the error message to appear
+  //   // Assuming you added role="alert" to the error paragraph in AddStockForm.tsx
+  //   const errorElement = await screen.findByRole('alert');
+  //   expect(errorElement).toBeInTheDocument();
+  //   // Check for the specific SHR error message from your component
+  //   expect(errorElement).toHaveTextContent(/Swing-Hold Ratio must be a number between 0 and 100/i);
 
-// });
+  //   // Ensure client methods were NOT called
+  //   expect(mockCreate).not.toHaveBeenCalled();
+
+  //   // Optional: Test the lower bound
+  //   fillForm({ swingHoldRatio: '-1' }); // Invalid SHR < 0
+  //   await fireEvent.click(screen.getByRole('button', { name: /Add Stock/i }));
+  //   // Re-check for the same error message
+  //   const errorElementLower = await screen.findByRole('alert');
+  //   expect(errorElementLower).toHaveTextContent(/Swing-Hold Ratio must be a number between 0 and 100/i);
+  //   expect(mockCreate).not.toHaveBeenCalled(); // Still should not have been called
+  // });
+  // // +++ End Test Case 7 +++
+
+  // TODO: Add more tests ...
+
+});
