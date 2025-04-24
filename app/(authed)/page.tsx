@@ -858,7 +858,9 @@ export default function HomePage() {
                     }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
                             <div>
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Ann budget | available</p>
+                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Budget</p>
+                                
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Annual | Available</p>
                                 <p>
                                     ${portfolioBudgetStats.totalBudget.toFixed(CURRENCY_PRECISION)}
                                     &nbsp;|&nbsp;
