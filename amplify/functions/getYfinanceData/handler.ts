@@ -17,8 +17,14 @@ interface PriceResult {
 
 export const handler = async (event: GetPricesEvent): Promise<PriceResult[]> => {
   const symbols = event.arguments.symbols;
+
   if (!symbols || symbols.length === 0) return [];
   console.log(`Workspaceing prices & history for symbols: ${symbols.join(', ')}`);
+
+  // --- TEMPORARY WORKAROUND: Filter out BTC-USD ---
+  const symbolsToFetch = symbols.filter(symbol => symbol !== 'BTC-USD');
+  console.log(`getYfinanceData: Fetching prices for (excluding BTC-USD): ${symbolsToFetch.join(',')}`);
+  // --- END WORKAROUND ---
 
   const results: PriceResult[] = [];
 
@@ -27,13 +33,17 @@ export const handler = async (event: GetPricesEvent): Promise<PriceResult[]> => 
   startDate.setDate(startDate.getDate() - 7);
   const period1 = startDate.toISOString().split('T')[0]; // Format YYYY-MM-DD
 
-  const quotePromises = symbols.map(async (symbol) => {
+  const quotePromises = symbolsToFetch.map(async (symbol) => {
     try {
       // Fetch quote and history concurrently
       const [quote, history] = await Promise.all([
         yahooFinance.quote(symbol, { fields: ['regularMarketPrice'] }),
         yahooFinance.historical(symbol, { period1: period1, interval: '1d' })
       ]);
+
+      if (symbol === 'BTC-USD' && quote) {
+        console.log(`DEBUG: BTC-USD Quote Object: ${JSON.stringify(quote, null, 2)}`);
+      }
 
       const currentPrice = (quote && typeof quote.regularMarketPrice === 'number') ? quote.regularMarketPrice : null;
 

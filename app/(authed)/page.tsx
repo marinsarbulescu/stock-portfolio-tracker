@@ -287,7 +287,7 @@ export default function HomePage() {
     type ProcessedDataMap = Record<string, ProcessedStockData>; // Keyed by stock ID
 
     const processedData = useMemo((): ProcessedDataMap => {
-        console.log(`Processing ${allTransactions.length} transactions and ${allWallets.length} wallets...`);
+        //console.log(`Processing ${allTransactions.length} transactions and ${allWallets.length} wallets...`);
         const dataMap: ProcessedDataMap = {};
         const epsilon = 0.000001; // Tolerance for share checks
 
@@ -376,7 +376,7 @@ export default function HomePage() {
             dataMap[stockId] = stockData;
         }); // End loop through portfolioStocks
 
-        console.log("Finished processing transactions and wallets.", dataMap);
+        //console.log("Finished processing transactions and wallets.", dataMap);
         return dataMap;
     // Update dependencies: now depends on wallets too
     }, [allTransactions, allWallets, portfolioStocks]);
@@ -422,7 +422,7 @@ export default function HomePage() {
 
     // --- Calculate Final Report Data (Phase 3) ---
     const reportData = useMemo((): ReportDataItem[] => {
-        console.log("Calculating final report data based on processed data...");
+        //console.log("Calculating final report data based on processed data...");
 
         return portfolioStocks.map(stock => {
             const stockId: string = stock.id;
