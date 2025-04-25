@@ -16,8 +16,8 @@ import { usePrices } from '@/app/contexts/PriceContext';
 type StockWalletDataType = Schema['StockWallet']['type'];
 
 // Define the keys we can sort the table by (removed 'symbol')
-type SortableWalletKey = 'buyPrice' | 'totalInvestment' | 'totalSharesQty' | 'tpValue' | 'tpPercent' | 'sharesSold' | 
-    'realizedPl' | 'realizedPlPercent' | 'remainingShares' | 'sellTxnCount';
+// type SortableWalletKey = 'buyPrice' | 'totalInvestment' | 'totalSharesQty' | 'tpValue' | 'tpPercent' | 'sharesSold' | 
+//     'realizedPl' | 'realizedPlPercent' | 'remainingShares' | 'sellTxnCount';
 
 //type TransactionItem = Schema['Transaction']; // Already likely defined
 type TransactionDataType = Schema['Transaction']['type']; // Already likely defined
@@ -39,8 +39,148 @@ export default function StockWalletPage() {
     const params = useParams();
     const stockId = params.stockId as string; // Get stockId from dynamic route
 
-    //const { latestPrices } = usePrices(); // Add pricesLoading, pricesError if you want to display their states
+    // --- START: Transactions Table Visibility & Sorting ---
+    // Define the shape of the visibility state
+    interface TxnColumnVisibilityState {
+        date: boolean;
+        action: boolean;
+        txnType: boolean;
+        signal: boolean;
+        price: boolean;
+        lbd: boolean;
+        investment: boolean;
+        quantity: boolean;
+        proceeds: boolean;
+        txnProfit: boolean;
+        txnProfitPercent: boolean;
+        completedTxnId: boolean;            
+    }
 
+    // Initialize the state (decide defaults - here all are visible initially)
+    const [txnColumnVisibility, setTxnColumnVisibility] = useState<TxnColumnVisibilityState>({
+        date: false,
+        action: true,
+        txnType: true,
+        signal: false,
+        price: true,
+        lbd: false,
+        investment: true,
+        quantity: false,
+        proceeds: true,
+        txnProfit: false,
+        txnProfitPercent: false,
+        completedTxnId: false,
+    });
+    
+    // Mapping from state keys to desired display labels
+    const TXN_COLUMN_LABELS: Record<keyof TxnColumnVisibilityState, string> = {
+        date:'Date',
+        action: 'Txn',
+        txnType: 'Type',
+        signal: 'Signal',
+        price: 'Price',
+        lbd: 'LBD',
+        investment: 'Inv',
+        quantity: 'Qty',
+        proceeds: 'Sell $',
+        txnProfit: 'P/L',
+        txnProfitPercent: 'P/L (%)',
+        completedTxnId: 'Wallet ID',
+    };
+    
+    type SortableTxnKey =
+    | 'date'
+    | 'action'
+    | 'txnType'
+    | 'signal'
+    | 'price'
+    | 'lbd'
+    | 'investment'
+    | 'quantity'
+    | 'txnProfit' // Added for P/L $ sort
+    | 'txnProfitPercent' // Added for P/L % sort
+    | 'proceeds'; // Added key for sorting Proceeds
+    
+    const [txnSortConfig, setTxnSortConfig] = useState<{ key: SortableTxnKey; direction: 'ascending' | 'descending' } | null>(null);
+
+    const requestTxnSort = (key: SortableTxnKey) => {
+        let direction: 'ascending' | 'descending' = 'ascending';
+        if (txnSortConfig && txnSortConfig.key === key && txnSortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        setTxnSortConfig({ key, direction });
+    };
+    // --- END: Transactions Table Visibility & Sorting ---
+
+
+
+    // --- START: Wallet Table Visibility & Sorting ---
+    interface WalletColumnVisibilityState {
+        id: boolean;
+        buyPrice: boolean;
+        totalInvestment: boolean;
+        //totalSharesQty: boolean;
+        tpValue: boolean;
+        sellTxnCount: boolean;
+        sharesSold: boolean;
+        realizedPl: boolean;
+        realizedPlPercent: boolean;
+        remainingShares: boolean;
+    }
+
+    type SortableWalletKey =
+        | 'id'
+        | 'buyPrice'
+        | 'totalInvestment'
+        //| 'totalSharesQty'
+        | 'tpValue'
+        | 'sellTxnCount'
+        | 'sharesSold'
+        | 'realizedPl'
+        | 'realizedPlPercent'
+        | 'remainingShares';
+
+    const [walletColumnVisibility, setWalletColumnVisibility] = useState<WalletColumnVisibilityState>({
+        id: true,
+        buyPrice: false,
+        totalInvestment: true,
+        //totalSharesQty: true,
+        tpValue: true,
+        sellTxnCount: true,
+        sharesSold: false,
+        realizedPl: false,
+        realizedPlPercent: false,
+        remainingShares: true,
+    });
+
+    const WALLET_COLUMN_LABELS: Record<keyof WalletColumnVisibilityState, string> = {
+        id: 'Id',
+        buyPrice: 'Buy Price',
+        totalInvestment: 'Inv',
+        //totalSharesQty: 'Shares',
+        tpValue: 'TP',
+        sellTxnCount: 'Sells',
+        sharesSold: 'Shs Sold',
+        realizedPl: 'P/L',
+        realizedPlPercent: 'P/L (%)',
+        remainingShares: 'Shs Left',
+    };
+
+    // State for Wallet table sorting (use a distinct name)
+    const [walletSortConfig, setWalletSortConfig] = useState<{ key: SortableWalletKey; direction: 'ascending' | 'descending' } | null>(null);
+
+    // Sort request handler for Wallet table (use a distinct name)
+    const requestWalletSort = (key: SortableWalletKey) => {
+        let direction: 'ascending' | 'descending' = 'ascending';
+        if (walletSortConfig && walletSortConfig.key === key && walletSortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        setWalletSortConfig({ key, direction });
+    };
+    // --- END: State for Wallet Table Visibility & Sorting ---
+
+    
+    
     // --- State for Stock Symbol (for Title) ---
     const [stockSymbol, setStockSymbol] = useState<string | undefined>(undefined);
     const [name, setStockName] = useState<string | undefined>(undefined);
@@ -55,7 +195,7 @@ export default function StockWalletPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     // State for table sorting
-    const [sortConfig, setSortConfig] = useState<{ key: SortableWalletKey; direction: 'ascending' | 'descending' } | null>(null);
+    //const [sortConfig, setSortConfig] = useState<{ key: SortableWalletKey; direction: 'ascending' | 'descending' } | null>(null);
 
     const { latestPrices, pricesLoading, pricesError, lastPriceFetchTimestamp } = usePrices(); // <<< Ensure lastPriceFetchTimestamp is included
 
@@ -67,9 +207,65 @@ export default function StockWalletPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Separate modal for editing
     const [txnToEdit, setTxnToEdit] = useState<TransactionDataType | null>(null);
     // State for Sorting Txn Table
-    type SortableTxnKey = 'date' | 'action' | 'signal' | 'txnType' |'price' | 'investment' | 'quantity' | 'lbd'; // Simplified keys
-    const [txnSortConfig, setTxnSortConfig] = useState<{ key: SortableTxnKey; direction: 'ascending' | 'descending' } | null>(null);
+    //type SortableTxnKey = 'date' | 'action' | 'signal' | 'txnType' |'price' | 'investment' | 'quantity' | 'lbd'; // Simplified keys
+    //const [txnSortConfig, setTxnSortConfig] = useState<{ key: SortableTxnKey; direction: 'ascending' | 'descending' } | null>(null);
     // --- END ADD STATE ---
+
+    const sortedTransactions = useMemo(() => {
+        // Add calculated 'proceeds' if sorting by it is needed
+        let itemsWithProceeds = transactions.map(txn => ({
+            ...txn,
+            // Calculate proceeds only for sell transactions, default to null otherwise
+            proceeds: (txn.action === 'Sell' && typeof txn.price === 'number' && typeof txn.quantity === 'number')
+                ? txn.price * txn.quantity
+                : null
+        }));
+    
+        let sortableItems = [...itemsWithProceeds]; // Use the array with proceeds
+    
+        if (txnSortConfig !== null) {
+            sortableItems.sort((a, b) => {
+                 // Helper to handle nulls based on the CURRENT sort direction
+                 // Places nulls/undefined last consistently
+                const handleNulls = (val: any) => {
+                    if (val === null || val === undefined) {
+                        return txnSortConfig.direction === 'ascending' ? Infinity : -Infinity;
+                    }
+                    return val;
+                };
+    
+                // Use the correct key type which now includes proceeds, txnProfit, etc.
+                const key = txnSortConfig.key as keyof (typeof sortableItems[0]);
+    
+                // Get values using the key, handle potential undefined items if array is empty initially
+                const valA = a ? a[key] : undefined;
+                const valB = b ? b[key] : undefined;
+    
+                const resolvedA = handleNulls(valA);
+                const resolvedB = handleNulls(valB);
+    
+                let comparison = 0;
+    
+                 // Comparison logic (handle strings vs numbers)
+                 if (typeof resolvedA === 'string' && typeof resolvedB === 'string') {
+                    comparison = resolvedA.localeCompare(resolvedB);
+                 } else if (typeof resolvedA === 'number' && typeof resolvedB === 'number') {
+                     comparison = resolvedA - resolvedB; // Simpler numeric comparison
+                 } else {
+                     // Fallback for mixed types or other types (less likely with specific keys)
+                     if (resolvedA < resolvedB) comparison = -1;
+                     else if (resolvedA > resolvedB) comparison = 1;
+                 }
+    
+    
+                return txnSortConfig.direction === 'ascending' ? comparison : comparison * -1;
+            });
+        } else {
+            // Default sort: Date descending
+            sortableItems.sort((a, b) => (a.date && b.date) ? b.date.localeCompare(a.date) : 0);
+        }
+        return sortableItems;
+    }, [transactions, txnSortConfig]); // Dependency only on transactions and sort config
 
     // --- ADD NEW STATE for Sell Modal ---
     const [isSellModalOpen, setIsSellModalOpen] = useState(false);
@@ -786,42 +982,61 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
     }, [transactions, wallets]); // <<< Now depends on BOTH transactions and wallets
     // --- End UPDATED P/L Calc Memo ---
 
-    // --- Client-Side Sorting Logic (Removed Symbol Sort) ---
-    const sortedWallets = useMemo(() => {
-        let sortableItems = [...wallets];
-        if (sortConfig !== null) {
-             sortableItems.sort((a, b) => {
-                 // @ts-ignore - Allow index access for defined keys
-                 let valA = a[sortConfig.key];
-                 // @ts-ignore
-                 let valB = b[sortConfig.key];
 
-                 // Comparison logic (handle nulls to sort them last)
-                 let comparison = 0;
-                 const handleNulls = (val: any) => (val === null || val === undefined) ? (sortConfig.direction === 'ascending' ? Infinity : -Infinity) : val;
+    // --- START - Client-Side Sorting Logic for Wallets ---
+const sortedWallets = useMemo(() => {
+    console.log("[Memo] Sorting wallets...");
+    let sortableItems = [...wallets]; // Start with the raw wallets fetched
 
-                 const resolvedA = handleNulls(valA);
-                 const resolvedB = handleNulls(valB);
+    if (walletSortConfig !== null) { // Use the new state variable
+        sortableItems.sort((a, b) => {
+             // Helper for nulls/undefined - places them last consistently
+            const handleNulls = (val: any) => {
+                if (val === null || val === undefined) {
+                    // Use walletSortConfig here
+                    return walletSortConfig.direction === 'ascending' ? Infinity : -Infinity;
+                }
+                return val;
+            };
 
-                 if (typeof resolvedA === 'string' && typeof resolvedB === 'string') {
-                    comparison = resolvedA.localeCompare(resolvedB);
-                 } else {
-                    if (resolvedA < resolvedB) comparison = -1;
-                    else if (resolvedA > resolvedB) comparison = 1;
-                 }
+            // Use the correct key type for wallets
+            const key = walletSortConfig.key as keyof StockWalletDataType;
 
-                 return sortConfig.direction === 'ascending' ? comparison : comparison * -1;
-             });
-        } else {
-            // Default sort: Buy Price ascending
-            sortableItems.sort((a, b) => {
-                const priceA = a.buyPrice ?? 0;
-                const priceB = b.buyPrice ?? 0;
-                return priceA - priceB;
-            });
-        }
-        return sortableItems;
-    }, [wallets, sortConfig]);
+            const valA = a ? a[key] : undefined;
+            const valB = b ? b[key] : undefined;
+
+            const resolvedA = handleNulls(valA);
+            const resolvedB = handleNulls(valB);
+
+            let comparison = 0;
+
+            // Comparison logic (only numbers expected for wallet keys based on SortableWalletKey)
+            if (typeof resolvedA === 'number' && typeof resolvedB === 'number') {
+                comparison = resolvedA - resolvedB;
+            } else {
+                 // Basic fallback if somehow not numbers
+                 if (resolvedA < resolvedB) comparison = -1;
+                 else if (resolvedA > resolvedB) comparison = 1;
+            }
+
+            // Use walletSortConfig here
+            return walletSortConfig.direction === 'ascending' ? comparison : comparison * -1;
+        });
+    } else {
+        // Default sort: Keep the sort by TP ascending from fetchWallets if desired,
+        // or change to Buy Price ascending, or remove default client sort
+         sortableItems.sort((a, b) => { // Example: Default sort Buy Price Asc
+             const priceA = a.buyPrice ?? Infinity; // Nulls last
+             const priceB = b.buyPrice ?? Infinity; // Nulls last
+             return priceA - priceB;
+         });
+    }
+    console.log("[Memo] Wallets sorted.");
+    return sortableItems;
+}, [wallets, walletSortConfig]); // Use the new sort config state
+// --- END - Client-Side Sorting Logic for Wallets ---
+
+
 
     // --- ADD Client-Side Filtering for Tabs ---
     const swingWallets = useMemo(() => {
@@ -854,74 +1069,13 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
     // --- END Filtering Logic ---
 
     // --- ADD Txn Sorting Logic ---
-    const requestTxnSort = (key: SortableTxnKey) => {
-        let direction: 'ascending' | 'descending' = 'ascending';
-        if (txnSortConfig && txnSortConfig.key === key && txnSortConfig.direction === 'ascending') {
-            direction = 'descending';
-        }
-        setTxnSortConfig({ key, direction });
-    };
-
-    const sortedTransactions = useMemo(() => {
-        let sortableItems = [...transactions];
-        if (txnSortConfig !== null) {
-            sortableItems.sort((a, b) => {
-                // @ts-ignore - Allow index access by key
-                const valA = a[txnSortConfig.key];
-                // @ts-ignore
-                const valB = b[txnSortConfig.key];
-                let comparison = 0;
-                // Basic comparison, handle nulls simply
-                if (valA === null || valA === undefined) comparison = -1;
-                else if (valB === null || valB === undefined) comparison = 1;
-                else if (valA < valB) comparison = -1;
-                else if (valA > valB) comparison = 1;
-
-                return txnSortConfig.direction === 'ascending' ? comparison : comparison * -1;
-            });
-        } else {
-            // Default sort: Date descending
-            sortableItems.sort((a, b) => (a.date < b.date ? 1 : -1));
-        }
-        return sortableItems;
-    }, [transactions, txnSortConfig]);
-    // --- END Txn Sorting Logic ---
-
-
-    // Sort request handler
-    const requestSort = (key: SortableWalletKey) => {
-         let direction: 'ascending' | 'descending' = 'ascending';
-         if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
-             direction = 'descending';
-         }
-         setSortConfig({ key, direction });
-    };
-    // --- End Sorting Logic ---
-
-    const totalTiedUpInvestment = useMemo(() => {
-        // Ensure wallets data is loaded
-        if (!wallets || wallets.length === 0) {
-            return 0;
-        }
-    
-        //const epsilon = 0.000001; // Tolerance
-    
-        return wallets.reduce((totalTiedUp, wallet) => {
-            const totalInvestment = wallet.totalInvestment ?? 0;
-            const totalShares = wallet.totalSharesQty ?? 0;
-            const remainingShares = wallet.remainingShares ?? 0;
-    
-            // Calculate investment per share for this wallet (handle division by zero)
-            const investmentPerShare = (totalShares > SHARE_EPSILON) ? (totalInvestment / totalShares) : 0;
-    
-            // Calculate investment tied up in remaining shares for this wallet
-            const tiedUpInWallet = investmentPerShare * remainingShares;
-    
-            return totalTiedUp + tiedUpInWallet;
-        }, 0); // Start sum at 0
-    
-    }, [wallets]); // Recalculate when the wallets data changes
-
+    // const requestTxnSort = (key: SortableTxnKey) => {
+    //     let direction: 'ascending' | 'descending' = 'ascending';
+    //     if (txnSortConfig && txnSortConfig.key === key && txnSortConfig.direction === 'ascending') {
+    //         direction = 'descending';
+    //     }
+    //     setTxnSortConfig({ key, direction });
+    // };
     
 // --- UPDATED Memo for Total SWING YTD P/L ($ and %) ---
 const totalSwingYtdPL = useMemo(() => {
@@ -1021,6 +1175,32 @@ const totalSwingYtdPL = useMemo(() => {
 // Correct dependencies for this specific calculation
 }, [transactions, wallets, latestPrices, stockSymbol]); // Removed walletBuyPriceMap as it's internal now
 // --- End Total Swing YTD P/L Calc Memo ---
+
+
+const totalTiedUpInvestment = useMemo(() => {
+    // Ensure wallets data is loaded
+    if (!wallets || wallets.length === 0) {
+        return 0;
+    }
+
+    //const epsilon = 0.000001; // Tolerance
+
+    return wallets.reduce((totalTiedUp, wallet) => {
+        const totalInvestment = wallet.totalInvestment ?? 0;
+        const totalShares = wallet.totalSharesQty ?? 0;
+        const remainingShares = wallet.remainingShares ?? 0;
+
+        // Calculate investment per share for this wallet (handle division by zero)
+        const investmentPerShare = (totalShares > SHARE_EPSILON) ? (totalInvestment / totalShares) : 0;
+
+        // Calculate investment tied up in remaining shares for this wallet
+        const tiedUpInWallet = investmentPerShare * remainingShares;
+
+        return totalTiedUp + tiedUpInWallet;
+    }, 0); // Start sum at 0
+
+}, [wallets]); // Recalculate when the wallets data changes
+
 
 // --- ADD Memo for Total HOLD YTD P/L Calculation ---
 const totalHoldYtdPL = useMemo(() => {
@@ -1391,6 +1571,74 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
     };
     // --- END HANDLERS ---
 
+    // // Calculate the number of currently visible columns
+    // const visibleColumnCount = useMemo(() => {
+    //     // Start with columns that are always visible (e.g., Ticker)
+    //     let count = 1;
+    //     // Add count of toggleable columns that are currently true
+    //     count += (Object.values(reportColumnVisibility) as boolean[]).filter(Boolean).length;
+    //     return count;
+    // }, [reportColumnVisibility]);
+        
+        
+    // type ReportColumnKey = 
+    //     'action' | 
+    //     'txnType' | 
+    //     'signal' | 
+    //     'price' | 
+    //     'lbd' |
+    //     'investment' | 
+    //     'quantity' |
+    //     'proceeds' | 
+    //     'txnProfit' | 
+    //     'percentToTp' | 
+    //     'txnProfitPercent' | 
+    //     'completedTxnId';
+    // const [sortConfig, setSortConfig] = useState<{ key: ReportColumnKey; direction: 'ascending' | 'descending' } | null>(null);
+    
+    // const sortedTableData = useMemo(() => {
+    //         // Start with the calculated report data
+    //         let sortableItems = [...reportData];
+        
+    //         // Helper function to handle nulls/undefined for ASCENDING sort
+    //         // Treats null/undefined as infinitely large so they sort last
+    //         const handleNullAsc = (val: number | null | undefined): number => {
+    //             return (val === null || val === undefined) ? Infinity : val;
+    //         };
+        
+    //         if (sortConfig !== null) {
+    //             // --- User has clicked a header - Sort by selected column ---
+        
+    //             // Helper to handle nulls based on the CURRENT sort direction
+    //             const handleNullCurrent = (val: any) => {
+    //                if (val === null || val === undefined) {
+    //                   // Ascending: Nulls go last (Infinity). Descending: Nulls go last (-Infinity).
+    //                   return sortConfig.direction === 'ascending' ? Infinity : -Infinity;
+    //                }
+    //                return val;
+    //             }
+        
+    //             sortableItems.sort((a, b) => {
+    //                 // @ts-ignore - Allow property access using key (known TS issue)
+    //                 const valA = a[sortConfig.key];
+    //                 // @ts-ignore - Allow property access using key
+    //                 const valB = b[sortConfig.key];
+    //                 let comparison = 0;
+        
+    //                 const resolvedA = handleNullCurrent(valA);
+    //                 const resolvedB = handleNullCurrent(valB);
+        
+    //                 if (resolvedA < resolvedB) comparison = -1;
+    //                 else if (resolvedA > resolvedB) comparison = 1;
+        
+    //                 return sortConfig.direction === 'ascending' ? comparison : comparison * -1;
+    //             });
+    //         } else {
+                
+    //         }
+    //         return sortableItems;
+    //       }, [transactions, wallets, sortConfig]); // Dependencies
+    
     // --- Render Logic ---
     // Show loading indicator until stock symbol AND wallets are potentially loaded
      if (isLoading || stockSymbol === undefined) return <p>Loading wallet data...</p>;
@@ -1586,156 +1834,353 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
             </div>
             {/* End Overview Section */}
             
-            <p style={{ fontSize: '1.3em', marginTop: '40px' }}>Wallets</p>
+            {/* --- START: Wallets section --- */}
+            <div>
+                <p style={{ fontSize: '1.3em', marginTop: '40px' }}>Wallets</p>
 
-            {/* --- ADD TABS --- */}
-             <div style={{ marginBottom: '1rem', borderBottom: '1px solid #555', paddingBottom: '0.5rem' }}>
-                <button
-                    onClick={() => setActiveTab('Swing')}
-                    style={{
-                        padding: '8px 15px', marginRight: '10px', cursor: 'pointer',
-                        border: 'none', borderBottom: activeTab === 'Swing' ? '2px solid lightblue' : '2px solid transparent',
-                        background: 'none', color: activeTab === 'Swing' ? 'lightblue' : 'inherit',
-                        fontSize: '1em'
-                    }}
-                >
-                    Swing ({swingWallets.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab('Hold')}
-                     style={{
-                        padding: '8px 15px', cursor: 'pointer',
-                        border: 'none', borderBottom: activeTab === 'Hold' ? '2px solid lightgreen' : '2px solid transparent',
-                        background: 'none', color: activeTab === 'Hold' ? 'lightgreen' : 'inherit',
-                        fontSize: '1em'
-                    }}
-                >
-                    Hold ({holdWallets.length})
-                </button>
-             </div>
-             {/* --- END TABS --- */}
-            
-            {error && <p style={{ color: 'red' }}>Error loading wallets: {error}</p>}
+                {/* --- START: Wallets column toggles --- */}
+                <div style={{ marginBottom: '1rem', marginTop: '0.5rem', padding: '10px', border: '1px solid #353535', fontSize: '0.7em', color: "gray" }}>
+                    {(Object.keys(walletColumnVisibility) as Array<keyof WalletColumnVisibilityState>).map((key) => (
+                        <label key={key} style={{ marginLeft: '15px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={walletColumnVisibility[key]}
+                                onChange={() =>
+                                    setWalletColumnVisibility((prev) => ({
+                                        ...prev,
+                                        [key]: !prev[key],
+                                    }))
+                                }
+                                style={{ marginRight: '5px', cursor: 'pointer' }}
+                            />
+                            {WALLET_COLUMN_LABELS[key]}
+                        </label>
+                    ))}
+                </div>
+                {/* --- END: Wallets column toggles --- */}
+                
+                {/* --- START: Wallets tabs --- */}
+                <div style={{ marginBottom: '1rem' }}>
+                    <button
+                        onClick={() => setActiveTab('Swing')}
+                        style={{
+                            padding: '8px 15px', marginRight: '10px', cursor: 'pointer',
+                            border: 'none', borderBottom: activeTab === 'Swing' ? '2px solid lightblue' : '2px solid transparent',
+                            background: 'none', color: activeTab === 'Swing' ? 'lightblue' : 'inherit',
+                            fontSize: '1em'
+                        }}
+                    >
+                        Swing ({swingWallets.length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('Hold')}
+                        style={{
+                            padding: '8px 15px', cursor: 'pointer',
+                            border: 'none', borderBottom: activeTab === 'Hold' ? '2px solid lightgreen' : '2px solid transparent',
+                            background: 'none', color: activeTab === 'Hold' ? 'lightgreen' : 'inherit',
+                            fontSize: '1em'
+                        }}
+                    >
+                        Hold ({holdWallets.length})
+                    </button>
+                </div>
+                {/* --- END: Wallets tabs --- */}
+                
+                {error && <p style={{ color: 'red' }}>Error loading wallets: {error}</p>}
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
-                <thead>
-                    <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
-                        <th style={{ padding: '5px', fontSize: '0.9em', color: 'grey'}}>Wallet ID</th>
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('buyPrice')}>
-                            Buy Price {sortConfig?.key === 'buyPrice' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('totalInvestment')}>
-                            Inv {sortConfig?.key === 'totalInvestment' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('totalSharesQty')}>
-                            Shares {sortConfig?.key === 'totalSharesQty' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('tpValue')}>
-                            TP ($) {sortConfig?.key === 'tpValue' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        {/* <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('tpPercent')}>
-                            TP (%) {sortConfig?.key === 'tpPercent' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th> */}
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('sellTxnCount')}>
-                            Sells {sortConfig?.key === 'sellTxnCount' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('sharesSold')}>
-                            Shs Sold {sortConfig?.key === 'sharesSold' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('realizedPl')}>
-                            P/L ($) {sortConfig?.key === 'realizedPl' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('realizedPlPercent')}>
-                            P/L (%) {sortConfig?.key === 'realizedPlPercent' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('remainingShares')}>
-                            Shs Left {sortConfig?.key === 'remainingShares' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        <th style={{ padding: '5px' }}>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {/* Check if the selected filtered list is empty */}
-                    {(activeTab === 'Swing' ? swingWallets : holdWallets).length === 0 ? (
-                        <tr>
-                            <td colSpan={11} style={{ textAlign: 'center', padding: '1rem' }}>
-                                No {activeTab} wallets found for this stock.
-                            </td>
+                {/* --- START: Wallets table --- */}
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
+                    <thead>
+                        <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
+                            {walletColumnVisibility.id && (
+                                <th style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>Wallet ID</th>
+                            )}
+
+                            {walletColumnVisibility.buyPrice && (
+                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('buyPrice')}>
+                                    Buy Price {walletSortConfig?.key === 'buyPrice' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                </th>
+                            )}
+                            {walletColumnVisibility.totalInvestment && (
+                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('totalInvestment')}>
+                                    Inv {walletSortConfig?.key === 'totalInvestment' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                </th>
+                            )}
+                            {/* {walletColumnVisibility.totalSharesQty && (
+                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('totalSharesQty')}>
+                                    Shares {walletSortConfig?.key === 'totalSharesQty' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                </th>
+                            )} */}
+                            {walletColumnVisibility.tpValue && (
+                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('tpValue')}>
+                                    TP {walletSortConfig?.key === 'tpValue' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                </th>
+                            )}
+                            {walletColumnVisibility.sellTxnCount && (
+                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('sellTxnCount')}>
+                                    Sells {walletSortConfig?.key === 'sellTxnCount' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                </th>
+                            )}
+                            {walletColumnVisibility.sharesSold && (
+                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('sharesSold')}>
+                                    Shs Sold {walletSortConfig?.key === 'sharesSold' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                </th>
+                            )}
+                            {walletColumnVisibility.realizedPl && (
+                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('realizedPl')}>
+                                    P/L {walletSortConfig?.key === 'realizedPl' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                </th>
+                            )}
+                            {walletColumnVisibility.realizedPlPercent && (
+                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('realizedPlPercent')}>
+                                    P/L (%) {walletSortConfig?.key === 'realizedPlPercent' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                </th>
+                            )}
+                            {walletColumnVisibility.remainingShares && (
+                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('remainingShares')}>
+                                    Shs Left {walletSortConfig?.key === 'remainingShares' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                </th>
+                            )}
+
+                            {/* Actions - Always visible */}
+                            <th style={{ padding: '5px', textAlign: 'center' }}>Actions</th>
                         </tr>
-                    ) : (
-                        (activeTab === 'Swing' ? swingWallets : holdWallets).map((wallet, index) => {
-                            const currentStockPrice = latestPrices[stockSymbol ?? '']?.currentPrice;
-                            return (
-                                <tr
-                                    key={wallet.id}
-                                    style={{
-                                        backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent',
-                                    }}
-                                >
-                                    {/* Render cells using the 'wallet' object from the filtered list */}
-                                    <td style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>{truncateId(wallet.id)}</td>
-                                    <td style={{ padding: '5px' }}>{formatCurrency(wallet.buyPrice)}</td>
-                                    <td style={{ padding: '5px' }}>{formatCurrency(wallet.totalInvestment)}</td>
-                                    <td style={{ padding: '5px' }}>{formatShares(wallet.totalSharesQty)}</td>
-                                    <td style={{
-                                        padding: '5px',
-                                        ...getTpCellStyle(wallet, currentStockPrice) // Apply conditional style
-                                    }}>
-                                        {formatCurrency(wallet.tpValue)}
-                                    </td>
-                                    {/* <td style={{ padding: '5px' }}>{formatPercent(wallet.tpPercent)}</td> */}
-                                    <td style={{ padding: '5px' }}>{wallet.sellTxnCount ?? 0}</td>
-                                    <td style={{ padding: '5px' }}>{formatShares(wallet.sharesSold)}</td>
-                                    <td style={{ padding: '5px' }}>{formatCurrency(wallet.realizedPl)}</td>
-                                    <td style={{ padding: '5px' }}>{formatPercent(wallet.realizedPlPercent)}</td>
-                                    <td style={{ padding: '5px' }}>{formatShares(wallet.remainingShares)}</td>
-                                    <td style={{ padding: '5px', textAlign: 'center' }}>
-                                        {/* Sell button logic using the correct 'wallet' */}
-                                        {wallet.remainingShares && wallet.remainingShares > 0 ? (
-                                            <button
-                                                onClick={() => handleOpenSellModal(wallet)}
-                                                style={{
-                                                    background: 'none', border: 'none', cursor: 'pointer',
-                                                    padding: '5px', color: '#28a745', fontSize: '1.1em'
-                                                }}
-                                                title={`Sell from Wallet (Buy Price: ${formatCurrency(wallet.buyPrice)})`}
-                                                disabled={!wallet.remainingShares || wallet.remainingShares <= 0}
-                                            >
-                                                <FaDollarSign />
-                                            </button>
-                                        ) : (
-                                            '' // Show '-' if no remaining shares
+                    </thead>
+                    <tbody>
+                        {/* Check if the selected filtered list is empty */}
+                        {(activeTab === 'Swing' ? swingWallets : holdWallets).length === 0 ? (
+                            <tr>
+                                {/* Calculate colspan dynamically */}
+                                <td colSpan={
+                                    (Object.values(walletColumnVisibility).filter(Boolean).length) + 2 // +1 for WalletID, +1 for Actions
+                                } style={{ textAlign: 'center', padding: '1rem' }}>
+                                    No {activeTab} wallets found for this stock.
+                                </td>
+                            </tr>
+                        ) : (
+                            // Map over the correct list (swingWallets or holdWallets which are derived from sortedWallets)
+                            (activeTab === 'Swing' ? swingWallets : holdWallets).map((wallet, index) => {
+                                const currentStockPrice = latestPrices[stockSymbol ?? '']?.currentPrice;
+                                return (
+                                    <tr key={wallet.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
+                                        {walletColumnVisibility.id && <td style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>{truncateId(wallet.id)}</td>}
+                                        {walletColumnVisibility.buyPrice && <td style={{ padding: '5px' }}>{formatCurrency(wallet.buyPrice)}</td>}
+                                        {walletColumnVisibility.totalInvestment && <td style={{ padding: '5px' }}>{formatCurrency(wallet.totalInvestment)}</td>}
+                                        {/* {walletColumnVisibility.totalSharesQty && <td style={{ padding: '5px' }}>{formatShares(wallet.totalSharesQty)}</td>} */}
+                                        {walletColumnVisibility.tpValue && (
+                                            <td style={{ padding: '5px', ...getTpCellStyle(wallet, currentStockPrice) }}>
+                                                {formatCurrency(wallet.tpValue)}
+                                            </td>
                                         )}
+                                        {walletColumnVisibility.sellTxnCount && <td style={{ padding: '5px' }}>{wallet.sellTxnCount ?? 0}</td>}
+                                        {walletColumnVisibility.sharesSold && <td style={{ padding: '5px' }}>{formatShares(wallet.sharesSold)}</td>}
+                                        {walletColumnVisibility.realizedPl && <td style={{ padding: '5px' }}>{formatCurrency(wallet.realizedPl)}</td>}
+                                        {walletColumnVisibility.realizedPlPercent && <td style={{ padding: '5px' }}>{formatPercent(wallet.realizedPlPercent)}</td>}
+                                        {walletColumnVisibility.remainingShares && <td style={{ padding: '5px' }}>{formatShares(wallet.remainingShares)}</td>}
 
-                                        {/* --- ADD DELETE BUTTON --- */}
-                                        {wallet.remainingShares === 0 ? (
-                                            <button
-                                                onClick={() => handleDeleteWallet(wallet)} // <<< Call new handler
-                                                // Enable only if remaining shares are effectively zero
-                                                disabled={(wallet.remainingShares ?? 0) > 0.000001}
-                                                title={ (wallet.remainingShares ?? 0) > 0.000001 ? "Delete disabled (shares remain)" : `Delete Empty ${wallet.walletType} Wallet` }
-                                                style={{
-                                                    background: 'none', border: 'none', cursor: 'pointer',
-                                                    padding: '5px', marginLeft: '8px', // Add some space
-                                                    // Grey out when disabled, make red when enabled?
-                                                    color: 'gray', // Grey or Red
-                                                    fontSize: '1.1em'
-                                                }}
-                                            >
-                                                <FaTrashAlt />
-                                            </button>
-                                        ) : (
-                                            '' // Show '-' if no remaining shares
-                                        )}
-                                        {/* --- END DELETE BUTTON --- */}
-                                    </td>
-                                </tr>
-                            )
-                        }) // End map over the CORRECT list
-                    )}
-                </tbody>
-            </table>
+                                        {/* Actions - Always Visible */}
+                                        <td style={{ padding: '5px', textAlign: 'center' }}>
+                                            {/* Sell Button */}
+                                            {wallet.remainingShares && wallet.remainingShares > SHARE_EPSILON ? ( // Use Epsilon
+                                                <button onClick={() => handleOpenSellModal(wallet)} title="Sell from wallet" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: '#28a745' }}>
+                                                    <FaDollarSign />
+                                                </button>
+                                            ) : ''}
+                                            {/* Delete Button */}
+                                            {Math.abs(wallet.remainingShares ?? 0) < SHARE_EPSILON ? ( // Use Epsilon
+                                                <button onClick={() => handleDeleteWallet(wallet)}  title="Delete wallet" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray' }}>
+                                                    <FaTrashAlt />
+                                                </button>
+                                            ) : ''}
+                                        </td>
+                                    </tr>
+                                );
+                            }) // End map
+                        )}
+                    </tbody>
+                </table>
+                {/* --- END: Wallets table --- */}
+                {/* --- END: Wallets section --- */}
+            </div>
+
+            {/* --- START: Transactions section --- */}
+            <div style={{ marginTop: '2rem' }}>
+                <p style={{ fontSize: '1.3em' }}>Transactions</p>
+
+                {isTxnLoading && <p>Loading transaction history...</p>}
+                {txnError && <p style={{ color: 'red' }}>Error loading transactions: {txnError}</p>}
+
+                
+                {/* --- START: Transactions column toggles --- */}
+                <div style={{ marginBottom: '1rem', marginTop: '1rem', padding: '10px', border: '1px solid #353535', fontSize: '0.7em', color: "gray" }}>
+                    {(Object.keys(txnColumnVisibility) as Array<keyof TxnColumnVisibilityState>).map((key) => (
+                        <label key={key} style={{ marginLeft: '15px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={txnColumnVisibility[key]}
+                                onChange={() =>
+                                    // Update the NEW state
+                                    setTxnColumnVisibility((prev) => ({
+                                        ...prev,
+                                        [key]: !prev[key],
+                                    }))
+                                }
+                                style={{ marginRight: '5px', cursor: 'pointer' }}
+                            />
+                            {/* Use the NEW labels */}
+                            {TXN_COLUMN_LABELS[key]}
+                        </label>
+                    ))}
+                </div>
+                {/* --- END: Transactions column toggles --- */}
+
+                {/* --- START: Transactions table --- */}
+                {!isTxnLoading && !txnError && (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
+                                {txnColumnVisibility.date && (
+                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('date')}>
+                                        {TXN_COLUMN_LABELS.date} {txnSortConfig?.key === 'date' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                    </th>
+                                )}
+                                {txnColumnVisibility.action && (
+                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('action')}>
+                                        {TXN_COLUMN_LABELS.action} {txnSortConfig?.key === 'action' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                    </th>
+                                )}
+                                {txnColumnVisibility.txnType && (
+                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('txnType')}>
+                                        {TXN_COLUMN_LABELS.txnType} {txnSortConfig?.key === 'txnType' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                    </th>
+                                )}
+                                {txnColumnVisibility.signal && (
+                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('signal')}>
+                                        {TXN_COLUMN_LABELS.signal} {txnSortConfig?.key === 'signal' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                    </th>
+                                )}
+                                {txnColumnVisibility.price && (
+                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('price')}>
+                                        {TXN_COLUMN_LABELS.price} {txnSortConfig?.key === 'price' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                    </th>
+                                )}
+                                {txnColumnVisibility.lbd && (
+                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('lbd')}>
+                                        {TXN_COLUMN_LABELS.lbd} {txnSortConfig?.key === 'lbd' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                    </th>
+                                )}
+                                {txnColumnVisibility.investment && (
+                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('investment')}>
+                                        {TXN_COLUMN_LABELS.investment} {txnSortConfig?.key === 'investment' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                    </th>
+                                )}
+                                {txnColumnVisibility.quantity && (
+                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('quantity')}>
+                                        {TXN_COLUMN_LABELS.quantity} {txnSortConfig?.key === 'quantity' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                    </th>
+                                )}
+                                {txnColumnVisibility.proceeds && (
+                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('proceeds')}>
+                                        {TXN_COLUMN_LABELS.proceeds} {txnSortConfig?.key === 'proceeds' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                    </th>
+                                )}
+                                {txnColumnVisibility.txnProfit && (
+                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('txnProfit')}>
+                                        {TXN_COLUMN_LABELS.txnProfit} {txnSortConfig?.key === 'txnProfit' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                    </th>
+                                )}
+                                {txnColumnVisibility.txnProfitPercent && (
+                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('txnProfitPercent')}>
+                                        {TXN_COLUMN_LABELS.txnProfitPercent} {txnSortConfig?.key === 'txnProfitPercent' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                    </th>
+                                )}
+                                {txnColumnVisibility.completedTxnId && (
+                                    // Assuming Wallet ID isn't meant to be sortable by default, remove onClick if needed
+                                    <th style={{ padding: '5px', fontSize: '0.9em', color: 'grey' /*, cursor: 'pointer'*/ }} /* onClick={() => requestTxnSort('completedTxnId')} */ >
+                                        {TXN_COLUMN_LABELS.completedTxnId} {/* {txnSortConfig?.key === 'completedTxnId' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''} */}
+                                    </th>
+                                )}
+                                {/* Actions column is always visible */}
+                                <th style={{ padding: '5px', textAlign: 'center' }}>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sortedTransactions.length === 0 ? (
+                                    <tr>
+                                         {/* Calculate colspan dynamically based on VISIBLE columns + Actions */}
+                                        <td colSpan={
+                                            (Object.values(txnColumnVisibility).filter(Boolean).length) + 1 // +1 for Actions
+                                        } style={{ textAlign: 'center', padding: '1rem' }}>
+                                            No transactions found for this stock.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    sortedTransactions.map((txn, index) => (
+                                        <tr
+                                            key={txn.id}
+                                            style={{
+                                                backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent',
+                                            }}
+                                        >
+                                            {/* Wrap each cell conditionally */}
+                                            {txnColumnVisibility.date && <td style={{ padding: '5px' }}>{txn.date}</td>}
+                                            {txnColumnVisibility.action && <td style={{ padding: '5px' }}>{txn.action}</td>}
+                                            {txnColumnVisibility.txnType && <td style={{ padding: '5px' }}>{txn.txnType ?? '-'}</td>}
+                                            {txnColumnVisibility.signal && <td style={{ padding: '5px' }}>{txn.signal ?? '-'}</td>}
+                                            {txnColumnVisibility.price && <td style={{ padding: '5px' }}>{formatCurrency(txn.price)}</td>}
+                                            {txnColumnVisibility.lbd && <td style={{ padding: '5px' }}>{txn.action === 'Buy' ? formatCurrency(txn.lbd) : '-'}</td>}
+                                            {txnColumnVisibility.investment && <td style={{ padding: '5px' }}>{txn.action !== 'Sell' ? formatCurrency(txn.investment) : '-'}</td>}
+                                            {txnColumnVisibility.quantity && <td style={{ padding: '5px' }}>{formatShares(txn.quantity)}</td>}
+                                            {txnColumnVisibility.proceeds && (
+                                                <td style={{ padding: '5px' }}>
+                                                    {(txn.action === 'Sell' && typeof txn.price === 'number' && typeof txn.quantity === 'number')
+                                                        ? formatCurrency(txn.price * txn.quantity) // Calculate Proceeds
+                                                        : '-'
+                                                    }
+                                                </td>
+                                            )}
+                                            {txnColumnVisibility.txnProfit && (
+                                                <td style={{
+                                                    padding: '5px',
+                                                    color: txn.action !== 'Sell' || txn.txnProfit == null ? 'inherit' : txn.txnProfit >= 0 ? '#01ff00' : '#ff0000'
+                                                }}>
+                                                    {txn.action === 'Sell' ? formatCurrency(txn.txnProfit) : '-'}
+                                                </td>
+                                            )}
+                                            {txnColumnVisibility.txnProfitPercent && (
+                                                <td style={{
+                                                    padding: '5px',
+                                                    color: txn.action !== 'Sell' || txn.txnProfitPercent == null ? 'inherit' : txn.txnProfitPercent >= 0 ? '#01ff00' : '#ff0000'
+                                                }}>
+                                                    {txn.action === 'Sell' ? formatPercent(txn.txnProfitPercent) : '-'}
+                                                </td>
+                                            )}
+                                            {txnColumnVisibility.completedTxnId && (
+                                                <td style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>
+                                                     {txn.action === 'Sell' ? truncateId(txn.completedTxnId) : '-'}
+                                                </td>
+                                            )}
+
+                                            {/* Actions column always visible */}
+                                            <td style={{ padding: '5px', textAlign: 'center' }}>
+                                                {/* Edit/Delete buttons */}
+                                                {/* Use 'as any' or ensure 'txn' from map matches TransactionDataType for handlers */}
+                                                <button onClick={() => handleEditTxnClick(txn as any)} title="Edit Transaction" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray', marginRight: '5px' }}><FaEdit /></button>
+                                                <button onClick={() => handleDeleteTransaction(txn as any)} title="Delete Transaction" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray' }}><FaTrashAlt /></button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )
+                            }
+                        </tbody>
+                    </table>
+                )}
+                {/* --- END: Transactions table --- */}
+            </div>
+            {/* --- END: Transactions section --- */}
+
             
+            {/* --- START: Sell modal --- */}
             {isSellModalOpen && walletToSell && (
                 <div style={modalOverlayStyle}> {/* Outer overlay div */}
                     <div style={modalContentStyle}> {/* Modal content container */}
@@ -1789,7 +2234,9 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
                     </div> 
                 </div>
             )}
+            {/* --- END: Sell modal --- */}
 
+            {/* --- START: Buy modal --- */}
             {isBuyModalOpen && (
                 <div style={modalOverlayStyle}> {/* Reuse styles */}
                     <div style={{ ...modalContentStyle, minWidth: '400px' }}> {/* Slightly wider? */}
@@ -1809,72 +2256,9 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
                     </div>
                 </div>
             )}
-
-            <div style={{ marginTop: '2rem' }}>
-                <p style={{ fontSize: '1.3em' }}>Transactions</p>
-
-                {/* Loading/Error Display */}
-                {isTxnLoading && <p>Loading transaction history...</p>}
-                {txnError && <p style={{ color: 'red' }}>Error loading transactions: {txnError}</p>}
-
-                {/* Transaction Table */}
-                {!isTxnLoading && !txnError && (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
-                        <thead>
-                            <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
-                                {/* Simplified Columns */}
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('date')}>Date</th>
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('action')}>Txn</th>
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('txnType')}>Type</th>
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('signal')}>Signal</th>
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('price')}>Price</th>
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('investment')}>Inv</th>
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('quantity')}>Quantity</th>
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('lbd')}>LBD</th>
-                                <th style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>Wallet ID</th>
-                                <th style={{ padding: '5px' }}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sortedTransactions.length === 0 ? (
-                                <tr>
-                                    <td colSpan={10} style={{ textAlign: 'center', padding: '1rem' }}> {/* Adjust colspan */}
-                                        No transactions found for this stock.
-                                    </td>
-                                </tr>
-                            ) : (
-                                sortedTransactions.map((txn, index) => (
-                                    <tr
-                                        key={txn.id}
-                                        style={{
-                                            backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent',
-                                        }}
-                                    >
-                                        <td style={{ padding: '5px' }}>{txn.date}</td>
-                                        <td style={{ padding: '5px' }}>{txn.action}</td>
-                                        <td style={{ padding: '5px' }}>{txn.txnType ?? '-'}</td>
-                                        <td style={{ padding: '5px' }}>{txn.signal ?? '-'}</td>
-                                        <td style={{ padding: '5px' }}>{formatCurrency(txn.price)}</td>
-                                        {/* Show investment only if Buy/Div */}
-                                        <td style={{ padding: '5px' }}>{txn.action !== 'Sell' ? formatCurrency(txn.investment) : '-'}</td>
-                                        <td style={{ padding: '5px' }}>{formatShares(txn.quantity)}</td>
-                                        {/* Show LBD only if Buy */}
-                                        <td style={{ padding: '5px' }}>{txn.action === 'Buy' ? formatCurrency(txn.lbd) : '-'}</td>
-                                        <td style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>
-                                            {txn.action === 'Sell' ? truncateId(txn.completedTxnId) : '-'}
-                                        </td>
-                                        <td style={{ padding: '5px', textAlign: 'center' }}>
-                                            <button onClick={() => handleEditTxnClick(txn)} title="Edit Transaction" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray', marginRight: '5px' }}><FaEdit /></button>
-                                            <button onClick={() => handleDeleteTransaction(txn)} title="Delete Transaction" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray' }}><FaTrashAlt /></button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                )}
-            </div>
-
+            {/* --- END: Buy modal --- */}
+            
+            {/* --- START: Edit modal --- */}
             {isEditModalOpen && txnToEdit && (
                 <div style={modalOverlayStyle}> {/* Reuse styles */}
                     <div style={{ ...modalContentStyle, minWidth: '400px' }}>
@@ -1891,7 +2275,7 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
                     </div>
                 </div>
             )}
-        
+            {/* --- END: Edit modal --- */}        
         </div>
     );
 }

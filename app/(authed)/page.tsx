@@ -967,13 +967,11 @@ export default function HomePage() {
                             <div>
                                 <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>YTD P/L</p>
 
-                                {/* --- NEW: Conditionally display warning based on partialDataUsed flag --- */}
                                 {portfolioYtdPL.partialDataUsed && (
                                     <p style={{ margin: '5px 0 0 0', fontSize: '0.8em', fontStyle: 'italic', color: 'orange' }}>
-                                    (* only w/ price)
+                                    (* only holdings w/ price)
                                     </p>
                                 )}
-                                {/* --- End New Warning --- */}
                                 
                                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing YTD P/L</p>
                                 <p>
