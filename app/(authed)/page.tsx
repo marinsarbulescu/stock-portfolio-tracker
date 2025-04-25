@@ -606,6 +606,12 @@ export default function HomePage() {
 
     // Calculate YTD P/L Stats
     const portfolioYtdPL = useMemo(() => {
+        console.log('[YTD Calc Start] Input Lengths:', {
+            allWallets: allWallets.length,
+            portfolioStocks: portfolioStocks.length,
+            latestPrices: Object.keys(latestPrices).length,
+            allTransactions: allTransactions.length
+        });
         const walletBuyPriceMap = new Map<string, number>();
         allWallets.forEach(w => { if (w.id && typeof w.buyPrice === 'number') walletBuyPriceMap.set(w.id, w.buyPrice); });
 
@@ -615,7 +621,7 @@ export default function HomePage() {
         let ytdRealizedSwingPL = 0, ytdRealizedHoldPL = 0;
         let currentUnrealizedSwingPL = 0, currentSwingCostBasis = 0;
         let currentUnrealizedHoldPL = 0, currentHoldCostBasis = 0;
-        let priceAvailable = true;
+        let partialDataUsed = false;
 
         // YTD Realized
         allTransactions.forEach(txn => {
@@ -629,10 +635,27 @@ export default function HomePage() {
             }
         });
 
+        console.log('[YTD Calc] After Realized Calc:', { ytdRealizedSwingPL, ytdRealizedHoldPL });
+
+        // Current Unrealized and Cost Basis (Price dependency here)
+        console.log('[YTD Calc] Starting Unrealized Calc Loop...');
+
         // Current Unrealized and Cost Basis
-        allWallets.forEach(wallet => {
-            const currentPrice = latestPrices[portfolioStocks.find(s => s.id === wallet.portfolioStockId)?.symbol ?? '']?.currentPrice ?? null;
-            if (currentPrice === null) priceAvailable = false; // Mark if any price is missing
+        allWallets.forEach((wallet, index) => {
+            const stockForWallet = portfolioStocks.find(s => s.id === wallet.portfolioStockId);
+            const stockSymbol = stockForWallet?.symbol ?? null;
+            console.log(`[YTD Calc Loop ${index}] WalletID=${wallet.id} StockID=${wallet.portfolioStockId} -> Symbol=${stockSymbol}`);
+
+            const currentPrice = latestPrices[stockSymbol ?? '']?.currentPrice ?? null;
+            // --- LOG 3: Log Price Lookup Result ---
+            console.log(`[YTD Calc Loop ${index}] Price lookup for ${stockSymbol}:`, currentPrice);
+            
+            if (currentPrice === null && (wallet.remainingShares ?? 0) > SHARE_EPSILON) {
+                // --- LOG 4: Log EXACTLY when priceAvailable becomes false ---
+                partialDataUsed = true;
+                console.warn(`[YTD Calc Loop ${index}] Setting priceAvailable=false. Missing price for symbol: ${stockSymbol} (Wallet ID: ${wallet.id})`);
+                return;
+            }
 
             if ((wallet.remainingShares ?? 0) > SHARE_EPSILON && typeof wallet.buyPrice === 'number' && typeof currentPrice === 'number') {
                 const unrealizedForWallet = (currentPrice - wallet.buyPrice) * wallet.remainingShares!;
@@ -646,12 +669,17 @@ export default function HomePage() {
                 }
             }
         });
+        
+        console.log('[YTD Calc] After Unrealized Loop:', { currentUnrealizedSwingPL, currentSwingCostBasis, currentUnrealizedHoldPL, currentHoldCostBasis });
 
-        if (!priceAvailable) {
-            console.warn("[Portfolio YTD P/L] Cannot calculate full unrealized P/L: One or more current prices unavailable.");
-            // Return nulls for values depending on unrealized P/L
-            return { totalSwingYtdPL_dollars: null, totalSwingYtdPL_percent: null, totalHoldYtdPL_dollars: null, totalHoldYtdPL_percent: null };
-        }
+        // --- LOG 5: Log state of priceAvailable before the check ---
+        //console.log('[YTD Calc] Before priceAvailable check. priceAvailable =', priceAvailable);
+    
+        // if (!priceAvailable) {
+        //     console.warn("[YTD Calc ABORT] Cannot calculate full unrealized P/L: One or more current prices unavailable. Returning nulls.");
+        //     // Return nulls for values depending on unrealized P/L
+        //     return { totalSwingYtdPL_dollars: null, totalSwingYtdPL_percent: null, totalHoldYtdPL_dollars: null, totalHoldYtdPL_percent: null };
+        // }
 
         const totalSwingYtdPL_dollars = ytdRealizedSwingPL + currentUnrealizedSwingPL;
         const totalHoldYtdPL_dollars = ytdRealizedHoldPL + currentUnrealizedHoldPL;
@@ -659,11 +687,17 @@ export default function HomePage() {
         const totalSwingYtdPL_percent = (currentSwingCostBasis > SHARE_EPSILON) ? (totalSwingYtdPL_dollars / currentSwingCostBasis) * 100 : (totalSwingYtdPL_dollars === 0 ? 0 : null);
         const totalHoldYtdPL_percent = (currentHoldCostBasis > SHARE_EPSILON) ? (totalHoldYtdPL_dollars / currentHoldCostBasis) * 100 : (totalHoldYtdPL_dollars === 0 ? 0 : null);
 
+        // --- LOG 6: Log final calculated results ---
+        console.log('[YTD Calc Success] Calculation complete. Returning:', {
+            totalSwingYtdPL_dollars, totalSwingYtdPL_percent, totalHoldYtdPL_dollars, totalHoldYtdPL_percent
+        });
+        
         return {
             totalSwingYtdPL_dollars: parseFloat(totalSwingYtdPL_dollars.toFixed(CURRENCY_PRECISION)),
             totalSwingYtdPL_percent: typeof totalSwingYtdPL_percent === 'number' ? parseFloat(totalSwingYtdPL_percent.toFixed(PERCENT_PRECISION)) : null,
             totalHoldYtdPL_dollars: parseFloat(totalHoldYtdPL_dollars.toFixed(CURRENCY_PRECISION)),
             totalHoldYtdPL_percent: typeof totalHoldYtdPL_percent === 'number' ? parseFloat(totalHoldYtdPL_percent.toFixed(PERCENT_PRECISION)) : null,
+            partialDataUsed: partialDataUsed,
         };
 
     }, [allTransactions, allWallets, portfolioStocks, latestPrices]); // Dependencies
@@ -933,21 +967,24 @@ export default function HomePage() {
                             <div>
                                 <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>YTD P/L</p>
 
+                                {/* --- NEW: Conditionally display warning based on partialDataUsed flag --- */}
+                                {portfolioYtdPL.partialDataUsed && (
+                                    <p style={{ margin: '5px 0 0 0', fontSize: '0.8em', fontStyle: 'italic', color: 'orange' }}>
+                                    (* only w/ price)
+                                    </p>
+                                )}
+                                {/* --- End New Warning --- */}
+                                
                                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing YTD P/L</p>
                                 <p>
-                                    {portfolioYtdPL.totalSwingYtdPL_dollars !== null
-                                        ? `$${portfolioYtdPL.totalSwingYtdPL_dollars.toFixed(CURRENCY_PRECISION)} (${portfolioYtdPL.totalSwingYtdPL_percent !== null ? `${portfolioYtdPL.totalSwingYtdPL_percent.toFixed(PERCENT_PRECISION)}%` : 'N/A %'})`
-                                        : 'Calculating...'
-                                    }
-                                    
+                                    ${portfolioYtdPL.totalSwingYtdPL_dollars.toFixed(CURRENCY_PRECISION)}&nbsp; 
+                                    ({portfolioYtdPL.totalSwingYtdPL_percent !== null ? `${portfolioYtdPL.totalSwingYtdPL_percent.toFixed(PERCENT_PRECISION)}%` : 'N/A %'})
                                 </p>
 
                                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold YTD P/L</p>
                                 <p>
-                                    {portfolioYtdPL.totalHoldYtdPL_dollars !== null
-                                        ? `$${portfolioYtdPL.totalHoldYtdPL_dollars.toFixed(CURRENCY_PRECISION)} (${portfolioYtdPL.totalHoldYtdPL_percent !== null ? `${portfolioYtdPL.totalHoldYtdPL_percent.toFixed(PERCENT_PRECISION)}%` : 'N/A %'})`
-                                        : 'Calculating...'
-                                    }
+                                    ${portfolioYtdPL.totalHoldYtdPL_dollars.toFixed(CURRENCY_PRECISION)} &nbsp;
+                                    ({portfolioYtdPL.totalHoldYtdPL_percent !== null ? `${portfolioYtdPL.totalHoldYtdPL_percent.toFixed(PERCENT_PRECISION)}%` : 'N/A %'})
                                 </p>
                             </div>
                         </div>
