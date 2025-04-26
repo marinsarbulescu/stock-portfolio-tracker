@@ -1145,13 +1145,19 @@ export default function HomePage() {
                             </div>
 
                             <div>
-                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Unrealized P/L</p>
-
-                                {portfolioUnrealizedPL.partialDataUsed && (
-                                    <p style={{ margin: '5px 0 0 0', fontSize: '0.8em', fontStyle: 'italic', color: 'orange' }}>
-                                    (* only holdings w/ price)
-                                    </p>
-                                )}
+                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}> {/* Main heading paragraph */}
+                                    Unrealized P/L
+                                    {portfolioUnrealizedPL.partialDataUsed && (
+                                        <span style={{
+                                            marginLeft: '3px', // Add some space between heading and warning
+                                            fontSize: '1.1em',  // Keep smaller font size
+                                            color: 'orange',
+                                            fontWeight: 'normal' // Make warning text normal weight
+                                        }}>
+                                            *
+                                        </span>
+                                    )}
+                                </p>
                                 
                                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
                                 <p>
@@ -1176,13 +1182,19 @@ export default function HomePage() {
                             </div>
 
                             <div>
-                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Total P/L</p>
-
-                                {portfolioTotalPL.partialDataUsed && (
-                                    <p style={{ margin: '5px 0 0 0', fontSize: '0.8em', fontStyle: 'italic', color: 'orange' }}>
-                                    (* only holdings w/ price)
-                                    </p>
-                                )}
+                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}> {/* Main heading paragraph */}
+                                    Total P/L
+                                    {portfolioTotalPL.partialDataUsed && (
+                                        <span style={{
+                                            marginLeft: '3px', // Add some space between heading and warning
+                                            fontSize: '1.1em',  // Keep smaller font size
+                                            color: 'orange',
+                                            fontWeight: 'normal' // Make warning text normal weight
+                                        }}>
+                                            *
+                                        </span>
+                                    )}
+                                </p>
                                 
                                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
                                 <p>
