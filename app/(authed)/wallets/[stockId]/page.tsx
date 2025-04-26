@@ -1869,21 +1869,21 @@ a temporary map (walletBuyPriceMap) created from your wallets data.
 */}
                                     <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Realized P/L</p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing P/L</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
                                     <p>
                                         {formatCurrency(plStats.totalSwingPlDollars)}
                                         &nbsp;
                                         ({formatPercent(plStats.avgSwingPlPercent)})
                                     </p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold P/L</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
                                     <p>
                                         {formatCurrency(plStats.totalHoldPlDollars)}
                                         &nbsp;
                                         ({formatPercent(plStats.avgHoldPlPercent)})
                                     </p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock P/L</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                                     <p>
                                         {formatCurrency(plStats.totalStockPlDollars)}
                                         &nbsp;
@@ -1910,7 +1910,7 @@ For each matching "Currently Held Swing" wallet found:
 */}                                     
                                     <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Unrealized P/L</p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing P/L</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
                                     <p>
                                         {unrealizedPlStats.unrealizedSwingDollars === null
                                               ? (pricesLoading ? 'Loading Price...' : 'N/A')
@@ -1923,7 +1923,7 @@ For each matching "Currently Held Swing" wallet found:
                                          })
                                     </p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold P/L</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
                                     <p>
                                         {unrealizedPlStats.unrealizedHoldDollars === null
                                               ? (pricesLoading ? 'Loading Price...' : 'N/A')
@@ -1936,7 +1936,7 @@ For each matching "Currently Held Swing" wallet found:
                                         })
                                     </p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock P/L</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                                     <p>
                                         {unrealizedPlStats.unrealizedTotalDollars === null
                                               ? (pricesLoading ? 'Loading Price...' : 'N/A')
@@ -1956,7 +1956,7 @@ For each matching "Currently Held Swing" wallet found:
                                 <div>
                                     <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Total P/L</p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing P/L</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
                                     <p>
                                         {totalPlStats.totalSwingDollars === null
                                             ? (pricesLoading ? 'Loading Price...' : 'N/A')
@@ -1970,7 +1970,7 @@ For each matching "Currently Held Swing" wallet found:
                                         })
                                     </p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold P/L</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
                                     <p>
                                          {totalPlStats.totalHoldDollars === null
                                             ? (pricesLoading ? 'Loading Price...' : 'N/A')
@@ -1984,7 +1984,7 @@ For each matching "Currently Held Swing" wallet found:
                                         })
                                     </p>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock P/L</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                                     <p>
                                          {totalPlStats.totalStockDollars === null
                                             ? (pricesLoading ? 'Loading Price...' : 'N/A')
