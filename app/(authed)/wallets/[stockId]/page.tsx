@@ -1068,14 +1068,6 @@ const sortedWallets = useMemo(() => {
     }, [sortedWallets]); // Dependency array remains the same
     // --- END Filtering Logic ---
 
-    // --- ADD Txn Sorting Logic ---
-    // const requestTxnSort = (key: SortableTxnKey) => {
-    //     let direction: 'ascending' | 'descending' = 'ascending';
-    //     if (txnSortConfig && txnSortConfig.key === key && txnSortConfig.direction === 'ascending') {
-    //         direction = 'descending';
-    //     }
-    //     setTxnSortConfig({ key, direction });
-    // };
     
 // --- UPDATED Memo for Total SWING YTD P/L ($ and %) ---
 const totalSwingYtdPL = useMemo(() => {
@@ -1175,6 +1167,93 @@ const totalSwingYtdPL = useMemo(() => {
 // Correct dependencies for this specific calculation
 }, [transactions, wallets, latestPrices, stockSymbol]); // Removed walletBuyPriceMap as it's internal now
 // --- End Total Swing YTD P/L Calc Memo ---
+
+
+// --- START: Memo for All-Time UNREALIZED P/L Calculation ---
+const unrealizedPlStats = useMemo(() => {
+    console.log("[Memo] Calculating unrealizedPlStats ($ and %)");
+    // Depends on wallets and the latest price for this stock
+    if (!wallets || !stockSymbol) {
+      return { // Return default structure if data is missing
+          unrealizedSwingDollars: null, unrealizedSwingPercent: null,
+          unrealizedHoldDollars: null, unrealizedHoldPercent: null,
+          unrealizedTotalDollars: null, unrealizedTotalPercent: null
+      };
+    }
+
+    const currentPrice = latestPrices[stockSymbol]?.currentPrice ?? null;
+
+    // If current price isn't available, we cannot calculate unrealized P/L
+    if (currentPrice === null) {
+        console.warn("[Unrealized P/L] Cannot calculate: Current price unavailable for", stockSymbol);
+        return {
+            unrealizedSwingDollars: null, unrealizedSwingPercent: null,
+            unrealizedHoldDollars: null, unrealizedHoldPercent: null,
+            unrealizedTotalDollars: null, unrealizedTotalPercent: null
+        };
+    }
+
+    let totalUnrealizedSwingPL = 0;
+    let totalSwingCostBasis = 0; // Cost basis of CURRENTLY HELD swing shares
+    let totalUnrealizedHoldPL = 0;
+    let totalHoldCostBasis = 0; // Cost basis of CURRENTLY HELD hold shares
+
+    wallets.forEach(wallet => {
+      // Only consider wallets with remaining shares and a valid buy price
+      if ((wallet.remainingShares ?? 0) > SHARE_EPSILON && typeof wallet.buyPrice === 'number') {
+        const unrealizedForWallet = (currentPrice - wallet.buyPrice) * wallet.remainingShares!;
+        const costBasisForWallet = wallet.buyPrice * wallet.remainingShares!;
+
+        if (wallet.walletType === 'Swing') {
+          totalUnrealizedSwingPL += unrealizedForWallet;
+          totalSwingCostBasis += costBasisForWallet;
+        } else if (wallet.walletType === 'Hold') {
+          totalUnrealizedHoldPL += unrealizedForWallet;
+          totalHoldCostBasis += costBasisForWallet;
+        }
+      }
+    });
+
+    // Calculate percentages
+    const swingPercent = (totalSwingCostBasis > SHARE_EPSILON)
+        ? (totalUnrealizedSwingPL / totalSwingCostBasis) * 100
+        : (Math.abs(totalUnrealizedSwingPL) < 0.001 ? 0 : null);
+
+    const holdPercent = (totalHoldCostBasis > SHARE_EPSILON)
+        ? (totalUnrealizedHoldPL / totalHoldCostBasis) * 100
+        : (Math.abs(totalUnrealizedHoldPL) < 0.001 ? 0 : null);
+
+    // Calculate totals
+    const totalUnrealizedPl = totalUnrealizedSwingPL + totalUnrealizedHoldPL;
+    const totalCostBasis = totalSwingCostBasis + totalHoldCostBasis;
+    const totalPercent = (totalCostBasis > SHARE_EPSILON)
+        ? (totalUnrealizedPl / totalCostBasis) * 100
+        : (Math.abs(totalUnrealizedPl) < 0.001 ? 0 : null);
+
+
+    // Rounding (Apply precision constants)
+    const roundedSwingDollars = parseFloat(totalUnrealizedSwingPL.toFixed(CURRENCY_PRECISION));
+    const roundedHoldDollars = parseFloat(totalUnrealizedHoldPL.toFixed(CURRENCY_PRECISION));
+    const roundedTotalDollars = parseFloat(totalUnrealizedPl.toFixed(CURRENCY_PRECISION));
+
+    const roundedSwingPercent = typeof swingPercent === 'number' ? parseFloat(swingPercent.toFixed(PERCENT_PRECISION)) : null;
+    const roundedHoldPercent = typeof holdPercent === 'number' ? parseFloat(holdPercent.toFixed(PERCENT_PRECISION)) : null;
+    const roundedTotalPercent = typeof totalPercent === 'number' ? parseFloat(totalPercent.toFixed(PERCENT_PRECISION)) : null;
+
+     console.log(`[Unrealized P/L] Swing $: ${roundedSwingDollars}, Hold $: ${roundedHoldDollars}, Total $: ${roundedTotalDollars}`);
+
+    // Return results
+    return {
+        unrealizedSwingDollars: roundedSwingDollars,
+        unrealizedSwingPercent: roundedSwingPercent,
+        unrealizedHoldDollars: roundedHoldDollars,
+        unrealizedHoldPercent: roundedHoldPercent,
+        unrealizedTotalDollars: roundedTotalDollars,
+        unrealizedTotalPercent: roundedTotalPercent
+    };
+
+  }, [wallets, latestPrices, stockSymbol]); // Dependencies
+  // --- END: Memo for All-Time UNREALIZED P/L Calculation ---
 
 
 const totalTiedUpInvestment = useMemo(() => {
@@ -1570,74 +1649,6 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
         // You might also need to refresh other data if the Buy impacts other calculations on the page
     };
     // --- END HANDLERS ---
-
-    // // Calculate the number of currently visible columns
-    // const visibleColumnCount = useMemo(() => {
-    //     // Start with columns that are always visible (e.g., Ticker)
-    //     let count = 1;
-    //     // Add count of toggleable columns that are currently true
-    //     count += (Object.values(reportColumnVisibility) as boolean[]).filter(Boolean).length;
-    //     return count;
-    // }, [reportColumnVisibility]);
-        
-        
-    // type ReportColumnKey = 
-    //     'action' | 
-    //     'txnType' | 
-    //     'signal' | 
-    //     'price' | 
-    //     'lbd' |
-    //     'investment' | 
-    //     'quantity' |
-    //     'proceeds' | 
-    //     'txnProfit' | 
-    //     'percentToTp' | 
-    //     'txnProfitPercent' | 
-    //     'completedTxnId';
-    // const [sortConfig, setSortConfig] = useState<{ key: ReportColumnKey; direction: 'ascending' | 'descending' } | null>(null);
-    
-    // const sortedTableData = useMemo(() => {
-    //         // Start with the calculated report data
-    //         let sortableItems = [...reportData];
-        
-    //         // Helper function to handle nulls/undefined for ASCENDING sort
-    //         // Treats null/undefined as infinitely large so they sort last
-    //         const handleNullAsc = (val: number | null | undefined): number => {
-    //             return (val === null || val === undefined) ? Infinity : val;
-    //         };
-        
-    //         if (sortConfig !== null) {
-    //             // --- User has clicked a header - Sort by selected column ---
-        
-    //             // Helper to handle nulls based on the CURRENT sort direction
-    //             const handleNullCurrent = (val: any) => {
-    //                if (val === null || val === undefined) {
-    //                   // Ascending: Nulls go last (Infinity). Descending: Nulls go last (-Infinity).
-    //                   return sortConfig.direction === 'ascending' ? Infinity : -Infinity;
-    //                }
-    //                return val;
-    //             }
-        
-    //             sortableItems.sort((a, b) => {
-    //                 // @ts-ignore - Allow property access using key (known TS issue)
-    //                 const valA = a[sortConfig.key];
-    //                 // @ts-ignore - Allow property access using key
-    //                 const valB = b[sortConfig.key];
-    //                 let comparison = 0;
-        
-    //                 const resolvedA = handleNullCurrent(valA);
-    //                 const resolvedB = handleNullCurrent(valB);
-        
-    //                 if (resolvedA < resolvedB) comparison = -1;
-    //                 else if (resolvedA > resolvedB) comparison = 1;
-        
-    //                 return sortConfig.direction === 'ascending' ? comparison : comparison * -1;
-    //             });
-    //         } else {
-                
-    //         }
-    //         return sortableItems;
-    //       }, [transactions, wallets, sortConfig]); // Dependencies
     
     // --- Render Logic ---
     // Show loading indicator until stock symbol AND wallets are potentially loaded
@@ -1669,6 +1680,7 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
                 <button onClick={handleOpenBuyModal} style={{ padding: '8px 15px' }}>Add Buy Transaction</button>
             </div>
 
+            {/* --- START: Overview section --- */}
             <div style={{
                 marginBottom: '1rem',
                 border: '1px solid #444', // Keep border for the whole section
@@ -1774,7 +1786,22 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
                                     <p>{formatShares(currentShares.total)}</p>
                                 </div>
 
+                                {/* --- START: Realized P/L --- */}
                                 <div>
+{/*
+Calculate all-time realized P/L (totalSwingPlDollars) from all Swing Sells
+
+The code iterates through your transactions list. It looks for transactions that meet all these criteria:
+- action is 'Sell'
+- txnType is 'Swing'
+
+For each matching Swing Sell transaction found:
+- It finds the buyPrice of the shares sold by looking up the wallet ID stored in the transaction's completedTxnId field in 
+a temporary map (walletBuyPriceMap) created from your wallets data.
+- It calculates the profit/loss for that specific sale: profitForTxn = (Sell Price - Wallet Buy Price) * Quantity Sold.
+
+It adds this profitForTxn to a running total called totalSwingPlDollars. Same logic for Hold.                                  
+*/}
                                     <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Realized P/L</p>
 
                                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing P/L</p>
@@ -1798,11 +1825,72 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
                                         ({formatPercent(plStats.avgStockPlPercent)})
                                     </p>
                                 </div>
+                                {/* --- END: Realized P/L --- */}
 
+                                {/* --- START: Total P/L --- */}                               
+                                <div>
+{/*
+It checks if the currentPrice for stock was successfully loaded from latestPrices. If not (currentPrice is null), 
+the entire calculation stops here and returns { dollars: null, percent: null }.
+
+The code then iterates through your wallets list for stock. It looks for wallets that meet all these criteria:
+- walletType is 'Swing'
+- remainingShares is greater than 0 (using SHARE_EPSILON for precision).
+
+For each matching "Currently Held Swing" wallet found:
+- It calculates the unrealized ("paper") P/L for that wallet: unrealizedForWallet = (Current Price - Wallet Buy Price) * Remaining Shares.
+- It adds this unrealizedForWallet to a running total called currentUnrealizedSwingPL.
+
+It adds the realized totalSwingPlDollars to the final currentUnrealizedSwingPL and we get the total unrealizedSwingDollars. Same logic for Hold.
+*/}                                     
+                                    <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Total P/L</p>
+
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing P/L</p>
+                                    <p>
+                                        {unrealizedPlStats.unrealizedSwingDollars === null
+                                              ? (pricesLoading ? 'Loading Price...' : 'N/A')
+                                              : formatCurrency(unrealizedPlStats.unrealizedSwingDollars)
+                                        }
+                                        &nbsp;
+                                        ({unrealizedPlStats.unrealizedSwingPercent === null
+                                              ? 'N/A'
+                                              : formatPercent(unrealizedPlStats.unrealizedSwingPercent)
+                                         })
+                                    </p>
+
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold P/L</p>
+                                    <p>
+                                        {unrealizedPlStats.unrealizedHoldDollars === null
+                                              ? (pricesLoading ? 'Loading Price...' : 'N/A')
+                                              : formatCurrency(unrealizedPlStats.unrealizedHoldDollars)
+                                        }
+                                        &nbsp;
+                                        ({unrealizedPlStats.unrealizedHoldPercent === null
+                                              ? 'N/A'
+                                              : formatPercent(unrealizedPlStats.unrealizedHoldPercent)
+                                        })
+                                    </p>
+
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock P/L</p>
+                                    <p>
+                                        {unrealizedPlStats.unrealizedTotalDollars === null
+                                              ? (pricesLoading ? 'Loading Price...' : 'N/A')
+                                              : formatCurrency(unrealizedPlStats.unrealizedTotalDollars)
+                                        }
+                                        &nbsp;
+                                        ({unrealizedPlStats.unrealizedTotalPercent === null
+                                              ? 'N/A'
+                                              : formatPercent(unrealizedPlStats.unrealizedTotalPercent)
+                                        })
+                                    </p>
+                                </div>
+                                 {/* --- END: Total P/L --- */}
+
+
+                                {/* --- START: YTD Total P/L ---
                                 <div>
                                     <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>YTD P/L</p>
 
-                                    {/* +++ ADD TOTAL SWING YTD P/L +++ */}
                                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing YTD P/L</p>
                                     <p>
                                         {totalSwingYtdPL?.dollars === null // Check if calculation was possible
@@ -1824,15 +1912,17 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
                                         ({totalHoldYtdPL?.percent === null // <<< Use totalHoldYtdPL
                                             ? (pricesLoading ? 'Loading Price...' : 'N/A')
                                             : formatPercent(totalHoldYtdPL.percent) // <<< Use totalHoldYtdPL
-                                        })
+                                        }) 
                                     </p>
                                 </div>
+                                --- END: YTD Total P/L ---
+                                */}
                             </div> // End grid layout
                         )}
                     </div>
                 )}
             </div>
-            {/* End Overview Section */}
+            {/* --- END: Overview section --- */}
             
             {/* --- START: Wallets section --- */}
             <div>
