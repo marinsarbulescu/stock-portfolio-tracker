@@ -74,7 +74,6 @@ const schema = a.schema({
     })
     .authorization((allow) => [allow.owner()]),
 
-  // --- ADD THIS NEW MODEL ---
   StockWallet: a
   .model(
     {
@@ -95,10 +94,7 @@ const schema = a.schema({
       // Add owner field if not implicitly added by .authorization
       owner: a.string(),
     })
-  .authorization((allow) => [
-      allow.owner() // Only owner can CRUD their wallets
-  ]),
-// --- END ADD NEW MODEL ---
+  .authorization((allow) => [allow.owner()]),
 
   // Define the input type for a single portfolio item
   PortfolioItemInput: a.customType({
