@@ -1,11 +1,13 @@
-// app/account/page.tsx (or wherever AccountPage is defined)
-'use client'; // Make sure it's a client component
+// app/account/page.tsx
+'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getCurrentUser, fetchUserAttributes, signOut } from 'aws-amplify/auth'; // Import functions
-import { useRouter } from 'next/navigation'; // To redirect after sign out
+// Removed signOut from here, kept others
+import { getCurrentUser, fetchUserAttributes } from 'aws-amplify/auth';
+import { useRouter } from 'next/navigation';
+// --- Import the new button ---
+import SignOutButton from '@/app/components/SignOutButton'; // Adjust path if needed
 
-// Define a type for user data if needed
 type UserAttributes = {
   sub?: string;
   email?: string;
@@ -16,16 +18,15 @@ export default function AccountPage() {
   const [user, setUser] = useState<UserAttributes | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+  // Remove router if only used for sign out, as SignOutButton handles it now
+  // const router = useRouter(); // Keep if used for other navigation
 
   useEffect(() => {
     const fetchUserData = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        // You can use getCurrentUser for basic info or fetchUserAttributes for more details
-        // const currentUser = await getCurrentUser(); // Gets userId, username, signInDetails
-        const attributes = await fetchUserAttributes(); // Gets attributes like email, sub, etc.
+        const attributes = await fetchUserAttributes();
         setUser(attributes);
         console.log('User attributes:', attributes);
       } catch (err) {
@@ -36,21 +37,12 @@ export default function AccountPage() {
         setIsLoading(false);
       }
     };
-
     fetchUserData();
-  }, []); // Empty dependency array ensures this runs once on mount
+  }, []);
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      // Redirect to login page or home page after sign out
-      router.push('/login');
-    } catch (error) {
-      console.error('Error signing out: ', error);
-    }
-  };
+  // --- Remove the local handleSignOut function ---
+  // const handleSignOut = async () => { ... };
 
-  // Render based on loading/error/user state
   if (isLoading) {
     return <p>Loading account information...</p>;
   }
@@ -65,11 +57,14 @@ export default function AccountPage() {
       {user ? (
         <>
           <p>Welcome!</p>
-          {/* Display user details safely */}
           <p>Email: {user.email ?? 'N/A'}</p>
           <p>Sub ID: {user.sub ?? 'N/A'}</p>
           {/* Add other details */}
-          <button onClick={handleSignOut} style={{ marginTop: '20px' }}>Sign Out</button>
+
+          {/* --- Use the SignOutButton component --- */}
+          <div style={{ marginTop: '20px' }}>
+             <SignOutButton />
+          </div>
         </>
       ) : (
         <p>Could not load user information.</p>

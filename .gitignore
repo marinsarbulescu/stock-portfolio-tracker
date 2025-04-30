@@ -56,3 +56,6 @@ amplify/**/*.js.map
 
 # Build output
 dist/
+
+# Other
+read.me

@@ -285,9 +285,9 @@ export default function StockWalletPage() {
 
     const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
 
-    const SHARE_PRECISION = 5; // Or your desired share precision
-    const CURRENCY_PRECISION = 2; // Standard for currency
-    const PERCENT_PRECISION = 4; // Precision for percentages (adjust as needed)
+    const SHARE_PRECISION = 6; // Or your desired share precision
+    const CURRENCY_PRECISION = 6; // Standard for currency
+    const PERCENT_PRECISION = 6; // Precision for percentages (adjust as needed)
     // Epsilon for checking closeness to zero, based on share precision
     const SHARE_EPSILON = 1 / (10**(SHARE_PRECISION + 2)); // e.g., 0.0000001 for 5 decimal places
 

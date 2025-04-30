@@ -1,63 +1,93 @@
 // app/components/NavBar.tsx
-'use client'; // Needed for Link and potentially hooks later
+'use client';
 
 import Link from 'next/link';
 import React from 'react';
 import { usePrices } from '@/app/contexts/PriceContext';
-// Import useAuthenticator if you want user info/signout directly here
-// import { useAuthenticator } from '@aws-amplify/ui-react';
+import SignOutButton from './SignOutButton'; // Import SignOutButton if you have it
 
-// Basic CSS for styling - adjust as needed
+// Define the type for the prop
+type AccessStatus = 'loading' | 'approved' | 'denied';
+interface NavBarProps {
+    accessStatus: AccessStatus; // Add prop to receive status
+}
+
 const navStyles: React.CSSProperties = {
-  backgroundColor: '#333',
-  padding: '1rem',
-  marginBottom: '1rem',
+    backgroundColor: '#333',
+    padding: '1rem',
+    marginBottom: '1rem',
+    display: 'flex',        // Use flexbox for layout
+    justifyContent: 'space-between', // Space out left/right groups
+    alignItems: 'center',  // Vertically align items
+};
+
+const linkGroupStyles: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
 };
 
 const linkStyles: React.CSSProperties = {
-  color: 'white',
-  margin: '0 1rem',
-  textDecoration: 'none',
+    color: 'white',
+    margin: '0 1rem',
+    textDecoration: 'none',
 };
 
-export default function NavBar() {
-  // Optional: Get user/signOut if needed for displaying user info or a sign out button in the nav
-  // const { user, signOut } = useAuthenticator();
+const buttonStyles: React.CSSProperties = {
+    marginLeft: '20px',
+    cursor: 'pointer',
+    padding: '5px 10px' // Example padding
+};
 
-  const {
-    fetchLatestPricesForAllStocks,
-    pricesLoading,
-    sendNotificationEmail, // Get the new function
-    notifyStatus,          // Get the new status
-    notifyError        // Get error if you want to display it here
-  } = usePrices();
 
-  return (
-    <nav style={navStyles}>
-      <Link href="/" style={linkStyles}>Home</Link>
-      {/* <Link href="/add-stocks" style={linkStyles}>Add Stocks</Link> */}
-      <Link href="/stocks-listing" style={linkStyles}>Portfolio</Link>
+// Accept accessStatus prop
+export default function NavBar({ accessStatus }: NavBarProps) {
 
-      {/* <button
-        onClick={sendNotificationEmail}
-        disabled={notifyStatus === 'sending' || pricesLoading} // Disable if sending OR fetching prices
-        style={{ marginLeft: '10px', cursor: 'pointer' }}
-      >
-        {notifyStatus === 'sending' ? 'Sending...' : 'Notify'}
-      </button> */}
+    const {
+        fetchLatestPricesForAllStocks,
+        pricesLoading,
+        // Removed unused notify variables for clarity
+        // sendNotificationEmail,
+        // notifyStatus,
+        // notifyError
+    } = usePrices();
 
-      <Link href="/goals" style={linkStyles}>Goals</Link>
-      <Link href="/account" style={linkStyles}>Account</Link>
-      <button
-        onClick={fetchLatestPricesForAllStocks}
-        disabled={pricesLoading}
-        style={{ marginLeft: '20px', cursor: 'pointer' /* Add other styles */}}
-      >
-        {pricesLoading ? 'Fetching Prices...' : 'Fetch Prices'}
-      </button>
-      {/* Optional: Add user info or sign out here */}
-      {/* {user && <span style={{ color: 'grey', marginLeft: '2rem' }}>Welcome, {user.username}</span>} */}
-      {/* {user && <button onClick={signOut} style={{ marginLeft: '1rem'}}>Sign Out (Nav)</button>} */}
-    </nav>
-  );
+    const isApproved = accessStatus === 'approved';
+
+    return (
+        <nav style={navStyles}>
+            {/* Left Group: Conditional Links */}
+            <div style={linkGroupStyles}>
+                {/* Show Home/Portfolio/Goals only if approved */}
+                {isApproved && (
+                    <>
+                        <Link href="/" style={linkStyles}>Home</Link>
+                        <Link href="/stocks-listing" style={linkStyles}>Portfolio</Link>
+                        <Link href="/goals" style={linkStyles}>Goals</Link>
+                    </>
+                )}
+                {/* Optional: Show something minimal if not approved */}
+                {!isApproved && accessStatus !== 'loading' && (
+                     <span style={{ color: '#888', marginLeft: '1rem'}}>Awaiting Approval</span>
+                 )}
+            </div>
+
+            {/* Right Group: Always Visible Items */}
+            <div style={linkGroupStyles}>
+                <Link href="/account" style={linkStyles}>Account</Link>
+                {isApproved && (
+                  <button
+                      onClick={fetchLatestPricesForAllStocks}
+                      disabled={pricesLoading}
+                      style={buttonStyles}
+                  >
+                      {pricesLoading ? 'Fetching...' : 'Fetch Prices'}
+                  </button>
+                )}
+                {/* Add SignOutButton here */}
+                 <div style={{marginLeft: '1rem'}}>
+                    <SignOutButton />
+                 </div>
+            </div>
+        </nav>
+    );
 }

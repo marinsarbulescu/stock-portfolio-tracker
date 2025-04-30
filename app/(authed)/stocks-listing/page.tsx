@@ -223,7 +223,7 @@ export default function StocksListingPage() {
                     <button onClick={() => handleToggleHidden(stock)} title={stock.isHidden ? "Show in Reports" : "Hide from Reports"}>
                       {stock.isHidden ? <FaEyeSlash /> : <FaEye />}
                     </button>
-                    <button onClick={() => handleDeleteStock(stock.id)} title="Delete Stock"><FaTrashAlt /></button>
+                    {/* <button onClick={() => handleDeleteStock(stock.id)} title="Delete Stock"><FaTrashAlt /></button> */}
                   </td>
                 </tr>
               ))

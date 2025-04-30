@@ -6,10 +6,12 @@ import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
 import { usePrices } from '@/app/contexts/PriceContext'; // Import context hook
 import Link from 'next/link';
+import { getCurrentUser } from 'aws-amplify/auth';
+import { fetchAuthSession } from 'aws-amplify/auth';
 
 const SHARE_EPSILON = 0.00001; // Example value, adjust as needed
-const CURRENCY_PRECISION = 2;  // Example value (e.g., for dollars and cents)
-const PERCENT_PRECISION = 2;   // Example value (e.g., 12.34%)
+const CURRENCY_PRECISION = 6;  // Example value (e.g., for dollars and cents)
+const PERCENT_PRECISION = 6;   // Example value (e.g., 12.34%)
 
 // Define types locally matching schema if needed (or import if shared)
 type PortfolioStockDataType = { // Simplified representation needed for this page
@@ -30,7 +32,7 @@ type TransactionListResultType = Awaited<ReturnType<typeof client.models.Transac
 
 const client = generateClient<Schema>();
 
-export default function HomePage() {
+export default function HomePage() {    
     // Define the shape of the visibility state
     interface ReportColumnVisibilityState {
         fiveDayDip: boolean;
@@ -114,6 +116,45 @@ export default function HomePage() {
             return date.toLocaleDateString(); // Fallback
         }
     }
+
+    const [accessStatus, setAccessStatus] = useState<'loading' | 'approved' | 'denied'>('loading');
+
+    useEffect(() => {
+        const checkUserGroup = async () => {
+            try {
+                // --- Use fetchAuthSession() instead of getCurrentUser() ---
+                const session = await fetchAuthSession();
+          
+                // --- Access tokens from the session object ---
+                // Check the exact structure via console.log(session) if needed,
+                // but usually it's session.tokens.accessToken
+                const accessToken = session.tokens?.accessToken;
+          
+                // Handle case where token might not be available
+                if (!accessToken) {
+                  console.log("Access token not found in session.");
+                  setAccessStatus('denied'); // Treat as denied if no token
+                  return;
+                }
+          
+                // --- Access payload and groups from the accessToken ---
+                const groups = accessToken.payload['cognito:groups'] as string[] | undefined;
+          
+                console.log("User groups:", groups); // For debugging
+          
+                if (groups && groups.includes('ApprovedUsers')) {
+                  setAccessStatus('approved');
+                } else {
+                  setAccessStatus('denied');
+                }
+              } catch (error) {
+                console.error("Error checking user group (or user not authenticated):", error);
+                setAccessStatus('denied'); // Deny access if not authenticated or error occurs
+              }
+            };
+      
+        checkUserGroup();
+    }, []); // Run only once on component mount
     
     // --- Helper function to fetch ALL transactions using pagination ---
     const fetchAllPaginatedTransactions = useCallback(async (): Promise<Schema['Transaction'][]> => {
@@ -1027,6 +1068,24 @@ export default function HomePage() {
     };
     // --- END: Formatting Helpers ---
 
+    // --- Render based on access status ---
+
+    if (accessStatus === 'loading') {
+        return <p>Loading access...</p>; // Or a proper loading spinner
+    }
+  
+    if (accessStatus === 'denied') {
+        return (
+        <div style={{ padding: '2rem' }}>
+            <h2>Access Denied</h2>
+            <p>I need to know who you are before you can access this application. Ping me with your email address.</p>
+            {/* TODO: Add a Sign Out button here using Amplify Auth.signOut() */}
+        </div>
+        );
+    }
+  
+    // --- If accessStatus is 'approved', render the actual page content ---
+    // For page.tsx, this would be the main return statement you already have:
     return (
         // Inside HomePage component return:
         <div>
