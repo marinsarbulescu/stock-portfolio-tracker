@@ -10,36 +10,31 @@ import { getCurrentUser } from 'aws-amplify/auth';
 import { fetchAuthSession } from 'aws-amplify/auth';
 
 const SHARE_EPSILON = 0.00001; // Example value, adjust as needed
-const CURRENCY_PRECISION = 6;  // Example value (e.g., for dollars and cents)
-const PERCENT_PRECISION = 6;   // Example value (e.g., 12.34%)
+const CURRENCY_PRECISION = 2;  // Example value (e.g., for dollars and cents)
+const PERCENT_PRECISION = 2;   // Example value (e.g., 12.34%)
 
-// Define types locally matching schema if needed (or import if shared)
 type PortfolioStockDataType = { // Simplified representation needed for this page
     id: string;
     symbol: string;
     pdp: number | null | undefined;
     name?: string | null | undefined;
     budget?: number | null | undefined;
-    // Add other fields if needed by the table/sort
+    isHidden?: boolean | null | undefined;
 }
 
 type StockWalletDataType = Schema['StockWallet']['type'];
 
 type FiveDayDipResult = Record<string, number | null>; // Map: symbol -> dip percentage or null
 
-// Define Transaction List Result Type (helpful for pagination function)
 type TransactionListResultType = Awaited<ReturnType<typeof client.models.Transaction.list>>;
 
 const client = generateClient<Schema>();
 
 export default function HomePage() {    
-    // Define the shape of the visibility state
     interface ReportColumnVisibilityState {
         fiveDayDip: boolean;
         lbd: boolean;
         swingWalletCount: boolean;
-        //buys: boolean;
-        //incompleteBuys: boolean;
         sinceBuy: boolean;
         sinceSell: boolean;
         currentPrice: boolean;
@@ -47,16 +42,12 @@ export default function HomePage() {
         ltpiaTakeProfitPrice: boolean,
         percentToTp: boolean;
         tpShares: boolean;
-        
     }
     
-    // Initialize the state (decide defaults - here all are visible initially)
     const [reportColumnVisibility, setReportColumnVisibility] = useState<ReportColumnVisibilityState>({
         fiveDayDip: true,
         lbd: true,
         swingWalletCount: true,
-        //buys: false,
-        //incompleteBuys: true,
         sinceBuy: true,
         sinceSell: false,
         currentPrice: true,
@@ -66,13 +57,10 @@ export default function HomePage() {
         tpShares: true,
     });
 
-    // Mapping from state keys to desired display labels
     const COLUMN_LABELS: Record<keyof ReportColumnVisibilityState, string> = {
         fiveDayDip: '5DD',      
         lbd: 'LBD',
         swingWalletCount: 'Swing Wallets',         
-        //buys: 'Sw Wallets',
-        //incompleteBuys: 'I-Buys',
         sinceBuy: 'Last Buy',
         sinceSell: 'Last Sell',
         currentPrice: 'Price',
@@ -90,18 +78,12 @@ export default function HomePage() {
 
     const [allWallets, setAllWallets] = useState<StockWalletDataType[]>([]);
 
-    // Add state for all transactions
     const [allTransactions, setAllTransactions] = useState<Schema['Transaction'][]>([]);
 
-    // Get price data from context
     const { latestPrices, pricesLoading, pricesError, lastPriceFetchTimestamp } = usePrices(); // <-- Add timestamp
 
-    // Helper function (place inside component or import from utils)
     const formatTimestamp = (date: Date | null): string => {
         if (!date) return "N/A";
-        // Options for formatting like "Apr 12th 1:58 PM PDT"
-        // 'th'/'st' (ordinals) usually require a library like date-fns or manual logic.
-        // Intl.DateTimeFormat provides good browser-native formatting.
         try {
             return new Intl.DateTimeFormat('en-US', {
                 month: 'short',    // Apr
@@ -122,26 +104,15 @@ export default function HomePage() {
     useEffect(() => {
         const checkUserGroup = async () => {
             try {
-                // --- Use fetchAuthSession() instead of getCurrentUser() ---
                 const session = await fetchAuthSession();
-          
-                // --- Access tokens from the session object ---
-                // Check the exact structure via console.log(session) if needed,
-                // but usually it's session.tokens.accessToken
                 const accessToken = session.tokens?.accessToken;
-          
-                // Handle case where token might not be available
                 if (!accessToken) {
                   console.log("Access token not found in session.");
                   setAccessStatus('denied'); // Treat as denied if no token
                   return;
                 }
-          
-                // --- Access payload and groups from the accessToken ---
                 const groups = accessToken.payload['cognito:groups'] as string[] | undefined;
-          
                 console.log("User groups:", groups); // For debugging
-          
                 if (groups && groups.includes('ApprovedUsers')) {
                   setAccessStatus('approved');
                 } else {
@@ -152,19 +123,15 @@ export default function HomePage() {
                 setAccessStatus('denied'); // Deny access if not authenticated or error occurs
               }
             };
-      
         checkUserGroup();
     }, []); // Run only once on component mount
     
-    // --- Helper function to fetch ALL transactions using pagination ---
     const fetchAllPaginatedTransactions = useCallback(async (): Promise<Schema['Transaction'][]> => {
-        //console.log("Fetching ALL user transactions with pagination...");
         let accumulatedTxns: Schema['Transaction'][] = [];
         let currentToken: string | null = null;
         let loopSafetyCounter = 0;
         const maxLoops = 25; // Adjust max pages if needed
 
-        // --- IMPORTANT: Define the full selectionSet needed by ANY calculation using allTransactions ---
         const selectionSetNeeded = [
             'id',
             'date',
@@ -181,7 +148,6 @@ export default function HomePage() {
             'signal',
             'lbd',
         ] as const;
-        // --- END selectionSet definition ---
 
         try {
             do {
@@ -191,7 +157,6 @@ export default function HomePage() {
                     throw new Error(`Could not fetch all transactions after ${maxLoops} pages.`);
                 }
 
-                //console.log(`Workspaceing transaction page with token: ${currentToken ? '...' : 'null'}`);
                 const listResult: TransactionListResultType = await client.models.Transaction.list({
                     nextToken: currentToken,
                     limit: 5000, // Fetch larger chunks
@@ -202,8 +167,6 @@ export default function HomePage() {
                 const errors = listResult.errors;
                 const returnedToken = listResult.nextToken ?? null;
 
-                //console.log(`Workspaceed ${fetchedTxns?.length ?? 0} transactions. Next Token: ${returnedToken ? 'Yes' : 'No'}`);
-
                 if (errors) throw errors; // Throw GraphQL errors
 
                 if (fetchedTxns) {
@@ -213,7 +176,6 @@ export default function HomePage() {
 
             } while (currentToken !== null);
 
-            //console.log(`Finished fetching. Total user transactions: ${accumulatedTxns.length}`);
             return accumulatedTxns;
 
         } catch (err: any) {
@@ -222,10 +184,7 @@ export default function HomePage() {
             throw new Error(errMsg); // Re-throw to be caught by fetchPageData
         }
     }, []); // Empty dependency array - stable function definition
-    // --- End Helper Function ---
 
-
-    // --- Updated function to fetch both stocks and ALL transactions ---
     const fetchPageData = useCallback(async () => {
         setIsLoading(true); // Use combined loading state
         setError(null);     // Use combined error state
@@ -234,21 +193,17 @@ export default function HomePage() {
         setAllWallets([]);
 
         try {
-            //console.log("Starting parallel fetch for stocks and all transactions...");
-            // Fetch stocks AND use the pagination helper for transactions
             const [stockResult, allTxnsData, walletResult] = await Promise.all([
                 client.models.PortfolioStock.list({
-                    selectionSet: ['id', 'symbol', 'pdp', 'name', 'budget'], // Fields needed for report
+                    selectionSet: ['id', 'symbol', 'pdp', 'name', 'budget', 'isHidden'], // Add isHidden to selection
                     filter: {
                         isHidden: { ne: true } // ne: not equal to true (i.e., fetch if false or null/undefined)
-                        // Or you could use: isHidden: { eq: false } if you are sure all items will have the field set
                     },
                     limit: 1000
                 }),
                 fetchAllPaginatedTransactions(), // Call the pagination helper
 
                 client.models.StockWallet.list({
-                    // No filter here fetches ALL wallets for the user (owner auth applied by default)
                     selectionSet: [ // Fields needed for calculations
                         'id',
                         'portfolioStockId',
@@ -257,46 +212,48 @@ export default function HomePage() {
                         'remainingShares',
                         'tpValue', // Needed for finding lowest TP
                         'sellTxnCount', // Potentially useful later
-                        'sharesSold' // Potentially useful later
-                        // Add any other fields needed by revised calculations
+                        'sharesSold', // Potentially useful later
+                        'totalInvestment', // Add this for budget calculations
+                        'totalSharesQty' // Add this for budget calculations
                     ],
                     limit: 3000 // Adjust limit generously for wallets
                 })
             ]);
-            //console.log("Parallel fetches completed.");
 
-            // Process stocks result (basic error check)
             if (stockResult && Array.isArray((stockResult as any).errors) && (stockResult as any).errors.length > 0) {
                  throw (stockResult as any).errors;
             }
-            setPortfolioStocks(stockResult.data as any);
-
-            // Transactions data is the complete array from the helper
-            setAllTransactions(allTxnsData);
-
-            if (walletResult.errors) throw walletResult.errors;
-            setAllWallets(walletResult.data as any); // <<< Set wallets state
-
-            //console.log('Fetched Stocks Count:', stockResult.data?.length);
-            //console.log('Fetched All Transactions Count:', allTxnsData?.length);
+            
+            const visibleStocks = (stockResult.data as any[]).filter(stock => stock.isHidden !== true);
+            setPortfolioStocks(visibleStocks);
+            
+            const visibleStockIds = new Set(visibleStocks.map(stock => stock.id));
+            
+            const visibleTransactions = (allTxnsData as any[]).filter(
+                txn => visibleStockIds.has(txn.portfolioStockId)
+            );
+            setAllTransactions(visibleTransactions);
+            
+            const visibleWallets = (walletResult.data as any[]).filter(
+                wallet => visibleStockIds.has(wallet.portfolioStockId)
+            );
+            setAllWallets(visibleWallets);
 
         } catch (err: any) {
             console.error("Error fetching page data:", err);
             const errorMessage = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || "Failed to load page data.");
             setError(errorMessage); // Set combined error state
-            // Clear data on error
             setPortfolioStocks([]);
             setAllTransactions([]);
+            setAllWallets([]);
         } finally {
             setIsLoading(false); // Set combined loading state false
         }
     }, [fetchAllPaginatedTransactions]); // Add helper to dependencies
-    // --- End Updated fetchPageData ---
-    
+
     useEffect(() => {
         fetchPageData();
     }, [fetchPageData]); // Renamed fetch function
-
 
     interface ProcessedStockTxnData {
         lastBuy?: { date: string; price: number | null }; // Store only needed info
@@ -312,44 +269,33 @@ export default function HomePage() {
     }
     type ProcessedTxnMap = Record<string, ProcessedStockTxnData>; // Keyed by stock ID
 
-    // --- Process Transactions & Wallets per Stock ---
     interface ProcessedStockData {
-        // From Transactions
         lastSwingBuy: { date: string; price: number | null } | undefined;
         lastSwingSell: { date: string } | undefined;
         swingBuyCount: number;
-        // From Wallets
-        activeSwingWallets: StockWalletDataType[]; // Keep the actual wallet objects
-        lowestSwingBuyPriceWallet: StockWalletDataType | null; // Wallet with lowest buy price (and shares > 0)
-        lowestSwingTpWallet: StockWalletDataType | null; // Wallet with lowest TP (and shares > 0)
-        totalCurrentSwingShares: number; // Sum remaining swing shares
-        totalCurrentHoldShares: number; // Sum remaining hold shares (calculated for reference)
+        activeSwingWallets: StockWalletDataType[];
+        lowestSwingBuyPriceWallet: StockWalletDataType | null;
+        lowestSwingTpWallet: StockWalletDataType | null;
+        totalCurrentSwingShares: number;
+        totalCurrentHoldShares: number;
     }
-    type ProcessedDataMap = Record<string, ProcessedStockData>; // Keyed by stock ID
+    type ProcessedDataMap = Record<string, ProcessedStockData>;
 
     const processedData = useMemo((): ProcessedDataMap => {
-        //console.log(`Processing ${allTransactions.length} transactions and ${allWallets.length} wallets...`);
         const dataMap: ProcessedDataMap = {};
-        const epsilon = 0.000001; // Tolerance for share checks
+        const epsilon = 0.000001;
 
-        // --- Add this mapping step ---
-        // Explicitly cast each transaction to the type we expect it to be
-        // (assuming schema and selectionSet are correct)
         const typedTransactions: Schema['Transaction']['type'][] = allTransactions.map(
             txn => txn as unknown as Schema['Transaction']['type']
         );
-        // --- End mapping step ---
 
-        // --- Process data PER STOCK ---
         portfolioStocks.forEach(stock => {
             const stockId = stock.id;
             if (!stockId) return;
 
-            // Filter transactions and wallets for the current stock
             const stockTxns = typedTransactions.filter(txn => txn.portfolioStockId === stockId);
             const stockWallets = allWallets.filter(w => w.portfolioStockId === stockId);
 
-            // Initialize data structure for this stock
             const stockData: ProcessedStockData = {
                 lastSwingBuy: undefined,
                 lastSwingSell: undefined,
@@ -361,53 +307,41 @@ export default function HomePage() {
                 totalCurrentHoldShares: 0,
             };
 
-            // --- Process Transactions ---
-            // Sort by date to find latest
             const sortedStockTxns = [...stockTxns].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
             sortedStockTxns.forEach(txn => {
-                // Find Last Swing Buy (contributed to Swing shares)
                 if (txn.action === 'Buy' && (txn.txnType === 'Swing' || (txn.txnType === 'Split' && (txn.swingShares ?? 0) > epsilon))) {
                     stockData.swingBuyCount++;
-                    // Update lastSwingBuy if this one is later or first
                     if (!stockData.lastSwingBuy || (txn.date && txn.date >= stockData.lastSwingBuy.date)) {
                         stockData.lastSwingBuy = { date: txn.date, price: txn.price ?? null };
                     }
                 }
-                // Find Last Swing Sell (sold FROM Swing shares)
                 else if (txn.action === 'Sell' && txn.txnType === 'Swing') {
-                    // Update lastSwingSell if this one is later or first
                      if (!stockData.lastSwingSell || (txn.date && txn.date >= stockData.lastSwingSell.date)) {
                         stockData.lastSwingSell = { date: txn.date };
                     }
                 }
             });
 
-            // --- Process Wallets ---
             stockData.activeSwingWallets = stockWallets.filter(w =>
                 w.walletType === 'Swing' && (w.remainingShares ?? 0) > epsilon
             );
             stockData.totalCurrentSwingShares = stockData.activeSwingWallets.reduce((sum, w) => sum + (w.remainingShares ?? 0), 0);
-            // Calculate total Hold shares for reference if needed elsewhere
             stockData.totalCurrentHoldShares = stockWallets
                 .filter(w => w.walletType === 'Hold' && (w.remainingShares ?? 0) > epsilon)
                 .reduce((sum, w) => sum + (w.remainingShares ?? 0), 0);
 
-
-            // Find Lowest Buy Price Active Swing Wallet
             stockData.lowestSwingBuyPriceWallet = stockData.activeSwingWallets.reduce((lowest, current) => {
-                if (!lowest) return current; // First one becomes lowest initially
+                if (!lowest) return current;
                 if (typeof current.buyPrice === 'number' && current.buyPrice < (lowest.buyPrice ?? Infinity)) {
                     return current;
                 }
                 return lowest;
             }, null as StockWalletDataType | null);
 
-            // Find Lowest TP Active Swing Wallet (considering only those with valid TP)
-             stockData.lowestSwingTpWallet = stockData.activeSwingWallets
-                 .filter(w => typeof w.tpValue === 'number' && w.tpValue > 0) // Filter for valid TPs
+            stockData.lowestSwingTpWallet = stockData.activeSwingWallets
+                 .filter(w => typeof w.tpValue === 'number' && w.tpValue > 0)
                  .reduce((lowest, current) => {
                     if (!lowest) return current;
-                    // We know tpValue is number here due to filter
                     if (current.tpValue! < lowest.tpValue!) {
                         return current;
                     }
@@ -415,43 +349,37 @@ export default function HomePage() {
                  }, null as StockWalletDataType | null);
 
             dataMap[stockId] = stockData;
-        }); // End loop through portfolioStocks
+        });
 
-        //console.log("Finished processing transactions and wallets.", dataMap);
         return dataMap;
-    // Update dependencies: now depends on wallets too
     }, [allTransactions, allWallets, portfolioStocks]);
-
 
     interface ReportDataItem {
         id: string;
         symbol: string;
         currentPrice: number | null;
-        fiveDayDip: number | null; // Calculated 5DD percentage
-        lbd: number | null;        // Calculated LBD percentage
-        sinceBuy: number | null;   // Days
-        sinceSell: number | null;  // Days
+        fiveDayDip: number | null;
+        lbd: number | null;
+        sinceBuy: number | null;
+        sinceSell: number | null;
         swingWalletCount: number;
-        buys: number;            // Count
+        buys: number;
         percentToBe: number | null;
         ltpiaTakeProfitPrice: number | null;
         percentToTp: number | null;
         tpShares: number | null;
         totalCurrentShares: number;
         incompleteBuyCount: number;
-        
-      }
+    }
 
     function calculateDaysAgo(dateString: string | null | undefined): number | null {
         if (!dateString) return null;
         try {
-          // Parse YYYY-MM-DD assuming UTC or consistent local timezone interpretation
-          const pastDate = new Date(dateString + 'T00:00:00Z'); // Treat as UTC midnight
+          const pastDate = new Date(dateString + 'T00:00:00Z');
           const today = new Date();
-          today.setUTCHours(0, 0, 0, 0); // Compare with today's UTC midnight
-      
+          today.setUTCHours(0, 0, 0, 0);
           const diffTime = today.getTime() - pastDate.getTime();
-          if (diffTime < 0) return 0; // Or handle future dates if possible? Default to 0 days ago.
+          if (diffTime < 0) return 0;
           const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
           return diffDays;
         } catch (e) {
@@ -460,27 +388,20 @@ export default function HomePage() {
         }
     }
 
-
-    // --- Calculate Final Report Data (Phase 3) ---
     const reportData = useMemo((): ReportDataItem[] => {
-        //console.log("Calculating final report data based on processed data...");
-
         return portfolioStocks.map(stock => {
             const stockId: string = stock.id;
             const symbol: string = stock.symbol;
-            const pdp: number | null | undefined = stock.pdp; // Keep PDP from stock
-            const priceData = latestPrices[symbol]; // Get current price / history
+            const pdp: number | null | undefined = stock.pdp;
+            const priceData = latestPrices[symbol];
             const currentPrice = priceData?.currentPrice ?? null;
 
-            // Get processed Txn/Wallet data for this stock
-            const procData = processedData[stockId] ?? { // Use new processedData map
+            const procData = processedData[stockId] ?? {
                 lastSwingBuy: undefined, lastSwingSell: undefined, swingBuyCount: 0,
                 activeSwingWallets: [], lowestSwingBuyPriceWallet: null, lowestSwingTpWallet: null,
-                totalCurrentSwingShares: 0, totalCurrentHoldShares: 0, // Provide defaults
+                totalCurrentSwingShares: 0, totalCurrentHoldShares: 0,
             };
 
-            // --- Calculations for 5DD, LBD, %2BE, %2TP ---
-            // 5DD (Uses Price History & PDP - unchanged logic)
             let fiveDayDipPercent: number | null = null;
             if (typeof currentPrice === 'number' && typeof pdp === 'number' && priceData?.historicalCloses) {
                  const historicalCloses = priceData.historicalCloses ?? [];
@@ -501,7 +422,6 @@ export default function HomePage() {
                  }
             }
 
-            // LBD (Uses Last SWING Buy Price & PDP)
             let lbdPercent: number | null = null;
             const lastSwingBuyPrice = procData.lastSwingBuy?.price;
             if (typeof currentPrice === 'number' && typeof lastSwingBuyPrice === 'number' && typeof pdp === 'number' && lastSwingBuyPrice > 0) {
@@ -511,31 +431,25 @@ export default function HomePage() {
                 }
             }
 
-            // %2BE (Uses Lowest Swing Buy Price)
             let percentToBe: number | null = null;
             const lowestSwingBuyPrice = procData.lowestSwingBuyPriceWallet?.buyPrice;
             if (typeof currentPrice === 'number' && typeof lowestSwingBuyPrice === 'number' && lowestSwingBuyPrice > 0) {
                 percentToBe = (currentPrice / lowestSwingBuyPrice - 1) * 100;
             }
 
-            // TP, %2TP, TP-Shs (Uses Lowest Swing TP Wallet info)
-            const lowestSwingTpPrice = procData.lowestSwingTpWallet?.tpValue; // The TP value itself
-            const lowestSwingTpShares = procData.lowestSwingTpWallet?.remainingShares; // Shares in that wallet
+            const lowestSwingTpPrice = procData.lowestSwingTpWallet?.tpValue;
+            const lowestSwingTpShares = procData.lowestSwingTpWallet?.remainingShares;
             let percentToTp: number | null = null;
             if (typeof currentPrice === 'number' && typeof lowestSwingTpPrice === 'number' && lowestSwingTpPrice > 0) {
                 percentToTp = (currentPrice / lowestSwingTpPrice - 1) * 100;
             }
-            // --- End Calculations ---
 
-            // Get other data points
             const sinceBuyDays = calculateDaysAgo(procData.lastSwingBuy?.date);
-            const sinceSellDays = calculateDaysAgo(procData.lastSwingSell?.date); // Last SWING sell
+            const sinceSellDays = calculateDaysAgo(procData.lastSwingSell?.date);
             const swingBuyCountValue = procData.swingBuyCount;
-            // Calculate total shares from processed data
             const totalShares = procData.totalCurrentSwingShares + procData.totalCurrentHoldShares;
             const swingWalletCountValue = procData.activeSwingWallets.length;
 
-            // Return combined data object for the report row
             return {
                 id: stockId,
                 symbol: symbol,
@@ -543,29 +457,22 @@ export default function HomePage() {
                 fiveDayDip: fiveDayDipPercent,
                 lbd: lbdPercent,
                 percentToBe: percentToBe,
-                // Rename LTPIA TP Price to just TP
-                ltpiaTakeProfitPrice: lowestSwingTpPrice ?? null, // TP value to display
+                ltpiaTakeProfitPrice: lowestSwingTpPrice ?? null,
                 percentToTp: percentToTp,
-                tpShares: lowestSwingTpShares ?? null, // Shares corresponding to lowest TP wallet
+                tpShares: lowestSwingTpShares ?? null,
                 sinceBuy: sinceBuyDays,
-                sinceSell: sinceSellDays, // Since last SWING sell
-                buys: swingBuyCountValue, // Now represents SWING buys
-                totalCurrentShares: totalShares, // Keep total if needed
-                incompleteBuyCount: 0, // No longer calculated/used
+                sinceSell: sinceSellDays,
+                buys: swingBuyCountValue,
+                totalCurrentShares: totalShares,
+                incompleteBuyCount: 0,
                 swingWalletCount: swingWalletCountValue,
             };
         });
-    // Update dependencies
     }, [portfolioStocks, latestPrices, processedData]);
 
-
-    // --- Portfolio Overview Calculations ---
-
-    // Calculate Budget Stats
     const portfolioBudgetStats = useMemo(() => {
         const totalBudget = portfolioStocks.reduce((sum, stock) => sum + (stock.budget ?? 0), 0);
 
-        // Calculate total tied-up investment across ALL wallets
         const totalTiedUpInvestment = allWallets.reduce((totalTiedUp, wallet) => {
             const totalInvestment = wallet.totalInvestment ?? 0;
             const totalShares = wallet.totalSharesQty ?? 0;
@@ -581,9 +488,8 @@ export default function HomePage() {
             totalBudget: parseFloat(totalBudget.toFixed(CURRENCY_PRECISION)),
             budgetLeft: parseFloat(budgetLeft.toFixed(CURRENCY_PRECISION)),
         };
-    }, [portfolioStocks, allWallets]); // Depends on stocks and wallets
+    }, [portfolioStocks, allWallets]);
 
-    // Calculate Transaction Counts
     const portfolioTransactionCounts = useMemo(() => {
         const buys = allTransactions.filter(t => (t as any).action === 'Buy').length;
         const swingSells = allTransactions.filter(t => (t as any).action === 'Sell' && (t as any).txnType === 'Swing').length;
@@ -592,7 +498,6 @@ export default function HomePage() {
         return { buys, swingSells, holdSells, totalSells };
     }, [allTransactions]);
 
-    // Calculate Realized P/L Stats (Method 2)
     const portfolioRealizedPL = useMemo(() => {
         const walletBuyPriceMap = new Map<string, number>();
         allWallets.forEach(w => {
@@ -604,23 +509,15 @@ export default function HomePage() {
         let totalSwingPlDollars = 0, totalSwingCostBasis = 0;
         let totalHoldPlDollars = 0, totalHoldCostBasis = 0;
     
-        // Use '(txn as any)' to access properties we know exist via selectionSet
         allTransactions.forEach(txn => {
-            // Access properties using 'as any'
             if ((txn as any).action === 'Sell' && (txn as any).completedTxnId && typeof (txn as any).quantity === 'number' && typeof (txn as any).price === 'number') {
-                // Access completedTxnId using 'as any'
                 const walletBuyPrice = walletBuyPriceMap.get((txn as any).completedTxnId);
                 if (typeof walletBuyPrice === 'number') {
-                    // Access quantity using 'as any'
                     const costBasisForTxn = walletBuyPrice * (txn as any).quantity;
-                     // Access price and quantity using 'as any'
                     const profitForTxn = ((txn as any).price - walletBuyPrice) * (txn as any).quantity;
-    
-                    // Access txnType using 'as any'
                     if ((txn as any).txnType === 'Swing') {
                         totalSwingPlDollars += profitForTxn;
                         totalSwingCostBasis += costBasisForTxn;
-                    // Access txnType using 'as any'
                     } else if ((txn as any).txnType === 'Hold') {
                         totalHoldPlDollars += profitForTxn;
                         totalHoldCostBasis += costBasisForTxn;
@@ -648,26 +545,23 @@ export default function HomePage() {
         };
     }, [allTransactions, allWallets]);
 
-    // --- START: Memo for All-Time UNREALIZED P/L Calculation (Portfolio-Wide) ---
     const portfolioUnrealizedPL = useMemo(() => {
         console.log("[Memo] Calculating portfolioUnrealizedPL ($ and %)");
 
         let totalUnrealizedSwingPL = 0;
-        let currentSwingCostBasis = 0; // Total cost basis of ALL HELD swing shares
-        let currentSwingCostBasisForPct = 0; // Basis only for those with prices (for % calc)
+        let currentSwingCostBasis = 0;
+        let currentSwingCostBasisForPct = 0;
         let totalUnrealizedHoldPL = 0;
-        let currentHoldCostBasis = 0;   // Total cost basis of ALL HELD hold shares
-        let currentHoldCostBasisForPct = 0; // Basis only for those with prices (for % calc)
-        let partialDataUsed = false; // Flag if any held stock price is missing
+        let currentHoldCostBasis = 0;
+        let currentHoldCostBasisForPct = 0;
+        let partialDataUsed = false;
 
         allWallets.forEach(wallet => {
-        // Only consider wallets with remaining shares and a valid buy price
         if ((wallet.remainingShares ?? 0) > SHARE_EPSILON && typeof wallet.buyPrice === 'number') {
             const stockInfo = portfolioStocks.find(s => s.id === wallet.portfolioStockId);
             const stockSymbol = stockInfo?.symbol;
             const currentPrice = stockSymbol ? (latestPrices[stockSymbol]?.currentPrice ?? null) : null;
 
-            // Always calculate and accumulate total cost basis for HELD shares
             const costBasisForWallet = wallet.buyPrice * wallet.remainingShares!;
             if (wallet.walletType === 'Swing') {
                 currentSwingCostBasis += costBasisForWallet;
@@ -675,28 +569,24 @@ export default function HomePage() {
                 currentHoldCostBasis += costBasisForWallet;
             }
 
-            // Check for missing price
             if (currentPrice === null) {
-            partialDataUsed = true; // Mark data as potentially partial
+            partialDataUsed = true;
             console.warn(`[Unrealized P/L] SKIPPING P/L calc for wallet ${wallet.id} due to missing price for ${stockSymbol || 'unknown'}`);
-            // Skip P/L calculation for THIS wallet if price is missing
-            return; // continue to next wallet iteration
+            return;
             }
 
-            // --- Price is available, proceed with P/L and basis for percentage ---
             const unrealizedForWallet = (currentPrice - wallet.buyPrice) * wallet.remainingShares!;
 
             if (wallet.walletType === 'Swing') {
             totalUnrealizedSwingPL += unrealizedForWallet;
-            currentSwingCostBasisForPct += costBasisForWallet; // Add to basis used for %
+            currentSwingCostBasisForPct += costBasisForWallet;
             } else if (wallet.walletType === 'Hold') {
             totalUnrealizedHoldPL += unrealizedForWallet;
-            currentHoldCostBasisForPct += costBasisForWallet; // Add to basis used for %
+            currentHoldCostBasisForPct += costBasisForWallet;
             }
         }
         });
 
-        // Calculate percentages using the cost basis ONLY from wallets where price was available
         const swingPercent = (currentSwingCostBasisForPct > SHARE_EPSILON)
             ? (totalUnrealizedSwingPL / currentSwingCostBasisForPct) * 100
             : (Math.abs(totalUnrealizedSwingPL) < 0.001 ? 0 : null);
@@ -711,8 +601,6 @@ export default function HomePage() {
             ? (totalUnrealizedPl / currentTotalCostBasisForPct) * 100
             : (Math.abs(totalUnrealizedPl) < 0.001 ? 0 : null);
 
-
-        // Rounding (as before)
         const roundedSwingDollars = parseFloat(totalUnrealizedSwingPL.toFixed(CURRENCY_PRECISION));
         const roundedHoldDollars = parseFloat(totalUnrealizedHoldPL.toFixed(CURRENCY_PRECISION));
         const roundedTotalDollars = parseFloat(totalUnrealizedPl.toFixed(CURRENCY_PRECISION));
@@ -722,42 +610,32 @@ export default function HomePage() {
 
         console.log(`[Unrealized P/L] Swing $: ${roundedSwingDollars}, Hold $: ${roundedHoldDollars}, Total $: ${roundedTotalDollars}. Partial: ${partialDataUsed}`);
 
-        // Return potentially partial results, total basis, and the flag
         return {
             unrealizedSwingDollars: roundedSwingDollars,
             unrealizedSwingPercent: roundedSwingPercent,
-            currentSwingCostBasis: currentSwingCostBasis, // Total basis of ALL HELD swing shares
+            currentSwingCostBasis: currentSwingCostBasis,
             unrealizedHoldDollars: roundedHoldDollars,
             unrealizedHoldPercent: roundedHoldPercent,
-            currentHoldCostBasis: currentHoldCostBasis,   // Total basis of ALL HELD hold shares
+            currentHoldCostBasis: currentHoldCostBasis,
             unrealizedTotalDollars: roundedTotalDollars,
             unrealizedTotalPercent: roundedTotalPercent,
-            currentTotalCostBasis: currentSwingCostBasis + currentHoldCostBasis, // Total basis of ALL HELD shares
-            partialDataUsed: partialDataUsed, // Indicate if results are partial
+            currentTotalCostBasis: currentSwingCostBasis + currentHoldCostBasis,
+            partialDataUsed: partialDataUsed,
         };
 
     }, [allWallets, portfolioStocks, latestPrices]);
-    // --- END: Memo for All-Time UNREALIZED P/L Calculation ---
 
-    // --- START: Memo for All-Time TOTAL P/L (Realized + Unrealized) Portfolio-Wide ---
     const portfolioTotalPL = useMemo(() => {
         console.log("[Memo] Calculating portfolioTotalPL ($ and %)");
 
-        // --- REMOVED check for unrealizedAvailable ---
-        // The calculation now proceeds even if unrealized P/L is partial or zero.
-
-        // Calculate Total Dollar Amounts
-        // Use ?? 0 to handle potential nulls if the structure changes, though shouldn't be needed now
         const totalSwingDollars = (portfolioRealizedPL.totalSwingPlDollars ?? 0) + (portfolioUnrealizedPL.unrealizedSwingDollars ?? 0);
         const totalHoldDollars = (portfolioRealizedPL.totalHoldPlDollars ?? 0) + (portfolioUnrealizedPL.unrealizedHoldDollars ?? 0);
         const totalStockDollars = (portfolioRealizedPL.totalStockPlDollars ?? 0) + (portfolioUnrealizedPL.unrealizedTotalDollars ?? 0);
 
-        // Calculate Combined Cost Bases (Uses total basis of held shares from portfolioUnrealizedPL)
         const combinedSwingBasis = (portfolioRealizedPL.totalSwingCostBasis ?? 0) + (portfolioUnrealizedPL.currentSwingCostBasis ?? 0);
         const combinedHoldBasis = (portfolioRealizedPL.totalHoldCostBasis ?? 0) + (portfolioUnrealizedPL.currentHoldCostBasis ?? 0);
         const combinedStockBasis = (portfolioRealizedPL.totalStockCostBasis ?? 0) + (portfolioUnrealizedPL.currentTotalCostBasis ?? 0);
 
-        // Calculate Total Percentages (logic unchanged)
         const totalSwingPercentCalc = (combinedSwingBasis > SHARE_EPSILON)
             ? (totalSwingDollars / combinedSwingBasis) * 100
             : (Math.abs(totalSwingDollars) < 0.001 ? 0 : null);
@@ -768,7 +646,6 @@ export default function HomePage() {
             ? (totalStockDollars / combinedStockBasis) * 100
             : (Math.abs(totalStockDollars) < 0.001 ? 0 : null);
 
-        // Rounding (logic unchanged)
         const roundedSwingDollars = parseFloat(totalSwingDollars.toFixed(CURRENCY_PRECISION));
         const roundedHoldDollars = parseFloat(totalHoldDollars.toFixed(CURRENCY_PRECISION));
         const roundedStockDollars = parseFloat(totalStockDollars.toFixed(CURRENCY_PRECISION));
@@ -785,14 +662,10 @@ export default function HomePage() {
         totalHoldPercent: roundedHoldPercent,
         totalStockDollars: roundedStockDollars,
         totalStockPercent: roundedStockPercent,
-        // --- ADD partialDataUsed flag from unrealized calculation ---
         partialDataUsed: portfolioUnrealizedPL.partialDataUsed,
         };
-    // Depend on the results of the realized and unrealized calculations
     }, [portfolioRealizedPL, portfolioUnrealizedPL]);
-    // --- END: Memo for All-Time TOTAL P/L ---
 
-    // Calculate YTD P/L Stats
     const portfolioYtdPL = useMemo(() => {
         console.log('[YTD Calc Start] Input Lengths:', {
             allWallets: allWallets.length,
@@ -811,7 +684,6 @@ export default function HomePage() {
         let currentUnrealizedHoldPL = 0, currentHoldCostBasis = 0;
         let partialDataUsed = false;
 
-        // YTD Realized
         allTransactions.forEach(txn => {
             if ((txn as any).action === 'Sell' && (txn as any).date && (txn as any).date >= startOfYear && (txn as any).completedTxnId && typeof (txn as any).quantity === 'number' && typeof (txn as any).price === 'number') {
                 const walletBuyPrice = walletBuyPriceMap.get((txn as any).completedTxnId);
@@ -825,21 +697,17 @@ export default function HomePage() {
 
         console.log('[YTD Calc] After Realized Calc:', { ytdRealizedSwingPL, ytdRealizedHoldPL });
 
-        // Current Unrealized and Cost Basis (Price dependency here)
         console.log('[YTD Calc] Starting Unrealized Calc Loop...');
 
-        // Current Unrealized and Cost Basis
         allWallets.forEach((wallet, index) => {
             const stockForWallet = portfolioStocks.find(s => s.id === wallet.portfolioStockId);
             const stockSymbol = stockForWallet?.symbol ?? null;
             console.log(`[YTD Calc Loop ${index}] WalletID=${wallet.id} StockID=${wallet.portfolioStockId} -> Symbol=${stockSymbol}`);
 
             const currentPrice = latestPrices[stockSymbol ?? '']?.currentPrice ?? null;
-            // --- LOG 3: Log Price Lookup Result ---
             console.log(`[YTD Calc Loop ${index}] Price lookup for ${stockSymbol}:`, currentPrice);
             
             if (currentPrice === null && (wallet.remainingShares ?? 0) > SHARE_EPSILON) {
-                // --- LOG 4: Log EXACTLY when priceAvailable becomes false ---
                 partialDataUsed = true;
                 console.warn(`[YTD Calc Loop ${index}] Setting priceAvailable=false. Missing price for symbol: ${stockSymbol} (Wallet ID: ${wallet.id})`);
                 return;
@@ -860,22 +728,12 @@ export default function HomePage() {
         
         console.log('[YTD Calc] After Unrealized Loop:', { currentUnrealizedSwingPL, currentSwingCostBasis, currentUnrealizedHoldPL, currentHoldCostBasis });
 
-        // --- LOG 5: Log state of priceAvailable before the check ---
-        //console.log('[YTD Calc] Before priceAvailable check. priceAvailable =', priceAvailable);
-    
-        // if (!priceAvailable) {
-        //     console.warn("[YTD Calc ABORT] Cannot calculate full unrealized P/L: One or more current prices unavailable. Returning nulls.");
-        //     // Return nulls for values depending on unrealized P/L
-        //     return { totalSwingYtdPL_dollars: null, totalSwingYtdPL_percent: null, totalHoldYtdPL_dollars: null, totalHoldYtdPL_percent: null };
-        // }
-
         const totalSwingYtdPL_dollars = ytdRealizedSwingPL + currentUnrealizedSwingPL;
         const totalHoldYtdPL_dollars = ytdRealizedHoldPL + currentUnrealizedHoldPL;
 
         const totalSwingYtdPL_percent = (currentSwingCostBasis > SHARE_EPSILON) ? (totalSwingYtdPL_dollars / currentSwingCostBasis) * 100 : (totalSwingYtdPL_dollars === 0 ? 0 : null);
         const totalHoldYtdPL_percent = (currentHoldCostBasis > SHARE_EPSILON) ? (totalHoldYtdPL_dollars / currentHoldCostBasis) * 100 : (totalHoldYtdPL_dollars === 0 ? 0 : null);
 
-        // --- LOG 6: Log final calculated results ---
         console.log('[YTD Calc Success] Calculation complete. Returning:', {
             totalSwingYtdPL_dollars, totalSwingYtdPL_percent, totalHoldYtdPL_dollars, totalHoldYtdPL_percent
         });
@@ -888,20 +746,13 @@ export default function HomePage() {
             partialDataUsed: partialDataUsed,
         };
 
-    }, [allTransactions, allWallets, portfolioStocks, latestPrices]); // Dependencies
+    }, [allTransactions, allWallets, portfolioStocks, latestPrices]);
 
-    // --- End Portfolio Overview Calculations ---
-
-
-    // Calculate the number of currently visible columns
     const visibleColumnCount = useMemo(() => {
-        // Start with columns that are always visible (e.g., Ticker)
         let count = 1;
-        // Add count of toggleable columns that are currently true
         count += (Object.values(reportColumnVisibility) as boolean[]).filter(Boolean).length;
         return count;
     }, [reportColumnVisibility]);
-    
     
     type ReportColumnKey = 
         'symbol' | 
@@ -911,7 +762,6 @@ export default function HomePage() {
         'sinceBuy' |
         'sinceSell' | 
         'swingWalletCount' |
-        //'buys' | 
         'incompleteBuyCount' | 
         'percentToBe' | 
         'percentToTp' | 
@@ -920,31 +770,22 @@ export default function HomePage() {
     const [sortConfig, setSortConfig] = useState<{ key: ReportColumnKey; direction: 'ascending' | 'descending' } | null>(null);
 
     const sortedTableData = useMemo(() => {
-        // Start with the calculated report data
         let sortableItems = [...reportData];
     
-        // Helper function to handle nulls/undefined for ASCENDING sort
-        // Treats null/undefined as infinitely large so they sort last
         const handleNullAsc = (val: number | null | undefined): number => {
             return (val === null || val === undefined) ? Infinity : val;
         };
     
         if (sortConfig !== null) {
-            // --- User has clicked a header - Sort by selected column ---
-    
-            // Helper to handle nulls based on the CURRENT sort direction
             const handleNullCurrent = (val: any) => {
                if (val === null || val === undefined) {
-                  // Ascending: Nulls go last (Infinity). Descending: Nulls go last (-Infinity).
                   return sortConfig.direction === 'ascending' ? Infinity : -Infinity;
                }
                return val;
             }
     
             sortableItems.sort((a, b) => {
-                // @ts-ignore - Allow property access using key (known TS issue)
                 const valA = a[sortConfig.key];
-                // @ts-ignore - Allow property access using key
                 const valB = b[sortConfig.key];
                 let comparison = 0;
     
@@ -957,39 +798,28 @@ export default function HomePage() {
                 return sortConfig.direction === 'ascending' ? comparison : comparison * -1;
             });
         } else {
-            // --- Default sort: LBD ascending (nulls last), then 5DD ascending (nulls last) ---
             sortableItems.sort((a, b) => {
-                // Helper function remains the same: maps null/undefined to Infinity
                 const handleNullAsc = (val: number | null | undefined): number => {
                     return (val === null || val === undefined) ? Infinity : val;
                 };
       
-                // Get LBD values, applying null handling
-                // @ts-ignore - Allow property access
                 const lbdA = handleNullAsc(a.lbd);
-                // @ts-ignore - Allow property access
                 const lbdB = handleNullAsc(b.lbd);
       
-                // Compare LBD values using explicit checks, not just subtraction
                 if (lbdA < lbdB) return -1;
                 if (lbdA > lbdB) return 1;
       
-                // If LBDs are equal (including both being null/Infinity), compare by 5DD
-                // @ts-ignore - Allow property access
                 const fiveDayDipA = handleNullAsc(a.fiveDayDip);
-                // @ts-ignore - Allow property access
                 const fiveDayDipB = handleNullAsc(b.fiveDayDip);
       
-                // Compare 5DD values using explicit checks
                 if (fiveDayDipA < fiveDayDipB) return -1;
                 if (fiveDayDipA > fiveDayDipB) return 1;
       
-                // If both LBD and 5DD are equal, maintain original order
                 return 0;
             });
         }
         return sortableItems;
-      }, [reportData, sortConfig]); // Dependencies
+      }, [reportData, sortConfig]);
 
     const requestSort = (key: ReportColumnKey) => {
          let direction: 'ascending' | 'descending' = 'ascending';
@@ -999,79 +829,60 @@ export default function HomePage() {
          setSortConfig({ key, direction });
     };
 
-    // --- Render ---
     if (isLoading) return <p>Loading portfolio...</p>;
     if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
 
     const getBreakEvenCellStyle = (percent: number | null): React.CSSProperties => {
-        if (percent === null || percent === undefined) return {}; // Default style
-    
+        if (percent === null || percent === undefined) return {};
         if (percent >= 0) {
-            //return { backgroundColor: '#286328', };
             return { color: '#01ff00' };
-        } else if (percent >= -1) { // Between -1 (exclusive) and 0 (inclusive)
-            //return { backgroundColor: '#737538' };
+        } else if (percent >= -1) {
             return { color: '#edff00' };
         } else {
-            return {}; // Default for less than -1
+            return {};
         }
     };
 
     const getSinceBuyCellStyle = (days: number | null): React.CSSProperties => {
         if (days === null || typeof days !== 'number') {
-            return {}; // No highlighting if data is missing or invalid
+            return {};
         }
-    
         if (days > 30) {
-             // Over 30 days - light red background
-            //return { backgroundColor: '#5d3232' }; // Light red hex code
             return { color: '#ff0000' };
         } else if (days > 20) {
-             // Between 21 and 30 days (inclusive) - light yellow background
-            //return { backgroundColor: '#5a5745' }; // Light yellow hex code
             return { color: '#ffb400' };
         } else {
-            // 20 days or less - default background
             return {};
         }
     };
 
-    // --- START: Add Formatting Helpers ---
     const formatCurrency = (value: number | null | undefined): string => {
-        // Check if the value is not a valid number
         if (typeof value !== 'number' || isNaN(value)) {
-            return '-'; // Return '-' for null, undefined, or NaN
+            return '-';
         }
-        // Use toLocaleString for commas and correct decimal places
-        // Manually add '$' as style: 'currency' adds it automatically and might conflict
-        return `$${value.toLocaleString(undefined, { // Use default locale
-            minimumFractionDigits: CURRENCY_PRECISION, // Use constant from top of file
-            maximumFractionDigits: CURRENCY_PRECISION, // Use constant from top of file
+        return `$${value.toLocaleString(undefined, {
+            minimumFractionDigits: CURRENCY_PRECISION,
+            maximumFractionDigits: CURRENCY_PRECISION,
         })}`;
     };
 
     const formatPercent = (value: number | null | undefined): string => {
         if (typeof value !== 'number' || isNaN(value)) {
-            return '-'; // Return '-' for non-numbers
+            return '-';
         }
-        // Use constant from top of file for precision
         return `${value.toFixed(PERCENT_PRECISION)}%`;
     };
 
     const formatShares = (value: number | null | undefined): string => {
-        // Use SHARE_PRECISION constant defined at the top
         const decimals = SHARE_EPSILON;
         if (typeof value !== 'number' || isNaN(value)) {
-            return '-'; // Return '-' for non-numbers
+            return '-';
         }
         return value.toFixed(decimals);
     };
-    // --- END: Formatting Helpers ---
-
-    // --- Render based on access status ---
 
     if (accessStatus === 'loading') {
-        return <p>Loading access...</p>; // Or a proper loading spinner
+        return <p>Loading access...</p>;
     }
   
     if (accessStatus === 'denied') {
@@ -1079,53 +890,46 @@ export default function HomePage() {
         <div style={{ padding: '2rem' }}>
             <h2>Access Denied</h2>
             <p>I need to know who you are before you can access this application. Ping me with your email address.</p>
-            {/* TODO: Add a Sign Out button here using Amplify Auth.signOut() */}
         </div>
         );
     }
   
-    // --- If accessStatus is 'approved', render the actual page content ---
-    // For page.tsx, this would be the main return statement you already have:
     return (
-        // Inside HomePage component return:
         <div>
             <h2>Opportunity Report</h2>
             <div style={{ fontSize: '0.7em', color: "gray" }}>
                 {pricesLoading
                 ? 'Prices are refreshing...'
-                // Check if timestamp exists before formatting
                 : lastPriceFetchTimestamp
                     ? `Prices as of ${formatTimestamp(lastPriceFetchTimestamp)}`
-                    : 'Prices not fetched yet.' // Message if no timestamp loaded
+                    : 'Prices not fetched yet.'
                 }
             </div>
             {pricesError && <p style={{ color: 'red' }}>Price Error: {pricesError}</p>}
 
             <div style={{
                 marginBottom: '1rem',
-                border: '1px solid #444', // Keep border for the whole section
+                border: '1px solid #444',
             }}>
                 <p
                     style={{
-                        marginTop: 0, marginBottom: 0, // Remove bottom margin if collapsing
-                        padding: '10px 15px', // Keep padding on heading
-                        cursor: 'pointer', // Indicate clickable
-                        display: 'flex', // Use flex to align text and arrow
-                        justifyContent: 'space-between', // Push arrow to the right
+                        marginTop: 0, marginBottom: 0,
+                        padding: '10px 15px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        justifyContent: 'space-between',
                         alignItems: 'center'
                     }}
-                    onClick={() => setIsOverviewExpanded(prev => !prev)} // Toggle state on click
+                    onClick={() => setIsOverviewExpanded(prev => !prev)}
                 >                   
                     Overview
-                    {/* Indicator Arrow */}
                     <span style={{ fontSize: '0.8em' }}>{isOverviewExpanded ? '▼' : '▶'}</span>
                 </p>
 
-                {/* Conditionally render the details based on state */}
                 {isOverviewExpanded && (
                     <div style={{
-                        padding: '0px 15px 10px 15px', // Add padding back for content
-                        borderTop: '1px solid #444', // Add divider when expanded
+                        padding: '0px 15px 10px 15px',
+                        borderTop: '1px solid #444',
                         fontSize: '0.8em'
                     }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
@@ -1204,14 +1008,14 @@ export default function HomePage() {
                             </div>
 
                             <div>
-                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}> {/* Main heading paragraph */}
+                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>
                                     Unrealized P/L
                                     {portfolioUnrealizedPL.partialDataUsed && (
                                         <span style={{
-                                            marginLeft: '3px', // Add some space between heading and warning
-                                            fontSize: '1.1em',  // Keep smaller font size
+                                            marginLeft: '3px',
+                                            fontSize: '1.1em',
                                             color: 'orange',
-                                            fontWeight: 'normal' // Make warning text normal weight
+                                            fontWeight: 'normal'
                                         }}>
                                             *
                                         </span>
@@ -1241,14 +1045,14 @@ export default function HomePage() {
                             </div>
 
                             <div>
-                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}> {/* Main heading paragraph */}
+                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>
                                     Total P/L
                                     {portfolioTotalPL.partialDataUsed && (
                                         <span style={{
-                                            marginLeft: '3px', // Add some space between heading and warning
-                                            fontSize: '1.1em',  // Keep smaller font size
+                                            marginLeft: '3px',
+                                            fontSize: '1.1em',
                                             color: 'orange',
-                                            fontWeight: 'normal' // Make warning text normal weight
+                                            fontWeight: 'normal'
                                         }}>
                                             *
                                         </span>
@@ -1276,42 +1080,18 @@ export default function HomePage() {
                                     ({formatPercent(portfolioTotalPL.totalStockPercent)})
                                 </p>
                             </div>
-                            {/* <div>
-                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>YTD P/L</p>
-
-                                {portfolioYtdPL.partialDataUsed && (
-                                    <p style={{ margin: '5px 0 0 0', fontSize: '0.8em', fontStyle: 'italic', color: 'orange' }}>
-                                    (* only holdings w/ price)
-                                    </p>
-                                )}
-                                
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing YTD P/L</p>
-                                <p>
-                                    ${portfolioYtdPL.totalSwingYtdPL_dollars.toFixed(CURRENCY_PRECISION)}&nbsp; 
-                                    ({portfolioYtdPL.totalSwingYtdPL_percent !== null ? `${portfolioYtdPL.totalSwingYtdPL_percent.toFixed(PERCENT_PRECISION)}%` : 'N/A %'})
-                                </p>
-
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold YTD P/L</p>
-                                <p>
-                                    ${portfolioYtdPL.totalHoldYtdPL_dollars.toFixed(CURRENCY_PRECISION)} &nbsp;
-                                    ({portfolioYtdPL.totalHoldYtdPL_percent !== null ? `${portfolioYtdPL.totalHoldYtdPL_percent.toFixed(PERCENT_PRECISION)}%` : 'N/A %'})
-                                </p>
-                            </div> */}
                         </div>
                     </div>
                 )}
             </div>
             
-            {/* --- Add Column Toggle Checkboxes --- */}
             <div style={{ marginBottom: '1rem', marginTop: '1rem', padding: '10px', border: '1px solid #353535', fontSize: '0.7em', color: "gray" }}>
-            {/* Map over the keys of the state object to create checkboxes */}
             {(Object.keys(reportColumnVisibility) as Array<keyof ReportColumnVisibilityState>).map((key) => (
                 <label key={key} style={{ marginLeft: '15px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
                     <input
                         type="checkbox"
                         checked={reportColumnVisibility[key]}
                         onChange={() =>
-                            // Update state by toggling the specific key's value
                             setReportColumnVisibility((prev) => ({
                                 ...prev,
                                 [key]: !prev[key],
@@ -1323,7 +1103,6 @@ export default function HomePage() {
                 </label>
             ))}
             </div>
-            {/* --- End Column Toggle Checkboxes --- */}
 
             <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
                 <thead>
@@ -1346,16 +1125,6 @@ export default function HomePage() {
                                 Sw Wlts {sortConfig?.key === 'swingWalletCount' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                             </th>
                         )}
-                        {/* {reportColumnVisibility.buys && (
-                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('buys')}>
-                                S Wallets {sortConfig?.key === 'buys' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                            </th>
-                        )} */}
-                        {/* {reportColumnVisibility.incompleteBuys && (
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('incompleteBuyCount')}>
-                            I-Buys {sortConfig?.key === 'incompleteBuyCount' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        )} */}
                         {reportColumnVisibility.sinceBuy && (
                             <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('sinceBuy')}>
                                 L Buy {sortConfig?.key === 'sinceBuy' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
@@ -1364,7 +1133,7 @@ export default function HomePage() {
                         {reportColumnVisibility.sinceSell && (
                             <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('sinceSell')}>
                                 L Sell {sortConfig?.key === 'sinceSell' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                            </th>                        
+                            </th>
                         )}
                         {reportColumnVisibility.currentPrice && (
                             <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('currentPrice')}>
@@ -1393,35 +1162,21 @@ export default function HomePage() {
                     </tr>
                 </thead>
                 <tbody>
-                    {/* Use combined isLoading/error checked above, map sortedTableData */}
-                    {sortedTableData.length === 0 && !isLoading ? ( // Check isLoading here too
+                    {sortedTableData.length === 0 && !isLoading ? (
                         <tr>
-                            {/* Use dynamic colspan */}
                             <td colSpan={visibleColumnCount} style={{ textAlign: 'center', padding: '1rem' }}>
                                 No stocks in portfolio.
                             </td>
                         </tr>
                     ) : (
-                        sortedTableData.map((item, index) => ( // item should match ReportDataItem structure
+                        sortedTableData.map((item, index) => (
                             <tr key={item.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
                                 <td style={{ padding: '5px' }}>
-                                {/* <Link
-                                    href={`/txns/${item.id}/add`}
-                                    style={{
-                                    textDecoration: 'none',
-                                    // Apply conditional color based on total shares
-                                    color: item.totalCurrentShares === 0 ? 'red' : 'inherit' // Check if total is zero
-                                    }}
-                                >
-                                    {item.symbol}
-                                </Link> | */}
-
                                 <Link
                                     href={`/wallets/${item.id}`}
                                     style={{
                                     textDecoration: 'none',
-                                    // Apply conditional color based on total shares
-                                    color: item.totalCurrentShares === 0 ? 'red' : 'inherit' // Check if total is zero
+                                    color: item.totalCurrentShares === 0 ? 'red' : 'inherit'
                                     }}
                                 >
                                     {item.symbol}
@@ -1442,8 +1197,8 @@ export default function HomePage() {
                                 )}
                                 {reportColumnVisibility.sinceBuy && (
                                     <td style={{
-                                        padding: '5px', // Keep existing padding
-                                        ...getSinceBuyCellStyle(item.sinceBuy) // Merge conditional styles
+                                        padding: '5px',
+                                        ...getSinceBuyCellStyle(item.sinceBuy)
                                         }}>
                                         {item.sinceBuy != null ? `${item.sinceBuy} d` : '-'}
                                     </td>
@@ -1469,7 +1224,7 @@ export default function HomePage() {
                                     </td>
                                 )}
                                 {reportColumnVisibility.percentToTp && (
-                                    <td style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToTp) }}> {/* <<< ADD STYLING HERE */}
+                                    <td style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToTp) }}>
                                         {typeof item.percentToTp === 'number'
                                             ? `${item.percentToTp.toFixed(2)}%`
                                             : '-'}
@@ -1478,7 +1233,7 @@ export default function HomePage() {
                                 {reportColumnVisibility.tpShares && (
                                     <td style={{ padding: '5px' }}>
                                         {typeof item.tpShares === 'number'
-                                            ? item.tpShares.toFixed(5) // Format shares to 5 decimals, adjust if needed
+                                            ? item.tpShares.toFixed(5)
                                             : '-'}
                                     </td>
                                 )}
@@ -1491,5 +1246,4 @@ export default function HomePage() {
     );
 }
 
-// Helper type (might be useful globally) - Amplify often uses this internally
 type Nullable<T> = T | null | undefined;

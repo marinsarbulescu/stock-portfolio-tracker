@@ -2,6 +2,7 @@ Production Backend API
 API Id: l5ngx5jw55c3fm6fvsnd36wsly
 https://4uge4cy2izfbxatfhxsybgisy4.appsync-api.us-east-2.amazonaws.com/graphql
 User pool ID: us-east-2_c2X0v3W9w
+User pool name: amplifyAuthUserPool4BA7F805-HBYosGobAiT9
 Client Id: 9cm
 Cognito password: production app password
 Cognito tables postfix: l5ngx5jw55c3fm6fvsnd36wsly
@@ -10,6 +11,19 @@ Sandbox Backend API
 API id: jqszaeydbfhm5ex22dp3pel2aq
 https://bghjt37zhvfb3db3eqser5acda.appsync-api.us-east-2.amazonaws.com/graphql
 User pool ID: us-east-2_pUPpquHw2
+User pool name: amplifyAuthUserPool4BA7F805-HfGMCMCr1RC2
 Client Id: 1nn
 Cognito password: local app password
 Cognito tables postfix: mlajp6dltzfd5ancggexykwlcy
+
+###############################
+
+Step 4: Manual Approval Process (Admin Task)
+
+- After users sign up and confirm their email, an administrator will need to go to the AWS Cognito Console.
+- Navigate to your User Pool.
+- Find the user under the "Users" section.
+- Click on the username.
+- Go to the "Group membership" tab.
+- Click "Add user to group".
+- Select the "ApprovedUsers" group and confirm.
