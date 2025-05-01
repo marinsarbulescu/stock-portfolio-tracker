@@ -799,13 +799,21 @@ export default function HomePage() {
         }
     };
 
-    const getSinceBuyCellStyle = (days: number | null): React.CSSProperties => {
+    const getSinceBuyCellStyle = (days: number | null, swingWalletCount: number): React.CSSProperties => {
         if (days === null || typeof days !== 'number') {
             return {};
         }
-        if (days > 30) {
+        
+        // Get the current month (1-12)
+        const currentDate = new Date();
+        const currentMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11
+        
+        // New logic: Check both days AND wallet count against current month
+        if (days > 30 && swingWalletCount < currentMonth) {
+            // Return red for more than 30 days AND fewer wallets than current month
             return { color: '#ff0000' };
-        } else if (days > 20) {
+        } else if (days > 20 && swingWalletCount < currentMonth) {
+            // Return orange for 20-30 days AND fewer wallets than current month
             return { color: '#ffb400' };
         } else {
             return {};

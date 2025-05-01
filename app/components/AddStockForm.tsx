@@ -274,7 +274,7 @@ export default function AddStockForm({
       </div>
       
       <div>
-          <label htmlFor="shr" style={{display: 'block', marginBottom: '3px'}}>Swin-Hold Ratio (SHR):</label> {/* Swing-Hold Ratio */}
+          <label htmlFor="shr" style={{display: 'block', marginBottom: '3px'}}>Swing-Hold Ratio (SHR):</label> {/* Swing-Hold Ratio */}
           <input
               id="shr"
               type="number"

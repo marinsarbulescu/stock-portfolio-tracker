@@ -49,7 +49,7 @@ interface StockTableProps {
     };
     cellStyles: {
         getBreakEvenCellStyle: (percent: number | null) => React.CSSProperties;
-        getSinceBuyCellStyle: (days: number | null) => React.CSSProperties;
+        getSinceBuyCellStyle: (days: number | null, swingWalletCount: number) => React.CSSProperties;
     };
 }
 
@@ -158,12 +158,16 @@ export default function StockTable({
                                 </td>
                             )}
                             {reportColumnVisibility.swingWalletCount && (
-                                <td style={{ padding: '5px' }}>{item.swingWalletCount}</td>
+                                <td style={{
+                                    padding: '5px',
+                                    ...getSinceBuyCellStyle(item.sinceBuy, item.swingWalletCount)
+                                    }}>{item.swingWalletCount}
+                                </td>
                             )}
                             {reportColumnVisibility.sinceBuy && (
                                 <td style={{
                                     padding: '5px',
-                                    ...getSinceBuyCellStyle(item.sinceBuy)
+                                    ...getSinceBuyCellStyle(item.sinceBuy, item.swingWalletCount)
                                     }}>
                                     {item.sinceBuy != null ? `${item.sinceBuy} d` : '-'}
                                 </td>
