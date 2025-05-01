@@ -187,14 +187,14 @@ export default function StocksListingPage() {
             <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
               {/* Headers */}
               <th>Ticker</th>
-              <th style={{  maxWidth: '150px', }}>Name</th>
+              <th style={{  maxWidth: '100px', }}>Name</th>
               <th>Type</th>
               <th>Region</th>
               <th>Last Price</th>
               <th>PDP (%)</th>
               <th>PLR (%)</th>
               <th>Budget</th>
-              <th>Actions</th>
+              <th style={{ padding: '5px', textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -208,7 +208,13 @@ export default function StocksListingPage() {
                   {/* Symbol Link */}
                   <td><Link href={`/wallets/${stock.id}`}>{stock.symbol?.toUpperCase()}</Link></td>
                   {/* Other Data Cells */}
-                  <td>{stock.name ?? '-'}</td>
+                  <td style={{ maxWidth: '100px' }}>
+                    {stock.name ? 
+                      (stock.name.length > 15 ? 
+                        `${stock.name.substring(0, 15)}...` : 
+                        stock.name) 
+                      : '-'}
+                  </td>
                   <td>{stock.stockType}</td>
                   <td>{stock.region}</td>
                   <td>
@@ -218,10 +224,18 @@ export default function StocksListingPage() {
                   <td>{stock.plr ?? '-'}</td>
                   <td>{typeof stock.budget === 'number' ? stock.budget.toLocaleString('en-US', {style:'currency', currency:'USD'}) : '-'}</td>
                   {/* Actions */}
-                  <td style={{ textAlign: 'center' }}>
-                    <button onClick={() => handleEditClick(stock)} title="Edit Stock"><FaEdit /></button>
-                    <button onClick={() => handleToggleHidden(stock)} title={stock.isHidden ? "Show in Reports" : "Hide from Reports"}>
-                      {stock.isHidden ? <FaEyeSlash /> : <FaEye />}
+                  <td style={{ padding: '5px', textAlign: 'center' }}>
+                    <button 
+                      onClick={() => handleEditClick(stock)} 
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray', marginRight: '5px' }}
+                      title="Edit Stock">
+                        <FaEdit />
+                    </button>
+                    <button 
+                      onClick={() => handleToggleHidden(stock)} 
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray' }}
+                      title={stock.isHidden ? "Show in Reports" : "Hide from Reports"}>
+                        {stock.isHidden ? <FaEyeSlash /> : <FaEye />}
                     </button>
                     {/* <button onClick={() => handleDeleteStock(stock.id)} title="Delete Stock"><FaTrashAlt /></button> */}
                   </td>
