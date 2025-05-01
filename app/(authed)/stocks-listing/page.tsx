@@ -224,14 +224,14 @@ export default function StocksListingPage() {
           <thead>
             <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
               {/* Headers */}
-              <th>Ticker</th>
-              <th style={{  maxWidth: '100px', }}>Name</th>
-              <th>Type</th>
-              <th>Region</th>
-              <th>Last Price</th>
-              <th>PDP (%)</th>
-              <th>PLR (%)</th>
-              <th>Budget</th>
+              <th style={{ padding: '5px' }}>Ticker</th>
+              <th style={{ padding: '5px' }}>Name</th>
+              <th style={{ padding: '5px' }}>Type</th>
+              <th style={{ padding: '5px' }}>Region</th>
+              <th style={{ padding: '5px' }}>Last Price</th>
+              <th style={{ padding: '5px' }}>PDP (%)</th>
+              <th style={{ padding: '5px' }}>PLR (%)</th>
+              <th style={{ padding: '5px' }}>Budget</th>
               <th style={{ padding: '5px', textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
@@ -241,22 +241,22 @@ export default function StocksListingPage() {
             ) : (
               portfolioStocksData.map((stock, index) => (
                 <tr key={stock.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
-                  <td><Link href={`/wallets/${stock.id}`}>{stock.symbol?.toUpperCase()}</Link></td>
-                  <td style={{ maxWidth: '100px' }}>
+                  <td style={{ padding: '5px' }}><Link href={`/wallets/${stock.id}`}>{stock.symbol?.toUpperCase()}</Link></td>
+                  <td style={{ padding: '5px' }}>
                     {stock.name ? 
                       (stock.name.length > 15 ? 
                         `${stock.name.substring(0, 15)}...` : 
                         stock.name) 
                       : '-'}
                   </td>
-                  <td>{stock.stockType}</td>
-                  <td>{stock.region}</td>
-                  <td>
+                  <td style={{ padding: '5px' }}>{stock.stockType}</td>
+                  <td style={{ padding: '5px' }}>{stock.region}</td>
+                  <td style={{ padding: '5px' }}>
                     {pricesLoading ? '...' : (latestPrices[stock.symbol]?.currentPrice?.toFixed(2) ?? 'N/A')}
                   </td>
-                  <td>{stock.pdp ?? '-'}</td>
-                  <td>{stock.plr ?? '-'}</td>
-                  <td>{typeof stock.budget === 'number' ? stock.budget.toLocaleString('en-US', {style:'currency', currency:'USD'}) : '-'}</td>
+                  <td style={{ padding: '5px' }}>{stock.pdp ?? '-'}</td>
+                  <td style={{ padding: '5px' }}>{stock.plr ?? '-'}</td>
+                  <td style={{ padding: '5px' }}>{typeof stock.budget === 'number' ? stock.budget.toLocaleString('en-US', {style:'currency', currency:'USD'}) : '-'}</td>
                   {/* Actions */}
                   <td style={{ padding: '5px', textAlign: 'center' }}>
                     <button 

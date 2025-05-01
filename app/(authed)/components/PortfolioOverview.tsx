@@ -67,6 +67,16 @@ export default function PortfolioOverview({
     const { formatCurrency, formatPercent } = formatters;
     const { CURRENCY_PRECISION, PERCENT_PRECISION } = precision;
 
+    // Local wrapper for formatCurrency to handle negative values correctly
+    const formatCurrencyWithProperNegative = (value: number | null | undefined) => {
+        if (typeof value !== 'number') return formatCurrency(value);
+        if (value < 0) {
+            // For negative values, return with minus sign before the dollar sign
+            return `-${formatCurrency(Math.abs(value))}`;
+        }
+        return formatCurrency(value);
+    };
+
     return (
         <div style={{
             marginBottom: '1rem',
@@ -185,21 +195,21 @@ export default function PortfolioOverview({
                             
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
                             <p>
-                                {formatCurrency(portfolioUnrealizedPL.unrealizedSwingDollars)}
+                                {formatCurrencyWithProperNegative(portfolioUnrealizedPL.unrealizedSwingDollars)}
                                 &nbsp;
                                 ({formatPercent(portfolioUnrealizedPL.unrealizedSwingPercent)})
                             </p>
 
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
                             <p>
-                                {formatCurrency(portfolioUnrealizedPL.unrealizedHoldDollars)}
+                                {formatCurrencyWithProperNegative(portfolioUnrealizedPL.unrealizedHoldDollars)}
                                 &nbsp;
                                 ({formatPercent(portfolioUnrealizedPL.unrealizedHoldPercent)})
                             </p>
 
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                             <p>
-                                {formatCurrency(portfolioUnrealizedPL.unrealizedTotalDollars)}
+                                {formatCurrencyWithProperNegative(portfolioUnrealizedPL.unrealizedTotalDollars)}
                                 &nbsp;
                                 ({formatPercent(portfolioUnrealizedPL.unrealizedTotalPercent)})
                             </p>
@@ -222,21 +232,21 @@ export default function PortfolioOverview({
                             
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
                             <p>
-                                {formatCurrency(portfolioTotalPL.totalSwingDollars)}
+                                {formatCurrencyWithProperNegative(portfolioTotalPL.totalSwingDollars)}
                                 &nbsp;
                                 ({formatPercent(portfolioTotalPL.totalSwingPercent)})
                             </p>
 
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
                             <p>
-                                {formatCurrency(portfolioTotalPL.totalHoldDollars)}
+                                {formatCurrencyWithProperNegative(portfolioTotalPL.totalHoldDollars)}
                                 &nbsp;
                                 ({formatPercent(portfolioTotalPL.totalHoldPercent)})
                             </p>
 
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                             <p>
-                                {formatCurrency(portfolioTotalPL.totalStockDollars)}
+                                {formatCurrencyWithProperNegative(portfolioTotalPL.totalStockDollars)}
                                 &nbsp;
                                 ({formatPercent(portfolioTotalPL.totalStockPercent)})
                             </p>
