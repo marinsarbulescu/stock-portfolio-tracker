@@ -90,11 +90,11 @@ export default function NavBar({ accessStatus }: NavBarProps) {
                   </button>
                 )}
                 {/* Add SignOutButton here */}
-                <div 
+                {/* <div 
                     style={{marginLeft: '0.5rem', padding: '8px 16px'}}
                 >
                     <SignOutButton />
-                 </div>
+                 </div> */}
             </div>
         </nav>
     );
