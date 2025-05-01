@@ -809,7 +809,7 @@ export default function HomePage() {
         const currentMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11
         
         // New logic: Check both days AND wallet count against current month
-        if (days > 30 && swingWalletCount < currentMonth) {
+        if ((days > 30 && swingWalletCount < currentMonth) || (swingWalletCount === 0)) {
             // Return red for more than 30 days AND fewer wallets than current month
             return { color: '#ff0000' };
         } else if (days > 20 && swingWalletCount < currentMonth) {
