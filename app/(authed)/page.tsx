@@ -5,9 +5,10 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
 import { usePrices } from '@/app/contexts/PriceContext'; // Import context hook
-import Link from 'next/link';
-import { getCurrentUser } from 'aws-amplify/auth';
 import { fetchAuthSession } from 'aws-amplify/auth';
+import PortfolioOverview from './components/PortfolioOverview';
+import ColumnVisibilityControls, { ReportColumnVisibilityState } from './components/ColumnVisibilityControls';
+import StockTable, { ReportDataItem, ReportColumnKey } from './components/StockTable';
 
 const SHARE_EPSILON = 0.00001; // Example value, adjust as needed
 const CURRENCY_PRECISION = 2;  // Example value (e.g., for dollars and cents)
@@ -31,18 +32,6 @@ type TransactionListResultType = Awaited<ReturnType<typeof client.models.Transac
 const client = generateClient<Schema>();
 
 export default function HomePage() {    
-    interface ReportColumnVisibilityState {
-        fiveDayDip: boolean;
-        lbd: boolean;
-        swingWalletCount: boolean;
-        sinceBuy: boolean;
-        sinceSell: boolean;
-        currentPrice: boolean;
-        percentToBe: boolean;
-        ltpiaTakeProfitPrice: boolean,
-        percentToTp: boolean;
-        tpShares: boolean;
-    }
     
     const [reportColumnVisibility, setReportColumnVisibility] = useState<ReportColumnVisibilityState>({
         fiveDayDip: true,
@@ -353,24 +342,6 @@ export default function HomePage() {
 
         return dataMap;
     }, [allTransactions, allWallets, portfolioStocks]);
-
-    interface ReportDataItem {
-        id: string;
-        symbol: string;
-        currentPrice: number | null;
-        fiveDayDip: number | null;
-        lbd: number | null;
-        sinceBuy: number | null;
-        sinceSell: number | null;
-        swingWalletCount: number;
-        buys: number;
-        percentToBe: number | null;
-        ltpiaTakeProfitPrice: number | null;
-        percentToTp: number | null;
-        tpShares: number | null;
-        totalCurrentShares: number;
-        incompleteBuyCount: number;
-    }
 
     function calculateDaysAgo(dateString: string | null | undefined): number | null {
         if (!dateString) return null;
@@ -754,19 +725,6 @@ export default function HomePage() {
         return count;
     }, [reportColumnVisibility]);
     
-    type ReportColumnKey = 
-        'symbol' | 
-        'currentPrice' | 
-        'fiveDayDip' | 
-        'lbd' | 
-        'sinceBuy' |
-        'sinceSell' | 
-        'swingWalletCount' |
-        'incompleteBuyCount' | 
-        'percentToBe' | 
-        'percentToTp' | 
-        'ltpiaTakeProfitPrice' | 
-        'tpShares';
     const [sortConfig, setSortConfig] = useState<{ key: ReportColumnKey; direction: 'ascending' | 'descending' } | null>(null);
 
     const sortedTableData = useMemo(() => {
@@ -829,9 +787,7 @@ export default function HomePage() {
          setSortConfig({ key, direction });
     };
 
-    if (isLoading) return <p>Loading portfolio...</p>;
-    if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
-
+    // Cell styling helper functions
     const getBreakEvenCellStyle = (percent: number | null): React.CSSProperties => {
         if (percent === null || percent === undefined) return {};
         if (percent >= 0) {
@@ -856,6 +812,7 @@ export default function HomePage() {
         }
     };
 
+    // Formatting helpers
     const formatCurrency = (value: number | null | undefined): string => {
         if (typeof value !== 'number' || isNaN(value)) {
             return '-';
@@ -881,6 +838,7 @@ export default function HomePage() {
         return value.toFixed(decimals);
     };
 
+    // Handle access control
     if (accessStatus === 'loading') {
         return <p>Loading access...</p>;
     }
@@ -893,7 +851,12 @@ export default function HomePage() {
         </div>
         );
     }
-  
+
+    // Combined formatters and styling objects for passing to components
+    const formatters = { formatCurrency, formatPercent, formatShares };
+    const cellStyles = { getBreakEvenCellStyle, getSinceBuyCellStyle };
+    const precision = { CURRENCY_PRECISION, PERCENT_PRECISION };
+
     return (
         <div>
             <h2>Opportunity Report</h2>
@@ -907,341 +870,37 @@ export default function HomePage() {
             </div>
             {pricesError && <p style={{ color: 'red' }}>Price Error: {pricesError}</p>}
 
-            <div style={{
-                marginBottom: '1rem',
-                border: '1px solid #444',
-            }}>
-                <p
-                    style={{
-                        marginTop: 0, marginBottom: 0,
-                        padding: '10px 15px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                    }}
-                    onClick={() => setIsOverviewExpanded(prev => !prev)}
-                >                   
-                    Overview
-                    <span style={{ fontSize: '0.8em' }}>{isOverviewExpanded ? '▼' : '▶'}</span>
-                </p>
-
-                {isOverviewExpanded && (
-                    <div style={{
-                        padding: '0px 15px 10px 15px',
-                        borderTop: '1px solid #444',
-                        fontSize: '0.8em'
-                    }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
-                            <div>
-                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Budget</p>
-
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Annual</p>
-                                <p>
-                                    ${portfolioBudgetStats.totalBudget.toLocaleString(undefined, {
-                                        minimumFractionDigits: CURRENCY_PRECISION,
-                                        maximumFractionDigits: CURRENCY_PRECISION,
-                                    })}
-                                </p>
-                                
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Available</p>
-                                <p>
-                                    ${portfolioBudgetStats.budgetLeft.toLocaleString(undefined, {
-                                        minimumFractionDigits: CURRENCY_PRECISION,
-                                        maximumFractionDigits: CURRENCY_PRECISION,
-                                    })}
-                                </p>                             
-                            </div>
-
-                            <div>
-                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Transactions</p>
-                                    
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-                                    <div>
-                                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Buys</p>
-                                        <p>
-                                            {portfolioTransactionCounts.buys}
-                                        </p>
-
-                                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Sw Sells</p>
-                                        <p>
-                                            {portfolioTransactionCounts.swingSells}
-                                        </p>
-                                    </div>
-                                    <div>    
-                                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Sells</p>
-                                        <p>
-                                            {portfolioTransactionCounts.totalSells}
-                                        </p>
-                                        
-                                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hld Sells</p>
-                                        <p>
-                                            {portfolioTransactionCounts.holdSells}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Realized P/L</p>
-
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
-                                <p>
-                                    ${portfolioRealizedPL.totalSwingPlDollars.toFixed(CURRENCY_PRECISION)}
-                                    &nbsp;
-                                    ({portfolioRealizedPL.avgSwingPlPercent !== null ? `${portfolioRealizedPL.avgSwingPlPercent.toFixed(PERCENT_PRECISION)}%` : 'N/A'})
-                                </p>
-
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
-                                <p>
-                                    ${portfolioRealizedPL.totalHoldPlDollars.toFixed(CURRENCY_PRECISION)}
-                                    &nbsp;
-                                    ({portfolioRealizedPL.avgHoldPlPercent !== null ? `${portfolioRealizedPL.avgHoldPlPercent.toFixed(PERCENT_PRECISION)}%` : 'N/A'})
-                                </p>
-
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
-                                <p>
-                                    ${portfolioRealizedPL.totalStockPlDollars.toFixed(CURRENCY_PRECISION)}
-                                    &nbsp;
-                                    ({portfolioRealizedPL.avgStockPlPercent !== null ? `${portfolioRealizedPL.avgStockPlPercent.toFixed(PERCENT_PRECISION)}%` : 'N/A'})
-                                </p>
-                            </div>
-
-                            <div>
-                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>
-                                    Unrealized P/L
-                                    {portfolioUnrealizedPL.partialDataUsed && (
-                                        <span style={{
-                                            marginLeft: '3px',
-                                            fontSize: '1.1em',
-                                            color: 'orange',
-                                            fontWeight: 'normal'
-                                        }}>
-                                            *
-                                        </span>
-                                    )}
-                                </p>
-                                
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
-                                <p>
-                                    {formatCurrency(portfolioUnrealizedPL.unrealizedSwingDollars)}
-                                    &nbsp;
-                                    ({formatPercent(portfolioUnrealizedPL.unrealizedSwingPercent)})
-                                </p>
-
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
-                                <p>
-                                    {formatCurrency(portfolioUnrealizedPL.unrealizedHoldDollars)}
-                                    &nbsp;
-                                    ({formatPercent(portfolioUnrealizedPL.unrealizedHoldPercent)})
-                                </p>
-
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
-                                <p>
-                                    {formatCurrency(portfolioUnrealizedPL.unrealizedTotalDollars)}
-                                    &nbsp;
-                                    ({formatPercent(portfolioUnrealizedPL.unrealizedTotalPercent)})
-                                </p>
-                            </div>
-
-                            <div>
-                                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>
-                                    Total P/L
-                                    {portfolioTotalPL.partialDataUsed && (
-                                        <span style={{
-                                            marginLeft: '3px',
-                                            fontSize: '1.1em',
-                                            color: 'orange',
-                                            fontWeight: 'normal'
-                                        }}>
-                                            *
-                                        </span>
-                                    )}
-                                </p>
-                                
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
-                                <p>
-                                    {formatCurrency(portfolioTotalPL.totalSwingDollars)}
-                                    &nbsp;
-                                    ({formatPercent(portfolioTotalPL.totalSwingPercent)})
-                                </p>
-
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
-                                <p>
-                                    {formatCurrency(portfolioTotalPL.totalHoldDollars)}
-                                    &nbsp;
-                                    ({formatPercent(portfolioTotalPL.totalHoldPercent)})
-                                </p>
-
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
-                                <p>
-                                    {formatCurrency(portfolioTotalPL.totalStockDollars)}
-                                    &nbsp;
-                                    ({formatPercent(portfolioTotalPL.totalStockPercent)})
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
+            {/* Portfolio Overview Component */}
+            <PortfolioOverview
+                isExpanded={isOverviewExpanded}
+                toggleExpand={() => setIsOverviewExpanded(prev => !prev)}
+                portfolioBudgetStats={portfolioBudgetStats}
+                portfolioTransactionCounts={portfolioTransactionCounts}
+                portfolioRealizedPL={portfolioRealizedPL}
+                portfolioUnrealizedPL={portfolioUnrealizedPL}
+                portfolioTotalPL={portfolioTotalPL}
+                formatters={formatters}
+                precision={precision}
+            />
             
-            <div style={{ marginBottom: '1rem', marginTop: '1rem', padding: '10px', border: '1px solid #353535', fontSize: '0.7em', color: "gray" }}>
-            {(Object.keys(reportColumnVisibility) as Array<keyof ReportColumnVisibilityState>).map((key) => (
-                <label key={key} style={{ marginLeft: '15px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
-                    <input
-                        type="checkbox"
-                        checked={reportColumnVisibility[key]}
-                        onChange={() =>
-                            setReportColumnVisibility((prev) => ({
-                                ...prev,
-                                [key]: !prev[key],
-                            }))
-                        }
-                        style={{ marginRight: '5px', cursor: 'pointer' }}
-                    />
-                    {COLUMN_LABELS[key]}
-                </label>
-            ))}
-            </div>
+            {/* Column Visibility Controls Component */}
+            <ColumnVisibilityControls
+                columnVisibility={reportColumnVisibility}
+                setColumnVisibility={setReportColumnVisibility}
+                columnLabels={COLUMN_LABELS}
+            />
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
-                <thead>
-                    <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
-                        <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('symbol')}>
-                            Ticker {sortConfig?.key === 'symbol' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                        </th>
-                        {reportColumnVisibility.fiveDayDip && (
-                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('fiveDayDip')}>
-                                5DD (%) {sortConfig?.key === 'fiveDayDip' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                            </th>
-                        )}
-                        {reportColumnVisibility.lbd && (
-                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('lbd')}>
-                                LBD (%) {sortConfig?.key === 'lbd' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                            </th>
-                        )}
-                        {reportColumnVisibility.swingWalletCount && (
-                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('swingWalletCount')}>
-                                Sw Wlts {sortConfig?.key === 'swingWalletCount' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                            </th>
-                        )}
-                        {reportColumnVisibility.sinceBuy && (
-                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('sinceBuy')}>
-                                L Buy {sortConfig?.key === 'sinceBuy' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                            </th>
-                        )}
-                        {reportColumnVisibility.sinceSell && (
-                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('sinceSell')}>
-                                L Sell {sortConfig?.key === 'sinceSell' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                            </th>
-                        )}
-                        {reportColumnVisibility.currentPrice && (
-                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('currentPrice')}>
-                                Price {sortConfig?.key === 'currentPrice' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                            </th>
-                        )}
-                        {reportColumnVisibility.percentToBe && (
-                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('percentToBe')}>
-                                %2BE {sortConfig?.key === 'percentToBe' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                            </th>
-                        )}
-                        {reportColumnVisibility.ltpiaTakeProfitPrice && (
-                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('ltpiaTakeProfitPrice')}>
-                                TP {sortConfig?.key === 'ltpiaTakeProfitPrice' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                            </th>
-                        )}
-                        {reportColumnVisibility.percentToTp && (
-                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('percentToTp')}>
-                                %2TP {sortConfig?.key === 'percentToTp' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                            </th>
-                        )}
-                        
-                        {reportColumnVisibility.tpShares && (
-                            <th onClick={() => requestSort('tpShares')}>TP-Shs</th>
-                        )}
-                    </tr>
-                </thead>
-                <tbody>
-                    {sortedTableData.length === 0 && !isLoading ? (
-                        <tr>
-                            <td colSpan={visibleColumnCount} style={{ textAlign: 'center', padding: '1rem' }}>
-                                No stocks in portfolio.
-                            </td>
-                        </tr>
-                    ) : (
-                        sortedTableData.map((item, index) => (
-                            <tr key={item.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
-                                <td style={{ padding: '5px' }}>
-                                <Link
-                                    href={`/wallets/${item.id}`}
-                                    style={{
-                                    textDecoration: 'none',
-                                    color: item.totalCurrentShares === 0 ? 'red' : 'inherit'
-                                    }}
-                                >
-                                    {item.symbol}
-                                </Link>
-                                </td>                                
-                                {reportColumnVisibility.fiveDayDip && (
-                                    <td style={{ padding: '5px' }}>
-                                        {typeof item.fiveDayDip === 'number' && Math.abs(item.fiveDayDip) > 0.0001 ? `${item.fiveDayDip.toFixed(2)}%` : '-'}
-                                    </td>
-                                )}
-                                {reportColumnVisibility.lbd && (
-                                    <td style={{ padding: '5px' }}>
-                                        {typeof item.lbd === 'number' ? `${item.lbd.toFixed(2)}%` : '-'}
-                                    </td>
-                                )}
-                                {reportColumnVisibility.swingWalletCount  && (
-                                    <td style={{ padding: '5px' }}>{item.swingWalletCount }</td>
-                                )}
-                                {reportColumnVisibility.sinceBuy && (
-                                    <td style={{
-                                        padding: '5px',
-                                        ...getSinceBuyCellStyle(item.sinceBuy)
-                                        }}>
-                                        {item.sinceBuy != null ? `${item.sinceBuy} d` : '-'}
-                                    </td>
-                                )}
-                                {reportColumnVisibility.sinceSell && (
-                                    <td style={{ padding: '5px' }}>{item.sinceSell != null ? `${item.sinceSell} d` : '-'}</td>
-                                )}
-                                {reportColumnVisibility.currentPrice && (
-                                    <td style={{ padding: '5px' }}>
-                                        {typeof item.currentPrice === 'number' ? `$${item.currentPrice.toFixed(2)}` : '-'}
-                                    </td>
-                                )}
-                                {reportColumnVisibility.percentToBe && (
-                                    <td style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToBe) }}>
-                                        {typeof item.percentToBe === 'number'
-                                            ? `${item.percentToBe.toFixed(2)}%`
-                                            : '-'}
-                                    </td>
-                                )}
-                                {reportColumnVisibility.ltpiaTakeProfitPrice && (
-                                    <td style={{ padding: '5px' }}>
-                                        {typeof item.ltpiaTakeProfitPrice === 'number' ? `$${item.ltpiaTakeProfitPrice.toFixed(2)}` : '-'}
-                                    </td>
-                                )}
-                                {reportColumnVisibility.percentToTp && (
-                                    <td style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToTp) }}>
-                                        {typeof item.percentToTp === 'number'
-                                            ? `${item.percentToTp.toFixed(2)}%`
-                                            : '-'}
-                                    </td>
-                                )}
-                                {reportColumnVisibility.tpShares && (
-                                    <td style={{ padding: '5px' }}>
-                                        {typeof item.tpShares === 'number'
-                                            ? item.tpShares.toFixed(5)
-                                            : '-'}
-                                    </td>
-                                )}
-                            </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
+            {/* Stock Table Component */}
+            <StockTable
+                isLoading={isLoading}
+                reportColumnVisibility={reportColumnVisibility}
+                sortedTableData={sortedTableData}
+                visibleColumnCount={visibleColumnCount}
+                requestSort={requestSort}
+                sortConfig={sortConfig}
+                formatters={formatters}
+                cellStyles={cellStyles}
+            />
         </div>
     );
 }
