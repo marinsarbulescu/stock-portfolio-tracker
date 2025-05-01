@@ -963,7 +963,7 @@ export default function HomePage() {
                                             {portfolioTransactionCounts.buys}
                                         </p>
 
-                                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing Sells</p>
+                                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Sw Sells</p>
                                         <p>
                                             {portfolioTransactionCounts.swingSells}
                                         </p>
@@ -974,7 +974,7 @@ export default function HomePage() {
                                             {portfolioTransactionCounts.totalSells}
                                         </p>
                                         
-                                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold Sells</p>
+                                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hld Sells</p>
                                         <p>
                                             {portfolioTransactionCounts.holdSells}
                                         </p>

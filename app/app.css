@@ -26,11 +26,12 @@ body {
     color: white;
   }
   button:hover {
-    border-color: #646cff;
+    border-color: #919191;  /* Changing to match the blue used in your Add New Stock button */
   }
   button:focus,
   button:focus-visible {
-    outline: 4px auto -webkit-focus-ring-color;
+    outline: 2px solid #0078d4;
+    outline-offset: 2px;
   }
   
   ul {

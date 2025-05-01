@@ -19,19 +19,16 @@ type PriceMap = Record<string, number | null>; // Symbol -> Price or null
 const client = generateClient<Schema>();
 
 export default function StocksListingPage() {
-  //const [latestPrices, setLatestPrices] = useState<PriceMap>({});
-  //const [pricesLoading, setPricesLoading] = useState<boolean>(false);
-  //const [pricesError, setPricesError] = useState<string | null>(null);
-  
   // --- STATE using PortfolioStockDataType[] ---
   const [portfolioStocksData, setPortfolioStocksData] = useState<PortfolioStockDataType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // --- State for editing ---
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingStockId, setEditingStockId] = useState<string | null>(null); // Store ID separately
-  const [stockToEditData, setStockToEditData] = useState<PortfolioStockDataType | null>(null); // Store data with simpler type
+  // --- State for editing and modal ---
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false); // For Add Stock modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // For Edit Stock modal
+  const [editingStockId, setEditingStockId] = useState<string | null>(null);
+  const [stockToEditData, setStockToEditData] = useState<PortfolioStockDataType | null>(null);
 
   // Inside your component function
   const { latestPrices, pricesLoading, pricesError } = usePrices();
@@ -125,63 +122,104 @@ export default function StocksListingPage() {
     } catch (err: any) { /* ... error handling ... */ }
   };
 
-  // Edit Click Handler (sets simpler type state + ID)
-  const handleEditClick = (stockData: PortfolioStockDataType) => { // Parameter uses simpler type
+  // Modal Handlers
+  const openAddModal = () => {
+    setIsAddModalOpen(true);
+  };
+
+  const closeAddModal = () => {
+    setIsAddModalOpen(false);
+  };
+
+  const handleAddSuccess = () => {
+    fetchPortfolio(); // Refresh the list
+    closeAddModal(); // Close the modal
+  };
+
+  // Edit Click Handler (sets up edit modal)
+  const handleEditClick = (stockData: PortfolioStockDataType) => {
     console.log('Editing stock data:', stockData);
-    // --- Check for TS errors accessing stockData.id ---
     setEditingStockId(stockData.id);
     setStockToEditData(stockData);
-    setIsEditing(true);
+    setIsEditModalOpen(true);
   };
 
   // Cancel Edit Handler
   const handleCancelEdit = () => {
-    setIsEditing(false);
+    setIsEditModalOpen(false);
     setEditingStockId(null);
     setStockToEditData(null);
   };
 
   // Update Stock Handler (receives plain object from form, uses ID from state)
   const handleUpdateStock = async (updatePayload: PortfolioStockUpdateInput) => {
-    if (!editingStockId) return; // Should have ID if editing
+    if (!editingStockId) return;
     console.log('Attempting to update stock:', editingStockId, updatePayload);
     setError(null);
-    // Add isSaving state if needed
 
     try {
-      // update function expects object with ID + changed fields
       const { data: updatedStock, errors } = await client.models.PortfolioStock.update(updatePayload);
       if (errors) throw errors;
 
       console.log('Stock updated successfully:', updatedStock);
       fetchPortfolio(); // Refresh the list
-      handleCancelEdit(); // Close edit form
+      handleCancelEdit(); // Close edit modal
 
     } catch (err: any) {
       console.error('Error updating stock:', err);
       const message = Array.isArray(err) ? err[0].message : err.message;
       setError(message || 'Failed to update stock.');
-    } finally {
-      // Stop isSaving state if added
     }
+  };
+
+  // Modal styles
+  const modalOverlayStyle: React.CSSProperties = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000
+  };
+
+  const modalContentStyle: React.CSSProperties = {
+    backgroundColor: '#1e1e1e',
+    borderRadius: '8px',
+    maxHeight: '90vh',
+    width: '90%',
+    maxWidth: '500px',
+    overflowY: 'auto',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
   };
 
   return (
     <div>
       <h2>Portfolio</h2>
       
-      {/* Button/Link to Add New Stock (opens form or navigates) - Optional */}
-      {!isEditing && (
-         <button onClick={() => setIsEditing(true)} style={{marginTop: '1rem'}}>Add New Stock</button>
-         // When isEditing becomes true without stockToEditData, the form should show in 'Add' mode
-         // OR navigate to a separate /add-stocks page which renders <AddStockForm />
-      )}
+      {/* Button to open Add Stock modal */}
+      <button 
+        onClick={openAddModal} 
+        style={{
+          marginTop: '1rem',
+          padding: '8px 16px',
+          background: '#557100',
+          borderRadius: '4px',
+          color: 'white',
+          cursor: 'pointer'
+        }}
+      >
+        Add New Stock
+      </button>
 
       {isLoading && <p>Loading stocks...</p>}
       {error && <p style={{ color: 'red' }}>Error: {error}</p>}
 
-      {/* Table Display (Only when NOT editing) */}
-      {!isLoading && !error && !isEditing && (
+      {/* Table Display */}
+      {!isLoading && !error && (
         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
@@ -201,13 +239,9 @@ export default function StocksListingPage() {
             {portfolioStocksData.length === 0 ? (
               <tr><td colSpan={8} style={{ textAlign: 'center', padding: '1rem' }}>Your portfolio is empty.</td></tr>
             ) : (
-              // --- Map over portfolioStocksData (simpler type) ---
               portfolioStocksData.map((stock, index) => (
-                // --- Check for TS errors accessing stock properties below ---
                 <tr key={stock.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
-                  {/* Symbol Link */}
                   <td><Link href={`/wallets/${stock.id}`}>{stock.symbol?.toUpperCase()}</Link></td>
-                  {/* Other Data Cells */}
                   <td style={{ maxWidth: '100px' }}>
                     {stock.name ? 
                       (stock.name.length > 15 ? 
@@ -246,28 +280,30 @@ export default function StocksListingPage() {
         </table>
       )}
 
-      
-      {isEditing && !stockToEditData && (
-         <div style={{ marginTop: '2rem', border: '1px solid #ccc', padding: '1rem' }}>
-           <h2>New Stock</h2>
-           <AddStockForm
-             isEditMode={false} // Explicitly Add mode
-             // No initialData needed
-             onStockAdded={() => { fetchPortfolio(); setIsEditing(false); }} // Refresh list and close form on add
-             onCancel={handleCancelEdit} // Use cancel handler to close form
-           />
-         </div>
+      {/* Add Stock Modal */}
+      {isAddModalOpen && (
+        <div style={modalOverlayStyle}>
+          <div style={modalContentStyle}>
+            <AddStockForm
+              isEditMode={false}
+              onStockAdded={handleAddSuccess}
+              onCancel={closeAddModal}
+            />
+          </div>
+        </div>
       )}
 
-      {isEditing && stockToEditData && (
-        <div style={{ marginTop: '2rem', border: '1px solid #ccc', padding: '1rem' }}>
-          <h2>Edit Stock: {stockToEditData.symbol?.toUpperCase()}</h2>
-          <AddStockForm
-            isEditMode={true}
-            initialData={stockToEditData} // Pass simpler data type
-            onUpdate={handleUpdateStock}
-            onCancel={handleCancelEdit}
-          />
+      {/* Edit Stock Modal */}
+      {isEditModalOpen && stockToEditData && (
+        <div style={modalOverlayStyle}>
+          <div style={modalContentStyle}>
+            <AddStockForm
+              isEditMode={true}
+              initialData={stockToEditData}
+              onUpdate={handleUpdateStock}
+              onCancel={handleCancelEdit}
+            />
+          </div>
         </div>
       )}
     </div>

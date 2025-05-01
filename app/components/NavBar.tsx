@@ -35,7 +35,7 @@ const linkStyles: React.CSSProperties = {
 const buttonStyles: React.CSSProperties = {
     marginLeft: '20px',
     cursor: 'pointer',
-    padding: '5px 10px' // Example padding
+    padding: '8px 16px', // Example padding
 };
 
 
@@ -78,13 +78,21 @@ export default function NavBar({ accessStatus }: NavBarProps) {
                   <button
                       onClick={fetchLatestPricesForAllStocks}
                       disabled={pricesLoading}
-                      style={buttonStyles}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#557100',
+                        borderRadius: '4px',
+                        color: 'white',
+                        cursor: 'pointer'
+                      }}
                   >
                       {pricesLoading ? 'Fetching...' : 'Fetch Prices'}
                   </button>
                 )}
                 {/* Add SignOutButton here */}
-                 <div style={{marginLeft: '1rem'}}>
+                <div 
+                    style={{marginLeft: '0.5rem', padding: '8px 16px'}}
+                >
                     <SignOutButton />
                  </div>
             </div>

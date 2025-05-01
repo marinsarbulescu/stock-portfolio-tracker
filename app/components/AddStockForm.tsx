@@ -175,42 +175,165 @@ export default function AddStockForm({
   }; // End handleSubmit
 
   return (
-    <form onSubmit={handleSubmit} style={{ marginTop: '1rem', borderTop: '1px dashed #eee', paddingTop: '1rem' }}>
+    <form onSubmit={handleSubmit} style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      gap: '15px', 
+      maxWidth: '450px', 
+      margin: '0 auto',
+      padding: '1rem'
+    }}>
       {/* Conditional Title */}
-      <h2>{isEditMode ? `Edit ${initialData?.symbol ?? 'Stock'}` : 'Add New Stock to Portfolio'}</h2>
-      {error && <p style={{ color: 'red' }} role="alert">{error}</p>}
-      {/* Removed success message - parent page should handle feedback after successful save/refresh */}
+      <h2 style={{ margin: '0 0 15px 0' }}>{isEditMode ? `Edit ${initialData?.symbol ?? 'Stock'}` : 'Add New Stock to Portfolio'}</h2>
+      
+      {error && <p style={{ color: 'red', background: '#331a1a', padding: '8px', borderRadius: '4px', border: '1px solid #663333', margin: '0 0 10px 0', fontSize: '0.9em' }} role="alert">{error}</p>}
 
       {/* --- Form Fields --- */}
-      {/* Use same inputs as before, bound to state */}
-      <div><label htmlFor="symbol">Ticker: </label><input id="symbol" value={symbol} onChange={(e) => setSymbol(e.target.value)} required disabled={isLoading} /></div>
-      <div style={{ marginTop: '0.5rem' }}><label htmlFor="type">Type: </label><select id="type" value={stockType} onChange={(e) => setStockType(e.target.value as StockTypeValue)} required disabled={isLoading}><option value="Stock">Stock</option><option value="ETF">ETF</option><option value="Crypto">Crypto</option></select></div>
-      <div style={{ marginTop: '0.5rem' }}><label htmlFor="region">Region: </label><select id="region" value={region} onChange={(e) => setRegion(e.target.value as RegionValue)} required disabled={isLoading}><option value="US">US</option><option value="EU">EU</option><option value="APAC">APAC</option></select></div>
-      <div style={{ marginTop: '0.5rem' }}><label htmlFor="name">Stock Name (Optional): </label><input id="name" value={name} onChange={(e) => setName(e.target.value)} disabled={isLoading} /></div>
-      <div style={{ marginTop: '0.5rem' }}><label htmlFor="pdp">PDP (%): </label><input id="pdp" type="number" step="any" value={pdp} onChange={(e) => setPdp(e.target.value)} disabled={isLoading} /></div>
-      <div style={{ marginTop: '0.5rem' }}><label htmlFor="plr">PLR:</label><input id="plr" type="number" step="any" value={plr} onChange={(e) => setPlr(e.target.value)} disabled={isLoading} /></div>
-      <div style={{ marginTop: '0.5rem' }}>
-          <label htmlFor="shr">SHR (%):</label> {/* Swing-Hold Ratio */}
+      <div>
+        <label htmlFor="symbol" style={{display: 'block', marginBottom: '3px'}}>Ticker:</label>
+        <input 
+          id="symbol" 
+          value={symbol} 
+          onChange={(e) => setSymbol(e.target.value)} 
+          required 
+          disabled={isLoading} 
+          style={{width: '100%', padding: '8px'}}
+        />
+      </div>
+      
+      <div>
+        <label htmlFor="type" style={{display: 'block', marginBottom: '3px'}}>Type:</label>
+        <select 
+          id="type" 
+          value={stockType} 
+          onChange={(e) => setStockType(e.target.value as StockTypeValue)} 
+          required 
+          disabled={isLoading}
+          style={{width: '100%', padding: '8px'}}
+        >
+          <option value="Stock">Stock</option>
+          <option value="ETF">ETF</option>
+          <option value="Crypto">Crypto</option>
+        </select>
+      </div>
+      
+      <div>
+        <label htmlFor="region" style={{display: 'block', marginBottom: '3px'}}>Region:</label>
+        <select 
+          id="region" 
+          value={region} 
+          onChange={(e) => setRegion(e.target.value as RegionValue)} 
+          required 
+          disabled={isLoading}
+          style={{width: '100%', padding: '8px'}}
+        >
+          <option value="US">US</option>
+          <option value="APAC">APAC</option>
+          <option value="EU">EU</option>
+          <option value="Intl">Intl</option>
+        </select>
+      </div>
+      
+      <div>
+        <label htmlFor="name" style={{display: 'block', marginBottom: '3px'}}>Stock Name (Optional):</label>
+        <input 
+          id="name" 
+          value={name} 
+          onChange={(e) => setName(e.target.value)} 
+          disabled={isLoading}
+          style={{width: '100%', padding: '8px'}}
+        />
+      </div>
+      
+      <div>
+        <label htmlFor="pdp" style={{display: 'block', marginBottom: '3px'}}>Price Drop Percentage (PDP):</label>
+        <input 
+          id="pdp" 
+          type="number" 
+          step="any" 
+          value={pdp} 
+          onChange={(e) => setPdp(e.target.value)}
+          placeholder="e.g., 10 = 10%" 
+          disabled={isLoading}
+          style={{width: '100%', padding: '8px'}} 
+        />
+      </div>
+      
+      <div>
+        <label htmlFor="plr" style={{display: 'block', marginBottom: '3px'}}>Profit Loss Ratio (PLR):</label>
+        <input 
+          id="plr" 
+          type="number" 
+          step="any" 
+          value={plr} 
+          onChange={(e) => setPlr(e.target.value)}
+          placeholder="e.g., 1.5 = 150%" 
+          disabled={isLoading}
+          style={{width: '100%', padding: '8px'}}
+        />
+      </div>
+      
+      <div>
+          <label htmlFor="shr" style={{display: 'block', marginBottom: '3px'}}>Swin-Hold Ratio (SHR):</label> {/* Swing-Hold Ratio */}
           <input
               id="shr"
               type="number"
-              step="any" // Allow decimals if needed, or "1" for whole numbers
-              min="0"   // Minimum value
-              max="100" // Maximum value
+              step="any" 
+              min="0"   
+              max="100" 
               value={swingHoldRatio}
               onChange={(e) => setSwingHoldRatio(e.target.value)}
-              placeholder="0-100 (e.g., 70 = 70% Swing)"
+              placeholder="0-100 (e.g., 70 = 70% Swing & 30% Hold)"
               disabled={isLoading}
-              style={{width: '100%', padding: '8px'}} // Example style
+              style={{width: '100%', padding: '8px'}}
           />
       </div>
-      <div style={{ marginTop: '0.5rem' }}><label htmlFor="budget">Annual Budget:</label><input id="budget" type="number" step="any" value={budget} onChange={(e) => setBudget(e.target.value)} disabled={isLoading} /></div>
+      
+      <div>
+        <label htmlFor="budget" style={{display: 'block', marginBottom: '3px'}}>Annual Budget:</label>
+        <input 
+          id="budget" 
+          type="number" 
+          step="any" 
+          value={budget} 
+          onChange={(e) => setBudget(e.target.value)}
+          placeholder="e.g., 1500 or best guess if unknown" 
+          disabled={isLoading}
+          style={{width: '100%', padding: '8px'}}
+        />
+      </div>
       {/* --- End Form Fields --- */}
 
-      {/* Conditional Buttons */}
-      <div style={{ marginTop: '1rem' }}>
-        <button type="submit" disabled={isLoading}>{isLoading ? 'Saving...' : (isEditMode ? 'Update Stock' : 'Add Stock')}</button>
-        {isEditMode && onCancel && (<button type="button" onClick={onCancel} disabled={isLoading} style={{ marginLeft: '10px' }}>Cancel</button>)}
+      {/* Buttons */}
+      <div style={{ marginTop: '1rem', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+        {/* Always show Cancel button (onCancel required in props) */}
+        {onCancel && (
+          <button 
+            type="button" 
+            onClick={onCancel} 
+            disabled={isLoading}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#555555',
+              borderRadius: '4px',
+              cursor: isLoading ? 'not-allowed' : 'pointer'
+            }}
+          >
+            Cancel
+          </button>
+        )}
+        <button 
+          type="submit" 
+          disabled={isLoading}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: '#557100',
+            borderRadius: '4px',
+            cursor: isLoading ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {isLoading ? 'Saving...' : (isEditMode ? 'Update Stock' : 'Add Stock')}
+        </button>
       </div>
     </form>
   );

@@ -4,7 +4,7 @@ import { sendStockEmail } from '../functions/sendStockEmail/resource.js';
 
 // Define Enums first
 const stockTypeEnum = a.enum(['Stock', 'ETF', 'Crypto']); // Changed order to match default in form example
-const regionEnum = a.enum(['US', 'EU', 'APAC']);
+const regionEnum = a.enum(['APAC', 'EU', 'Intl', 'US']); // Intl = International, EU = Europe, APAC = Asia-Pacific
 
 const txnActionEnum = a.enum(['Buy', 'Sell', 'Div']); // Div = Dividend
 const txnSignalEnum = a.enum(['_5DD', 'Cust', 'Initial', 'EOM', 'LBD', 'TPH', 'TPP', 'TP', 'Div']);
