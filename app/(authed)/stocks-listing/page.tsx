@@ -1,18 +1,18 @@
 // app/(authed)/stocks-listing/page.tsx - Refactored with ["type"] pattern
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'; // Added useMemo
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '@/amplify/data/resource'; // Adjust path if needed
-import AddStockForm from '@/app/components/AddStockForm'; // Adjust path if needed
-import { FaEdit, FaTrashAlt, FaEye, FaEyeSlash } from 'react-icons/fa'; // Add FaEye and FaEyeSlash here
+import type { Schema } from '@/amplify/data/resource';
+import AddStockForm from '@/app/components/AddStockForm';
+import { FaEdit, FaTrashAlt, FaEye, FaEyeSlash } from 'react-icons/fa';
 import Link from 'next/link';
 import { usePrices } from '@/app/contexts/PriceContext';
 import { Pie } from 'react-chartjs-2';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 
 // Register Chart.js components
-ChartJS.register(ArcElement, Tooltip, Legend);
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
 // Use the simpler data type for state
 type PortfolioStockDataType = Schema["PortfolioStock"]["type"];
@@ -23,7 +23,8 @@ type PriceMap = Record<string, number | null>; // Symbol -> Price or null
 
 const client = generateClient<Schema>();
 
-export default function StocksListingPage() {
+// Create a wrapper component that safely uses the context
+function StocksListingContent() {
   // --- STATE using PortfolioStockDataType[] ---
   const [portfolioStocksData, setPortfolioStocksData] = useState<PortfolioStockDataType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,7 +37,7 @@ export default function StocksListingPage() {
   const [stockToEditData, setStockToEditData] = useState<PortfolioStockDataType | null>(null);
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false); // For collapsible overview
 
-  // Inside your component function
+  // Inside your component function - this will now work because we're in a client component under the provider
   const { latestPrices, pricesLoading, pricesError } = usePrices();
 
   const handleToggleHidden = async (stock: PortfolioStockDataType) => {
@@ -224,6 +225,42 @@ export default function StocksListingPage() {
     return distribution;
   }, [portfolioStocksData]);
   
+  // Calculate detailed breakdown by region and stock type
+  const detailedDistribution = useMemo(() => {
+    // Create a structure to hold counts for each region and stock type
+    const distribution: Record<string, Record<string, number>> = {
+      US: { Stock: 0, ETF: 0, Crypto: 0 },
+      Intl: { Stock: 0, ETF: 0, Crypto: 0 },
+      APAC: { Stock: 0, ETF: 0, Crypto: 0 },
+      EU: { Stock: 0, ETF: 0, Crypto: 0 }
+    };
+
+    // Count stocks by region and type
+    portfolioStocksData.forEach(stock => {
+      if (stock.region && stock.stockType) {
+        const region = stock.region as keyof typeof distribution;
+        const stockType = stock.stockType as keyof typeof distribution.US;
+        
+        if (distribution[region] && distribution[region][stockType] !== undefined) {
+          distribution[region][stockType]++;
+        }
+      }
+    });
+
+    return distribution;
+  }, [portfolioStocksData]);
+
+  // Calculate percentages
+  const percentages = useMemo(() => {
+    const total = Object.values(regionDistribution).reduce((sum, count) => sum + count, 0);
+    return {
+      US: total > 0 ? Math.round((regionDistribution.US / total) * 100) : 0,
+      Intl: total > 0 ? Math.round((regionDistribution.Intl / total) * 100) : 0,
+      APAC: total > 0 ? Math.round((regionDistribution.APAC / total) * 100) : 0,
+      EU: total > 0 ? Math.round((regionDistribution.EU / total) * 100) : 0
+    };
+  }, [regionDistribution]);
+  
   // Prepare data for the region distribution pie chart
   const regionChartData = {
     labels: ['US', 'Intl', 'APAC', 'EU'],
@@ -283,6 +320,21 @@ export default function StocksListingPage() {
     }
   };
 
+  // Get region colors for the stacked bar chart
+  const regionColors = {
+    US: 'rgba(54, 162, 235, 0.7)',    // Blue
+    Intl: 'rgba(255, 159, 64, 0.7)',  // Orange
+    EU: 'rgba(75, 192, 192, 0.7)',    // Green
+    APAC: 'rgba(255, 99, 132, 0.7)'   // Red
+  };
+
+  // Get colors for stock types within each bar
+  const stockTypeColors = {
+    Stock: 'rgba(54, 162, 235, 0.9)',  // Darker blue
+    ETF: 'rgba(255, 205, 86, 0.9)',    // Yellow
+    Crypto: 'rgba(153, 102, 255, 0.9)' // Purple
+  };
+
   return (
     <div>
       <h2>Portfolio</h2>
@@ -318,35 +370,184 @@ export default function StocksListingPage() {
                 display: 'grid', 
                 gridTemplateColumns: '1fr 1fr', 
                 gap: '20px',
-                alignItems: 'center'
+                alignItems: 'center',
+                marginBottom: '25px'
             }}>
               {/* Chart container */}
               <div style={{ height: '180px', position: 'relative' }}>
-                  <Pie data={regionChartData} options={chartOptions} />
+                <Pie data={regionChartData} options={chartOptions} />
               </div>
 
               {/* Text representation of the data */}
               {/* <div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                      <div>
-                          <p style={{ 
-                              marginTop: '5px', 
-                              fontWeight: 'bold', 
-                              color: 'rgba(54, 162, 235, 0.9)' 
-                          }}>US</p>
-                          <p>{Math.round((regionDistribution.US / (regionDistribution.US + regionDistribution.Intl + regionDistribution.APAC + regionDistribution.EU)) * 100)}%</p>
-                          <p style={{ marginTop: '15px', fontWeight: 'bold', color: 'rgba(255, 99, 132, 0.9)' }}>Asia-Pacific</p>
-                          <p>{Math.round((regionDistribution.APAC / (regionDistribution.US + regionDistribution.Intl + regionDistribution.APAC + regionDistribution.EU)) * 100)}%</p>
-                      </div>
-                      <div>
-                          <p style={{ marginTop: '5px', fontWeight: 'bold', color: 'rgba(255, 159, 64, 0.9)' }}>International</p>
-                          <p>{Math.round((regionDistribution.Intl / (regionDistribution.US + regionDistribution.Intl + regionDistribution.APAC + regionDistribution.EU)) * 100)}%</p>
-                          <p style={{ marginTop: '15px', fontWeight: 'bold', color: 'rgba(75, 192, 192, 0.9)' }}>Europe</p>
-                          <p>{Math.round((regionDistribution.EU / (regionDistribution.US + regionDistribution.Intl + regionDistribution.APAC + regionDistribution.EU)) * 100)}%</p>
-                      </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <p style={{ 
+                        marginTop: '5px', 
+                        fontWeight: 'bold', 
+                        color: 'rgba(54, 162, 235, 0.9)' 
+                    }}>US</p>
+                    <p>{percentages.US}%</p>
+                    <p style={{ marginTop: '15px', fontWeight: 'bold', color: 'rgba(255, 99, 132, 0.9)' }}>Asia-Pacific</p>
+                    <p>{percentages.APAC}%</p>
                   </div>
-                  <p style={{ marginTop: '15px', fontSize: '0.9em' }}>Total Stocks: {regionDistribution.US + regionDistribution.Intl + regionDistribution.APAC + regionDistribution.EU}</p>
+                  <div>
+                    <p style={{ marginTop: '5px', fontWeight: 'bold', color: 'rgba(255, 159, 64, 0.9)' }}>International</p>
+                    <p>{percentages.Intl}%</p>
+                    <p style={{ marginTop: '15px', fontWeight: 'bold', color: 'rgba(75, 192, 192, 0.9)' }}>Europe</p>
+                    <p>{percentages.EU}%</p>
+                  </div>
+                </div>
+                <p style={{ marginTop: '15px', fontSize: '0.9em' }}>
+                  Total Stocks: {regionDistribution.US + regionDistribution.Intl + regionDistribution.APAC + regionDistribution.EU}
+                </p>
               </div> */}
+            </div>
+
+            {/* Stock Type Distribution by Region - Bar Chart Visualization */}
+            <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginTop: '20px', marginBottom: '20px' }}>Region & Stock Type Distribution</p>
+            
+            {/* Custom bar chart visualization */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-end',
+              height: '260px',
+              width: '100%',
+              borderBottom: '2px solid #666',
+              position: 'relative',
+              marginBottom: '30px'
+            }}>
+              {/* Render bars for each region */}
+              {['EU', 'Intl', 'US', 'APAC'].map(region => {
+                const regionKey = region as keyof typeof detailedDistribution;
+                const totalInRegion = Object.values(detailedDistribution[regionKey]).reduce((sum, count) => sum + count, 0);
+                const regionPercentage = percentages[regionKey as keyof typeof percentages];
+                
+                // Skip regions with no data
+                if (totalInRegion === 0) return null;
+
+                // Calculate relative bar height (max height is 200px)
+                const barHeight = Math.max(30, (totalInRegion / 10) * 200);
+                const barWidth = 80;
+                
+                return (
+                  <div key={region} style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    position: 'relative'
+                  }}>
+                    {/* Region total and percentage at the top */}
+                    <div style={{
+                      fontSize: '0.85em',
+                      fontWeight: 'bold',
+                      marginBottom: '2px',
+                      textAlign: 'center'
+                    }}>
+                      {totalInRegion}
+                      <br />
+                      <span style={{ fontSize: '0.9em' }}>({regionPercentage}%)</span>
+                    </div>
+                    
+                    {/* Bar container */}
+                    <div style={{
+                      width: `${barWidth}px`,
+                      height: `${barHeight}px`,
+                      display: 'flex',
+                      flexDirection: 'column-reverse', // Stack segments from bottom
+                      overflow: 'visible',
+                      position: 'relative'
+                    }}>
+                      {/* Render segments for each stock type */}
+                      {(Object.keys(detailedDistribution[regionKey]) as Array<keyof typeof detailedDistribution.US>)
+                        .filter(stockType => detailedDistribution[regionKey][stockType] > 0)
+                        .map(stockType => {
+                          const count = detailedDistribution[regionKey][stockType];
+                          const segmentPercentage = totalInRegion > 0 
+                            ? Math.round((count / totalInRegion) * 100) 
+                            : 0;
+                          
+                          // Calculate segment height proportional to its count within region's total
+                          const segmentHeight = count > 0 
+                            ? (count / totalInRegion) * barHeight 
+                            : 0;
+                          
+                          return (
+                            <div key={`${region}-${stockType}`}
+                              style={{
+                                width: '100%',
+                                height: `${segmentHeight}px`,
+                                backgroundColor: stockTypeColors[stockType as keyof typeof stockTypeColors],
+                                border: '1px solid rgba(255, 255, 255, 0.3)',
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                position: 'relative',
+                                overflow: 'visible'
+                              }}
+                            >
+                              {/* Label inside bar if there's enough space */}
+                              {segmentHeight > 25 && (
+                                <div style={{
+                                  color: '#fff',
+                                  fontSize: '0.8em',
+                                  fontWeight: 'bold',
+                                  textShadow: '0px 0px 2px rgba(0,0,0,0.7)'
+                                }}>
+                                  {count}
+                                </div>
+                              )}
+                              
+                              {/* Label to the side if bar is too small */}
+                              {segmentHeight <= 25 && segmentHeight > 0 && (
+                                <div style={{
+                                  position: 'absolute',
+                                  right: '-28px',
+                                  top: '50%',
+                                  transform: 'translateY(-50%)',
+                                  fontSize: '0.7em',
+                                  color: '#ddd'
+                                }}>
+                                  {count}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                    
+                    {/* X-axis region label */}
+                    <div style={{
+                      marginTop: '5px',
+                      fontWeight: 'bold',
+                      fontSize: '0.9em'
+                    }}>
+                      {region}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* Legend for stock types */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '20px',
+              marginTop: '5px'
+            }}>
+              {Object.entries(stockTypeColors).map(([type, color]) => (
+                <div key={type} style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{
+                    width: '15px',
+                    height: '15px',
+                    backgroundColor: color,
+                    marginRight: '5px'
+                  }}></div>
+                  <span style={{ fontSize: '0.9em' }}>{type}</span>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -460,4 +661,42 @@ export default function StocksListingPage() {
       )}
     </div>
   );
+}
+
+// Main page component wrapped with error handling
+export default function StocksListingPage() {
+  // Use error boundary pattern to catch any context errors
+  const [hasError, setHasError] = useState(false);
+
+  // If there's an error with context, show a fallback UI
+  if (hasError) {
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center' }}>
+        <h2>Something went wrong</h2>
+        <p>There was an issue loading the stocks listing page.</p>
+        <button 
+          onClick={() => window.location.reload()}
+          style={{
+            marginTop: '1rem',
+            padding: '8px 16px',
+            background: '#444',
+            borderRadius: '4px',
+            color: 'white',
+            cursor: 'pointer'
+          }}
+        >
+          Reload page
+        </button>
+      </div>
+    );
+  }
+
+  // Try to render the content component
+  try {
+    return <StocksListingContent />;
+  } catch (error) {
+    console.error("Error in StocksListingPage:", error);
+    setHasError(true);
+    return null; // Will re-render with the error state
+  }
 }
