@@ -10,9 +10,10 @@ import Link from 'next/link';
 import { usePrices } from '@/app/contexts/PriceContext';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 
-// Register Chart.js components
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+// Register Chart.js components and plugins
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, ChartDataLabels);
 
 // Use the simpler data type for state
 type PortfolioStockDataType = Schema["PortfolioStock"]["type"];
@@ -263,7 +264,7 @@ function StocksListingContent() {
   
   // Prepare data for the region distribution pie chart
   const regionChartData = {
-    labels: ['US', 'Intl', 'APAC', 'EU'],
+    labels: ['US', 'International', 'Asia-Pacific', 'Europe'],
     datasets: [
       {
           data: [
@@ -275,14 +276,14 @@ function StocksListingContent() {
           backgroundColor: [
               'rgba(54, 162, 235, 0.6)', // US - Blue
               'rgba(255, 159, 64, 0.6)', // Intl - Orange
-              'rgba(255, 252, 99, 0.6)',  // APAC - Red
+              'rgba(255, 252, 99, 0.6)',  // APAC - Yellow
               'rgba(75, 192, 81, 0.6)'   // EU - Green
           ],
           borderColor: [
-              'rgba(54, 162, 235, 0.6)', // US - Blue
-              'rgba(255, 159, 64, 0.6)', // Intl - Orange
-              'rgba(255, 252, 99, 0.6)',  // APAC - Red
-              'rgba(75, 192, 81, 0.6)'   // EU - Green
+              'rgba(54, 162, 235, 1)', // US - Blue
+              'rgba(255, 159, 64, 1)', // Intl - Orange
+              'rgba(255, 252, 99, 1)',  // APAC - Yellow
+              'rgba(75, 192, 81, 1)'   // EU - Green
           ],
           borderWidth: 1,
       },
@@ -294,29 +295,54 @@ function StocksListingContent() {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-        legend: {
-            position: 'right' as const,
-            labels: {
-                color: '#fff', // Light text color for dark theme
-                boxWidth: 15,
-                font: {
-                    size: 10
-                }
-            }
-        },
-        tooltip: {
-            callbacks: {
-                // Override the title callback to return an empty string
-                title: () => '',
-                label: (context: any) => {
-                    const label = context.label || '';
-                    const value = context.raw || 0;
-                    const total = context.chart.data.datasets[0].data.reduce((a: number, b: number) => a + b, 0);
-                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
-                    return `${label}: ${value} (${percentage}%)`;
-                }
-            }
+      legend: {
+        position: 'right' as const,
+        labels: {
+          color: '#fff', // Light text color for dark theme
+          boxWidth: 15,
+          font: {
+            size: 10
+          }
         }
+      },
+      tooltip: {
+        callbacks: {
+          title: () => '',
+          label: (context: any) => {
+            const label = context.label || '';
+            const value = context.raw || 0;
+            const total = context.chart.data.datasets[0].data.reduce((a: number, b: number) => a + b, 0);
+            const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+            return `${label}: ${value} (${percentage}%)`;
+          }
+        }
+      },
+      datalabels: {
+        // Configure the data labels plugin
+        color: '#fff',
+        font: {
+          weight: 'bold',
+          size: 11
+        },
+        textStrokeColor: 'black',
+        textStrokeWidth: 1,
+        textShadowBlur: 5,
+        textShadowColor: 'rgba(0, 0, 0, 0.5)',
+        align: 'outer',
+        anchor: 'end',
+        offset: 10,
+        formatter: (value: number, context: any) => {
+          const total = context.dataset.data.reduce((sum: number, val: number) => sum + val, 0);
+          const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+          return `${value} (${percentage}%)`;
+        },
+        display: (context: any) => {
+          // Only show labels for segments that aren't too small
+          const value = context.dataset.data[context.dataIndex];
+          const total = context.dataset.data.reduce((sum: number, val: number) => sum + val, 0);
+          return value / total > 0.05; // Only show if the segment is at least 5% of the total
+        }
+      }
     }
   };
 
@@ -375,6 +401,7 @@ function StocksListingContent() {
             }}>
               {/* Chart container */}
               <div style={{ height: '180px', position: 'relative' }}>
+                {/* @ts-ignore */}
                 <Pie data={regionChartData} options={chartOptions} />
               </div>
 
@@ -495,7 +522,7 @@ function StocksListingContent() {
                                   fontWeight: 'bold',
                                   textShadow: '0px 0px 2px rgba(0,0,0,0.7)'
                                 }}>
-                                  {count}
+                                  {count} ({segmentPercentage}%)
                                 </div>
                               )}
                               
@@ -503,13 +530,14 @@ function StocksListingContent() {
                               {segmentHeight <= 25 && segmentHeight > 0 && (
                                 <div style={{
                                   position: 'absolute',
-                                  right: '-28px',
+                                  right: '-45px',
                                   top: '50%',
                                   transform: 'translateY(-50%)',
                                   fontSize: '0.7em',
-                                  color: '#ddd'
+                                  color: '#ddd',
+                                  whiteSpace: 'nowrap'
                                 }}>
-                                  {count}
+                                  {count} ({segmentPercentage}%)
                                 </div>
                               )}
                             </div>
