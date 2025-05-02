@@ -328,7 +328,7 @@ function StocksListingContent() {
         textStrokeWidth: 1,
         textShadowBlur: 5,
         textShadowColor: 'rgba(0, 0, 0, 0.5)',
-        align: 'outer',
+        align: 'end',
         anchor: 'end',
         offset: 10,
         formatter: (value: number, context: any) => {
@@ -394,18 +394,22 @@ function StocksListingContent() {
             <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '10px' }}>Region Distribution</p>
             <div style={{ 
                 display: 'grid', 
-                gridTemplateColumns: '1fr 1fr', 
+                gridTemplateColumns: '400px 1fr', 
                 gap: '20px',
                 alignItems: 'center',
                 marginBottom: '25px'
             }}>
-              {/* Chart container */}
-              <div style={{ height: '180px', position: 'relative' }}>
+              {/* Chart container - with fixed width to ensure labels aren't cut off */}
+              <div style={{ 
+                height: '180px',
+                width: '400px', 
+                position: 'relative'
+              }}>
                 {/* @ts-ignore */}
                 <Pie data={regionChartData} options={chartOptions} />
               </div>
 
-              {/* Text representation of the data */}
+              {/* Text representation of the data -- leave this commented out */}
               {/* <div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div>
@@ -415,13 +419,13 @@ function StocksListingContent() {
                         color: 'rgba(54, 162, 235, 0.9)' 
                     }}>US</p>
                     <p>{percentages.US}%</p>
-                    <p style={{ marginTop: '15px', fontWeight: 'bold', color: 'rgba(255, 99, 132, 0.9)' }}>Asia-Pacific</p>
+                    <p style={{ marginTop: '15px', fontWeight: 'bold', color: 'rgba(255, 252, 99, 0.9)' }}>Asia-Pacific</p>
                     <p>{percentages.APAC}%</p>
                   </div>
                   <div>
                     <p style={{ marginTop: '5px', fontWeight: 'bold', color: 'rgba(255, 159, 64, 0.9)' }}>International</p>
                     <p>{percentages.Intl}%</p>
-                    <p style={{ marginTop: '15px', fontWeight: 'bold', color: 'rgba(75, 192, 192, 0.9)' }}>Europe</p>
+                    <p style={{ marginTop: '15px', fontWeight: 'bold', color: 'rgba(75, 192, 81, 0.9)' }}>Europe</p>
                     <p>{percentages.EU}%</p>
                   </div>
                 </div>
@@ -429,153 +433,6 @@ function StocksListingContent() {
                   Total Stocks: {regionDistribution.US + regionDistribution.Intl + regionDistribution.APAC + regionDistribution.EU}
                 </p>
               </div> */}
-            </div>
-
-            {/* Stock Type Distribution by Region - Bar Chart Visualization */}
-            <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginTop: '20px', marginBottom: '20px' }}>Region & Stock Type Distribution</p>
-            
-            {/* Custom bar chart visualization */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-end',
-              height: '260px',
-              width: '100%',
-              borderBottom: '2px solid #666',
-              position: 'relative',
-              marginBottom: '30px'
-            }}>
-              {/* Render bars for each region */}
-              {['EU', 'Intl', 'US', 'APAC'].map(region => {
-                const regionKey = region as keyof typeof detailedDistribution;
-                const totalInRegion = Object.values(detailedDistribution[regionKey]).reduce((sum, count) => sum + count, 0);
-                const regionPercentage = percentages[regionKey as keyof typeof percentages];
-                
-                // Skip regions with no data
-                if (totalInRegion === 0) return null;
-
-                // Calculate relative bar height (max height is 200px)
-                const barHeight = Math.max(30, (totalInRegion / 10) * 200);
-                const barWidth = 80;
-                
-                return (
-                  <div key={region} style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    position: 'relative'
-                  }}>
-                    {/* Region total and percentage at the top */}
-                    <div style={{
-                      fontSize: '0.85em',
-                      fontWeight: 'bold',
-                      marginBottom: '2px',
-                      textAlign: 'center'
-                    }}>
-                      {totalInRegion}
-                      <br />
-                      <span style={{ fontSize: '0.9em' }}>({regionPercentage}%)</span>
-                    </div>
-                    
-                    {/* Bar container */}
-                    <div style={{
-                      width: `${barWidth}px`,
-                      height: `${barHeight}px`,
-                      display: 'flex',
-                      flexDirection: 'column-reverse', // Stack segments from bottom
-                      overflow: 'visible',
-                      position: 'relative'
-                    }}>
-                      {/* Render segments for each stock type */}
-                      {(Object.keys(detailedDistribution[regionKey]) as Array<keyof typeof detailedDistribution.US>)
-                        .filter(stockType => detailedDistribution[regionKey][stockType] > 0)
-                        .map(stockType => {
-                          const count = detailedDistribution[regionKey][stockType];
-                          const segmentPercentage = totalInRegion > 0 
-                            ? Math.round((count / totalInRegion) * 100) 
-                            : 0;
-                          
-                          // Calculate segment height proportional to its count within region's total
-                          const segmentHeight = count > 0 
-                            ? (count / totalInRegion) * barHeight 
-                            : 0;
-                          
-                          return (
-                            <div key={`${region}-${stockType}`}
-                              style={{
-                                width: '100%',
-                                height: `${segmentHeight}px`,
-                                backgroundColor: stockTypeColors[stockType as keyof typeof stockTypeColors],
-                                border: '1px solid rgba(255, 255, 255, 0.3)',
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                position: 'relative',
-                                overflow: 'visible'
-                              }}
-                            >
-                              {/* Label inside bar if there's enough space */}
-                              {segmentHeight > 25 && (
-                                <div style={{
-                                  color: '#fff',
-                                  fontSize: '0.8em',
-                                  fontWeight: 'bold',
-                                  textShadow: '0px 0px 2px rgba(0,0,0,0.7)'
-                                }}>
-                                  {count} ({segmentPercentage}%)
-                                </div>
-                              )}
-                              
-                              {/* Label to the side if bar is too small */}
-                              {segmentHeight <= 25 && segmentHeight > 0 && (
-                                <div style={{
-                                  position: 'absolute',
-                                  right: '-45px',
-                                  top: '50%',
-                                  transform: 'translateY(-50%)',
-                                  fontSize: '0.7em',
-                                  color: '#ddd',
-                                  whiteSpace: 'nowrap'
-                                }}>
-                                  {count} ({segmentPercentage}%)
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                    </div>
-                    
-                    {/* X-axis region label */}
-                    <div style={{
-                      marginTop: '5px',
-                      fontWeight: 'bold',
-                      fontSize: '0.9em'
-                    }}>
-                      {region}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            
-            {/* Legend for stock types */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '20px',
-              marginTop: '5px'
-            }}>
-              {Object.entries(stockTypeColors).map(([type, color]) => (
-                <div key={type} style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{
-                    width: '15px',
-                    height: '15px',
-                    backgroundColor: color,
-                    marginRight: '5px'
-                  }}></div>
-                  <span style={{ fontSize: '0.9em' }}>{type}</span>
-                </div>
-              ))}
             </div>
           </div>
         )}
