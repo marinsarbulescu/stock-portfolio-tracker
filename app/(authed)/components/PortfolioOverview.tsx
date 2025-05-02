@@ -103,6 +103,7 @@ export default function PortfolioOverview({
                     borderTop: '1px solid #444',
                     fontSize: '0.8em'
                 }}>
+                    {/* First row with existing data */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
                         <div>
                             <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Budget</p>
@@ -117,10 +118,16 @@ export default function PortfolioOverview({
                             
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Available</p>
                             <p>
-                                ${portfolioBudgetStats.budgetLeft.toLocaleString(undefined, {
-                                    minimumFractionDigits: CURRENCY_PRECISION,
-                                    maximumFractionDigits: CURRENCY_PRECISION,
-                                })}
+                                {portfolioBudgetStats.budgetLeft >= 0 
+                                    ? `$${portfolioBudgetStats.budgetLeft.toLocaleString(undefined, {
+                                        minimumFractionDigits: CURRENCY_PRECISION,
+                                        maximumFractionDigits: CURRENCY_PRECISION,
+                                    })}`
+                                    : `-$${Math.abs(portfolioBudgetStats.budgetLeft).toLocaleString(undefined, {
+                                        minimumFractionDigits: CURRENCY_PRECISION,
+                                        maximumFractionDigits: CURRENCY_PRECISION,
+                                    })}`
+                                }
                             </p>                             
                         </div>
 

@@ -21,6 +21,7 @@ type PortfolioStockDataType = { // Simplified representation needed for this pag
     name?: string | null | undefined;
     budget?: number | null | undefined;
     isHidden?: boolean | null | undefined;
+    region?: string | null | undefined; // Added region property
 }
 
 type StockWalletDataType = Schema['StockWallet']['type'];
@@ -184,7 +185,7 @@ export default function HomePage() {
         try {
             const [stockResult, allTxnsData, walletResult] = await Promise.all([
                 client.models.PortfolioStock.list({
-                    selectionSet: ['id', 'symbol', 'pdp', 'name', 'budget', 'isHidden'], // Add isHidden to selection
+                    selectionSet: ['id', 'symbol', 'pdp', 'name', 'budget', 'isHidden', 'region'], // Added region to selection
                     filter: {
                         isHidden: { ne: true } // ne: not equal to true (i.e., fetch if false or null/undefined)
                     },
@@ -878,7 +879,7 @@ export default function HomePage() {
             </div>
             {pricesError && <p style={{ color: 'red' }}>Price Error: {pricesError}</p>}
 
-            {/* Portfolio Overview Component */}
+            {/* Portfolio Overview Component - no longer need to pass regionDistribution */}
             <PortfolioOverview
                 isExpanded={isOverviewExpanded}
                 toggleExpand={() => setIsOverviewExpanded(prev => !prev)}

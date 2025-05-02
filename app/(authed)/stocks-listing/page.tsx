@@ -1,13 +1,18 @@
 // app/(authed)/stocks-listing/page.tsx - Refactored with ["type"] pattern
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react'; // Added useCallback
+import React, { useState, useEffect, useCallback, useMemo } from 'react'; // Added useMemo
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource'; // Adjust path if needed
 import AddStockForm from '@/app/components/AddStockForm'; // Adjust path if needed
 import { FaEdit, FaTrashAlt, FaEye, FaEyeSlash } from 'react-icons/fa'; // Add FaEye and FaEyeSlash here
 import Link from 'next/link';
 import { usePrices } from '@/app/contexts/PriceContext';
+import { Pie } from 'react-chartjs-2';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+
+// Register Chart.js components
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 // Use the simpler data type for state
 type PortfolioStockDataType = Schema["PortfolioStock"]["type"];
@@ -29,6 +34,7 @@ export default function StocksListingPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false); // For Edit Stock modal
   const [editingStockId, setEditingStockId] = useState<string | null>(null);
   const [stockToEditData, setStockToEditData] = useState<PortfolioStockDataType | null>(null);
+  const [isOverviewExpanded, setIsOverviewExpanded] = useState(false); // For collapsible overview
 
   // Inside your component function
   const { latestPrices, pricesLoading, pricesError } = usePrices();
@@ -195,10 +201,156 @@ export default function StocksListingPage() {
     overflowY: 'auto',
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
   };
+  
+  // Calculate region distribution
+  const regionDistribution = useMemo(() => {
+    // Initialize counters for each region
+    const distribution = {
+        US: 0,
+        Intl: 0,
+        APAC: 0,
+        EU: 0
+    };
+    
+    // Count stocks in each region
+    portfolioStocksData.forEach(stock => {
+        if (stock.region) {
+            if (distribution.hasOwnProperty(stock.region)) {
+                distribution[stock.region as keyof typeof distribution]++;
+            }
+        }
+    });
+    
+    return distribution;
+  }, [portfolioStocksData]);
+  
+  // Prepare data for the region distribution pie chart
+  const regionChartData = {
+    labels: ['US', 'Intl', 'APAC', 'EU'],
+    datasets: [
+      {
+          data: [
+              regionDistribution.US,
+              regionDistribution.Intl,
+              regionDistribution.APAC,
+              regionDistribution.EU
+          ],
+          backgroundColor: [
+              'rgba(54, 162, 235, 0.6)', // US - Blue
+              'rgba(255, 159, 64, 0.6)', // Intl - Orange
+              'rgba(255, 252, 99, 0.6)',  // APAC - Red
+              'rgba(75, 192, 81, 0.6)'   // EU - Green
+          ],
+          borderColor: [
+              'rgba(54, 162, 235, 0.6)', // US - Blue
+              'rgba(255, 159, 64, 0.6)', // Intl - Orange
+              'rgba(255, 252, 99, 0.6)',  // APAC - Red
+              'rgba(75, 192, 81, 0.6)'   // EU - Green
+          ],
+          borderWidth: 1,
+      },
+    ],
+  };
+
+  // Chart options
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            position: 'right' as const,
+            labels: {
+                color: '#fff', // Light text color for dark theme
+                boxWidth: 15,
+                font: {
+                    size: 10
+                }
+            }
+        },
+        tooltip: {
+            callbacks: {
+                // Override the title callback to return an empty string
+                title: () => '',
+                label: (context: any) => {
+                    const label = context.label || '';
+                    const value = context.raw || 0;
+                    const total = context.chart.data.datasets[0].data.reduce((a: number, b: number) => a + b, 0);
+                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                    return `${label}: ${value} (${percentage}%)`;
+                }
+            }
+        }
+    }
+  };
 
   return (
     <div>
       <h2>Portfolio</h2>
+      
+      {/* Collapsible Overview Section */}
+      <div style={{
+        marginBottom: '1rem',
+        border: '1px solid #444',
+      }}>
+        <p
+          style={{
+              marginTop: 0, marginBottom: 0,
+              padding: '10px 15px',
+              cursor: 'pointer',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+          }}
+          onClick={() => setIsOverviewExpanded(!isOverviewExpanded)}
+        >                   
+          Overview
+          <span style={{ fontSize: '0.8em' }}>{isOverviewExpanded ? '▼' : '▶'}</span>
+        </p>
+
+        {isOverviewExpanded && (
+          <div style={{
+            padding: '15px',
+            borderTop: '1px solid #444',
+            fontSize: '0.8em'
+          }}>
+            <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '10px' }}>Region Distribution</p>
+            <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '1fr 1fr', 
+                gap: '20px',
+                alignItems: 'center'
+            }}>
+              {/* Chart container */}
+              <div style={{ height: '180px', position: 'relative' }}>
+                  <Pie data={regionChartData} options={chartOptions} />
+              </div>
+
+              {/* Text representation of the data */}
+              {/* <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <div>
+                          <p style={{ 
+                              marginTop: '5px', 
+                              fontWeight: 'bold', 
+                              color: 'rgba(54, 162, 235, 0.9)' 
+                          }}>US</p>
+                          <p>{Math.round((regionDistribution.US / (regionDistribution.US + regionDistribution.Intl + regionDistribution.APAC + regionDistribution.EU)) * 100)}%</p>
+                          <p style={{ marginTop: '15px', fontWeight: 'bold', color: 'rgba(255, 99, 132, 0.9)' }}>Asia-Pacific</p>
+                          <p>{Math.round((regionDistribution.APAC / (regionDistribution.US + regionDistribution.Intl + regionDistribution.APAC + regionDistribution.EU)) * 100)}%</p>
+                      </div>
+                      <div>
+                          <p style={{ marginTop: '5px', fontWeight: 'bold', color: 'rgba(255, 159, 64, 0.9)' }}>International</p>
+                          <p>{Math.round((regionDistribution.Intl / (regionDistribution.US + regionDistribution.Intl + regionDistribution.APAC + regionDistribution.EU)) * 100)}%</p>
+                          <p style={{ marginTop: '15px', fontWeight: 'bold', color: 'rgba(75, 192, 192, 0.9)' }}>Europe</p>
+                          <p>{Math.round((regionDistribution.EU / (regionDistribution.US + regionDistribution.Intl + regionDistribution.APAC + regionDistribution.EU)) * 100)}%</p>
+                      </div>
+                  </div>
+                  <p style={{ marginTop: '15px', fontSize: '0.9em' }}>Total Stocks: {regionDistribution.US + regionDistribution.Intl + regionDistribution.APAC + regionDistribution.EU}</p>
+              </div> */}
+            </div>
+          </div>
+        )}
+      </div>
       
       {/* Button to open Add Stock modal */}
       <button 
