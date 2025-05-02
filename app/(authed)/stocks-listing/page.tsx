@@ -262,90 +262,6 @@ function StocksListingContent() {
     };
   }, [regionDistribution]);
   
-  // Prepare data for the region distribution pie chart
-  const regionChartData = {
-    labels: ['US', 'International', 'Asia-Pacific', 'Europe'],
-    datasets: [
-      {
-          data: [
-              regionDistribution.US,
-              regionDistribution.Intl,
-              regionDistribution.APAC,
-              regionDistribution.EU
-          ],
-          backgroundColor: [
-              'rgba(54, 162, 235, 0.6)', // US - Blue
-              'rgba(255, 159, 64, 0.6)', // Intl - Orange
-              'rgba(255, 252, 99, 0.6)',  // APAC - Yellow
-              'rgba(75, 192, 81, 0.6)'   // EU - Green
-          ],
-          borderColor: [
-              'rgba(54, 162, 235, 1)', // US - Blue
-              'rgba(255, 159, 64, 1)', // Intl - Orange
-              'rgba(255, 252, 99, 1)',  // APAC - Yellow
-              'rgba(75, 192, 81, 1)'   // EU - Green
-          ],
-          borderWidth: 1,
-      },
-    ],
-  };
-
-  // Chart options
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'right' as const,
-        labels: {
-          color: '#fff', // Light text color for dark theme
-          boxWidth: 15,
-          font: {
-            size: 10
-          }
-        }
-      },
-      tooltip: {
-        callbacks: {
-          title: () => '',
-          label: (context: any) => {
-            const label = context.label || '';
-            const value = context.raw || 0;
-            const total = context.chart.data.datasets[0].data.reduce((a: number, b: number) => a + b, 0);
-            const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
-            return `${label}: ${value} (${percentage}%)`;
-          }
-        }
-      },
-      datalabels: {
-        // Configure the data labels plugin
-        color: '#fff',
-        font: {
-          weight: 'bold',
-          size: 11
-        },
-        textStrokeColor: 'black',
-        textStrokeWidth: 1,
-        textShadowBlur: 5,
-        textShadowColor: 'rgba(0, 0, 0, 0.5)',
-        align: 'end',
-        anchor: 'end',
-        offset: 10,
-        formatter: (value: number, context: any) => {
-          const total = context.dataset.data.reduce((sum: number, val: number) => sum + val, 0);
-          const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
-          return `${value} (${percentage}%)`;
-        },
-        display: (context: any) => {
-          // Only show labels for segments that aren't too small
-          const value = context.dataset.data[context.dataIndex];
-          const total = context.dataset.data.reduce((sum: number, val: number) => sum + val, 0);
-          return value / total > 0.05; // Only show if the segment is at least 5% of the total
-        }
-      }
-    }
-  };
-
   // Get region colors for the stacked bar chart
   const regionColors = {
     US: 'rgba(54, 162, 235, 0.7)',    // Blue
@@ -360,6 +276,123 @@ function StocksListingContent() {
     ETF: 'rgba(255, 205, 86, 0.9)',    // Yellow
     Crypto: 'rgba(153, 102, 255, 0.9)' // Purple
   };
+
+  // Calculate stock type distribution
+  const stockTypeDistribution = useMemo(() => {
+    // Initialize counters for each stock type
+    const distribution = {
+      Stock: 0,
+      ETF: 0, 
+      Crypto: 0
+    };
+    
+    // Count stocks by type
+    portfolioStocksData.forEach(stock => {
+      if (stock.stockType && Object.keys(distribution).includes(stock.stockType)) {
+        distribution[stock.stockType as keyof typeof distribution]++;
+      }
+    });
+    
+    return distribution;
+  }, [portfolioStocksData]);
+
+  // Calculate stock type percentages
+  const stockTypePercentages = useMemo(() => {
+    const total = Object.values(stockTypeDistribution).reduce((sum, count) => sum + count, 0);
+    return {
+      Stock: total > 0 ? Math.round((stockTypeDistribution.Stock / total) * 100) : 0,
+      ETF: total > 0 ? Math.round((stockTypeDistribution.ETF / total) * 100) : 0,
+      Crypto: total > 0 ? Math.round((stockTypeDistribution.Crypto / total) * 100) : 0
+    };
+  }, [stockTypeDistribution]);
+
+  // Calculate US region investment statistics
+  const usRegionStats = useMemo(() => {
+    // Filter for only US region stocks
+    const usStocks = portfolioStocksData.filter(stock => stock.region === 'US');
+    
+    // Count US stocks by type 
+    const stockCount = usStocks.filter(s => s.stockType === 'Stock').length;
+    const etfCount = usStocks.filter(s => s.stockType === 'ETF').length;
+    const totalCount = stockCount + etfCount;
+    
+    // Sum up investment amounts - using budget as investment value for demonstration
+    // In real app, you might want to use actual investment amounts
+    const stockSwingInvestment = usStocks
+      .filter(s => s.stockType === 'Stock' && s.swingHoldRatio && s.budget)
+      .reduce((sum, stock) => {
+        const swingRatio = stock.swingHoldRatio ? stock.swingHoldRatio / 100 : 0;
+        return sum + (stock.budget || 0) * swingRatio;
+      }, 0);
+    
+    const etfSwingInvestment = usStocks
+      .filter(s => s.stockType === 'ETF' && s.swingHoldRatio && s.budget)
+      .reduce((sum, stock) => {
+        const swingRatio = stock.swingHoldRatio ? stock.swingHoldRatio / 100 : 0;
+        return sum + (stock.budget || 0) * swingRatio;
+      }, 0);
+    
+    const totalSwingInvestment = stockSwingInvestment + etfSwingInvestment;
+    
+    const stockHoldInvestment = usStocks
+      .filter(s => s.stockType === 'Stock' && s.swingHoldRatio && s.budget)
+      .reduce((sum, stock) => {
+        const holdRatio = stock.swingHoldRatio ? (100 - stock.swingHoldRatio) / 100 : 1;
+        return sum + (stock.budget || 0) * holdRatio;
+      }, 0);
+    
+    const etfHoldInvestment = usStocks
+      .filter(s => s.stockType === 'ETF' && s.swingHoldRatio && s.budget)
+      .reduce((sum, stock) => {
+        const holdRatio = stock.swingHoldRatio ? (100 - stock.swingHoldRatio) / 100 : 1;
+        return sum + (stock.budget || 0) * holdRatio;
+      }, 0);
+    
+    const totalHoldInvestment = stockHoldInvestment + etfHoldInvestment;
+    
+    const stockTotalInvestment = usStocks
+      .filter(s => s.stockType === 'Stock' && s.budget)
+      .reduce((sum, stock) => sum + (stock.budget || 0), 0);
+    
+    const etfTotalInvestment = usStocks
+      .filter(s => s.stockType === 'ETF' && s.budget)
+      .reduce((sum, stock) => sum + (stock.budget || 0), 0);
+    
+    const totalInvestment = stockTotalInvestment + etfTotalInvestment;
+    
+    // Calculate percentages
+    const stockSwingPct = totalSwingInvestment > 0 ? Math.round((stockSwingInvestment / totalSwingInvestment) * 100) : 0;
+    const etfSwingPct = totalSwingInvestment > 0 ? Math.round((etfSwingInvestment / totalSwingInvestment) * 100) : 0;
+    
+    const stockHoldPct = totalHoldInvestment > 0 ? Math.round((stockHoldInvestment / totalHoldInvestment) * 100) : 0;
+    const etfHoldPct = totalHoldInvestment > 0 ? Math.round((etfHoldInvestment / totalHoldInvestment) * 100) : 0;
+    
+    const stockTotalPct = totalInvestment > 0 ? Math.round((stockTotalInvestment / totalInvestment) * 100) : 0;
+    const etfTotalPct = totalInvestment > 0 ? Math.round((etfTotalInvestment / totalInvestment) * 100) : 0;
+    
+    return {
+      counts: {
+        stock: stockCount,
+        etf: etfCount,
+        total: totalCount,
+      },
+      swingInvestment: {
+        stock: { value: stockSwingInvestment, pct: stockSwingPct },
+        etf: { value: etfSwingInvestment, pct: etfSwingPct },
+        total: { value: totalSwingInvestment, pct: 100 }
+      },
+      holdInvestment: {
+        stock: { value: stockHoldInvestment, pct: stockHoldPct },
+        etf: { value: etfHoldInvestment, pct: etfHoldPct },
+        total: { value: totalHoldInvestment, pct: 100 }
+      },
+      totalInvestment: {
+        stock: { value: stockTotalInvestment, pct: stockTotalPct },
+        etf: { value: etfTotalInvestment, pct: etfTotalPct },
+        total: { value: totalInvestment, pct: 100 }
+      }
+    };
+  }, [portfolioStocksData]);
 
   return (
     <div>
@@ -386,53 +419,124 @@ function StocksListingContent() {
         </p>
 
         {isOverviewExpanded && (
-          <div style={{
-            padding: '15px',
-            borderTop: '1px solid #444',
-            fontSize: '0.8em'
-          }}>
-            <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '10px' }}>Region Distribution</p>
-            <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: '400px 1fr', 
-                gap: '20px',
-                alignItems: 'center',
-                marginBottom: '25px'
-            }}>
-              {/* Chart container - with fixed width to ensure labels aren't cut off */}
-              <div style={{ 
-                height: '180px',
-                width: '400px', 
-                position: 'relative'
-              }}>
-                {/* @ts-ignore */}
-                <Pie data={regionChartData} options={chartOptions} />
-              </div>
-
-              {/* Text representation of the data -- leave this commented out */}
-              {/* <div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <div style={{ padding: '15px', borderTop: '1px solid #444', fontSize: '0.8em' }}>            
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>              
+              {/* Region Distribution - Text only */}    
+              <div style={{ borderRight: '1px solid #444', marginRight: '5px', paddingRight: '5px' }}>
+                <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '5px' }}>By Region</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '10px' }}>
                   <div>
-                    <p style={{ 
-                        marginTop: '5px', 
-                        fontWeight: 'bold', 
-                        color: 'rgba(54, 162, 235, 0.9)' 
-                    }}>US</p>
-                    <p>{percentages.US}%</p>
-                    <p style={{ marginTop: '15px', fontWeight: 'bold', color: 'rgba(255, 252, 99, 0.9)' }}>Asia-Pacific</p>
-                    <p>{percentages.APAC}%</p>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>US</p>
+                    <p>{percentages.US}% ({regionDistribution.US})</p>
                   </div>
                   <div>
-                    <p style={{ marginTop: '5px', fontWeight: 'bold', color: 'rgba(255, 159, 64, 0.9)' }}>International</p>
-                    <p>{percentages.Intl}%</p>
-                    <p style={{ marginTop: '15px', fontWeight: 'bold', color: 'rgba(75, 192, 81, 0.9)' }}>Europe</p>
-                    <p>{percentages.EU}%</p>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>EU</p>
+                    <p>{percentages.EU}% ({regionDistribution.EU})</p>
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Intl</p>
+                    <p>{percentages.Intl}% ({regionDistribution.Intl})</p>
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>APAC</p>
+                    <p>{percentages.APAC}% ({regionDistribution.APAC})</p>
                   </div>
                 </div>
-                <p style={{ marginTop: '15px', fontSize: '0.9em' }}>
-                  Total Stocks: {regionDistribution.US + regionDistribution.Intl + regionDistribution.APAC + regionDistribution.EU}
-                </p>
-              </div> */}
+              </div>
+
+              {/* Stock Type Distribution - Text only */}
+              <div>
+                <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '5px' }}>By Type</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
+                    <p>{stockTypePercentages.Stock}% ({stockTypeDistribution.Stock})</p>
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>ETF</p>
+                    <p>{stockTypePercentages.ETF}% ({stockTypeDistribution.ETF})</p>
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Crypto</p>
+                    <p>{stockTypePercentages.Crypto}% ({stockTypeDistribution.Crypto})</p>
+                  </div>
+                </div>
+              </div>               
+            </div>
+            
+            {/* US Region Statistics Table */}
+            <div style={{ marginTop: '20px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #444' }}>
+                {/* Table Header */}
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #444', background: '#1e1e1e' }}>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '25%' }}>US</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Stock</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>ETF</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Total</th>
+                  </tr>
+                </thead>
+                
+                {/* Table Body */}
+                <tbody>
+                  {/* Count of stocks row */}
+                  <tr style={{ borderBottom: '1px solid #444' }}>
+                    <td style={{ padding: '8px', fontSize: '0.9em' }}># Holdings</td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      {usRegionStats.counts.stock} ({Math.round((usRegionStats.counts.stock / usRegionStats.counts.total) * 100)}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      {usRegionStats.counts.etf} ({Math.round((usRegionStats.counts.etf / usRegionStats.counts.total) * 100)}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
+                      {usRegionStats.counts.total} (100%)
+                    </td>
+                  </tr>
+                  
+                  {/* Swing Investment row */}
+                  <tr style={{ borderBottom: '1px solid #444' }}>
+                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Swing Inv</td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      ${Math.round(usRegionStats.swingInvestment.stock.value).toLocaleString()} ({usRegionStats.swingInvestment.stock.pct}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      ${Math.round(usRegionStats.swingInvestment.etf.value).toLocaleString()} ({usRegionStats.swingInvestment.etf.pct}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
+                      ${Math.round(usRegionStats.swingInvestment.total.value).toLocaleString()} (100%)
+                    </td>
+                  </tr>
+                  
+                  {/* Hold Investment row */}
+                  <tr style={{ borderBottom: '1px solid #444' }}>
+                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Hold Inv</td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      ${Math.round(usRegionStats.holdInvestment.stock.value).toLocaleString()} ({usRegionStats.holdInvestment.stock.pct}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      ${Math.round(usRegionStats.holdInvestment.etf.value).toLocaleString()} ({usRegionStats.holdInvestment.etf.pct}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
+                      ${Math.round(usRegionStats.holdInvestment.total.value).toLocaleString()} (100%)
+                    </td>
+                  </tr>
+                  
+                  {/* Total Investment row */}
+                  <tr>
+                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Total Inv</td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      ${Math.round(usRegionStats.totalInvestment.stock.value).toLocaleString()} ({usRegionStats.totalInvestment.stock.pct}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      ${Math.round(usRegionStats.totalInvestment.etf.value).toLocaleString()} ({usRegionStats.totalInvestment.etf.pct}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
+                      ${Math.round(usRegionStats.totalInvestment.total.value).toLocaleString()} (100%)
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         )}
