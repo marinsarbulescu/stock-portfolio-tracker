@@ -497,83 +497,88 @@ function StocksListingContent() {
   }, [visibleStocks]);
 
   const intlRegionStats = useMemo(() => {
-    console.log("[Memo] Calculating apacRegionStats");
-    // Use visibleStocks to exclude hidden ones
+    console.log("[Memo] Calculating intlRegionStats");
     const intlStocks = visibleStocks.filter(stock => stock.region === 'Intl');
 
     let stockCount = 0;
     let etfCount = 0;
+    let cryptoCount = 0; // <-- ADDED: Crypto count
     let stockSwingInvestment = 0;
     let etfSwingInvestment = 0;
+    let cryptoSwingInvestment = 0; // <-- ADDED: Crypto swing investment
     let stockHoldInvestment = 0;
     let etfHoldInvestment = 0;
+    let cryptoHoldInvestment = 0;  // <-- ADDED: Crypto hold investment
 
     intlStocks.forEach(stock => {
-        // Increment counts
-        if (stock.stockType === 'Stock') stockCount++;
-        else if (stock.stockType === 'ETF') etfCount++;
+      // Increment counts including Crypto
+      if (stock.stockType === 'Stock') stockCount++;
+      else if (stock.stockType === 'ETF') etfCount++;
+      else if (stock.stockType === 'Crypto') cryptoCount++; // <-- ADDED
 
-        // Safely access wallets, default to empty array if null/undefined
-        const wallets = (stock.stockWallets as unknown as StockWalletDataType[] ?? []); // Use correct type
+      const wallets = (stock.stockWallets as unknown as StockWalletDataType[] ?? []);
 
-        wallets.forEach(wallet => {
-            // Check for remaining shares and valid buy price
-            if ((wallet.remainingShares ?? 0) > SHARE_EPSILON && typeof wallet.buyPrice === 'number') {
-                // Calculate tied-up investment for this wallet
-                const tiedUpInvestment = wallet.buyPrice * wallet.remainingShares!;
+      wallets.forEach(wallet => {
+        if ((wallet.remainingShares ?? 0) > SHARE_EPSILON && typeof wallet.buyPrice === 'number') {
+          const tiedUpInvestment = wallet.buyPrice * wallet.remainingShares!;
 
-                // Add to the correct bucket based on stockType and walletType
-                if (stock.stockType === 'Stock') {
-                    if (wallet.walletType === 'Swing') {
-                        stockSwingInvestment += tiedUpInvestment;
-                    } else if (wallet.walletType === 'Hold') {
-                        stockHoldInvestment += tiedUpInvestment;
-                    }
-                } else if (stock.stockType === 'ETF') {
-                     if (wallet.walletType === 'Swing') {
-                        etfSwingInvestment += tiedUpInvestment;
-                    } else if (wallet.walletType === 'Hold') {
-                        etfHoldInvestment += tiedUpInvestment;
-                    }
-                }
-            }
-        });
+          // Add to the correct bucket based on stockType and walletType
+          if (stock.stockType === 'Stock') {
+            if (wallet.walletType === 'Swing') stockSwingInvestment += tiedUpInvestment;
+            else if (wallet.walletType === 'Hold') stockHoldInvestment += tiedUpInvestment;
+          } else if (stock.stockType === 'ETF') {
+            if (wallet.walletType === 'Swing') etfSwingInvestment += tiedUpInvestment;
+            else if (wallet.walletType === 'Hold') etfHoldInvestment += tiedUpInvestment;
+          } else if (stock.stockType === 'Crypto') { // <-- ADDED Crypto case
+             if (wallet.walletType === 'Swing') cryptoSwingInvestment += tiedUpInvestment;
+             else if (wallet.walletType === 'Hold') cryptoHoldInvestment += tiedUpInvestment;
+          }
+        }
+      });
     });
 
-    const totalCount = stockCount + etfCount;
-    const totalSwingInvestment = stockSwingInvestment + etfSwingInvestment;
-    const totalHoldInvestment = stockHoldInvestment + etfHoldInvestment;
+    // Update totals to include Crypto
+    const totalCount = stockCount + etfCount + cryptoCount; // <-- ADDED
+    const totalSwingInvestment = stockSwingInvestment + etfSwingInvestment + cryptoSwingInvestment; // <-- ADDED
+    const totalHoldInvestment = stockHoldInvestment + etfHoldInvestment + cryptoHoldInvestment; // <-- ADDED
     const stockTotalInvestment = stockSwingInvestment + stockHoldInvestment;
     const etfTotalInvestment = etfSwingInvestment + etfHoldInvestment;
+    const cryptoTotalInvestment = cryptoSwingInvestment + cryptoHoldInvestment; // <-- ADDED
     const totalInvestment = totalSwingInvestment + totalHoldInvestment; // Total tied-up
 
-    // Calculate percentages based on the new investment totals
+    // Calculate percentages including Crypto
     const stockSwingPct = totalSwingInvestment > SHARE_EPSILON ? Math.round((stockSwingInvestment / totalSwingInvestment) * 100) : 0;
     const etfSwingPct = totalSwingInvestment > SHARE_EPSILON ? Math.round((etfSwingInvestment / totalSwingInvestment) * 100) : 0;
+    const cryptoSwingPct = totalSwingInvestment > SHARE_EPSILON ? Math.round((cryptoSwingInvestment / totalSwingInvestment) * 100) : 0; // <-- ADDED
 
     const stockHoldPct = totalHoldInvestment > SHARE_EPSILON ? Math.round((stockHoldInvestment / totalHoldInvestment) * 100) : 0;
     const etfHoldPct = totalHoldInvestment > SHARE_EPSILON ? Math.round((etfHoldInvestment / totalHoldInvestment) * 100) : 0;
+    const cryptoHoldPct = totalHoldInvestment > SHARE_EPSILON ? Math.round((cryptoHoldInvestment / totalHoldInvestment) * 100) : 0; // <-- ADDED
 
     const stockTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((stockTotalInvestment / totalInvestment) * 100) : 0;
     const etfTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((etfTotalInvestment / totalInvestment) * 100) : 0;
+    const cryptoTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((cryptoTotalInvestment / totalInvestment) * 100) : 0; // <-- ADDED
 
     console.log("[Memo] intlRegionStats Result:", { counts: {stockCount, etfCount, totalCount }, /* ... other stats */ });
 
     return {
-      counts: { stock: stockCount, etf: etfCount, total: totalCount },
+      counts: { stock: stockCount, etf: etfCount, crypto: cryptoCount, total: totalCount }, // <-- ADDED
       swingInvestment: {
         stock: { value: stockSwingInvestment, pct: stockSwingPct },
         etf: { value: etfSwingInvestment, pct: etfSwingPct },
+        crypto: { value: cryptoSwingInvestment, pct: cryptoSwingPct }, // <-- ADDED
         total: { value: totalSwingInvestment, pct: 100 }
       },
       holdInvestment: {
         stock: { value: stockHoldInvestment, pct: stockHoldPct },
         etf: { value: etfHoldInvestment, pct: etfHoldPct },
+        crypto: { value: cryptoHoldInvestment, pct: cryptoHoldPct }, // <-- ADDED
         total: { value: totalHoldInvestment, pct: 100 }
       },
       totalInvestment: {
         stock: { value: stockTotalInvestment, pct: stockTotalPct },
         etf: { value: etfTotalInvestment, pct: etfTotalPct },
+        crypto: { value: cryptoTotalInvestment, pct: cryptoTotalPct }, // <-- ADDED
         total: { value: totalInvestment, pct: 100 }
       }
     };
@@ -695,7 +700,7 @@ function StocksListingContent() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>              
               {/* Region Distribution - Text only */}    
               <div style={{ borderRight: '1px solid #444', marginRight: '5px', paddingRight: '5px' }}>
-                <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '5px' }}>By Region</p>
+                <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '5px' }}>Holdings By Region</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '10px' }}>
                   <div>
                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>US</p>
@@ -718,7 +723,7 @@ function StocksListingContent() {
 
               {/* Stock Type Distribution - Text only */}
               <div>
-                <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '5px' }}>By Type</p>
+                <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '5px' }}>Holdings By Type</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                   <div>
                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
@@ -738,7 +743,7 @@ function StocksListingContent() {
             
             {/* US Region Statistics Table */}
             <div style={{ marginTop: '20px', marginBottom: '20px' }}>
-              <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '10px' }}>Region Stats</p>
+              <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '10px' }}>Tied-up Investment by Region</p>
               <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #444' }}>
                 {/* Table Header */}
                 <thead>
@@ -890,10 +895,11 @@ function StocksListingContent() {
                 {/* Table Header */}
                 <thead>
                   <tr style={{ borderBottom: '1px solid #444', background: '#1e1e1e' }}>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%' }}>Intl</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Stock</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>ETF</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Total</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '20%' }}>Intl</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '20%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Stock</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '20%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>ETF</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '20%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Crypto</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '20%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Total</th>
                   </tr>
                 </thead>
                 
@@ -907,6 +913,9 @@ function StocksListingContent() {
                     </td>
                     <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
                       {intlRegionStats.counts.etf} ({Math.round((intlRegionStats.counts.etf / intlRegionStats.counts.total) * 100) || 0}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                        {intlRegionStats.counts.crypto} ({Math.round((intlRegionStats.counts.crypto / intlRegionStats.counts.total) * 100) || 0}%)
                     </td>
                     <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
                       {intlRegionStats.counts.total} (100%)
@@ -922,6 +931,9 @@ function StocksListingContent() {
                     <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
                       ${Math.round(intlRegionStats.swingInvestment.etf.value).toLocaleString()} ({intlRegionStats.swingInvestment.etf.pct}%)
                     </td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      ${Math.round(intlRegionStats.swingInvestment.crypto.value).toLocaleString()} ({intlRegionStats.swingInvestment.crypto.pct}%)
+                    </td>
                     <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
                       ${Math.round(intlRegionStats.swingInvestment.total.value).toLocaleString()} (100%)
                     </td>
@@ -936,6 +948,9 @@ function StocksListingContent() {
                     <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
                       ${Math.round(intlRegionStats.holdInvestment.etf.value).toLocaleString()} ({intlRegionStats.holdInvestment.etf.pct}%)
                     </td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      ${Math.round(intlRegionStats.holdInvestment.crypto.value).toLocaleString()} ({intlRegionStats.holdInvestment.crypto.pct}%)
+                    </td>
                     <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
                       ${Math.round(intlRegionStats.holdInvestment.total.value).toLocaleString()} (100%)
                     </td>
@@ -949,6 +964,9 @@ function StocksListingContent() {
                     </td>
                     <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
                       ${Math.round(intlRegionStats.totalInvestment.etf.value).toLocaleString()} ({intlRegionStats.totalInvestment.etf.pct}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      ${Math.round(intlRegionStats.totalInvestment.crypto.value).toLocaleString()} ({intlRegionStats.totalInvestment.crypto.pct}%)
                     </td>
                     <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
                       ${Math.round(intlRegionStats.totalInvestment.total.value).toLocaleString()} (100%)
