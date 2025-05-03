@@ -12,6 +12,8 @@ import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
+const SHARE_EPSILON = 0.00001;
+
 // Register Chart.js components and plugins
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, ChartDataLabels);
 
@@ -40,6 +42,16 @@ function StocksListingContent() {
 
   // Inside your component function - this will now work because we're in a client component under the provider
   const { latestPrices, pricesLoading, pricesError } = usePrices();
+
+  // Create a filteredStocks array that excludes hidden stocks for all calculations
+  const visibleStocks = useMemo(() => {
+    console.log("Recalculating visibleStocks. Input length:", portfolioStocksData.length);
+    const filtered = portfolioStocksData.filter(stock => !stock.isHidden);
+    console.log("VisibleStocks count:", filtered.length);
+    return filtered;
+  }, [portfolioStocksData]); // Depends only on the raw portfolio data
+
+  type StockWalletDataType = Schema['StockWallet']['type'];
 
   const handleToggleHidden = async (stock: PortfolioStockDataType) => {
     const newHiddenState = !stock.isHidden; // Calculate the new state
@@ -80,19 +92,25 @@ function StocksListingContent() {
     try {
       // --- Fetch Portfolio Stocks ONCE ---
       console.log("Fetching portfolio stocks...");
-      const { data: stocks, errors } = await client.models.PortfolioStock.list({
-        // Fetch all fields needed for the table AND the toggle button logic
-        selectionSet: [
-            'id',
-            'symbol',
-            'name',
-            'stockType', // Assuming 'stockType' is the correct field name based on your JSX
-            'region',
-            'pdp',
-            'plr',
-            'budget',
-            'isHidden',  // <<< Ensure isHidden is included here
-            'swingHoldRatio',
+      const { data, errors } = await client.models.PortfolioStock.list({
+        selectionSet: [ // <-- Replace this array content
+          // PortfolioStock fields (keep existing ones)
+          'id',
+          'symbol',
+          'name',
+          'region',
+          'stockType',
+          'budget',
+          'pdp',
+          'plr',
+          'isHidden',
+          'swingHoldRatio', // Needed if you use it elsewhere, maybe not for tied-up inv.   
+          // --- ADD Nested StockWallet fields ---
+          'stockWallets.*', // Essential for current holdings
+          // Include these if needed for alternative calc, but buyPrice/remaining is better
+          // 'stockWallets.items.totalInvestment',
+          // 'stockWallets.items.totalSharesQty',
+          // --- END Add Nested Fields ---
         ]
       });
       // --- End Fetch ---
@@ -103,8 +121,8 @@ function StocksListingContent() {
       }
 
       // Set state with the fetched data (which includes isHidden)
-      setPortfolioStocksData(stocks as PortfolioStockDataType[]);
-      console.log('Fetched portfolio count:', stocks.length);
+      setPortfolioStocksData(data as unknown as PortfolioStockDataType[]);
+      console.log('Fetched portfolio count:', data.length);
 
     } catch (err: any) {
       console.error("Error fetching portfolio:", err);
@@ -307,75 +325,72 @@ function StocksListingContent() {
   }, [stockTypeDistribution]);
 
   // Calculate US region investment statistics
+  // --- Corrected US Region Stats Calculation ---
   const usRegionStats = useMemo(() => {
-    // Filter for only US region stocks
-    const usStocks = portfolioStocksData.filter(stock => stock.region === 'US');
-    
-    // Count US stocks by type 
-    const stockCount = usStocks.filter(s => s.stockType === 'Stock').length;
-    const etfCount = usStocks.filter(s => s.stockType === 'ETF').length;
+    console.log("[Memo] Calculating usRegionStats");
+    // Use visibleStocks to exclude hidden ones
+    const usStocks = visibleStocks.filter(stock => stock.region === 'US');
+
+    let stockCount = 0;
+    let etfCount = 0;
+    let stockSwingInvestment = 0;
+    let etfSwingInvestment = 0;
+    let stockHoldInvestment = 0;
+    let etfHoldInvestment = 0;
+
+    usStocks.forEach(stock => {
+        // Increment counts
+        if (stock.stockType === 'Stock') stockCount++;
+        else if (stock.stockType === 'ETF') etfCount++;
+
+        // Safely access wallets, default to empty array if null/undefined
+        const wallets = (stock.stockWallets as unknown as StockWalletDataType[] ?? []); // Use correct type
+
+        wallets.forEach(wallet => {
+            // Check for remaining shares and valid buy price
+            if ((wallet.remainingShares ?? 0) > SHARE_EPSILON && typeof wallet.buyPrice === 'number') {
+                // Calculate tied-up investment for this wallet
+                const tiedUpInvestment = wallet.buyPrice * wallet.remainingShares!;
+
+                // Add to the correct bucket based on stockType and walletType
+                if (stock.stockType === 'Stock') {
+                    if (wallet.walletType === 'Swing') {
+                        stockSwingInvestment += tiedUpInvestment;
+                    } else if (wallet.walletType === 'Hold') {
+                        stockHoldInvestment += tiedUpInvestment;
+                    }
+                } else if (stock.stockType === 'ETF') {
+                     if (wallet.walletType === 'Swing') {
+                        etfSwingInvestment += tiedUpInvestment;
+                    } else if (wallet.walletType === 'Hold') {
+                        etfHoldInvestment += tiedUpInvestment;
+                    }
+                }
+            }
+        });
+    });
+
     const totalCount = stockCount + etfCount;
-    
-    // Sum up investment amounts - using budget as investment value for demonstration
-    // In real app, you might want to use actual investment amounts
-    const stockSwingInvestment = usStocks
-      .filter(s => s.stockType === 'Stock' && s.swingHoldRatio && s.budget)
-      .reduce((sum, stock) => {
-        const swingRatio = stock.swingHoldRatio ? stock.swingHoldRatio / 100 : 0;
-        return sum + (stock.budget || 0) * swingRatio;
-      }, 0);
-    
-    const etfSwingInvestment = usStocks
-      .filter(s => s.stockType === 'ETF' && s.swingHoldRatio && s.budget)
-      .reduce((sum, stock) => {
-        const swingRatio = stock.swingHoldRatio ? stock.swingHoldRatio / 100 : 0;
-        return sum + (stock.budget || 0) * swingRatio;
-      }, 0);
-    
     const totalSwingInvestment = stockSwingInvestment + etfSwingInvestment;
-    
-    const stockHoldInvestment = usStocks
-      .filter(s => s.stockType === 'Stock' && s.swingHoldRatio && s.budget)
-      .reduce((sum, stock) => {
-        const holdRatio = stock.swingHoldRatio ? (100 - stock.swingHoldRatio) / 100 : 1;
-        return sum + (stock.budget || 0) * holdRatio;
-      }, 0);
-    
-    const etfHoldInvestment = usStocks
-      .filter(s => s.stockType === 'ETF' && s.swingHoldRatio && s.budget)
-      .reduce((sum, stock) => {
-        const holdRatio = stock.swingHoldRatio ? (100 - stock.swingHoldRatio) / 100 : 1;
-        return sum + (stock.budget || 0) * holdRatio;
-      }, 0);
-    
     const totalHoldInvestment = stockHoldInvestment + etfHoldInvestment;
-    
-    const stockTotalInvestment = usStocks
-      .filter(s => s.stockType === 'Stock' && s.budget)
-      .reduce((sum, stock) => sum + (stock.budget || 0), 0);
-    
-    const etfTotalInvestment = usStocks
-      .filter(s => s.stockType === 'ETF' && s.budget)
-      .reduce((sum, stock) => sum + (stock.budget || 0), 0);
-    
-    const totalInvestment = stockTotalInvestment + etfTotalInvestment;
-    
-    // Calculate percentages
-    const stockSwingPct = totalSwingInvestment > 0 ? Math.round((stockSwingInvestment / totalSwingInvestment) * 100) : 0;
-    const etfSwingPct = totalSwingInvestment > 0 ? Math.round((etfSwingInvestment / totalSwingInvestment) * 100) : 0;
-    
-    const stockHoldPct = totalHoldInvestment > 0 ? Math.round((stockHoldInvestment / totalHoldInvestment) * 100) : 0;
-    const etfHoldPct = totalHoldInvestment > 0 ? Math.round((etfHoldInvestment / totalHoldInvestment) * 100) : 0;
-    
-    const stockTotalPct = totalInvestment > 0 ? Math.round((stockTotalInvestment / totalInvestment) * 100) : 0;
-    const etfTotalPct = totalInvestment > 0 ? Math.round((etfTotalInvestment / totalInvestment) * 100) : 0;
-    
+    const stockTotalInvestment = stockSwingInvestment + stockHoldInvestment;
+    const etfTotalInvestment = etfSwingInvestment + etfHoldInvestment;
+    const totalInvestment = totalSwingInvestment + totalHoldInvestment; // Total tied-up
+
+    // Calculate percentages based on the new investment totals
+    const stockSwingPct = totalSwingInvestment > SHARE_EPSILON ? Math.round((stockSwingInvestment / totalSwingInvestment) * 100) : 0;
+    const etfSwingPct = totalSwingInvestment > SHARE_EPSILON ? Math.round((etfSwingInvestment / totalSwingInvestment) * 100) : 0;
+
+    const stockHoldPct = totalHoldInvestment > SHARE_EPSILON ? Math.round((stockHoldInvestment / totalHoldInvestment) * 100) : 0;
+    const etfHoldPct = totalHoldInvestment > SHARE_EPSILON ? Math.round((etfHoldInvestment / totalHoldInvestment) * 100) : 0;
+
+    const stockTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((stockTotalInvestment / totalInvestment) * 100) : 0;
+    const etfTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((etfTotalInvestment / totalInvestment) * 100) : 0;
+
+    console.log("[Memo] usRegionStats Result:", { counts: {stockCount, etfCount, totalCount }, /* ... other stats */ });
+
     return {
-      counts: {
-        stock: stockCount,
-        etf: etfCount,
-        total: totalCount,
-      },
+      counts: { stock: stockCount, etf: etfCount, total: totalCount },
       swingInvestment: {
         stock: { value: stockSwingInvestment, pct: stockSwingPct },
         etf: { value: etfSwingInvestment, pct: etfSwingPct },
@@ -392,77 +407,76 @@ function StocksListingContent() {
         total: { value: totalInvestment, pct: 100 }
       }
     };
-  }, [portfolioStocksData]);
+    // Depend on visibleStocks now
+  }, [visibleStocks]);
+  // --- End Corrected US Region Stats ---
 
   // Calculate EU region investment statistics
   const euRegionStats = useMemo(() => {
-    // Filter for only EU region stocks
-    const euStocks = portfolioStocksData.filter(stock => stock.region === 'EU');
-    
-    // Count EU stocks by type 
-    const stockCount = euStocks.filter(s => s.stockType === 'Stock').length;
-    const etfCount = euStocks.filter(s => s.stockType === 'ETF').length;
+    console.log("[Memo] Calculating euRegionStats");
+    // Use visibleStocks to exclude hidden ones
+    const euStocks = visibleStocks.filter(stock => stock.region === 'EU');
+
+    let stockCount = 0;
+    let etfCount = 0;
+    let stockSwingInvestment = 0;
+    let etfSwingInvestment = 0;
+    let stockHoldInvestment = 0;
+    let etfHoldInvestment = 0;
+
+    euStocks.forEach(stock => {
+        // Increment counts
+        if (stock.stockType === 'Stock') stockCount++;
+        else if (stock.stockType === 'ETF') etfCount++;
+
+        // Safely access wallets, default to empty array if null/undefined
+        const wallets = (stock.stockWallets as unknown as StockWalletDataType[] ?? []); // Use correct type
+
+        wallets.forEach(wallet => {
+            // Check for remaining shares and valid buy price
+            if ((wallet.remainingShares ?? 0) > SHARE_EPSILON && typeof wallet.buyPrice === 'number') {
+                // Calculate tied-up investment for this wallet
+                const tiedUpInvestment = wallet.buyPrice * wallet.remainingShares!;
+
+                // Add to the correct bucket based on stockType and walletType
+                if (stock.stockType === 'Stock') {
+                    if (wallet.walletType === 'Swing') {
+                        stockSwingInvestment += tiedUpInvestment;
+                    } else if (wallet.walletType === 'Hold') {
+                        stockHoldInvestment += tiedUpInvestment;
+                    }
+                } else if (stock.stockType === 'ETF') {
+                     if (wallet.walletType === 'Swing') {
+                        etfSwingInvestment += tiedUpInvestment;
+                    } else if (wallet.walletType === 'Hold') {
+                        etfHoldInvestment += tiedUpInvestment;
+                    }
+                }
+            }
+        });
+    });
+
     const totalCount = stockCount + etfCount;
-    
-    // Sum up investment amounts
-    const stockSwingInvestment = euStocks
-      .filter(s => s.stockType === 'Stock' && s.swingHoldRatio && s.budget)
-      .reduce((sum, stock) => {
-        const swingRatio = stock.swingHoldRatio ? stock.swingHoldRatio / 100 : 0;
-        return sum + (stock.budget || 0) * swingRatio;
-      }, 0);
-    
-    const etfSwingInvestment = euStocks
-      .filter(s => s.stockType === 'ETF' && s.swingHoldRatio && s.budget)
-      .reduce((sum, stock) => {
-        const swingRatio = stock.swingHoldRatio ? stock.swingHoldRatio / 100 : 0;
-        return sum + (stock.budget || 0) * swingRatio;
-      }, 0);
-    
     const totalSwingInvestment = stockSwingInvestment + etfSwingInvestment;
-    
-    const stockHoldInvestment = euStocks
-      .filter(s => s.stockType === 'Stock' && s.swingHoldRatio && s.budget)
-      .reduce((sum, stock) => {
-        const holdRatio = stock.swingHoldRatio ? (100 - stock.swingHoldRatio) / 100 : 1;
-        return sum + (stock.budget || 0) * holdRatio;
-      }, 0);
-    
-    const etfHoldInvestment = euStocks
-      .filter(s => s.stockType === 'ETF' && s.swingHoldRatio && s.budget)
-      .reduce((sum, stock) => {
-        const holdRatio = stock.swingHoldRatio ? (100 - stock.swingHoldRatio) / 100 : 1;
-        return sum + (stock.budget || 0) * holdRatio;
-      }, 0);
-    
     const totalHoldInvestment = stockHoldInvestment + etfHoldInvestment;
-    
-    const stockTotalInvestment = euStocks
-      .filter(s => s.stockType === 'Stock' && s.budget)
-      .reduce((sum, stock) => sum + (stock.budget || 0), 0);
-    
-    const etfTotalInvestment = euStocks
-      .filter(s => s.stockType === 'ETF' && s.budget)
-      .reduce((sum, stock) => sum + (stock.budget || 0), 0);
-    
-    const totalInvestment = stockTotalInvestment + etfTotalInvestment;
-    
-    // Calculate percentages
-    const stockSwingPct = totalSwingInvestment > 0 ? Math.round((stockSwingInvestment / totalSwingInvestment) * 100) : 0;
-    const etfSwingPct = totalSwingInvestment > 0 ? Math.round((etfSwingInvestment / totalSwingInvestment) * 100) : 0;
-    
-    const stockHoldPct = totalHoldInvestment > 0 ? Math.round((stockHoldInvestment / totalHoldInvestment) * 100) : 0;
-    const etfHoldPct = totalHoldInvestment > 0 ? Math.round((etfHoldInvestment / totalHoldInvestment) * 100) : 0;
-    
-    const stockTotalPct = totalInvestment > 0 ? Math.round((stockTotalInvestment / totalInvestment) * 100) : 0;
-    const etfTotalPct = totalInvestment > 0 ? Math.round((etfTotalInvestment / totalInvestment) * 100) : 0;
-    
+    const stockTotalInvestment = stockSwingInvestment + stockHoldInvestment;
+    const etfTotalInvestment = etfSwingInvestment + etfHoldInvestment;
+    const totalInvestment = totalSwingInvestment + totalHoldInvestment; // Total tied-up
+
+    // Calculate percentages based on the new investment totals
+    const stockSwingPct = totalSwingInvestment > SHARE_EPSILON ? Math.round((stockSwingInvestment / totalSwingInvestment) * 100) : 0;
+    const etfSwingPct = totalSwingInvestment > SHARE_EPSILON ? Math.round((etfSwingInvestment / totalSwingInvestment) * 100) : 0;
+
+    const stockHoldPct = totalHoldInvestment > SHARE_EPSILON ? Math.round((stockHoldInvestment / totalHoldInvestment) * 100) : 0;
+    const etfHoldPct = totalHoldInvestment > SHARE_EPSILON ? Math.round((etfHoldInvestment / totalHoldInvestment) * 100) : 0;
+
+    const stockTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((stockTotalInvestment / totalInvestment) * 100) : 0;
+    const etfTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((etfTotalInvestment / totalInvestment) * 100) : 0;
+
+    console.log("[Memo] euRegionStats Result:", { counts: {stockCount, etfCount, totalCount }, /* ... other stats */ });
+
     return {
-      counts: {
-        stock: stockCount,
-        etf: etfCount,
-        total: totalCount,
-      },
+      counts: { stock: stockCount, etf: etfCount, total: totalCount },
       swingInvestment: {
         stock: { value: stockSwingInvestment, pct: stockSwingPct },
         etf: { value: etfSwingInvestment, pct: etfSwingPct },
@@ -479,77 +493,159 @@ function StocksListingContent() {
         total: { value: totalInvestment, pct: 100 }
       }
     };
-  }, [portfolioStocksData]);
+    // Depend on visibleStocks now
+  }, [visibleStocks]);
+
+  const intlRegionStats = useMemo(() => {
+    console.log("[Memo] Calculating apacRegionStats");
+    // Use visibleStocks to exclude hidden ones
+    const intlStocks = visibleStocks.filter(stock => stock.region === 'Intl');
+
+    let stockCount = 0;
+    let etfCount = 0;
+    let stockSwingInvestment = 0;
+    let etfSwingInvestment = 0;
+    let stockHoldInvestment = 0;
+    let etfHoldInvestment = 0;
+
+    intlStocks.forEach(stock => {
+        // Increment counts
+        if (stock.stockType === 'Stock') stockCount++;
+        else if (stock.stockType === 'ETF') etfCount++;
+
+        // Safely access wallets, default to empty array if null/undefined
+        const wallets = (stock.stockWallets as unknown as StockWalletDataType[] ?? []); // Use correct type
+
+        wallets.forEach(wallet => {
+            // Check for remaining shares and valid buy price
+            if ((wallet.remainingShares ?? 0) > SHARE_EPSILON && typeof wallet.buyPrice === 'number') {
+                // Calculate tied-up investment for this wallet
+                const tiedUpInvestment = wallet.buyPrice * wallet.remainingShares!;
+
+                // Add to the correct bucket based on stockType and walletType
+                if (stock.stockType === 'Stock') {
+                    if (wallet.walletType === 'Swing') {
+                        stockSwingInvestment += tiedUpInvestment;
+                    } else if (wallet.walletType === 'Hold') {
+                        stockHoldInvestment += tiedUpInvestment;
+                    }
+                } else if (stock.stockType === 'ETF') {
+                     if (wallet.walletType === 'Swing') {
+                        etfSwingInvestment += tiedUpInvestment;
+                    } else if (wallet.walletType === 'Hold') {
+                        etfHoldInvestment += tiedUpInvestment;
+                    }
+                }
+            }
+        });
+    });
+
+    const totalCount = stockCount + etfCount;
+    const totalSwingInvestment = stockSwingInvestment + etfSwingInvestment;
+    const totalHoldInvestment = stockHoldInvestment + etfHoldInvestment;
+    const stockTotalInvestment = stockSwingInvestment + stockHoldInvestment;
+    const etfTotalInvestment = etfSwingInvestment + etfHoldInvestment;
+    const totalInvestment = totalSwingInvestment + totalHoldInvestment; // Total tied-up
+
+    // Calculate percentages based on the new investment totals
+    const stockSwingPct = totalSwingInvestment > SHARE_EPSILON ? Math.round((stockSwingInvestment / totalSwingInvestment) * 100) : 0;
+    const etfSwingPct = totalSwingInvestment > SHARE_EPSILON ? Math.round((etfSwingInvestment / totalSwingInvestment) * 100) : 0;
+
+    const stockHoldPct = totalHoldInvestment > SHARE_EPSILON ? Math.round((stockHoldInvestment / totalHoldInvestment) * 100) : 0;
+    const etfHoldPct = totalHoldInvestment > SHARE_EPSILON ? Math.round((etfHoldInvestment / totalHoldInvestment) * 100) : 0;
+
+    const stockTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((stockTotalInvestment / totalInvestment) * 100) : 0;
+    const etfTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((etfTotalInvestment / totalInvestment) * 100) : 0;
+
+    console.log("[Memo] intlRegionStats Result:", { counts: {stockCount, etfCount, totalCount }, /* ... other stats */ });
+
+    return {
+      counts: { stock: stockCount, etf: etfCount, total: totalCount },
+      swingInvestment: {
+        stock: { value: stockSwingInvestment, pct: stockSwingPct },
+        etf: { value: etfSwingInvestment, pct: etfSwingPct },
+        total: { value: totalSwingInvestment, pct: 100 }
+      },
+      holdInvestment: {
+        stock: { value: stockHoldInvestment, pct: stockHoldPct },
+        etf: { value: etfHoldInvestment, pct: etfHoldPct },
+        total: { value: totalHoldInvestment, pct: 100 }
+      },
+      totalInvestment: {
+        stock: { value: stockTotalInvestment, pct: stockTotalPct },
+        etf: { value: etfTotalInvestment, pct: etfTotalPct },
+        total: { value: totalInvestment, pct: 100 }
+      }
+    };
+    // Depend on visibleStocks now
+  }, [visibleStocks]);
 
   // Calculate APAC region investment statistics
   const apacRegionStats = useMemo(() => {
-    // Filter for only APAC region stocks
-    const apacStocks = portfolioStocksData.filter(stock => stock.region === 'APAC');
-    
-    // Count APAC stocks by type 
-    const stockCount = apacStocks.filter(s => s.stockType === 'Stock').length;
-    const etfCount = apacStocks.filter(s => s.stockType === 'ETF').length;
+    console.log("[Memo] Calculating apacRegionStats");
+    // Use visibleStocks to exclude hidden ones
+    const apacStocks = visibleStocks.filter(stock => stock.region === 'APAC');
+
+    let stockCount = 0;
+    let etfCount = 0;
+    let stockSwingInvestment = 0;
+    let etfSwingInvestment = 0;
+    let stockHoldInvestment = 0;
+    let etfHoldInvestment = 0;
+
+    apacStocks.forEach(stock => {
+        // Increment counts
+        if (stock.stockType === 'Stock') stockCount++;
+        else if (stock.stockType === 'ETF') etfCount++;
+
+        // Safely access wallets, default to empty array if null/undefined
+        const wallets = (stock.stockWallets as unknown as StockWalletDataType[] ?? []); // Use correct type
+
+        wallets.forEach(wallet => {
+            // Check for remaining shares and valid buy price
+            if ((wallet.remainingShares ?? 0) > SHARE_EPSILON && typeof wallet.buyPrice === 'number') {
+                // Calculate tied-up investment for this wallet
+                const tiedUpInvestment = wallet.buyPrice * wallet.remainingShares!;
+
+                // Add to the correct bucket based on stockType and walletType
+                if (stock.stockType === 'Stock') {
+                    if (wallet.walletType === 'Swing') {
+                        stockSwingInvestment += tiedUpInvestment;
+                    } else if (wallet.walletType === 'Hold') {
+                        stockHoldInvestment += tiedUpInvestment;
+                    }
+                } else if (stock.stockType === 'ETF') {
+                     if (wallet.walletType === 'Swing') {
+                        etfSwingInvestment += tiedUpInvestment;
+                    } else if (wallet.walletType === 'Hold') {
+                        etfHoldInvestment += tiedUpInvestment;
+                    }
+                }
+            }
+        });
+    });
+
     const totalCount = stockCount + etfCount;
-    
-    // Sum up investment amounts
-    const stockSwingInvestment = apacStocks
-      .filter(s => s.stockType === 'Stock' && s.swingHoldRatio && s.budget)
-      .reduce((sum, stock) => {
-        const swingRatio = stock.swingHoldRatio ? stock.swingHoldRatio / 100 : 0;
-        return sum + (stock.budget || 0) * swingRatio;
-      }, 0);
-    
-    const etfSwingInvestment = apacStocks
-      .filter(s => s.stockType === 'ETF' && s.swingHoldRatio && s.budget)
-      .reduce((sum, stock) => {
-        const swingRatio = stock.swingHoldRatio ? stock.swingHoldRatio / 100 : 0;
-        return sum + (stock.budget || 0) * swingRatio;
-      }, 0);
-    
     const totalSwingInvestment = stockSwingInvestment + etfSwingInvestment;
-    
-    const stockHoldInvestment = apacStocks
-      .filter(s => s.stockType === 'Stock' && s.swingHoldRatio && s.budget)
-      .reduce((sum, stock) => {
-        const holdRatio = stock.swingHoldRatio ? (100 - stock.swingHoldRatio) / 100 : 1;
-        return sum + (stock.budget || 0) * holdRatio;
-      }, 0);
-    
-    const etfHoldInvestment = apacStocks
-      .filter(s => s.stockType === 'ETF' && s.swingHoldRatio && s.budget)
-      .reduce((sum, stock) => {
-        const holdRatio = stock.swingHoldRatio ? (100 - stock.swingHoldRatio) / 100 : 1;
-        return sum + (stock.budget || 0) * holdRatio;
-      }, 0);
-    
     const totalHoldInvestment = stockHoldInvestment + etfHoldInvestment;
-    
-    const stockTotalInvestment = apacStocks
-      .filter(s => s.stockType === 'Stock' && s.budget)
-      .reduce((sum, stock) => sum + (stock.budget || 0), 0);
-    
-    const etfTotalInvestment = apacStocks
-      .filter(s => s.stockType === 'ETF' && s.budget)
-      .reduce((sum, stock) => sum + (stock.budget || 0), 0);
-    
-    const totalInvestment = stockTotalInvestment + etfTotalInvestment;
-    
-    // Calculate percentages
-    const stockSwingPct = totalSwingInvestment > 0 ? Math.round((stockSwingInvestment / totalSwingInvestment) * 100) : 0;
-    const etfSwingPct = totalSwingInvestment > 0 ? Math.round((etfSwingInvestment / totalSwingInvestment) * 100) : 0;
-    
-    const stockHoldPct = totalHoldInvestment > 0 ? Math.round((stockHoldInvestment / totalHoldInvestment) * 100) : 0;
-    const etfHoldPct = totalHoldInvestment > 0 ? Math.round((etfHoldInvestment / totalHoldInvestment) * 100) : 0;
-    
-    const stockTotalPct = totalInvestment > 0 ? Math.round((stockTotalInvestment / totalInvestment) * 100) : 0;
-    const etfTotalPct = totalInvestment > 0 ? Math.round((etfTotalInvestment / totalInvestment) * 100) : 0;
-    
+    const stockTotalInvestment = stockSwingInvestment + stockHoldInvestment;
+    const etfTotalInvestment = etfSwingInvestment + etfHoldInvestment;
+    const totalInvestment = totalSwingInvestment + totalHoldInvestment; // Total tied-up
+
+    // Calculate percentages based on the new investment totals
+    const stockSwingPct = totalSwingInvestment > SHARE_EPSILON ? Math.round((stockSwingInvestment / totalSwingInvestment) * 100) : 0;
+    const etfSwingPct = totalSwingInvestment > SHARE_EPSILON ? Math.round((etfSwingInvestment / totalSwingInvestment) * 100) : 0;
+
+    const stockHoldPct = totalHoldInvestment > SHARE_EPSILON ? Math.round((stockHoldInvestment / totalHoldInvestment) * 100) : 0;
+    const etfHoldPct = totalHoldInvestment > SHARE_EPSILON ? Math.round((etfHoldInvestment / totalHoldInvestment) * 100) : 0;
+
+    const stockTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((stockTotalInvestment / totalInvestment) * 100) : 0;
+    const etfTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((etfTotalInvestment / totalInvestment) * 100) : 0;
+
+    console.log("[Memo] apacRegionStats Result:", { counts: {stockCount, etfCount, totalCount }, /* ... other stats */ });
+
     return {
-      counts: {
-        stock: stockCount,
-        etf: etfCount,
-        total: totalCount,
-      },
+      counts: { stock: stockCount, etf: etfCount, total: totalCount },
       swingInvestment: {
         stock: { value: stockSwingInvestment, pct: stockSwingPct },
         etf: { value: etfSwingInvestment, pct: etfSwingPct },
@@ -566,7 +662,8 @@ function StocksListingContent() {
         total: { value: totalInvestment, pct: 100 }
       }
     };
-  }, [portfolioStocksData]);
+    // Depend on visibleStocks now
+  }, [visibleStocks]);
 
   return (
     <div>
@@ -641,7 +738,7 @@ function StocksListingContent() {
             
             {/* US Region Statistics Table */}
             <div style={{ marginTop: '20px', marginBottom: '20px' }}>
-              <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '10px' }}>US Region Statistics</p>
+              <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '10px' }}>Region Stats</p>
               <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #444' }}>
                 {/* Table Header */}
                 <thead>
@@ -716,7 +813,6 @@ function StocksListingContent() {
 
             {/* EU Region Statistics Table */}
             <div style={{ marginTop: '20px', marginBottom: '20px' }}>
-              <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '10px' }}>EU Region Statistics</p>
               <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #444' }}>
                 {/* Table Header */}
                 <thead>
@@ -789,9 +885,81 @@ function StocksListingContent() {
               </table>
             </div>
 
+            <div style={{ marginTop: '20px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #444' }}>
+                {/* Table Header */}
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #444', background: '#1e1e1e' }}>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '25%' }}>Intl</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Stock</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>ETF</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Total</th>
+                  </tr>
+                </thead>
+                
+                {/* Table Body */}
+                <tbody>
+                  {/* Count of stocks row */}
+                  <tr style={{ borderBottom: '1px solid #444' }}>
+                    <td style={{ padding: '8px', fontSize: '0.9em' }}># Holdings</td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      {intlRegionStats.counts.stock} ({Math.round((intlRegionStats.counts.stock / intlRegionStats.counts.total) * 100) || 0}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      {intlRegionStats.counts.etf} ({Math.round((intlRegionStats.counts.etf / intlRegionStats.counts.total) * 100) || 0}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
+                      {intlRegionStats.counts.total} (100%)
+                    </td>
+                  </tr>
+                  
+                  {/* Swing Investment row */}
+                  <tr style={{ borderBottom: '1px solid #444' }}>
+                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Swing Inv</td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      ${Math.round(intlRegionStats.swingInvestment.stock.value).toLocaleString()} ({intlRegionStats.swingInvestment.stock.pct}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      ${Math.round(intlRegionStats.swingInvestment.etf.value).toLocaleString()} ({intlRegionStats.swingInvestment.etf.pct}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
+                      ${Math.round(intlRegionStats.swingInvestment.total.value).toLocaleString()} (100%)
+                    </td>
+                  </tr>
+                  
+                  {/* Hold Investment row */}
+                  <tr style={{ borderBottom: '1px solid #444' }}>
+                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Hold Inv</td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      ${Math.round(intlRegionStats.holdInvestment.stock.value).toLocaleString()} ({intlRegionStats.holdInvestment.stock.pct}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      ${Math.round(intlRegionStats.holdInvestment.etf.value).toLocaleString()} ({intlRegionStats.holdInvestment.etf.pct}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
+                      ${Math.round(intlRegionStats.holdInvestment.total.value).toLocaleString()} (100%)
+                    </td>
+                  </tr>
+                  
+                  {/* Total Investment row */}
+                  <tr>
+                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Total Inv</td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      ${Math.round(intlRegionStats.totalInvestment.stock.value).toLocaleString()} ({intlRegionStats.totalInvestment.stock.pct}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
+                      ${Math.round(intlRegionStats.totalInvestment.etf.value).toLocaleString()} ({intlRegionStats.totalInvestment.etf.pct}%)
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
+                      ${Math.round(intlRegionStats.totalInvestment.total.value).toLocaleString()} (100%)
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
             {/* APAC Region Statistics Table */}
             <div style={{ marginTop: '20px' }}>
-              <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '10px' }}>APAC Region Statistics</p>
               <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #444' }}>
                 {/* Table Header */}
                 <thead>
