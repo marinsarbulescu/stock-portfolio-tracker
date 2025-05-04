@@ -30,9 +30,18 @@ interface TransactionFormProps {
 // Define Buy Type options
 type BuyTypeValue = 'Swing' | 'Hold' | 'Split';
 
-const SHARE_PRECISION = 5;
-const CURRENCY_PRECISION = 2;
-const SHARE_EPSILON = 1 / (10**(SHARE_PRECISION + 2)); // For zero-checking
+// const SHARE_PRECISION = 5;
+// const CURRENCY_PRECISION = 2;
+// const SHARE_EPSILON = 1 / (10**(SHARE_PRECISION + 2)); // For zero-checking
+
+import {
+    SHARE_PRECISION,
+    CURRENCY_PRECISION,
+    PERCENT_PRECISION,
+    SHARE_EPSILON,
+    CURRENCY_EPSILON,
+    PERCENT_EPSILON // Import if your logic uses it
+} from '@/app/config/constants';
 
 // Default values for resetting the form
 const defaultFormState = {

@@ -12,6 +12,19 @@ import { FaEdit, FaTrashAlt, FaDollarSign } from 'react-icons/fa';
 import { usePrices } from '@/app/contexts/PriceContext';
 //import { DiVim } from 'react-icons/di';
 
+// const SHARE_EPSILON = 0.00001; // Example value, adjust as needed
+// const CURRENCY_PRECISION = 2;  // Example value (e.g., for dollars and cents)
+// const PERCENT_PRECISION = 2;   // Example value (e.g., 12.34%)
+
+import {
+    SHARE_PRECISION,
+    CURRENCY_PRECISION,
+    PERCENT_PRECISION,
+    SHARE_EPSILON,
+    CURRENCY_EPSILON,
+    PERCENT_EPSILON // Import if your logic uses it
+} from '@/app/config/constants';
+
 // Define the type for the fetched wallet data (no longer needs nested stock)
 type StockWalletDataType = Schema['StockWallet']['type'];
 
@@ -285,11 +298,11 @@ export default function StockWalletPage() {
 
     const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
 
-    const SHARE_PRECISION = 6; // Or your desired share precision
-    const CURRENCY_PRECISION = 6; // Standard for currency
-    const PERCENT_PRECISION = 6; // Precision for percentages (adjust as needed)
-    // Epsilon for checking closeness to zero, based on share precision
-    const SHARE_EPSILON = 1 / (10**(SHARE_PRECISION + 2)); // e.g., 0.0000001 for 5 decimal places
+    // const SHARE_PRECISION = 6; // Or your desired share precision
+    // const CURRENCY_PRECISION = 6; // Standard for currency
+    // const PERCENT_PRECISION = 6; // Precision for percentages (adjust as needed)
+    // // Epsilon for checking closeness to zero, based on share precision
+    // const SHARE_EPSILON = 1 / (10**(SHARE_PRECISION + 2)); // e.g., 0.0000001 for 5 decimal places
 
     const [isOverviewExpanded, setIsOverviewExpanded] = useState(false); // Collapsed by default
 
@@ -1461,24 +1474,29 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
 
     // --- START: Replace your existing Formatting Helpers with this block ---
     const formatCurrency = (value: number | null | undefined): string => {
-        if (typeof value !== 'number') {
-             return '-'; // Return '-' if value is not a number
+        // Check for non-number OR effectively zero using CURRENCY_EPSILON
+        if (typeof value !== 'number' || isNaN(value) || Math.abs(value) < CURRENCY_EPSILON) { // <-- Corrected: Use CURRENCY_EPSILON
+            return '-'; // Return '-' if value is not a valid number or is effectively zero
         }
-        // Return the formatted currency string
-        return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        // Use toLocaleString for formatting with commas and correct decimal places
+        // Use CURRENCY_PRECISION (value 2) for the actual formatting digits
+        return `$${value.toLocaleString(undefined, {
+            minimumFractionDigits: CURRENCY_PRECISION,
+            maximumFractionDigits: CURRENCY_PRECISION,
+        })}`;
     };
 
     const formatPercent = (value: number | null | undefined): string => {
-        if (typeof value !== 'number') {
-            return '-'; // Explicitly return string
+        if (typeof value !== 'number' || isNaN(value)) { // Added isNaN check for robustness
+            return '-';
         }
-        // Returns formatted string with '%'
-        return `${value.toFixed(2)}%`;
+        // Use the imported PERCENT_PRECISION constant
+        return `${value.toFixed(PERCENT_PRECISION)}%`;
     };
 
-     const formatShares = (value: number | null | undefined, decimals = 5): string => {
-        if (typeof value !== 'number') {
-            return '-'; // Explicitly return string
+    const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISION): string => {
+        if (typeof value !== 'number' || isNaN(value) || Math.abs(value) < SHARE_EPSILON) {
+            return '-'; // Returns '-' only for non-numbers
         }
         // Returns formatted string with fixed decimals
         return value.toFixed(decimals);
@@ -1798,7 +1816,7 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
                                         </div>
                                     </div>
 
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Price Dip Percent (PDP)</p>
+                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Price Drop Percent (PDP)</p>
                                     <p>{typeof stockPdp === 'number' ? `${stockPdp}%` : 'Not set'}</p>
 
                                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing-Hold Ratio (SHR)</p>

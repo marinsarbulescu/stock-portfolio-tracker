@@ -10,9 +10,18 @@ import PortfolioOverview from './components/PortfolioOverview';
 import ColumnVisibilityControls, { ReportColumnVisibilityState } from './components/ColumnVisibilityControls';
 import StockTable, { ReportDataItem, ReportColumnKey } from './components/StockTable';
 
-const SHARE_EPSILON = 0.00001; // Example value, adjust as needed
-const CURRENCY_PRECISION = 2;  // Example value (e.g., for dollars and cents)
-const PERCENT_PRECISION = 2;   // Example value (e.g., 12.34%)
+// const SHARE_EPSILON = 0.00001; // Example value, adjust as needed
+// const CURRENCY_PRECISION = 2;  // Example value (e.g., for dollars and cents)
+// const PERCENT_PRECISION = 2;   // Example value (e.g., 12.34%)
+
+import {
+    SHARE_PRECISION,
+    CURRENCY_PRECISION,
+    PERCENT_PRECISION,
+    SHARE_EPSILON,
+    CURRENCY_EPSILON,
+    PERCENT_EPSILON // Import if your logic uses it
+} from '@/app/config/constants';
 
 type PortfolioStockDataType = { // Simplified representation needed for this page
     id: string;

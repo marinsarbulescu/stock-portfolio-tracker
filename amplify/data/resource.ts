@@ -26,8 +26,8 @@ const schema = a.schema({
       stockType: a.ref('StockType').required(), // Reference the StockType enum, required
       region: a.ref('Region').required(),   // Reference the Region enum, required
       name: a.string(), // Stock name, optional
-      pdp: a.float(),   // Price Dip Percent, optional number
-      plr: a.float(),   // Profit Loss Ratio, optional number
+      pdp: a.float(),   // Price Drop Percent
+      plr: a.float(),   // Profit Loss Ratio
       budget: a.float(), // Annual budget, optional number
       isHidden: a.boolean().default(false), // Hide the stock from the reporting table
       swingHoldRatio: a.float(),

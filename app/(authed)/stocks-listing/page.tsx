@@ -12,7 +12,16 @@ import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
-const SHARE_EPSILON = 0.00001;
+//const SHARE_EPSILON = 0.00001;
+
+import {
+  SHARE_PRECISION,
+  CURRENCY_PRECISION,
+  PERCENT_PRECISION,
+  SHARE_EPSILON,
+  CURRENCY_EPSILON,
+  PERCENT_EPSILON // Import if your logic uses it
+} from '@/app/config/constants';
 
 // Register Chart.js components and plugins
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, ChartDataLabels);
@@ -751,7 +760,7 @@ function StocksListingContent() {
                     <th style={{ padding: '8px', textAlign: 'center', width: '25%' }}>US</th>
                     <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Stock</th>
                     <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>ETF</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Total</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>All Holdings</th>
                   </tr>
                 </thead>
                 
@@ -825,7 +834,7 @@ function StocksListingContent() {
                     <th style={{ padding: '8px', textAlign: 'center', width: '25%' }}>EU</th>
                     <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Stock</th>
                     <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>ETF</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Total</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>All Holdings</th>
                   </tr>
                 </thead>
                 
@@ -899,7 +908,7 @@ function StocksListingContent() {
                     <th style={{ padding: '8px', textAlign: 'center', width: '20%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Stock</th>
                     <th style={{ padding: '8px', textAlign: 'center', width: '20%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>ETF</th>
                     <th style={{ padding: '8px', textAlign: 'center', width: '20%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Crypto</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '20%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Total</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '20%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>All Holdings</th>
                   </tr>
                 </thead>
                 
@@ -985,7 +994,7 @@ function StocksListingContent() {
                     <th style={{ padding: '8px', textAlign: 'center', width: '25%' }}>APAC</th>
                     <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Stock</th>
                     <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>ETF</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Total</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>All Holdings</th>
                   </tr>
                 </thead>
                 
