@@ -89,7 +89,7 @@ export default function TransactionForm({
 
   const [warning, setWarning] = useState<string | null>(null);
 
-  console.log("[TransactionForm Render] Component rendering. Current warning state:", warning);
+  //console.log("[TransactionForm Render] Component rendering. Current warning state:", warning);
   
   // State for submission status
   const [isLoading, setIsLoading] = useState(false);
@@ -98,7 +98,7 @@ export default function TransactionForm({
 
   // --- Effect to populate form for editing or set defaults ---
   useEffect(() => {
-    console.log("[TransactionForm useEffect] Running effect, clearing messages. Mode:", isEditMode, "Initial Data:", initialData);
+    //console.log("[TransactionForm useEffect] Running effect, clearing messages. Mode:", isEditMode, "Initial Data:", initialData);
     setError(null);
     setSuccess(null);
     setWarning(null);
@@ -173,7 +173,7 @@ export default function TransactionForm({
           // --- Round TOTAL quantity ---
           const roundedQuantity = parseFloat(quantity_raw.toFixed(SHARE_PRECISION));
           quantity_final = (Math.abs(roundedQuantity) < SHARE_EPSILON) ? 0 : roundedQuantity;
-          console.log(`Calculated Quantity - Raw: ${quantity_raw}, Rounded: ${quantity_final}`);
+          //console.log(`Calculated Quantity - Raw: ${quantity_raw}, Rounded: ${quantity_final}`);
           // --- End Rounding ---
         } else {
             setError("Investment and positive Price are required to calculate quantity for Buy.");
@@ -183,7 +183,7 @@ export default function TransactionForm({
         // Fetch stock details (ratio, pdp, plr)
         let ratio = 1.0; // Default to 100% Swing
         try {
-            console.log("Fetching stock details for ratio/TP/LBD...");
+            //console.log("Fetching stock details for ratio/TP/LBD...");
             const { data: stock } = await client.models.PortfolioStock.get(
                 { id: portfolioStockId }, { selectionSet: ['swingHoldRatio', 'pdp', 'plr'] }
             );
@@ -193,7 +193,7 @@ export default function TransactionForm({
             if (buyType === 'Split') {
                 if (typeof stock?.swingHoldRatio === 'number' && stock.swingHoldRatio >= 0 && stock.swingHoldRatio <= 100) {
                     ratio = stock.swingHoldRatio / 100.0;
-                    console.log(`Using fetched ratio for split: ${ratio * 100}% Swing`);
+                    //console.log(`Using fetched ratio for split: ${ratio * 100}% Swing`);
                 } else {
                     ratio = 0.5; // Default 50/50 if type is Split but ratio missing/invalid
                     console.warn(`Swing/Hold ratio not found or invalid for stock, using default 50/50 split.`);
@@ -211,7 +211,9 @@ export default function TransactionForm({
               lbd_final = parseFloat(lbd_raw.toFixed(CURRENCY_PRECISION));
               tp_final = parseFloat(tp_raw.toFixed(CURRENCY_PRECISION));
               // --- End Rounding ---
-            } else { console.log("Could not calculate LBD/TP (PDP/PLR invalid or price missing)"); }
+            } else { 
+                //console.log("Could not calculate LBD/TP (PDP/PLR invalid or price missing)"); 
+            }
 
         } catch (fetchErr: any) {
             console.error("Error fetching stock data", fetchErr);
@@ -243,8 +245,8 @@ export default function TransactionForm({
                calculatedHoldShares_final = (Math.abs(reRoundedHold) < SHARE_EPSILON) ? 0 : reRoundedHold;
 
           }
-          console.log(`Calculated Split - Swing Raw: ${calculatedSwingShares_raw}, Hold Raw: ${calculatedHoldShares_raw}`);
-          console.log(`Calculated Split - Swing Rounded: ${calculatedSwingShares_final}, Hold Rounded: ${calculatedHoldShares_final}`);
+          //console.log(`Calculated Split - Swing Raw: ${calculatedSwingShares_raw}, Hold Raw: ${calculatedHoldShares_raw}`);
+          //console.log(`Calculated Split - Swing Rounded: ${calculatedSwingShares_final}, Hold Rounded: ${calculatedHoldShares_final}`);
           // --- End Rounding Split Shares ---
         }
     }
@@ -297,7 +299,7 @@ export default function TransactionForm({
                 portfolioStockId: portfolioStockId, // Include Stock ID in update
                 ...finalPayload // Spread the prepared fields
             };
-            console.log("Submitting Update Payload:", updatePayload);
+            //console.log("Submitting Update Payload:", updatePayload);
             await onUpdate(updatePayload); // Call parent's update handler
             setSuccess('Transaction updated successfully!');
              // @ts-ignore Simulate result for consistency if needed downstream
@@ -309,7 +311,7 @@ export default function TransactionForm({
 
             // Only attempt wallet updates if the edited action is still 'Buy'
             if (savedTransaction && savedTransaction.action === 'Buy') {
-              console.log("[Edit Wallet Logic] Checking if wallet update is needed for edited Buy txn...");
+              //console.log("[Edit Wallet Logic] Checking if wallet update is needed for edited Buy txn...");
 
               // --- Safety Checks ---
               // 1. Did Buy Price or Buy Type change? If so, DO NOT auto-update wallet.
@@ -328,12 +330,12 @@ export default function TransactionForm({
                   // <<< --- ADD Ratio Calculation HERE --- >>>
                   let ratio = 1.0; // Default (e.g., 100% Swing or 50/50) if fetch fails or no ratio
                   try {
-                       console.log("[Edit Wallet Logic] Fetching stock ratio for investment split...");
+                       //console.log("[Edit Wallet Logic] Fetching stock ratio for investment split...");
                        const { data: stock } = await client.models.PortfolioStock.get(
                            { id: portfolioStockId },
                            { selectionSet: ['swingHoldRatio'] }
                        );
-                       console.log(`[Edit Wallet Logic] Fetched stock.swingHoldRatio: ${stock?.swingHoldRatio}`);
+                       //console.log(`[Edit Wallet Logic] Fetched stock.swingHoldRatio: ${stock?.swingHoldRatio}`);
                        if (typeof stock?.swingHoldRatio === 'number' && stock.swingHoldRatio >= 0 && stock.swingHoldRatio <= 100) {
                            ratio = stock.swingHoldRatio / 100.0;
                        } else {
@@ -350,7 +352,7 @@ export default function TransactionForm({
                        console.error("[Edit Wallet Logic] Failed to fetch stock ratio, using default ratio.", fetchErr);
                        ratio = 0.5; // Use default on error
                    }
-                   console.log(`[Edit Wallet Logic] Using ratio: ${ratio} for investment delta split.`);
+                   //console.log(`[Edit Wallet Logic] Using ratio: ${ratio} for investment delta split.`);
                   // <<< --- END Ratio Calculation --- >>>
 
                   // Calculate *changes* in shares based on the update
@@ -384,13 +386,13 @@ export default function TransactionForm({
                          return;
                     }
 
-                    console.log(`[Edit Wallet Logic - ${type}] Delta detected (Shares: ${shareDelta}, Inv: ${investmentDelta}). Checking wallet for price ${originalBuyPrice}...`);
+                    //console.log(`[Edit Wallet Logic - ${type}] Delta detected (Shares: ${shareDelta}, Inv: ${investmentDelta}). Checking wallet for price ${originalBuyPrice}...`);
 
                     // Inside updateWalletIfNoSales helper function
 
                   try {
                     // 1. Fetch candidate wallets for this stock and type (BROADER filter)
-                    console.log(`[Edit Wallet Helper - ${type}] Fetching candidates for stock ${portfolioStockId}, type ${type}...`);
+                    //console.log(`[Edit Wallet Helper - ${type}] Fetching candidates for stock ${portfolioStockId}, type ${type}...`);
                     const { data: candidates, errors: listErrors } = await client.models.StockWallet.list({
                         filter: { and: [
                             { portfolioStockId: { eq: portfolioStockId } },
@@ -402,7 +404,7 @@ export default function TransactionForm({
                     });
 
                     if (listErrors) throw listErrors; // Handle list errors
-                    console.log(`[Edit Wallet Helper - ${type}] Found ${candidates?.length ?? 0} candidates. Searching for match with price ${originalBuyPrice}...`);
+                    //console.log(`[Edit Wallet Helper - ${type}] Found ${candidates?.length ?? 0} candidates. Searching for match with price ${originalBuyPrice}...`);
 
                     // 2. Find matching wallet in code using tolerance
                     const epsilon = 0.0001;
@@ -414,7 +416,7 @@ export default function TransactionForm({
                         // Optional Log: console.log(`[Find Check - ${type}] Wallet ${wallet.id}, DB Price ${wallet.buyPrice}, Target ${originalBuyPrice}, Match: ${isCloseEnough}`);
                         return isPriceValid && isCloseEnough;
                     });
-                    console.log(`[Edit Wallet Helper - ${type}] Result of find():`, walletToUpdate ? `Found ID ${walletToUpdate.id}` : 'Not Found');
+                    //console.log(`[Edit Wallet Helper - ${type}] Result of find():`, walletToUpdate ? `Found ID ${walletToUpdate.id}` : 'Not Found');
 
 
                     // 3. Proceed with logic using the wallet found by .find()
@@ -434,7 +436,7 @@ export default function TransactionForm({
                     }
 
                     // 5. No sales - Apply updates
-                    console.log(`[Edit Wallet Helper - ${type}] No sales detected for wallet ${walletToUpdate.id}. Applying updates...`);
+                    //console.log(`[Edit Wallet Helper - ${type}] No sales detected for wallet ${walletToUpdate.id}. Applying updates...`);
                     const currentTotalShares = walletToUpdate.totalSharesQty ?? 0;
                     const currentInvestment = walletToUpdate.totalInvestment ?? 0;
                     const currentRemaining = walletToUpdate.remainingShares ?? 0;
@@ -459,10 +461,10 @@ export default function TransactionForm({
                         sellTxnCount: 0, // Still 0
                         realizedPlPercent: 0, // Still 0
                     };
-                    console.log(`[Edit Wallet Helper - ${type}] Update Payload:`, walletUpdatePayload);
+                    //console.log(`[Edit Wallet Helper - ${type}] Update Payload:`, walletUpdatePayload);
                     const { errors: updateErrors } = await client.models.StockWallet.update(walletUpdatePayload);
                     if (updateErrors) throw updateErrors; // Throw actual error if update fails
-                    console.log(`[Edit Wallet Helper - ${type}] Wallet update successful.`);
+                    //console.log(`[Edit Wallet Helper - ${type}] Wallet update successful.`);
                     return true; // Indicate success
 
                 } catch (err: any) { // Catch errors from list, update, or calculations
@@ -489,7 +491,7 @@ export default function TransactionForm({
                 portfolioStockId: portfolioStockId,
                 ...finalPayload
             };
-            console.log("Submitting Create Payload:", createPayload);
+            //console.log("Submitting Create Payload:", createPayload);
             // Use 'as any' temporarily if strict type checking causes issues with optional fields
             const { errors, data: newTransaction } = await client.models.Transaction.create(createPayload as any);
             if (errors) throw errors;
@@ -506,7 +508,7 @@ export default function TransactionForm({
             // === START: UPDATED WALLET UPDATE/CREATE LOGIC for BUY ====
             // ============================================================
             if (action === 'Buy' && priceValue) {
-                console.log('>>> Buy detected, attempting to create/update TYPED StockWallet(s)...');
+                //console.log('>>> Buy detected, attempting to create/update TYPED StockWallet(s)...');
 
                 // Helper function to create/update typed wallets (REVISED CHECK LOGIC)
                 const createOrUpdateWallet = async (
@@ -517,7 +519,7 @@ export default function TransactionForm({
                   // Use a small tolerance for floating point comparison
                   const epsilon = SHARE_EPSILON;
                   if (!sharesToAdd || sharesToAdd <= epsilon) { // Check against tolerance
-                      console.log(`[Wallet Logic - <span class="math-inline">\{type\}\] No significant shares to add \(</span>{sharesToAdd}). Skipping wallet.`);
+                      //console.log(`[Wallet Logic - <span class="math-inline">\{type\}\] No significant shares to add \(</span>{sharesToAdd}). Skipping wallet.`);
                       return;
                   }
                   // Ensure priceValue is valid before proceeding
@@ -528,12 +530,12 @@ export default function TransactionForm({
 
                   // --- Round Investment to Add ---
                   const roundedInvestmentToAdd = parseFloat(investmentToAdd_raw.toFixed(CURRENCY_PRECISION));
-                  console.log(`[Wallet Logic - ${type}] Processing... Shares: ${sharesToAdd}, Investment: ${roundedInvestmentToAdd}, Price: ${priceValue}`);
+                  //console.log(`[Wallet Logic - ${type}] Processing... Shares: ${sharesToAdd}, Investment: ${roundedInvestmentToAdd}, Price: ${priceValue}`);
                   // --- End Rounding ---
 
                   try {
                       // 1. Fetch candidate wallets for this stock and type (BROADER filter)
-                      console.log(`[Wallet Logic - ${type}] Fetching candidate wallets (Stock: ${portfolioStockId}, Type: ${type})...`);
+                      //console.log(`[Wallet Logic - ${type}] Fetching candidate wallets (Stock: ${portfolioStockId}, Type: ${type})...`);
                       const { data: candidates, errors: listErrors } = await client.models.StockWallet.list({
                           filter: { and: [
                               { portfolioStockId: { eq: portfolioStockId } },
@@ -546,24 +548,24 @@ export default function TransactionForm({
                       });
 
                       if (listErrors) throw listErrors; // Handle list errors
-                      console.log(`[Wallet Logic - ${type}] Found ${candidates?.length ?? 0} candidates.`);
+                      //console.log(`[Wallet Logic - ${type}] Found ${candidates?.length ?? 0} candidates.`);
 
                       // 2. Find matching wallet in code using tolerance WITH detailed logging
                       const existingWallet = (candidates || []).find(wallet => {
                           // --- Add Detailed Logs INSIDE find callback ---
-                          console.log(`[Wallet Find Check - ${type}] Comparing Form Price (Value: ${priceValue}, Type: ${typeof priceValue}) with DB Wallet (ID: ${wallet.id}) Price (Value: ${wallet.buyPrice}, Type: ${typeof wallet.buyPrice})`);
+                          //console.log(`[Wallet Find Check - ${type}] Comparing Form Price (Value: ${priceValue}, Type: ${typeof priceValue}) with DB Wallet (ID: ${wallet.id}) Price (Value: ${wallet.buyPrice}, Type: ${typeof wallet.buyPrice})`);
                           const isPriceValid = wallet.buyPrice != null && typeof wallet.buyPrice === 'number'; // Check type too
                           const priceDifference = isPriceValid ? Math.abs(wallet.buyPrice! - priceValue) : Infinity;
                           const isCloseEnough = priceDifference < epsilon;
-                          console.log(`[Wallet Find Check - ${type}] DB Price Valid: ${isPriceValid}, Price Difference: <span class="math-inline">\{priceDifference\}, Is Close Enough \(<</span>{epsilon}): ${isCloseEnough}`);
+                          //console.log(`[Wallet Find Check - ${type}] DB Price Valid: ${isPriceValid}, Price Difference: <span class="math-inline">\{priceDifference\}, Is Close Enough \(<</span>{epsilon}): ${isCloseEnough}`);
                           // --- End Detailed Logs ---
                           return isPriceValid && isCloseEnough; // Return boolean result
                       });
-                      console.log(`[Wallet Logic - ${type}] Result of find():`, existingWallet ? `Found ID ${existingWallet.id}` : 'Not Found');
+                      //console.log(`[Wallet Logic - ${type}] Result of find():`, existingWallet ? `Found ID ${existingWallet.id}` : 'Not Found');
 
                       if (existingWallet) {
                           // 3a. Update existing wallet (Apply Rounding to final totals)
-                          console.log(`[Wallet Logic - ${type}] Found existing wallet ${existingWallet.id}. Updating...`);
+                          //console.log(`[Wallet Logic - ${type}] Found existing wallet ${existingWallet.id}. Updating...`);
                           const currentTotalShares = existingWallet.totalSharesQty ?? 0;
                           const currentInvestment = existingWallet.totalInvestment ?? 0;
                           const currentRemaining = existingWallet.remainingShares ?? 0;
@@ -586,10 +588,10 @@ export default function TransactionForm({
                           };
                           const { errors: updateErrors } = await client.models.StockWallet.update(updatePayload);
                           if (updateErrors) throw updateErrors;
-                          console.log(`[Wallet Logic - ${type}] Update SUCCESS`);
+                          //console.log(`[Wallet Logic - ${type}] Update SUCCESS`);
                       } else {
                           // 3b. Create new wallet (use rounded values directly)
-                          console.log(`[Wallet Logic - ${type}] No existing wallet found. Creating new...`);
+                          //console.log(`[Wallet Logic - ${type}] No existing wallet found. Creating new...`);
                           // Fetch PDP/PLR (use previously fetched values)
                           // Use rounded TP if available
                           const createPayload = {
@@ -608,7 +610,7 @@ export default function TransactionForm({
                           };
                           const { errors: createErrors } = await client.models.StockWallet.create(createPayload as any);
                           if (createErrors) throw createErrors;
-                          console.log(`[Wallet Logic - ${type}] Create SUCCESS`);
+                          //console.log(`[Wallet Logic - ${type}] Create SUCCESS`);
                      }
                  } catch (walletError: any) {
                      console.error(`[Wallet Logic - ${type}] FAILED:`, walletError?.errors || walletError);
@@ -653,11 +655,11 @@ export default function TransactionForm({
         }
 
         // Call success callback if provided (outside create/update blocks)
-        console.log("[TransactionForm Edit] Finished wallet updates (if any). Calling onTransactionAdded callback...");
+        //console.log("[TransactionForm Edit] Finished wallet updates (if any). Calling onTransactionAdded callback...");
         onTransactionAdded?.();
 
     } catch (err: any) {
-        console.error('Error saving transaction:', err);
+        //console.error('Error saving transaction:', err);
         // Attempt to parse Amplify errors which might be an array
         const message = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || "An unknown error occurred.");
         setError(message);

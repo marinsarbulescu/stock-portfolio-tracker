@@ -1,20 +1,26 @@
-// jest.config.mjs
+// root--jest.config.mjs
+
 import nextJest from 'next/jest.js'
 
 const createJestConfig = nextJest({
-  // Provide the path to your Next.js app to load next.config.js and .env files in your test environment
   dir: './',
 })
 
-// Add any custom config to be passed to Jest
 /** @type {import('jest').Config} */
 const config = {
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'], // Create this file if you need global setup
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jest-environment-jsdom',
-  // Add more options if needed
-  // Automatically clear mock calls and instances between every test
-  clearMocks: true,
+  //preset: 'ts-jest', // Keep if needed, though next/jest might handle TS
+
+  // --- Add this moduleNameMapper section ---
+  moduleNameMapper: {
+    // Handle CSS imports (optional, uncomment if you import CSS/SCSS/etc. directly into components)
+    // '\\.(css|less|sass|scss)$': 'identity-obj-proxy',
+
+    // Handle path aliases based on tsconfig.json (assuming "@/*": ["./*"])
+    '^@/(.*)$': '<rootDir>/$1',
+  },
+  // --- End moduleNameMapper section ---
 }
 
-// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
 export default createJestConfig(config)

@@ -22,14 +22,14 @@ export const AuthStatusProvider: React.FC<AuthStatusProviderProps> = ({ children
   const [accessStatus, setAccessStatus] = useState<AccessStatus>('loading');
 
   const checkAuthStatus = async () => {
-    console.log('[AuthStatusContext] Checking auth status...');
+    //console.log('[AuthStatusContext] Checking auth status...');
     setAccessStatus('loading'); // Set loading on check
     try {
       const session = await fetchAuthSession(); // Throws if not authenticated
       const accessToken = session.tokens?.accessToken;
       const groups = accessToken?.payload['cognito:groups'] as string[] | undefined;
 
-      console.log('[AuthStatusContext] User groups:', groups);
+      //console.log('[AuthStatusContext] User groups:', groups);
 
       if (groups && groups.includes('ApprovedUsers')) {
         setAccessStatus('approved');
@@ -39,7 +39,7 @@ export const AuthStatusProvider: React.FC<AuthStatusProviderProps> = ({ children
       }
     } catch (error) {
       // Error likely means user is not authenticated
-      console.log('[AuthStatusContext] User not authenticated or error fetching session:', error);
+      //console.log('[AuthStatusContext] User not authenticated or error fetching session:', error);
       setAccessStatus('denied'); // Treat non-authenticated as denied for protected routes
     }
   };
@@ -52,11 +52,11 @@ export const AuthStatusProvider: React.FC<AuthStatusProviderProps> = ({ children
     const hubListenerCancel = Hub.listen('auth', ({ payload }) => {
         switch (payload.event) {
             case 'signedIn':
-                console.log('[AuthStatusContext] Hub: User signed in, re-checking status.');
+                //console.log('[AuthStatusContext] Hub: User signed in, re-checking status.');
                 checkAuthStatus();
                 break;
             case 'signedOut':
-                 console.log('[AuthStatusContext] Hub: User signed out.');
+                 //console.log('[AuthStatusContext] Hub: User signed out.');
                 setAccessStatus('denied'); // Set to denied on sign out
                 break;
             // Add other cases like tokenRefresh if needed

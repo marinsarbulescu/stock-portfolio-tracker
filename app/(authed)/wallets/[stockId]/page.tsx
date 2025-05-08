@@ -12,6 +12,8 @@ import { FaEdit, FaTrashAlt, FaDollarSign } from 'react-icons/fa';
 import { usePrices } from '@/app/contexts/PriceContext';
 //import { DiVim } from 'react-icons/di';
 
+import { calculateSingleSalePL, calculateTotalRealizedSwingPL } from '@/app/utils/financialCalculations';
+
 // const SHARE_EPSILON = 0.00001; // Example value, adjust as needed
 // const CURRENCY_PRECISION = 2;  // Example value (e.g., for dollars and cents)
 // const PERCENT_PRECISION = 2;   // Example value (e.g., 12.34%)
@@ -155,7 +157,7 @@ export default function StockWalletPage() {
 
     const [walletColumnVisibility, setWalletColumnVisibility] = useState<WalletColumnVisibilityState>({
         id: true,
-        buyPrice: false,
+        buyPrice: true,
         totalInvestment: true,
         //totalSharesQty: true,
         tpValue: true,
@@ -899,11 +901,16 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                 totalSwingPlDollars: 0, avgSwingPlPercent: null,
                 totalHoldPlDollars: 0, avgHoldPlPercent: null,
                 totalStockPlDollars: 0, avgStockPlPercent: null,
+                totalSwingCostBasis: 0, totalHoldCostBasis: 0, totalStockCostBasis: 0,
             };
         }
 
-        // 1. Create a Wallet Map for efficient buyPrice lookup
-        const walletBuyPriceMap = new Map<string, number>(); // Map<walletId, buyPrice>
+        // 1. Use the new utility function for total Swing P/L Dollars
+        //    This function needs the raw transactions and wallets arrays.
+        const calculatedTotalSwingPlDollars = calculateTotalRealizedSwingPL(transactions, wallets);
+
+         // 2. Create Wallet Map (still needed for Hold P/L and cost basis calculations)
+        const walletBuyPriceMap = new Map<string, number>();
         wallets.forEach(w => {
             if (w.id && typeof w.buyPrice === 'number') {
                 walletBuyPriceMap.set(w.id, w.buyPrice);
@@ -911,61 +918,63 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
         });
 
         // 2. Initialize aggregators
-        let totalSwingPlDollars = 0;
-        let totalSwingCostBasis = 0;
+        // let totalSwingPlDollars = 0;
+        // let totalSwingCostBasis = 0;
+        // let totalHoldPlDollars = 0;
+        // let totalHoldCostBasis = 0;
+        // let warnings = 0;
+
         let totalHoldPlDollars = 0;
+        let totalSwingCostBasis = 0; // Will calculate this here
         let totalHoldCostBasis = 0;
         let warnings = 0;
 
-        // 3. Iterate through ALL transactions to find Sells and aggregate
+        // 4. Iterate through transactions for Hold P/L and ALL cost bases
         transactions.forEach(txn => {
             if (txn.action === 'Sell' && txn.completedTxnId && typeof txn.quantity === 'number' && typeof txn.price === 'number') {
                 const walletBuyPrice = walletBuyPriceMap.get(txn.completedTxnId);
 
-                // Check if we found the wallet and its buy price
                 if (typeof walletBuyPrice === 'number') {
                     const costBasisForTxn = walletBuyPrice * txn.quantity;
-                    const profitForTxn = (txn.price - walletBuyPrice) * txn.quantity; // Recalculate for accuracy here
 
-                    // Aggregate based on txnType
+                    // Calculate P/L for this transaction (used for Hold, and potentially if you didn't use the aggregate for Swing)
+                    // You are already using calculateSingleSalePL in YTD, ensure it's robust for this general use too.
+                    const profitForTxn = calculateSingleSalePL(txn.price, walletBuyPrice, txn.quantity);
+
                     if (txn.txnType === 'Swing') {
-                        totalSwingPlDollars += profitForTxn;
+                        // totalSwingPlDollars is now handled by calculateTotalRealizedSwingPL
                         totalSwingCostBasis += costBasisForTxn;
                     } else if (txn.txnType === 'Hold') {
                         totalHoldPlDollars += profitForTxn;
                         totalHoldCostBasis += costBasisForTxn;
                     } else {
-                        // Handle sells with missing/unexpected txnType if necessary
                         console.warn(`Sell transaction ${txn.id} has unexpected/missing txnType: ${txn.txnType}`);
                         warnings++;
                     }
                 } else {
-                    console.warn(`Could not find wallet buy price for Sell transaction ${txn.id} (linked wallet ID: ${txn.completedTxnId}). Cannot include in P/L % calculation.`);
+                    console.warn(`Could not find wallet buy price for Sell transaction ${txn.id} (linked wallet ID: ${txn.completedTxnId}). Cannot include in P/L calculation.`);
                     warnings++;
-                    // Optionally, still add its profit to the dollar totals if txnProfit exists?
-                    // if (txn.txnType === 'Swing') totalSwingPlDollars += (txn.txnProfit ?? 0);
-                    // if (txn.txnType === 'Hold') totalHoldPlDollars += (txn.txnProfit ?? 0);
                 }
             }
         });
 
-        // 4. Calculate final averages (handle division by zero)
+        // 5. Calculate percentages (logic remains similar)
         const avgSwingPlPercent = (totalSwingCostBasis !== 0)
-            ? (totalSwingPlDollars / totalSwingCostBasis) * 100
-            : (totalSwingPlDollars === 0 ? 0 : null); // If cost is 0, % is 0 only if P/L is also 0
+        ? (calculatedTotalSwingPlDollars / totalSwingCostBasis) * 100 // Use calculatedTotalSwingPlDollars
+        : (calculatedTotalSwingPlDollars === 0 ? 0 : null);
 
         const avgHoldPlPercent = (totalHoldCostBasis !== 0)
             ? (totalHoldPlDollars / totalHoldCostBasis) * 100
             : (totalHoldPlDollars === 0 ? 0 : null);
 
-        const totalStockPlDollars = totalSwingPlDollars + totalHoldPlDollars;
+        const totalStockPlDollars = calculatedTotalSwingPlDollars + totalHoldPlDollars; // Use calculatedTotalSwingPlDollars
         const totalStockCostBasis = totalSwingCostBasis + totalHoldCostBasis;
         const avgStockPlPercent = (totalStockCostBasis !== 0)
             ? (totalStockPlDollars / totalStockCostBasis) * 100
             : (totalStockPlDollars === 0 ? 0 : null);
 
-        // 5. Round final values
-        const roundedTotalSwingPl = parseFloat(totalSwingPlDollars.toFixed(CURRENCY_PRECISION));
+        // 6. Round final values
+        const roundedTotalSwingPl = parseFloat(calculatedTotalSwingPlDollars.toFixed(CURRENCY_PRECISION)); // Use calculatedTotalSwingPlDollars
         const roundedTotalHoldPl = parseFloat(totalHoldPlDollars.toFixed(CURRENCY_PRECISION));
         const roundedTotalStockPl = parseFloat(totalStockPlDollars.toFixed(CURRENCY_PRECISION));
 
@@ -984,18 +993,18 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
         }
 
         return {
-            totalSwingPlDollars: roundedTotalSwingPl,
+            totalSwingPlDollars: roundedTotalSwingPl, // Use the value from the utility function
             avgSwingPlPercent: finalAvgSwingPlPercent,
             totalHoldPlDollars: roundedTotalHoldPl,
             avgHoldPlPercent: finalAvgHoldPlPercent,
             totalStockPlDollars: roundedTotalStockPl,
             avgStockPlPercent: finalAvgStockPlPercent,
-            totalSwingCostBasis: totalSwingCostBasis, // <<< Make sure this is returned
-            totalHoldCostBasis: totalHoldCostBasis,   // <<< Make sure this is returned
-            totalStockCostBasis: totalSwingCostBasis + totalHoldCostBasis
+            totalSwingCostBasis: parseFloat(totalSwingCostBasis.toFixed(CURRENCY_PRECISION)), // Round cost basis
+            totalHoldCostBasis: parseFloat(totalHoldCostBasis.toFixed(CURRENCY_PRECISION)),   // Round cost basis
+            totalStockCostBasis: parseFloat(totalStockCostBasis.toFixed(CURRENCY_PRECISION))  // Round cost basis
         };
 
-    }, [transactions, wallets]); // <<< Now depends on BOTH transactions and wallets
+    }, [transactions, wallets, CURRENCY_PRECISION, PERCENT_PRECISION]); // <<< Now depends on BOTH transactions and wallets
     // --- End UPDATED P/L Calc Memo ---
 
 
@@ -1121,8 +1130,10 @@ const totalSwingYtdPL = useMemo(() => {
             typeof txn.quantity === 'number' && typeof txn.price === 'number') {
             const walletBuyPrice = walletBuyPriceMap.get(txn.completedTxnId);
             if (typeof walletBuyPrice === 'number') {
-                const profitForTxn = (txn.price - walletBuyPrice) * txn.quantity;
-                ytdRealizedSwingPL += profitForTxn;
+                //const profitForTxn = (txn.price - walletBuyPrice) * txn.quantity;
+                //ytdRealizedSwingPL += profitForTxn;
+                const profitForThisOneSale = calculateSingleSalePL(txn.price!, walletBuyPrice, txn.quantity!);
+                ytdRealizedSwingPL += profitForThisOneSale;
             } else {
                 // Wallet link or buy price was missing for a YTD Swing Sell
                 warnings++;
@@ -1396,8 +1407,10 @@ const totalHoldYtdPL = useMemo(() => {
             typeof txn.quantity === 'number' && typeof txn.price === 'number') {
             const walletBuyPrice = walletBuyPriceMap.get(txn.completedTxnId);
             if (typeof walletBuyPrice === 'number') {
-                const profitForTxn = (txn.price - walletBuyPrice) * txn.quantity;
-                ytdRealizedHoldPL += profitForTxn;
+                //const profitForTxn = (txn.price - walletBuyPrice) * txn.quantity;
+                //ytdRealizedHoldPL += profitForTxn;
+                const profitForThisOneSale = calculateSingleSalePL(txn.price!, walletBuyPrice, txn.quantity!);
+                ytdRealizedHoldPL += profitForThisOneSale;
             } else {
                 // Wallet link or buy price was missing for a YTD Hold Sell
                 warnings++;
@@ -1601,7 +1614,8 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
         // --- Database Operations ---
         try {
             // 1. Calculate raw P/L for this specific sale
-            const realizedPlForSale = (price - buyPrice) * quantity;
+            //const realizedPlForSale = (price - buyPrice) * quantity;
+            const realizedPlForSale = calculateSingleSalePL(price, buyPrice, quantity);
     
             // 2. Calculate NEW raw totals
             const newTotalSharesSold_raw = (walletToSell.sharesSold ?? 0) + quantity;
@@ -1889,23 +1903,36 @@ a temporary map (walletBuyPriceMap) created from your wallets data.
 
                                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
                                     <p>
-                                        {formatCurrency(plStats.totalSwingPlDollars)}
-                                        &nbsp;
-                                        ({formatPercent(plStats.avgSwingPlPercent)})
+                                        <span data-testid="overview-realized-swing-pl-dollars">
+                                            {formatCurrency(plStats.totalSwingPlDollars)}
+                                        </span>
+                                        &nbsp;(
+                                        <span data-testid="overview-realized-swing-pl-percent">
+                                            {formatPercent(plStats.avgSwingPlPercent)}
+                                        </span>
+                                        )
                                     </p>
-
                                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
                                     <p>
-                                        {formatCurrency(plStats.totalHoldPlDollars)}
-                                        &nbsp;
-                                        ({formatPercent(plStats.avgHoldPlPercent)})
+                                        <span data-testid="overview-realized-hold-pl-dollars">
+                                            {formatCurrency(plStats.totalHoldPlDollars)}
+                                        </span>
+                                        &nbsp;(
+                                        <span data-testid="overview-realized-hold-pl-percent">
+                                            {formatPercent(plStats.avgHoldPlPercent)}
+                                        </span>
+                                        )
                                     </p>
-
                                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                                     <p>
-                                        {formatCurrency(plStats.totalStockPlDollars)}
-                                        &nbsp;
-                                        ({formatPercent(plStats.avgStockPlPercent)})
+                                        <span data-testid="overview-realized-stock-pl-dollars">
+                                            {formatCurrency(plStats.totalStockPlDollars)}
+                                        </span>
+                                        &nbsp;(
+                                        <span data-testid="overview-realized-stock-pl-percent">
+                                            {formatPercent(plStats.avgStockPlPercent)}
+                                        </span>
+                                        )
                                     </p>
                                 </div>
                                 {/* --- END: Realized P/L --- */}

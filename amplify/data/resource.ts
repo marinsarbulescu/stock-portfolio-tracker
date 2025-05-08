@@ -1,3 +1,4 @@
+//amplify/backend/data/schema.ts
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 import { getYfinanceData } from '../functions/getYfinanceData/resource.js';
 import { sendStockEmail } from '../functions/sendStockEmail/resource.js';
