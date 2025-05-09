@@ -11,6 +11,6 @@ export const getYfinanceData = defineFunction({
   //   API_KEY: 'YOUR_API_KEY'
   // },
   // Set memory and timeout if needed (defaults are usually okay to start)
-  // memoryMb: 128,
-  // timeoutSeconds: 10,
+  //memoryMb: 128,
+  timeoutSeconds: 30,
 });
