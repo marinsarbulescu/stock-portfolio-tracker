@@ -1,3 +1,4 @@
+// amplify/functions/getYfinanceData/resource.ts
 import { defineFunction } from '@aws-amplify/backend-function';
 
 export const getYfinanceData = defineFunction({
