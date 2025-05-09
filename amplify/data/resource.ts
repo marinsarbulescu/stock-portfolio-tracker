@@ -38,7 +38,11 @@ const schema = a.schema({
       owner: a.string()
     })
     // Add owner-based authorization: grants full access ONLY to the record's owner
-    .authorization((allow) => [allow.owner()]),
+    .authorization((allow) => [
+      allow.owner(), // Keep owner auth for the app
+      allow.publicApiKey().to(['create', 'read', 'delete', 'update']) // Allow API Key access needed by helpers
+      // Add 'update' if your helpers might update
+    ]),
 
   Transaction: a
     .model({
@@ -61,7 +65,11 @@ const schema = a.schema({
       // Add owner field if not implicitly added by .authorization
       owner: a.string()
     })
-    .authorization((allow) => [allow.owner()]),
+    .authorization((allow) => [
+      allow.owner(), // Keep owner auth for the app
+      allow.publicApiKey().to(['create', 'read', 'delete', 'update']) // Allow API Key access needed by helpers
+      // Add 'update' if your helpers might update
+    ]),
 
   PortfolioGoals: a
     .model({
@@ -73,7 +81,11 @@ const schema = a.schema({
       intStocksTarget: a.integer(), // # of Int stocks target (optional integer)
       intEtfsTarget: a.integer(),   // # of Int ETFs target (optional integer)
     })
-    .authorization((allow) => [allow.owner()]),
+    .authorization((allow) => [
+      allow.owner(), // Keep owner auth for the app
+      allow.publicApiKey().to(['create', 'read', 'delete', 'update']) // Allow API Key access needed by helpers
+      // Add 'update' if your helpers might update
+    ]),
 
   StockWallet: a
   .model(
@@ -95,7 +107,11 @@ const schema = a.schema({
       // Add owner field if not implicitly added by .authorization
       owner: a.string(),
     })
-  .authorization((allow) => [allow.owner()]),
+    .authorization((allow) => [
+      allow.owner(), // Keep owner auth for the app
+      allow.publicApiKey().to(['create', 'read', 'delete', 'update']) // Allow API Key access needed by helpers
+      // Add 'update' if your helpers might update
+    ]),
 
   // Define the input type for a single portfolio item
   PortfolioItemInput: a.customType({
@@ -143,7 +159,10 @@ export const data = defineData({ // <<< Add : DataResources<Schema>
   schema,
   authorizationModes: {
     defaultAuthorizationMode: 'userPool',
-    // apiKeyAuthorizationMode: { expiresInDays: 30 },
+    apiKeyAuthorizationMode: {
+      description: 'API Key for E2E test helpers', // Optional description
+      expiresInDays: 365 // Or 7, or up to 365
+    },
   },
 });
 // --- END TYPE ANNOTATION ---

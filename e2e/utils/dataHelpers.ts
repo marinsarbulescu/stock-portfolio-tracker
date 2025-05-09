@@ -16,7 +16,18 @@ try {
     // throw error;
 }
 
-const client = generateClient<Schema>();
+// Ensure process.env.AMPLIFY_API_KEY is available when this module is loaded
+if (!process.env.AMPLIFY_API_KEY) {
+    const errorMessage = "[DataHelper] CRITICAL: AMPLIFY_API_KEY environment variable is not set. Data helper functions will fail authentication.";
+    console.error(errorMessage);
+    // Optionally throw here to prevent tests from even starting if key is missing
+    // throw new Error(errorMessage);
+}
+
+const client = generateClient<Schema>({
+    authMode: 'apiKey',
+    apiKey: process.env.AMPLIFY_API_KEY // Get key from environment variable
+});
 
 // Type for creating a PortfolioStock (adjust based on your actual schema, omitting relationship fields)
 export type PortfolioStockCreateData = Omit<Schema['PortfolioStock']['type'], 'id' | 'createdAt' | 'updatedAt' | 'owner' | 'transactions' | 'stockWallets'>;
