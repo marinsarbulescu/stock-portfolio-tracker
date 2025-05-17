@@ -9,10 +9,10 @@ const client = generateClient<Schema>();
 
 // Define the accurate item types
 type TransactionItem = Schema['Transaction'];
-type PortfolioStockItem = Schema['PortfolioStock'];
+//type PortfolioStockItem = Schema['PortfolioStock'];
 type TransactionDataType = Schema['Transaction']['type'];
 type TransactionUpdatePayload = Partial<TransactionDataType> & { id: string };
-type StockWalletDataType = Schema['StockWallet']['type']; // Needed for type checking
+//type StockWalletDataType = Schema['StockWallet']['type']; // Needed for type checking
 
 // Define props for the component
 interface TransactionFormProps {
@@ -37,10 +37,10 @@ type BuyTypeValue = 'Swing' | 'Hold' | 'Split';
 import {
     SHARE_PRECISION,
     CURRENCY_PRECISION,
-    PERCENT_PRECISION,
+    //PERCENT_PRECISION,
     SHARE_EPSILON,
-    CURRENCY_EPSILON,
-    PERCENT_EPSILON // Import if your logic uses it
+    //CURRENCY_EPSILON,
+    //PERCENT_EPSILON // Import if your logic uses it
 } from '@/app/config/constants';
 
 // Default values for resetting the form
@@ -684,30 +684,89 @@ export default function TransactionForm({
         {/* --- Input Fields --- */}
         <div>
             <label htmlFor="date" style={{display:'block', marginBottom:'3px'}}>Date:</label>
-            <input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required disabled={isLoading} style={{width: '100%', padding: '8px'}} />
+            <input 
+                data-testid="txn-form-date"
+                id="date" 
+                type="date" 
+                value={date} 
+                onChange={(e) => setDate(e.target.value)} 
+                required 
+                disabled={isLoading} 
+                style={{width: '100%', padding: '8px'}} />
         </div>
 
-        <div>
-            <label htmlFor="action" style={{display:'block', marginBottom:'3px'}}>Action:</label>
-            <select id="action" value={action} onChange={(e) => setAction(e.target.value as any)} required disabled={isLoading || !!forceAction || isEditMode} style={{ width: '100%', padding: '8px' }}>
-                 {forceAction ? ( <option value={forceAction}>{forceAction}</option> ) : (
-                    <>
+        {/* --- MODIFIED ACTION FIELD --- */}
+        {forceAction ? (
+                <div>
+                    <label style={{display:'block', marginBottom:'3px'}}>Action:</label>
+                    <p 
+                        data-testid="txn-form-action-display" // New data-testid for static display
+                        style={{ padding: '8px', border: '1px solid #333', borderRadius: '4px', margin: 0, background: '#1e1e1e' }}
+                    >
+                        {action} {/* This will display the value from the 'action' state, which is set by forceAction */}
+                    </p>
+                </div>
+            ) : (
+                // Only show the dropdown if action is not forced
+                <div>
+                    <label htmlFor="action" style={{display:'block', marginBottom:'3px'}}>Action:</label>
+                    <select 
+                        data-testid="txn-form-action" // Keep this for when dropdown is shown
+                        id="action" 
+                        value={action} 
+                        onChange={(e) => setAction(e.target.value as Schema['Transaction']['type']['action'])} 
+                        required 
+                        // Original disabled logic: isLoading || !!forceAction || isEditMode
+                        // Since this block only runs if !forceAction, we simplify:
+                        disabled={isLoading || isEditMode} // Still disabled in edit mode as per original logic
+                        style={{ width: '100%', padding: '8px' }}>
+                        {/* Options are only needed if not forceAction */}
                         <option value="Buy">Buy</option>
                         <option value="Sell">Sell</option>
                         <option value="Div">Dividend</option>
-                    </>
-                )}
-            </select>
-        </div>
+                    </select>
+                </div>
+        )}
+        {/* --- END MODIFIED ACTION FIELD --- */}
 
         {/* Buy Type Selection */}
         {action === 'Buy' && !isEditMode && (
              <div style={{marginTop: '5px', padding: '10px', border: '1px solid #444', borderRadius: '4px'}}>
                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Buy Type:</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 15px' }}>
-                    <label style={{cursor: 'pointer'}}><input type="radio" name="buyType" value="Swing" checked={buyType === 'Swing'} onChange={(e) => setBuyType(e.target.value as BuyTypeValue)} disabled={isLoading} /> Swing</label>
-                    <label style={{cursor: 'pointer'}}><input type="radio" name="buyType" value="Hold" checked={buyType === 'Hold'} onChange={(e) => setBuyType(e.target.value as BuyTypeValue)} disabled={isLoading} /> Hold</label>
-                    <label style={{cursor: 'pointer'}}><input type="radio" name="buyType" value="Split" checked={buyType === 'Split'} onChange={(e) => setBuyType(e.target.value as BuyTypeValue)} disabled={isLoading} /> Split (Auto)</label>
+                    <label style={{cursor: 'pointer'}}>
+                        <input 
+                            data-testid="txn-form-txnType-swing"
+                            type="radio" 
+                            name="buyType" 
+                            value="Swing" 
+                            checked={buyType === 'Swing'} 
+                            onChange={(e) => setBuyType(e.target.value as BuyTypeValue)} 
+                            disabled={isLoading} />
+                                Swing
+                    </label>
+                    <label style={{cursor: 'pointer'}}>
+                        <input 
+                            data-testid="txn-form-txnType-hold"
+                            type="radio" 
+                            name="buyType" 
+                            value="Hold" 
+                            checked={buyType === 'Hold'} 
+                            onChange={(e) => setBuyType(e.target.value as BuyTypeValue)} 
+                            disabled={isLoading} /> 
+                                Hold
+                    </label>
+                    <label style={{cursor: 'pointer'}}>
+                        <input 
+                            data-testid="txn-form-txnType-split"
+                            type="radio" 
+                            name="buyType" 
+                            value="Split" 
+                            checked={buyType === 'Split'} 
+                            onChange={(e) => setBuyType(e.target.value as BuyTypeValue)} 
+                            disabled={isLoading} /> 
+                                Split (Auto)
+                    </label>
                 </div>
              </div>
         )}
@@ -716,11 +775,18 @@ export default function TransactionForm({
         {(action === 'Buy' || action === 'Sell' || action === 'Div') && (
             <div>
                 <label htmlFor="signal" style={{display:'block', marginBottom:'3px'}}>Signal:</label>
-                <select id="signal" value={signal ?? ''} onChange={(e) => setSignal(e.target.value as any)} required={true} disabled={isLoading} style={{ width: '100%', padding: '8px' }} >
-                     <option value="">-- Select Signal --</option>
-                     {action === 'Buy' && <> <option value="_5DD">_5DD</option> <option value="Cust">Cust</option> <option value="Initial">Initial</option> <option value="EOM">EOM</option> <option value="LBD">LBD</option> </>}
-                     {action === 'Sell' && <> <option value="Cust">Cust</option> <option value="TPH">TPH</option> <option value="TPP">TPP</option><option value="TP">TP</option> </>}
-                     {action === 'Div' && <> <option value="Div">Div</option> </>}
+                <select 
+                    data-testid="txn-form-signal"
+                    id="signal" 
+                    value={signal ?? ''} 
+                    onChange={(e) => setSignal(e.target.value as any)} 
+                    required={true} 
+                    disabled={isLoading} 
+                    style={{ width: '100%', padding: '8px' }} >
+                        <option value="">-- Select Signal --</option>
+                        {action === 'Buy' && <> <option value="_5DD">_5DD</option> <option value="Cust">Cust</option> <option value="Initial">Initial</option> <option value="EOM">EOM</option> <option value="LBD">LBD</option> </>}
+                        {action === 'Sell' && <> <option value="Cust">Cust</option> <option value="TPH">TPH</option> <option value="TPP">TPP</option><option value="TP">TP</option> </>}
+                        {action === 'Div' && <> <option value="Div">Div</option> </>}
                 </select>
             </div>
         )}
@@ -729,7 +795,17 @@ export default function TransactionForm({
         {(action === 'Buy' || action === 'Sell') && (
             <div>
                 <label htmlFor="price" style={{display:'block', marginBottom:'3px'}}>Price:</label>
-                <input id="price" type="number" step="any" value={price} onChange={(e) => setPrice(e.target.value)} required={true} placeholder="e.g., 150.25" disabled={isLoading} style={{width: '100%', padding: '8px'}} />
+                <input 
+                    data-testid="txn-form-price"
+                    id="price" 
+                    type="number" 
+                    step="any" 
+                    value={price} 
+                    onChange={(e) => setPrice(e.target.value)} 
+                    required={true} 
+                    placeholder="e.g., 150.25" 
+                    disabled={isLoading} 
+                    style={{width: '100%', padding: '8px'}} />
             </div>
         )}
 
@@ -737,7 +813,17 @@ export default function TransactionForm({
         {(action === 'Buy' || action === 'Div') && (
             <div>
                 <label htmlFor="investment" style={{display:'block', marginBottom:'3px'}}>{action === 'Div' ? 'Amount:' : 'Investment:'}</label>
-                <input id="investment" type="number" step="any" value={investment} onChange={(e) => setInvestment(e.target.value)} required placeholder="e.g., 1000.00" disabled={isLoading} style={{width: '100%', padding: '8px'}}/>
+                <input 
+                    data-testid="txn-form-investment"
+                    id="investment" 
+                    type="number" 
+                    step="any" 
+                    value={investment} 
+                    onChange={(e) => setInvestment(e.target.value)} 
+                    required 
+                    placeholder="e.g., 1000.00" 
+                    disabled={isLoading} 
+                    style={{width: '100%', padding: '8px'}}/>
             </div>
         )}
 
@@ -764,7 +850,7 @@ export default function TransactionForm({
                     Cancel
                 </button>
             )}
-            <button type="submit" disabled={isLoading} style={{ padding: '8px 15px', marginLeft: showCancelButton ? '0' : 'auto' }}>
+            <button data-testid="txn-form-submit-button" type="submit" disabled={isLoading} style={{ padding: '8px 15px', marginLeft: showCancelButton ? '0' : 'auto' }}>
                 {isLoading ? (isEditMode ? 'Updating...' : 'Adding...') : (isEditMode ? 'Update Transaction' : 'Add Transaction')}
             </button>
         </div>

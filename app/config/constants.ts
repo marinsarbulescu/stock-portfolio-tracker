@@ -11,7 +11,4 @@ export const SHARE_EPSILON: number = 1 / (10**(SHARE_PRECISION + 2)); // e.g., 0
 export const CURRENCY_EPSILON: number = 1 / (10**(CURRENCY_PRECISION + 2)); // e.g., 0.0001
 export const PERCENT_EPSILON: number = 1 / (10**(PERCENT_PRECISION + 2)); // e.g., 0.0001
 
-// Alternative: Define literal epsilons if preferred, but ensure consistency
-// export const SHARE_EPSILON = 0.000001;
-// export const CURRENCY_EPSILON = 0.0001;
-// export const PERCENT_EPSILON = 0.0001;
+export const FETCH_LIMIT_FOR_UNIQUE_WALLET = 1000;

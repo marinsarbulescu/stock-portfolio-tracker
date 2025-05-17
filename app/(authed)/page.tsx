@@ -527,7 +527,7 @@ export default function HomePage() {
     }, [allTransactions, allWallets]);
 
     const portfolioUnrealizedPL = useMemo(() => {
-        console.log("[Memo] Calculating portfolioUnrealizedPL ($ and %)");
+        //console.log("[Memo] Calculating portfolioUnrealizedPL ($ and %)");
 
         let totalUnrealizedSwingPL = 0;
         let currentSwingCostBasis = 0;
@@ -589,7 +589,7 @@ export default function HomePage() {
         const roundedHoldPercent = typeof holdPercent === 'number' ? parseFloat(holdPercent.toFixed(PERCENT_PRECISION)) : null;
         const roundedTotalPercent = typeof totalPercent === 'number' ? parseFloat(totalPercent.toFixed(PERCENT_PRECISION)) : null;
 
-        console.log(`[Unrealized P/L] Swing $: ${roundedSwingDollars}, Hold $: ${roundedHoldDollars}, Total $: ${roundedTotalDollars}. Partial: ${partialDataUsed}`);
+        //console.log(`[Unrealized P/L] Swing $: ${roundedSwingDollars}, Hold $: ${roundedHoldDollars}, Total $: ${roundedTotalDollars}. Partial: ${partialDataUsed}`);
 
         return {
             unrealizedSwingDollars: roundedSwingDollars,
@@ -607,7 +607,7 @@ export default function HomePage() {
     }, [allWallets, portfolioStocks, latestPrices]);
 
     const portfolioTotalPL = useMemo(() => {
-        console.log("[Memo] Calculating portfolioTotalPL ($ and %)");
+        //console.log("[Memo] Calculating portfolioTotalPL ($ and %)");
 
         const totalSwingDollars = (portfolioRealizedPL.totalSwingPlDollars ?? 0) + (portfolioUnrealizedPL.unrealizedSwingDollars ?? 0);
         const totalHoldDollars = (portfolioRealizedPL.totalHoldPlDollars ?? 0) + (portfolioUnrealizedPL.unrealizedHoldDollars ?? 0);
@@ -634,7 +634,7 @@ export default function HomePage() {
         const roundedHoldPercent = typeof totalHoldPercentCalc === 'number' ? parseFloat(totalHoldPercentCalc.toFixed(PERCENT_PRECISION)) : null;
         const roundedStockPercent = typeof totalStockPercentCalc === 'number' ? parseFloat(totalStockPercentCalc.toFixed(PERCENT_PRECISION)) : null;
 
-        console.log(`[Total P/L] Swing: ${roundedSwingDollars} (${roundedSwingPercent}%), Hold: ${roundedHoldDollars} (${roundedHoldPercent}%), Stock: ${roundedStockDollars} (${roundedStockPercent}%)`);
+        //console.log(`[Total P/L] Swing: ${roundedSwingDollars} (${roundedSwingPercent}%), Hold: ${roundedHoldDollars} (${roundedHoldPercent}%), Stock: ${roundedStockDollars} (${roundedStockPercent}%)`);
 
         return {
         totalSwingDollars: roundedSwingDollars,
