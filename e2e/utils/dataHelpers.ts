@@ -1,41 +1,35 @@
 // e2e/utils/dataHelpers.ts
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
-import { Amplify } from 'aws-amplify';
-import amplifyOutputs from '@/amplify_outputs.json';
 
-try {
-    Amplify.configure(amplifyOutputs, {
-        // Optional: If using SSR with Amplify, you might need to specify this
-        // SSR: true // Uncomment if your app uses SSR and data helpers need to be SSR-aware
-    });
-    console.log('Amplify configured successfully for E2E tests.');
-} catch (error) {
-    console.error('Error configuring Amplify for E2E tests:', error);
-    // You might want to throw the error to stop tests if config fails
-    // throw error;
+let client: ReturnType<typeof generateClient<Schema>>; // Declare client variable
+
+// Function to get or initialize the client
+function getAmplifyClient() {
+    if (!client) {
+        // This check now happens on first use of a dataHelper function
+        if (!process.env.AMPLIFY_API_KEY) {
+            const errorMessage = "[DataHelper] CRITICAL: AMPLIFY_API_KEY environment variable is not set. Data helper functions will fail authentication. Ensure .env is loaded via playwright.config.ts or globalSetup.";
+            console.error(errorMessage);
+            throw new Error(errorMessage); // Fail hard if key is missing when needed
+        }
+        console.log('[DataHelper] Initializing Amplify client with API Key...');
+        client = generateClient<Schema>({
+            authMode: 'apiKey',
+            apiKey: process.env.AMPLIFY_API_KEY
+        });
+    }
+    return client;
 }
-
-// Ensure process.env.AMPLIFY_API_KEY is available when this module is loaded
-if (!process.env.AMPLIFY_API_KEY) {
-    const errorMessage = "[DataHelper] CRITICAL: AMPLIFY_API_KEY environment variable is not set. Data helper functions will fail authentication.";
-    console.error(errorMessage);
-    // Optionally throw here to prevent tests from even starting if key is missing
-    // throw new Error(errorMessage);
-}
-
-const client = generateClient<Schema>({
-    authMode: 'apiKey',
-    apiKey: process.env.AMPLIFY_API_KEY // Get key from environment variable
-});
 
 // Type for creating a PortfolioStock (adjust based on your actual schema, omitting relationship fields)
-export type PortfolioStockCreateData = Omit<Schema['PortfolioStock']['type'], 'id' | 'createdAt' | 'updatedAt' | 'owner' | 'transactions' | 'stockWallets'>;
+export type PortfolioStockCreateData = Omit<Schema['PortfolioStock']['type'], 'id' | 'createdAt' | 'updatedAt' | 'transactions' | 'stockWallets'> & { owner: string }; // Ensure owner can be passed
 // Type for creating a Transaction (adjust as needed)
-export type TransactionCreateData = Omit<Schema['Transaction']['type'], 'id' | 'createdAt' | 'updatedAt' | 'owner' | 'portfolioStock'> & { portfolioStockId: string }; // Ensure portfolioStockId is included
+export type TransactionCreateData = Omit<Schema['Transaction']['type'], 'id' | 'createdAt' | 'updatedAt' | 'owner' | 'portfolioStock'> & { portfolioStockId: string, owner: string; }; // Ensure portfolioStockId is included
 
 
 export async function createPortfolioStock(stockData: PortfolioStockCreateData): Promise<Schema['PortfolioStock']['type']> {
+    const localClient = getAmplifyClient();
     console.log('[DataHelper] Creating PortfolioStock:', stockData.symbol);
     const { data, errors } = await client.models.PortfolioStock.create(stockData); // Keep this destructuring
 
@@ -53,6 +47,7 @@ export async function createPortfolioStock(stockData: PortfolioStockCreateData):
 }
 
 export async function deletePortfolioStock(stockId: string): Promise<void> {
+    const localClient = getAmplifyClient();
     console.log('[DataHelper] Deleting PortfolioStock:', stockId);
     const { errors } = await client.models.PortfolioStock.delete({ id: stockId });
     if (errors) {
@@ -67,7 +62,8 @@ export async function deletePortfolioStock(stockId: string): Promise<void> {
 }
 
 export async function createTransaction(transactionData: TransactionCreateData): Promise<Schema['Transaction']['type']> {
-    console.log('[DataHelper] Creating Transaction for stock ID:', transactionData.portfolioStockId);
+    const localClient = getAmplifyClient();
+    console.log('[DataHelper] Creating Transaction for stock ID:', transactionData.portfolioStockId, 'owned by', transactionData.owner);
     // Ensure portfolioStockId is passed correctly for the relationship
     const payload = {
         ...transactionData,
@@ -101,6 +97,7 @@ export async function createTransaction(transactionData: TransactionCreateData):
 
 // Helper to get a stock by symbol to find its ID for cleanup or verification
 export async function getPortfolioStockBySymbol(symbol: string): Promise<Schema['PortfolioStock']['type'] | null> {
+    const localClient = getAmplifyClient();
     console.log('[DataHelper] Getting PortfolioStock by symbol:', symbol);
     // Note: DataStore list operations might not support complex filters on non-indexed fields
     // directly in the same way as a GraphQL API. You might need to list all and filter client-side,
@@ -118,6 +115,7 @@ export async function getPortfolioStockBySymbol(symbol: string): Promise<Schema[
 }
 
 export async function deleteTransactionsForStock(portfolioStockId: string): Promise<void> {
+    const localClient = getAmplifyClient();
     console.log('[DataHelper] Deleting all transactions for stock ID:', portfolioStockId);
     const { data: transactions, errors: listErrors } = await client.models.Transaction.list({
         // filter: { portfolioStockTransactionsId: { eq: portfolioStockId } } // Adjust filter to your schema

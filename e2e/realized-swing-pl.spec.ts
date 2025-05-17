@@ -1,6 +1,16 @@
 // e2e/realized-swing-pl.spec.ts
+import { Amplify } from 'aws-amplify';
+import amplifyOutputs from '../amplify_outputs.json';
 
-import { test, expect } from '@playwright/test';
+try {
+    Amplify.configure(amplifyOutputs);
+    console.log('Amplify configured successfully for E2E spec file.');
+} catch (error) {
+    console.error('CRITICAL: Error configuring Amplify in E2E spec file:', error);
+    // Optional: throw error; // This would stop tests if config fails
+}
+
+import { test, expect, type Page } from '@playwright/test';
 import {
     createPortfolioStock,
     deletePortfolioStock,
@@ -9,226 +19,264 @@ import {
     type PortfolioStockCreateData, // Import types if defined and exported
     type TransactionCreateData
 } from './utils/dataHelpers'; // Adjust path if needed
+import { loadTestScenarios, type TestScenario } from './utils/csvHelper';
 
-test.describe('Wallet Page Calculations', () => {
+const scenarios = loadTestScenarios('../test-scenarios.csv');
+const TEST_USER_COGNITO_ID = "e10b55e0-9031-70db-23f9-cdf5d997659c"; // marin.sarbulescu@gmail.com user is in local, used for testing
 
-    // --- Scenario Data ---
-    const testStockSymbol = 'TEST'; // The symbol you manually set up data for
-    let testPortfolioStockId: string | null = null;
-    const expectedRealizedSwingPL = '$20.00'; // The expected result from your Excel for this scenario
+// Helper function to add a Buy transaction via UI
+// This needs access to the 'page' object, so it cannot be in beforeAll directly if beforeAll doesn't have 'page'
+// We'll call this from within the test.beforeAll's page-enabled scope (if Playwright allows that)
+// Or, more practically, this logic might be part of beforeAll if we pass the global browser page
+// For now, let's define it conceptually. We will integrate it into beforeAll.
+async function addBuyTransactionViaUI(page: Page, scenario: TestScenario, stockId: string) {
+    console.log(`[UI Setup] Navigating to wallet page for stock ID: ${stockId}`);
+    await page.goto(`/wallets/${stockId}`); // Assuming this is the wallet page URL structure
+    await expect(page.locator(`p:has-text("${scenario.testStockSymbol}")`).first()).toBeVisible({ timeout: 15000 });
 
-    test.beforeAll(async () => {
-        console.log(`BEFORE ALL: Setting up data for test stock: ${testStockSymbol}`);
-        try {
-            // Clean up potentially leftover stock first (optional, but good practice)
-            // const existingStock = await getPortfolioStockBySymbol(testStockSymbol); // Assumes helper exists
-            // if (existingStock) {
-            //     await deleteTransactionsForStock(existingStock.id);
-            //     await deletePortfolioStock(existingStock.id);
-            // }
+    console.log('[UI Setup] Clicking "Add Buy Transaction" button');
+    // Replace with your actual selector for the "Add Buy Transaction" button
+    await page.getByRole('button', { name: /Add Buy Transaction/i }).click();
 
-            const stockInput: PortfolioStockCreateData = {
-                symbol: testStockSymbol, name: 'TEST', stockType: 'Stock', region: 'US',
-                pdp: 10, plr: 1, budget: 5000, swingHoldRatio: 50,
-            };
-            const createdStock = await createPortfolioStock(stockInput);
-            testPortfolioStockId = createdStock.id; // Store ID for cleanup
-            if (!testPortfolioStockId) throw new Error("Failed to create stock or get its ID.");
+    // Wait for modal to appear (replace with actual modal title/selector)
+    await expect(page.locator('h3:has-text("Add Buy Transaction")')).toBeVisible({ timeout: 5000 });
+    console.log('[UI Setup] Add Buy Transaction modal appeared.');
 
-            const buyTx: TransactionCreateData = {
-                portfolioStockId: testPortfolioStockId, action: 'Buy', date: '2024-01-10',
-                price: 100, quantity: 10, investment: 1000, swingShares: 5, holdShares: 5, txnType: 'Split'
-            };
-            await createTransaction(buyTx);
+    // Fill the form (TransactionForm) - adjust selectors as per your form
+    console.log('[UI Setup] Filling Buy transaction form...');
+    
+    
+    // --- date ---
+    if (scenario.date) { // Check if buyDate is provided in CSV
+        await page.locator('#date').fill(scenario.date);
+        console.log(`[UI Setup] Filled Date: ${scenario.date}`);
+    }
 
-            const sellTx: TransactionCreateData = {
-                portfolioStockId: testPortfolioStockId, action: 'Sell', date: '2024-01-15',
-                price: 110, quantity: 2, txnType: 'Swing',
-                investment: null, swingShares: null, holdShares: null
-            };
-            await createTransaction(sellTx);
-            console.log('BEFORE ALL: Test data setup complete.');
-        } catch (error) {
-            console.error("BEFORE ALL - Data setup failed:", error);
-            // If setup fails, we might want to skip tests or handle cleanup if possible
-            if (testPortfolioStockId) {
-                 await deleteTransactionsForStock(testPortfolioStockId);
-                 await deletePortfolioStock(testPortfolioStockId);
-            }
-            throw new Error(`BEFORE ALL - Data setup failed: ${error}`);
+    // --- txnType ---
+    if (scenario.txnType) {
+        // Check if this field actually exists in your "Add Buy Transaction" modal's form
+        const txnTypeSelector = page.locator('#buyType'); // Or other appropriate selector
+        if (await txnTypeSelector.isVisible({timeout: 1000}).catch(() => false)) { // Check if element exists
+            await txnTypeSelector.selectOption({ label: scenario.txnType }); // Or by value
+            console.log(`[UI Setup] Selected txnType: ${scenario.txnType}`);
+        } else {
+            console.log(`[UI Setup] buyType field not found in form, assuming form handles it or defaults to 'Split'.`);
+            // If this field is mandatory in your form but not found by selector, the test might fail later.
         }
-    });
+    } else {
+        console.log('[UI Setup] No specific Buy TxnType in scenario, using form default (likely "Split").');
+    }
 
-    // --- Runs ONCE after all tests in this file ---
-    test.afterAll(async () => {
-        if (testPortfolioStockId) {
-            console.log(`AFTER ALL: Cleaning up data for test stock ID: ${testPortfolioStockId}`);
-            try {
-                await deleteTransactionsForStock(testPortfolioStockId);
-                await deletePortfolioStock(testPortfolioStockId);
-            } catch (error) { console.error("AFTER ALL - Error during test cleanup:", error); }
-            finally { testPortfolioStockId = null; }
-            console.log('AFTER ALL: Test data cleanup finished.');
-        } else { console.log('AFTER ALL: No test stock ID found for cleanup.'); }
-    });
+    // --- signal ---
+    if (scenario.signal) { // Check if a signal is provided in the scenario
+        await page.locator('#signal').selectOption({ label: scenario.signal });
+        // If your <option> tags use 'value' attributes instead of labels for matching:
+        // await page.locator('#signal').selectOption({ value: scenario.buySignalValue }); // (You'd need a buySignalValue in CSV)
+        console.log(`[UI Setup] Selected Signal: ${scenario.signal}`);
+    } else {
+        // Optional: If the form has a default signal and your scenario doesn't specify one,
+        // you might not need to do anything, or you might explicitly select a default.
+        // For now, we'll assume if scenario.buySignal is blank/null, no selection is made,
+        // and the form's default will be used.
+        console.log('[UI Setup] No specific Buy Signal in scenario, using form default if any.');
+    }
 
-    
-    // --- Runs BEFORE EACH test case ---
-    test.beforeEach(async ({ page }) => {
-        // Login and navigate to a consistent starting point (e.g., the stocks list)
-        await page.goto('/');
-        console.log('BEFORE EACH: Attempting login...');
-        await page.locator('input[name="username"]').fill('marin.sarbulescu@gmail.com'); // USE YOUR CREDENTIALS
-        await page.locator('input[type="password"]').fill('T5u#PW4&!9wm4SzG');        // USE YOUR CREDENTIALS
-        const cognitoResponsePromise = page.waitForResponse(r => r.url().includes('cognito-idp.') && r.ok(), { timeout: 15000 });
-        await page.locator('button[type="submit"]:has-text("Sign In")').click(); // USE YOUR BUTTON TEXT/SELECTOR
-        try {
-            await cognitoResponsePromise;
-            // Wait for authorized homepage state (replace selector)
-            await expect(page.locator('nav a:has-text("Portfolio")')).toBeVisible({ timeout: 15000 });
-            console.log('BEFORE EACH: Login successful, authorized homepage element found.');
-        } catch (error) {
-            console.error("BEFORE EACH: Login or subsequent wait failed:", error);
-            await page.screenshot({ path: 'e2e_login_error_beforeEach.png' });
-            throw new Error("Login failed during beforeEach setup.");
-        }
+    // --- price ---
+    if (scenario.price !== null && scenario.price !== undefined) {
+        await page.locator('#price').fill(scenario.price.toString());
+        console.log(`[UI Setup] Filled Price: ${scenario.price}`);
+    }
 
-        // Navigate to the starting page for tests IF needed after login
-        console.log('BEFORE EACH: Navigating to /stocks-listing...');
-        await page.goto('/stocks-listing');
-        await expect(page.locator('h2:has-text("Portfolio")')).toBeVisible({ timeout: 10000 });
-        console.log('BEFORE EACH: Setup complete, on /stocks-listing page.');
-    });
-    
-    
-    // test.beforeEach(async ({ page }) => {
-    //     await page.goto('/');
-    //     console.log('Attempting login...');
-    //     await page.locator('input[name="username"]').fill('marin.sarbulescu@gmail.com'); // Replace selector and email
-    //     //await page.pause();
-    //     await page.locator('input[name="password"]').fill('T5u#PW4&!9wm4SzG'); // Replace selector and password
-    
-    //     const cognitoResponsePromise = page.waitForResponse(
-    //         response => response.url().includes('cognito-idp.') && response.ok(),
-    //         { timeout: 15000 }
-    //     );
-    //     console.log('Clicking Sign In, waiting for Cognito network response...');
-    //     await page.locator('button[type="submit"]:has-text("Sign In")').click(); // Replace
-    
-    //     try {
-    //         const response = await cognitoResponsePromise;
-    //         console.log(`Cognito response received: ${response.status()}`);
-    //     } catch (error) {
-    //         console.error("Login failed: Did not receive successful Cognito network response.", error);
-    //         await page.screenshot({ path: 'login_network_error.png' });
-    //         throw new Error("Login failed: Cognito response timed out or failed.");
+    // --- Quantity ---
+    // Assuming input has id="quantity"
+    // if (scenario.buyQuantity !== null && scenario.buyQuantity !== undefined) {
+    //     await page.locator('#quantity').fill(scenario.buyQuantity.toString());
+    //     console.log(`[UI Setup] Filled Quantity: ${scenario.buyQuantity}`);
+    // }
+
+    // --- Investment ---
+    if (scenario.investment !== null && scenario.investment !== undefined) {
+        await page.locator('#investment').fill(scenario.investment.toString());
+        console.log(`[UI Setup] Filled Investment: ${scenario.investment}`);
+    }
+
+    // --- Swing Shares & Hold Shares (if manually entered in TransactionForm) ---
+    // if (scenario.buySwingShares !== null && scenario.buySwingShares !== undefined) {
+    //     // Assuming input has id="swingShares"
+    //     await page.locator('#swingShares').fill(scenario.buySwingShares.toString());
+    //     console.log(`[UI Setup] Filled Swing Shares: ${scenario.buySwingShares}`);
+    // }
+    // if (scenario.buyHoldShares !== null && scenario.buyHoldShares !== undefined) {
+    //     // Assuming input has id="holdShares"
+    //     // The value from CSV might be string or number based on your csvHelper cast
+    //     const holdSharesValue = typeof scenario.buyHoldShares === 'number'
+    //         ? scenario.buyHoldShares.toString()
+    //         : scenario.buyHoldShares; // If it's already a string
+    //     if (holdSharesValue) {
+    //       await page.locator('#holdShares').fill(holdSharesValue);
+    //       console.log(`[UI Setup] Filled Hold Shares: ${holdSharesValue}`);
     //     }
+    // }
 
-    //     // --- Data Setup ---
-    //     console.log(`Setting up data for test stock: ${testStockSymbol}`);
-    //     try {
-    //         const stockInput: PortfolioStockCreateData = {
-    //             symbol: testStockSymbol, name: 'E2E P/L Test Stock', stockType: 'Stock', region: 'US',
-    //             pdp: 10, plr: 1, budget: 5000, swingHoldRatio: 50, // Example data
-    //         };
-    //         const createdStock = await createPortfolioStock(stockInput);
-    //         testPortfolioStockId = createdStock.id;
-    //         if (!testPortfolioStockId) { throw new Error("Failed to create stock or get its ID."); }
+    // --- Signal (Optional Dropdown) ---
+    // Assuming select has id="signal"
+    // if (scenario.buySignal) { // Assuming your TestScenario interface has 'buySignal'
+    //     await page.locator('#signal').selectOption({ label: scenario.buySignal }); // Or use { value: scenario.buySignalValue }
+    //     console.log(`[UI Setup] Selected Signal: ${scenario.buySignal}`);
+    // }
 
-    //         // Create Buy Transaction (e.g., 10 shares @ $100)
-    //         const buyTx: TransactionCreateData = {
-    //             portfolioStockId: testPortfolioStockId, action: 'Buy', date: '2024-01-10', // Use a fixed date
-    //             price: 100, quantity: 10, investment: 1000,
-    //             swingShares: 5, holdShares: 5, txnType: 'Split' // Adjust based on schema/logic
-    //         };
-    //         await createTransaction(buyTx);
+    // Click save/submit button in the modal
+    // Replace with your actual selector for the modal's save button
+    console.log('[UI Setup] Submitting Buy transaction form...');
+    // It's good to wait for a network response that indicates the transaction was created
+    const createTxnResponsePromise = page.waitForResponse(
+        response => response.url().includes('/graphql') && // Assuming AppSync call
+                     response.request().postData()?.includes('createTransaction') &&
+                     response.ok(),
+        { timeout: 10000 }
+    );
+    await page.getByRole('button', { name: /Add Transaction/i }).click(); // Or "Save", "Submit" etc.
+    await createTxnResponsePromise;
+    console.log('[UI Setup] Buy transaction submitted via UI.');
 
-    //         // Create Swing Sell Transaction (e.g., 2 shares @ $110 for +$20 P/L)
-    //         const sellTx: TransactionCreateData = {
-    //             portfolioStockId: testPortfolioStockId, action: 'Sell', date: '2024-01-15', // Use a fixed date
-    //             price: 110, quantity: 2,
-    //             txnType: 'Swing', // MUST be Swing for this test
-    //             // DO NOT include completedTxnId - let the app logic determine it
-    //             investment: null, swingShares: null, holdShares: null // Null out unused fields
-    //         };
-    //         await createTransaction(sellTx);
-    //         console.log('Test data setup complete.');
+    // Optionally, wait for the modal to close
+    await expect(page.locator('h3:has-text("Add Buy Transaction")')).toBeHidden({ timeout: 5000 });
+}
 
-    //     } catch (error) {
-    //         console.error("Data setup failed:", error);
-    //         // Attempt cleanup even if setup fails
-    //         if (testPortfolioStockId) {
-    //             await deleteTransactionsForStock(testPortfolioStockId);
-    //             await deletePortfolioStock(testPortfolioStockId);
-    //         }
-    //         throw new Error(`Data setup failed: ${error}`); // Fail fast
-    //     }
+// --- Create a test suite for each scenario ---
+for (const scenario of scenarios) {
+    // Only run scenarios intended for this test (e.g., those involving Swing P/L)
+    // You might want a column in your CSV like "testSuite" or filter by scenarioName pattern
+    if (scenario.scenarioName.toLowerCase().includes('swing')) { // Example filter
+        test.describe(`Wallet Page Calculations - ${scenario.scenarioName}`, () => {
+            let testPortfolioStockId: string | null = null;
+            let loggedInUserId: string | undefined; // To store the user ID
 
-    //     test.afterEach(async () => {
-    //         if (testPortfolioStockId) {
-    //             console.log(`Cleaning up data for test stock ID: ${testPortfolioStockId}`);
-    //             try {
-    //                 // Delete transactions first (if necessary based on relationships)
-    //                 await deleteTransactionsForStock(testPortfolioStockId);
-    //                 // Then delete the stock
-    //                 await deletePortfolioStock(testPortfolioStockId);
-    //             } catch (error) {
-    //                 console.error("Error during test cleanup:", error);
-    //                 // Decide if you want to throw error or just log during cleanup
-    //             } finally {
-    //                  testPortfolioStockId = null; // Ensure reset even if delete fails
-    //             }
-    //             console.log('Test data cleanup finished.');
-    //         } else {
-    //             console.log('No test stock ID found for cleanup.');
-    //         }
-    //     });
+            test.beforeAll(async () => {
+                console.log(`BEFORE ALL [${scenario.scenarioName}]: Setting up data for ${scenario.testStockSymbol}`);
+                try {
+                    const stockInput: PortfolioStockCreateData = {
+                        symbol: scenario.testStockSymbol,
+                        name: `${scenario.testStockSymbol} Test Stock`,
+                        stockType: 'Stock', // Or make this data-driven from CSV
+                        region: 'US',       // Or make this data-driven
+                        pdp: scenario.stockPdp,
+                        plr: scenario.stockPlr,
+                        budget: 10000, // Or from CSV
+                        swingHoldRatio: scenario.stockShr,
+                        owner: TEST_USER_COGNITO_ID,
+                    };
+                    const createdStock = await createPortfolioStock(stockInput);
+                    testPortfolioStockId = createdStock.id;
+                    if (!testPortfolioStockId) throw new Error("Failed to create stock or get its ID.");
+
+                    // Create Buy Transaction from scenario
+                    const buyTx: TransactionCreateData = {
+                        portfolioStockId: testPortfolioStockId,  
+                        date: scenario.date,
+                        action: 'Buy',
+                        txnType: scenario.txnType || 'Split',
+                        price: scenario.price, 
+                        //quantity: scenario.buyQuantity, 
+                        investment: scenario.investment,
+                        //swingShares: scenario.buySwingShares, 
+                        //holdShares: parseFloat(scenario.buyHoldShares as any), // CSV might parse as string
+                        owner: TEST_USER_COGNITO_ID,
+                    };
+                    await createTransaction(buyTx);
+
+                    // Create Sell Transaction from scenario (if applicable)
+                    if (scenario.sellPrice !== null && scenario.sellQuantity !== null) { // Check if sell data exists
+                        const sellTx: TransactionCreateData = {
+                            portfolioStockId: testPortfolioStockId, action: 'Sell', date: scenario.sellDate,
+                            price: scenario.sellPrice, quantity: scenario.sellQuantity,
+                            txnType: scenario.sellTxnType as 'Swing' | 'Hold', // Cast to expected type
+                            investment: null, swingShares: null, holdShares: null, owner: TEST_USER_COGNITO_ID,
+                        };
+                        await createTransaction(sellTx);
+                    }
+                    console.log(`BEFORE ALL [${scenario.scenarioName}]: Test data setup complete.`);
+                } catch (error) { /* ... error handling and cleanup ... */ throw error; }
+            });
+
+            
+            // --- Runs ONCE after all tests in this file ---
+            test.afterAll(async () => {
+                if (testPortfolioStockId) {
+                    console.log(`AFTER ALL: Cleaning up data for test stock ID: ${testPortfolioStockId}`);
+                    try {
+                        await deleteTransactionsForStock(testPortfolioStockId);
+                        await deletePortfolioStock(testPortfolioStockId);
+                    } catch (error) { console.error("AFTER ALL - Error during test cleanup:", error); }
+                    finally { testPortfolioStockId = null; }
+                    console.log('AFTER ALL: Test data cleanup finished.');
+                } else { console.log('AFTER ALL: No test stock ID found for cleanup.'); }
+            });
+
     
-    //     console.log('Waiting for authorized homepage content to appear...');
-    //     // ---> USE THE SELECTOR FOR YOUR AUTHORIZED HOMEPAGE STATE <---
-    //     // Replace 'nav a:has-text("Portfolio")' with your actual selector
-    //     await expect(page.locator('nav a:has-text("Portfolio")')).toBeVisible({ timeout: 15000 });
-    //     console.log('Authorized homepage content confirmed.');
-    //     // --- End Replacement ---
+            // --- Runs BEFORE EACH test case ---
+            test.beforeEach(async ({ page }) => {
+                // Login and navigate to a consistent starting point (e.g., the stocks list)
+                await page.goto('/');
+                console.log('BEFORE EACH: Attempting login...');
+                await page.locator('input[name="username"]').fill('marin.sarbulescu@gmail.com'); // USE YOUR CREDENTIALS
+                await page.locator('input[type="password"]').fill('T5u#PW4&!9wm4SzG');        // USE YOUR CREDENTIALS
+                const cognitoResponsePromise = page.waitForResponse(r => r.url().includes('cognito-idp.') && r.ok(), { timeout: 15000 });
+                await page.locator('button[type="submit"]:has-text("Sign In")').click(); // USE YOUR BUTTON TEXT/SELECTOR
+                try {
+                    await cognitoResponsePromise;
+                    // Wait for authorized homepage state (replace selector)
+                    await expect(page.locator('nav a:has-text("Portfolio")')).toBeVisible({ timeout: 15000 });
+                    console.log('BEFORE EACH: Login successful, authorized homepage element found.');
+                } catch (error) {
+                    console.error("BEFORE EACH: Login or subsequent wait failed:", error);
+                    await page.screenshot({ path: 'e2e_login_error_beforeEach.png' });
+                    throw new Error("Login failed during beforeEach setup.");
+                }             
+
+                // Navigate to the starting page for tests IF needed after login
+                console.log('BEFORE EACH: Navigating to /stocks-listing...');
+                await page.goto('/stocks-listing');
+                await expect(page.locator('h2:has-text("Portfolio")')).toBeVisible({ timeout: 10000 });
+                console.log('BEFORE EACH: Setup complete, on /stocks-listing page.');
+            });
     
-    //     // Now that we're authenticated AND authorized on the homepage, navigate to stocks listing
-    //     console.log('Navigating to /stocks-listing...');
-    //     await page.goto('/stocks-listing');
-    
-    //     console.log('Verifying landing on stocks listing page by finding heading...');
-    //     await expect(page.locator('h2:has-text("Portfolio")')).toBeVisible({ timeout: 10000 });
-    //     console.log('Successfully navigated to /stocks-listing and found heading.');
-    // });
 
+            // --- Test Case ---
+            test(`should display correct Realized Swing P/L in Overview`, async ({ page }) => {
+                // Arrange (Data is set up by beforeAll, user is logged in by beforeEach, already on /stocks-listing)
 
-    // --- Test Case ---
-    test('should display correct Realized Swing P/L in Overview', async ({ page }) => {
+                // Act
+                console.log(`TEST [${scenario.scenarioName}]: Currently on /stocks-listing page.`);
+                // ---> ADD A WAIT for the specific stock link to be visible <---
+                console.log(`TEST [${scenario.scenarioName}]: Waiting for stock link "${scenario.testStockSymbol}" to appear...`);
+                
+                const stockLinkLocator = page.getByRole('link', { name: new RegExp(scenario.testStockSymbol, 'i') });
 
-        // 1. Navigate from Portfolio to the specific Stock Wallet Page
-        console.log(`Navigating to wallet page for ${testStockSymbol}...`);
-        // Use a locator that reliably finds the link/row for your test stock
-        // Example: Clicking a link with the text 'TEST' inside an anchor tag
-        await page.locator(`a:has-text("${testStockSymbol}")`).click();
+                await expect(stockLinkLocator).toBeVisible({ timeout: 15000 }); // Wait up to 15 seconds for the link
+                console.log(`TEST [${scenario.scenarioName}]: Stock link "${scenario.testStockSymbol}" found.`);
+                // ---> END WAIT <---
 
-        // Wait for the wallet page header to ensure navigation is complete
-        await expect(page.locator(`p:has-text("${testStockSymbol}")`)).toBeVisible({ timeout: 10000 });
-        console.log('Wallet page loaded.');
+                console.log(`TEST [${scenario.scenarioName}]: Navigating to wallet page for ${scenario.testStockSymbol}...`);
+                await stockLinkLocator.click(); // Now click the found link
 
-        // 2. Expand the Overview section
-        console.log('Expanding Overview...');
-        // Find the clickable Overview header (adjust selector if needed)
-        await page.locator('p:has-text("Overview")').first().click(); // Use first() if multiple elements match
+                // Wait for a clear indicator of the wallet page being loaded
+                await expect(page.locator(`p:has-text("${scenario.testStockSymbol}")`).first()).toBeVisible({ timeout: 15000 });
+                console.log(`TEST [${scenario.scenarioName}]: Wallet page loaded.`);
 
-        // 3. Find and assert the Realized Swing P/L value
-        console.log(`Checking for Realized Swing P/L: ${expectedRealizedSwingPL}`);
-        // Use the data-testid you added previously
-        const swingPlElement = page.locator('[data-testid="overview-realized-swing-pl-dollars"]');
+                console.log(`TEST [${scenario.scenarioName}]: Expanding Overview...`);
+                await page.locator('p:has-text("Overview")').first().click();
 
-        // Wait for the element to be visible and assert its text content
-        await expect(swingPlElement).toBeVisible({ timeout: 5000 }); // Wait for potential calculation delays
-        await expect(swingPlElement).toHaveText(expectedRealizedSwingPL);
+                // Assert
+                console.log(`TEST [${scenario.scenarioName}]: Checking for Realized Swing P/L: ${scenario.expectedFormattedSwingPL}`);
+                await page.pause();
+                const swingPlElement = page.locator('[data-testid="overview-realized-swing-pl-dollars"]');
+                await page.pause();
+                await expect(swingPlElement).toBeVisible({ timeout: 10000 });
+                await expect(swingPlElement).toHaveText(scenario.expectedFormattedSwingPL);
 
-        console.log('Assertion passed!');
-    });
-
-});
+                console.log(`TEST [${scenario.scenarioName}]: Assertion passed!`);
+            });
+        });
+    }
+}

@@ -57,15 +57,8 @@ amplify/**/*.js.map
 # Build output
 dist/
 
-# Other
-read.me
-
 # Playwright
 /test-results/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
-/e2e
-/e2e
-/e2e
-read.me
