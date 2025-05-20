@@ -9,11 +9,11 @@ function getAmplifyClient() {
     if (!client) {
         // This check now happens on first use of a dataHelper function
         if (!process.env.AMPLIFY_API_KEY) {
-            const errorMessage = "[DataHelper] CRITICAL: AMPLIFY_API_KEY environment variable is not set. Data helper functions will fail authentication. Ensure .env is loaded via playwright.config.ts or globalSetup.";
+            const errorMessage = "[dataHelpers.ts] - CRITICAL: AMPLIFY_API_KEY environment variable is not set. Data helper functions will fail authentication. Ensure .env is loaded via playwright.config.ts or globalSetup.";
             console.error(errorMessage);
             throw new Error(errorMessage); // Fail hard if key is missing when needed
         }
-        console.log('[DataHelper] Initializing Amplify client with API Key...');
+        console.log('[dataHelpers.ts] - Initializing Amplify client with API Key...');
         client = generateClient<Schema>({
             authMode: 'apiKey',
             apiKey: process.env.AMPLIFY_API_KEY
@@ -30,11 +30,11 @@ export type TransactionCreateData = Omit<Schema['Transaction']['type'], 'id' | '
 
 export async function createPortfolioStock(stockData: PortfolioStockCreateData): Promise<Schema['PortfolioStock']['type']> {
     const localClient = getAmplifyClient();
-    console.log('[DataHelper] Creating PortfolioStock:', stockData.symbol);
+    console.log('[dataHelpers.ts] - Creating PortfolioStock:', stockData.symbol);
     const { data, errors } = await client.models.PortfolioStock.create(stockData); // Keep this destructuring
 
     if (errors || !data) { // Check if data exists
-        console.error('[DataHelper] Error creating PortfolioStock:', errors);
+        console.error('[dataHelpers.ts] - Error creating PortfolioStock:', errors);
         throw new Error(`Failed to create PortfolioStock: ${errors?.[0]?.message || 'No data returned from create operation'}`);
     }
 
@@ -42,28 +42,28 @@ export async function createPortfolioStock(stockData: PortfolioStockCreateData):
     const newStock: Schema['PortfolioStock']['type'] = data;
 
     // These lines should now be type-safe
-    console.log('[DataHelper] PortfolioStock created:', newStock.id, newStock.symbol);
+    console.log('[dataHelpers.ts] - PortfolioStock created:', newStock.id, newStock.symbol);
     return newStock;
 }
 
 export async function deletePortfolioStock(stockId: string): Promise<void> {
     const localClient = getAmplifyClient();
-    console.log('[DataHelper] Deleting PortfolioStock:', stockId);
+    console.log('[dataHelpers.ts] - Deleting PortfolioStock:', stockId);
     const { errors } = await client.models.PortfolioStock.delete({ id: stockId });
     if (errors) {
-        console.error('[DataHelper] Error deleting PortfolioStock:', errors);
+        console.error('[dataHelpers.ts] - Error deleting PortfolioStock:', errors);
         // Don't throw if it's just "not found" during cleanup, but log it.
         if (!errors.some(err => err.message.includes('conditional request failed'))) { // Example check
              console.warn(`Attempted to delete PortfolioStock ${stockId} but failed: ${errors?.[0]?.message}`);
         }
     } else {
-        console.log('[DataHelper] PortfolioStock deleted:', stockId);
+        console.log('[dataHelpers.ts] - PortfolioStock deleted:', stockId);
     }
 }
 
 export async function createTransaction(transactionData: TransactionCreateData): Promise<Schema['Transaction']['type']> {
     const localClient = getAmplifyClient();
-    console.log('[DataHelper] Creating Transaction for stock ID:', transactionData.portfolioStockId, 'owned by', transactionData.owner);
+    console.log('[dataHelpers.ts] - Creating Transaction for stock ID:', transactionData.portfolioStockId, 'owned by', transactionData.owner);
     // Ensure portfolioStockId is passed correctly for the relationship
     const payload = {
         ...transactionData,
@@ -82,7 +82,7 @@ export async function createTransaction(transactionData: TransactionCreateData):
 
      // Check for errors OR if data is missing
      if (errors || !data) {
-         console.error('[DataHelper] Error creating Transaction:', errors);
+         console.error('[dataHelpers.ts] - Error creating Transaction:', errors);
          throw new Error(`Failed to create Transaction: ${errors?.[0]?.message || 'No data returned from create operation'}`);
      }
  
@@ -91,14 +91,14 @@ export async function createTransaction(transactionData: TransactionCreateData):
      const newTransaction: Schema['Transaction']['type'] = data;
      // --- End Change ---
     
-    console.log('[DataHelper] Transaction created:', newTransaction.id);
+    console.log('[dataHelpers.ts] - Transaction created:', newTransaction.id);
     return newTransaction;
 }
 
 // Helper to get a stock by symbol to find its ID for cleanup or verification
 export async function getPortfolioStockBySymbol(symbol: string): Promise<Schema['PortfolioStock']['type'] | null> {
     const localClient = getAmplifyClient();
-    console.log('[DataHelper] Getting PortfolioStock by symbol:', symbol);
+    console.log('[dataHelpers.ts] - Getting PortfolioStock by symbol:', symbol);
     // Note: DataStore list operations might not support complex filters on non-indexed fields
     // directly in the same way as a GraphQL API. You might need to list all and filter client-side,
     // or ensure your schema/API supports filtering by symbol.
@@ -107,32 +107,92 @@ export async function getPortfolioStockBySymbol(symbol: string): Promise<Schema[
         // filter: { symbol: { eq: symbol } } // This filter might not work depending on your DataStore/GraphQL setup
     });
     if (errors) {
-        console.error('[DataHelper] Error listing stocks to find by symbol:', errors);
+        console.error('[dataHelpers.ts] - Error listing stocks to find by symbol:', errors);
         return null;
     }
     const foundStock = stocks.find(s => s.symbol === symbol);
     return foundStock || null;
 }
 
-export async function deleteTransactionsForStock(portfolioStockId: string): Promise<void> {
+export async function deleteTransactionsForStockByStockId(portfolioStockId: string): Promise<void> {
     const localClient = getAmplifyClient();
-    console.log('[DataHelper] Deleting all transactions for stock ID:', portfolioStockId);
+    console.log('[dataHelpers.ts] - Deleting all transactions for stock ID:', portfolioStockId);
     const { data: transactions, errors: listErrors } = await client.models.Transaction.list({
         // filter: { portfolioStockTransactionsId: { eq: portfolioStockId } } // Adjust filter to your schema
          filter: { portfolioStockId: { eq: portfolioStockId } } // Assuming direct portfolioStockId field
     });
 
     if (listErrors) {
-        console.error('[DataHelper] Error listing transactions for deletion:', listErrors);
+        console.error('[dataHelpers.ts] - Error listing transactions for deletion:', listErrors);
         return;
     }
 
     for (const transaction of transactions) {
-        console.log('[DataHelper] Deleting transaction:', transaction.id);
+        console.log('[dataHelpers.ts] - Deleting transaction:', transaction.id);
         const { errors: deleteErrors } = await client.models.Transaction.delete({ id: transaction.id });
         if (deleteErrors) {
-            console.warn(`[DataHelper] Failed to delete transaction ${transaction.id}:`, deleteErrors);
+            console.warn(`[dataHelpers.ts] - Failed to delete transaction ${transaction.id}:`, deleteErrors);
         }
     }
-    console.log('[DataHelper] Finished deleting transactions for stock ID:', portfolioStockId);
+    console.log('[dataHelpers.ts] - Finished deleting transactions for stock ID:', portfolioStockId);
+}
+
+export async function deleteStockWalletsForStockByStockId(portfolioStockId: string): Promise<void> {
+    console.log(`[dataHelpers.ts] - Attempting to delete all StockWallets for stock ID: ${portfolioStockId}`);
+    try {
+        // 1. List all StockWallets for the given portfolioStockId
+        // We only need the 'id' of each wallet to delete it.
+        const { data: wallets, errors: listErrors } = await client.models.StockWallet.list({
+            filter: { portfolioStockId: { eq: portfolioStockId } },
+            selectionSet: ['id'], // Only fetch IDs
+            // Set a limit high enough for test scenarios; default is 100.
+            // If a single test stock could somehow generate >1000 wallets (highly unlikely), this needs pagination.
+            limit: 1000
+        });
+
+        if (listErrors) {
+            console.error('[dataHelpers.ts] - Error listing StockWallets for deletion:', listErrors);
+            // Depending on your test strategy, you might throw or just log and continue
+            throw listErrors;
+        }
+
+        if (!wallets || wallets.length === 0) {
+            console.log(`[dataHelpers.ts] - No StockWallets found for stock ID ${portfolioStockId} to delete.`);
+            return;
+        }
+
+        console.log(`[dataHelpers.ts] - Found ${wallets.length} StockWallets to delete for stock ID ${portfolioStockId}.`);
+
+        // 2. Delete each StockWallet found
+        // Use Promise.all to run deletions in parallel for efficiency, but handle individual errors.
+        const deletePromises = wallets.map(async (wallet) => {
+            if (wallet.id) {
+                console.log(`[dataHelpers.ts] - Deleting StockWallet: ${wallet.id}`);
+                const { errors: deleteErrors } = await client.models.StockWallet.delete({ id: wallet.id });
+                if (deleteErrors) {
+                    console.error(`[dataHelpers.ts] - Error deleting StockWallet ${wallet.id}:`, deleteErrors);
+                    // Optionally, collect errors instead of throwing immediately to attempt all deletions
+                    return { id: wallet.id, error: deleteErrors };
+                }
+                return { id: wallet.id, error: null };
+            }
+            return null;
+        });
+
+        const results = await Promise.all(deletePromises);
+        const failedDeletions = results.filter(r => r && r.error);
+
+        if (failedDeletions.length > 0) {
+            console.warn(`[dataHelpers.ts] - Failed to delete ${failedDeletions.length} StockWallets for stock ID ${portfolioStockId}.`);
+            // You might want to throw an error here if any sub-deletion fails to make the test suite aware
+            // throw new Error(`Partial failure in deleting StockWallets: ${JSON.stringify(failedDeletions)}`);
+        }
+
+        console.log(`[dataHelpers.ts] - Finished attempting to delete StockWallets for stock ID: ${portfolioStockId}`);
+
+    } catch (error) {
+        console.error(`[dataHelpers.ts] - Critical error in deleteStockWalletsForStockByStockId for ${portfolioStockId}:`, error);
+        // Re-throw to ensure the test framework knows cleanup might have failed
+        throw error;
+    }
 }

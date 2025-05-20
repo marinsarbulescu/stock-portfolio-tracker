@@ -31,6 +31,10 @@ export interface AddTransactionInputScenario {
     price: number;
     investment: number;
     quantity: number;
+    pdp: number;
+    plr: number;
+    swingHoldRatio: number;
+    lbd: number;
 }
 
 export function loadScenariosFromCSV<T extends object>(
@@ -70,7 +74,7 @@ export function loadScenariosFromCSV<T extends object>(
 
     } catch (error) {
         const err = error as Error;
-        console.error(`[CSVHelper] Error loading scenarios from ${csvFilePath}: ${err.message}`);
+        console.error(`[csvHelper.ts] - Error loading scenarios from ${csvFilePath}: ${err.message}`);
         throw new Error(`Failed to load scenarios from ${relativePath}. Make sure the file exists, is readable, and matches the expected format. Original error: ${err.message}`);
     }
 }
