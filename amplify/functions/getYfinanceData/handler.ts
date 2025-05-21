@@ -13,18 +13,38 @@ interface PriceResult {
   historicalCloses: HistoricalClose[];
 }
 
+// --- Define your hardcoded list of symbols to exclude ---
+const EXCLUDED_SYMBOLS: string[] = [
+    'BTC-USD',
+    'DBA',
+    'IYZ',
+    'SOYB',
+    'AMD',
+];
+// --- End of Excluded Symbols Definition ---
+
 export const handler = async (event: GetPricesEvent): Promise<PriceResult[]> => {
-  const symbols = event.arguments.symbols;
+  const incomingSymbols = event.arguments.symbols;
 
-  if (!symbols || symbols.length === 0) return [];
-  console.log(`Workspaceing prices & history for symbols: ${symbols.join(', ')}`); // Corrected "Workspaceing"
+  if (!incomingSymbols || incomingSymbols.length === 0) return [];
+  console.log(`getYfinanceData: Received symbols: ${incomingSymbols.join(', ')}`);
 
-  // --- TEMPORARY WORKAROUND: Filter out BTC-USD ---
-  // const symbolsToFetch = symbols.filter(symbol => symbol !== 'BTC-USD');
-  // console.log(`getYfinanceData: Fetching prices for (excluding BTC-USD): ${symbolsToFetch.join(',')}`);
-  // --- END WORKAROUND ---
+  // --- Filter out excluded symbols ---
+  const symbolsToFetch = incomingSymbols.filter(symbol => {
+    const isExcluded = EXCLUDED_SYMBOLS.includes(symbol.toUpperCase()); // Case-insensitive check
+    if (isExcluded) {
+      console.log(`getYfinanceData: Excluding symbol: ${symbol} (found in EXCLUDED_SYMBOLS list)`);
+    }
+    return !isExcluded;
+  });
+  // --- End of filtering ---
 
-  const symbolsToFetch = symbols;
+  if (symbolsToFetch.length === 0) {
+    console.log('getYfinanceData: No symbols remaining to fetch after exclusion.');
+    return [];
+  }
+  console.log(`getYfinanceData: Fetching prices & history for (after exclusion): ${symbolsToFetch.join(', ')}`);
+
 
   const results: PriceResult[] = []; // Array to store all results
 
@@ -32,21 +52,15 @@ export const handler = async (event: GetPricesEvent): Promise<PriceResult[]> => 
   startDate.setDate(startDate.getDate() - 7); // Approx 7 days ago for historical
   const period1 = startDate.toISOString().split('T')[0];
 
-  // ---vvv START OF CHANGES: Implement Sequential Fetching vvv---
+  // --- Sequential Fetching for the filtered symbolsToFetch list ---
   for (const symbol of symbolsToFetch) {
     console.log(`[Sequential Fetch] Processing symbol: ${symbol}`);
     try {
       // Fetch quote and history concurrently FOR THE CURRENT SYMBOL
-      // This Promise.all is for the two calls (quote & historical) for ONE symbol
       const [quote, history] = await Promise.all([
         yahooFinance.quote(symbol, { fields: ['regularMarketPrice'] }),
         yahooFinance.historical(symbol, { period1: period1, interval: '1d' })
       ]);
-
-      // Debug log for BTC-USD if it were to pass the filter (this log might not be hit due to filter)
-      if (symbol === 'BTC-USD' && quote) {
-        console.log(`DEBUG: BTC-USD Quote Object: ${JSON.stringify(quote, null, 2)}`);
-      }
 
       const currentPrice = (quote && typeof quote.regularMarketPrice === 'number') ? quote.regularMarketPrice : null;
 
@@ -59,7 +73,6 @@ export const handler = async (event: GetPricesEvent): Promise<PriceResult[]> => 
         .sort((a, b) => b.date.localeCompare(a.date));
 
       console.log(`Data for ${symbol}: Price=${currentPrice}, History Points=${historicalCloses.length}`);
-      // Add the successfully fetched result to our main results array
       results.push({ symbol, currentPrice, historicalCloses });
 
     } catch (error: any) {
@@ -70,19 +83,8 @@ export const handler = async (event: GetPricesEvent): Promise<PriceResult[]> => 
     // Optional: Add a small delay between fetching each symbol if you suspect very aggressive rate limiting
     // await new Promise(resolve => setTimeout(resolve, 200)); // e.g., 200ms delay
   }
-  // ---^^^ END OF CHANGES: Implement Sequential Fetching ^^^---
+  // --- End of Sequential Fetching ---
 
-  // The `quotePromises` and `Promise.allSettled` logic is now replaced by the loop above.
-  // const quotePromises = symbolsToFetch.map(async (symbol) => { /* ... */ });
-  // const settledResults = await Promise.allSettled(quotePromises);
-  // settledResults.forEach(result => {
-  //   if (result.status === 'fulfilled' && result.value) {
-  //     results.push(result.value);
-  //   } else if (result.status === 'rejected') {
-  //     console.error(`[Promise.allSettled] A promise was rejected:`, result.reason);
-  //   }
-  // });
-
-  console.log('Returning results:', results.length);
+  console.log('getYfinanceData: Returning results count:', results.length);
   return results;
 };
