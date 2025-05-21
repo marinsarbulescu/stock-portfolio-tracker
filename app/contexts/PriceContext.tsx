@@ -60,7 +60,7 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
           return storedData.prices || {};
         }
       } catch (error) {
-        console.error("Error reading/parsing stored prices state:", error);
+        // console.error("[PriceContext.tsx] - Error reading/parsing stored prices state:", error);
       }
     }
     return {};
@@ -75,7 +75,7 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
           return storedData.timestamp ? new Date(storedData.timestamp) : null;
         }
       } catch (error) {
-        console.error("Error reading/parsing stored timestamp state:", error);
+        // console.error("[PriceContext.tsx] - Error reading/parsing stored timestamp state:", error);
         window.localStorage.removeItem(PRICES_STORAGE_KEY);
       }
     }
@@ -97,7 +97,7 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
             };
             window.localStorage.setItem(PRICES_STORAGE_KEY, JSON.stringify(dataToStore));
         } catch (error) {
-            console.error("Error saving state to localStorage:", error);
+            // console.error("[PriceContext.tsx] - Error saving state to localStorage:", error);
         }
     }
   }, [latestPrices, lastPriceFetchTimestamp]);
@@ -110,34 +110,34 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
     let overallError: string | null = null;
 
     try {
-      console.log('Fetching all stock symbols from backend...');
+      // console.log('[PriceContext.tsx] - Fetching all stock symbols from backend...');
       const { data: stocksData, errors: stockErrors } = await client.models.PortfolioStock.list({
         selectionSet: ['symbol']
       });
 
       if (stockErrors) {
-        console.error("Error fetching stock list:", stockErrors);
+        // console.error("[PriceContext.tsx] - Error fetching stock list:", stockErrors);
         const firstErrorMsg = Array.isArray(stockErrors) && stockErrors.length > 0 ? stockErrors[0].message : "Failed to fetch stock list";
         throw new Error(firstErrorMsg);
       }
 
       const allSymbolsFromBackend = stocksData?.map(stock => stock.symbol).filter(Boolean) as string[] ?? [];
-      console.log(`Found ${allSymbolsFromBackend.length} symbols from backend.`);
+      // console.log(`[PriceContext.tsx] - Found ${allSymbolsFromBackend.length} symbols from backend.`);
 
       // --- Filter out excluded symbols on the client-side ---
       const symbolsToProcess = allSymbolsFromBackend.filter(symbol => {
         const isExcluded = EXCLUDED_SYMBOLS_CLIENT.includes(symbol.toUpperCase());
         if (isExcluded) {
-          console.log(`Client-side: Excluding symbol: ${symbol}`);
+          // console.log(`[PriceContext.tsx] - Client-side: Excluding symbol: ${symbol}`);
         }
         return !isExcluded;
       });
-      console.log(`Processing ${symbolsToProcess.length} symbols after client-side exclusion.`);
+      // console.log(`[PriceContext.tsx] - Processing ${symbolsToProcess.length} symbols after client-side exclusion.`);
       // --- End of client-side filtering ---
 
 
       if (symbolsToProcess.length === 0) {
-        console.log('No stocks found to fetch prices for after exclusion.');
+        // console.log('[PriceContext.tsx] - No stocks found to fetch prices for after exclusion.');
         setLatestPrices({});
         setLastPriceFetchTimestamp(new Date());
       } else {
@@ -148,13 +148,13 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
           setProgressMessage(`Fetching batch ${currentBatchNumber} of ${totalBatches}...`); // Update progress message
 
           const batchSymbols = symbolsToProcess.slice(i, i + PRICE_FETCH_BATCH_SIZE);
-          console.log(`Fetching prices for batch ${currentBatchNumber}/${totalBatches} (Size: ${PRICE_FETCH_BATCH_SIZE}):`, batchSymbols);
+          // console.log(`[PriceContext.tsx] - Fetching prices for batch ${currentBatchNumber}/${totalBatches} (Size: ${PRICE_FETCH_BATCH_SIZE}):`, batchSymbols);
 
           try {
             const { data: batchPriceResults, errors: batchPriceErrors } = await client.queries.getLatestPrices({ symbols: batchSymbols });
 
             if (batchPriceErrors) {
-              console.error(`Error fetching prices for batch ${batchSymbols.join(',')}:`, batchPriceErrors);
+              // console.error(`[PriceContext.tsx] - Error fetching prices for batch ${batchSymbols.join(',')}:`, batchPriceErrors);
               const batchErrMsg = Array.isArray(batchPriceErrors) && batchPriceErrors.length > 0 ? batchPriceErrors[0].message : "Failed to fetch prices for a batch";
               if (!overallError) overallError = batchErrMsg;
               batchSymbols.forEach(s => {
@@ -180,9 +180,9 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
                 }
               });
             }
-            console.log(`Successfully processed batch ${currentBatchNumber}`);
+            // console.log(`[PriceContext.tsx] - Successfully processed batch ${currentBatchNumber}`);
           } catch (batchErr: any) {
-            console.error(`Unexpected error processing batch ${batchSymbols.join(',')}:`, batchErr);
+            // console.error(`[PriceContext.tsx] - Unexpected error processing batch ${batchSymbols.join(',')}:`, batchErr);
             const unexpectedBatchErrMsg = batchErr.message || "Unexpected error during batch price fetch";
             if (!overallError) overallError = unexpectedBatchErrMsg;
             batchSymbols.forEach(s => {
@@ -196,10 +196,10 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
         if (overallError) {
             setPricesError(overallError + " (Some batches may have failed)");
         }
-        console.log('All batches processed. Prices updated in context:', allFetchedPricesMap);
+        // console.log('[PriceContext.tsx] - All batches processed. Prices updated in context:', allFetchedPricesMap);
       }
     } catch (err: any) {
-      console.error("Error in fetchLatestPricesForAllStocks (Outer catch):", err);
+      // console.error("[PriceContext.tsx] - Error in fetchLatestPricesForAllStocks (Outer catch):", err);
       let outerErrMsg = "An unexpected error occurred";
       if (Array.isArray(err) && err.length > 0 && err[0].message) {
         outerErrMsg = err[0].message;

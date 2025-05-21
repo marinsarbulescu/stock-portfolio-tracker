@@ -20,8 +20,8 @@ import {
     CURRENCY_PRECISION,
     PERCENT_PRECISION,
     SHARE_EPSILON,
-    CURRENCY_EPSILON,
-    PERCENT_EPSILON // Import if your logic uses it
+    //CURRENCY_EPSILON,
+    //PERCENT_EPSILON // Import if your logic uses it
 } from '@/app/config/constants';
 
 type PortfolioStockDataType = { // Simplified representation needed for this page
@@ -36,7 +36,7 @@ type PortfolioStockDataType = { // Simplified representation needed for this pag
 
 type StockWalletDataType = Schema['StockWallet']['type'];
 
-type FiveDayDipResult = Record<string, number | null>; // Map: symbol -> dip percentage or null
+//type FiveDayDipResult = Record<string, number | null>; // Map: symbol -> dip percentage or null
 
 type TransactionListResultType = Awaited<ReturnType<typeof client.models.Transaction.list>>;
 
@@ -95,7 +95,7 @@ export default function HomePage() {
                 timeZoneName: 'short' // Attempts to get PDT/PST etc. based on *user's* browser timezone
             }).format(date);
         } catch (e) {
-            console.error("Error formatting date:", e);
+            // console.error("[app/(authed)/page.tsx] - Error formatting date:", e);
             return date.toLocaleDateString(); // Fallback
         }
     }
@@ -108,19 +108,19 @@ export default function HomePage() {
                 const session = await fetchAuthSession();
                 const accessToken = session.tokens?.accessToken;
                 if (!accessToken) {
-                  console.log("Access token not found in session.");
+                  // console.log("[app/(authed)/page.tsx] - Access token not found in session.");
                   setPageAccessLevel('denied'); // Use renamed setter
                   return;
                 }
                 const groups = accessToken.payload['cognito:groups'] as string[] | undefined;
-                console.log("User groups:", groups); // For debugging
+                // console.log("[app/(authed)/page.tsx] - User groups:", groups); // For debugging
                 if (groups && groups.includes('ApprovedUsers')) {
                   setPageAccessLevel('approved'); // Use renamed setter
                 } else {
                   setPageAccessLevel('denied'); // Use renamed setter
                 }
               } catch (error) {
-                console.error("Error checking user group (or user not authenticated):", error);
+                // console.error("[app/(authed)/page.tsx] - Error checking user group (or user not authenticated):", error);
                 setPageAccessLevel('denied'); // Use renamed setter
               }
             };
@@ -154,7 +154,7 @@ export default function HomePage() {
             do {
                 loopSafetyCounter++;
                 if (loopSafetyCounter > maxLoops) {
-                    console.warn("Exceeded maximum pagination loops fetching all transactions.");
+                    // console.warn("[app/(authed)/page.tsx] - Exceeded maximum pagination loops fetching all transactions.");
                     throw new Error(`Could not fetch all transactions after ${maxLoops} pages.`);
                 }
 
@@ -180,7 +180,7 @@ export default function HomePage() {
             return accumulatedTxns;
 
         } catch (err: any) {
-            console.error('Error during paginated transaction fetch:', err);
+            // console.error('[app/(authed)/page.tsx] - Error during paginated transaction fetch:', err);
             const errMsg = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || 'Failed to load all transactions.');
             throw new Error(errMsg); // Re-throw to be caught by fetchPageData
         }
@@ -241,7 +241,7 @@ export default function HomePage() {
             setAllWallets(visibleWallets);
 
         } catch (err: any) {
-            console.error("Error fetching page data:", err);
+            // console.error("[app/(authed)/page.tsx] - Error fetching page data:", err);
             const errorMessage = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || "Failed to load page data.");
             setError(errorMessage); // Set combined error state
             setPortfolioStocks([]);
@@ -366,7 +366,7 @@ export default function HomePage() {
           const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
           return diffDays;
         } catch (e) {
-          console.error("Error parsing date for diff calculation:", dateString, e);
+          // console.error("[app/(authed)/page.tsx] - Error parsing date for diff calculation:", dateString, e);
           return null;
         }
     }
@@ -529,7 +529,7 @@ export default function HomePage() {
     }, [allTransactions, allWallets]);
 
     const portfolioUnrealizedPL = useMemo(() => {
-        //console.log("[Memo] Calculating portfolioUnrealizedPL ($ and %)");
+        //console.log("[app/(authed)/page.tsx] - [Memo] Calculating portfolioUnrealizedPL ($ and %)");
 
         let totalUnrealizedSwingPL = 0;
         let currentSwingCostBasis = 0;
@@ -554,7 +554,7 @@ export default function HomePage() {
 
             if (currentPrice === null) {
             partialDataUsed = true;
-            console.warn(`[Unrealized P/L] SKIPPING P/L calc for wallet ${wallet.id} due to missing price for ${stockSymbol || 'unknown'}`);
+            // console.warn(`[app/(authed)/page.tsx] - [Unrealized P/L] SKIPPING P/L calc for wallet ${wallet.id} due to missing price for ${stockSymbol || 'unknown'}`);
             return;
             }
 
@@ -591,7 +591,7 @@ export default function HomePage() {
         const roundedHoldPercent = typeof holdPercent === 'number' ? parseFloat(holdPercent.toFixed(PERCENT_PRECISION)) : null;
         const roundedTotalPercent = typeof totalPercent === 'number' ? parseFloat(totalPercent.toFixed(PERCENT_PRECISION)) : null;
 
-        //console.log(`[Unrealized P/L] Swing $: ${roundedSwingDollars}, Hold $: ${roundedHoldDollars}, Total $: ${roundedTotalDollars}. Partial: ${partialDataUsed}`);
+        //console.log(`[app/(authed)/page.tsx] - [Unrealized P/L] Swing $: ${roundedSwingDollars}, Hold $: ${roundedHoldDollars}, Total $: ${roundedTotalDollars}. Partial: ${partialDataUsed}`);
 
         return {
             unrealizedSwingDollars: roundedSwingDollars,
@@ -609,7 +609,7 @@ export default function HomePage() {
     }, [allWallets, portfolioStocks, latestPrices]);
 
     const portfolioTotalPL = useMemo(() => {
-        //console.log("[Memo] Calculating portfolioTotalPL ($ and %)");
+        //console.log("[app/(authed)/page.tsx] - [Memo] Calculating portfolioTotalPL ($ and %)");
 
         const totalSwingDollars = (portfolioRealizedPL.totalSwingPlDollars ?? 0) + (portfolioUnrealizedPL.unrealizedSwingDollars ?? 0);
         const totalHoldDollars = (portfolioRealizedPL.totalHoldPlDollars ?? 0) + (portfolioUnrealizedPL.unrealizedHoldDollars ?? 0);
@@ -636,7 +636,7 @@ export default function HomePage() {
         const roundedHoldPercent = typeof totalHoldPercentCalc === 'number' ? parseFloat(totalHoldPercentCalc.toFixed(PERCENT_PRECISION)) : null;
         const roundedStockPercent = typeof totalStockPercentCalc === 'number' ? parseFloat(totalStockPercentCalc.toFixed(PERCENT_PRECISION)) : null;
 
-        //console.log(`[Total P/L] Swing: ${roundedSwingDollars} (${roundedSwingPercent}%), Hold: ${roundedHoldDollars} (${roundedHoldPercent}%), Stock: ${roundedStockDollars} (${roundedStockPercent}%)`);
+        //console.log(`[app/(authed)/page.tsx] - [Total P/L] Swing: ${roundedSwingDollars} (${roundedSwingPercent}%), Hold: ${roundedHoldDollars} (${roundedHoldPercent}%), Stock: ${roundedStockDollars} (${roundedStockPercent}%)`);
 
         return {
         totalSwingDollars: roundedSwingDollars,
@@ -650,12 +650,12 @@ export default function HomePage() {
     }, [portfolioRealizedPL, portfolioUnrealizedPL]);
 
     const portfolioYtdPL = useMemo(() => {
-        console.log('[YTD Calc Start] Input Lengths:', {
-            allWallets: allWallets.length,
-            portfolioStocks: portfolioStocks.length,
-            latestPrices: Object.keys(latestPrices).length,
-            allTransactions: allTransactions.length
-        });
+        // console.log('[app/(authed)/page.tsx] - [YTD Calc Start] Input Lengths:', {
+        //     allWallets: allWallets.length,
+        //     portfolioStocks: portfolioStocks.length,
+        //     latestPrices: Object.keys(latestPrices).length,
+        //     allTransactions: allTransactions.length
+        // });
         const walletBuyPriceMap = new Map<string, number>();
         allWallets.forEach(w => { if (w.id && typeof w.buyPrice === 'number') walletBuyPriceMap.set(w.id, w.buyPrice); });
 
@@ -678,21 +678,21 @@ export default function HomePage() {
             }
         });
 
-        console.log('[YTD Calc] After Realized Calc:', { ytdRealizedSwingPL, ytdRealizedHoldPL });
+        // console.log('[app/(authed)/page.tsx] - [YTD Calc] After Realized Calc:', { ytdRealizedSwingPL, ytdRealizedHoldPL });
 
-        console.log('[YTD Calc] Starting Unrealized Calc Loop...');
+        // console.log('[app/(authed)/page.tsx] - [YTD Calc] Starting Unrealized Calc Loop...');
 
         allWallets.forEach((wallet, index) => {
             const stockForWallet = portfolioStocks.find(s => s.id === wallet.portfolioStockId);
             const stockSymbol = stockForWallet?.symbol ?? null;
-            console.log(`[YTD Calc Loop ${index}] WalletID=${wallet.id} StockID=${wallet.portfolioStockId} -> Symbol=${stockSymbol}`);
+            // console.log(`[app/(authed)/page.tsx] - [YTD Calc Loop ${index}] WalletID=${wallet.id} StockID=${wallet.portfolioStockId} -> Symbol=${stockSymbol}`);
 
             const currentPrice = latestPrices[stockSymbol ?? '']?.currentPrice ?? null;
-            console.log(`[YTD Calc Loop ${index}] Price lookup for ${stockSymbol}:`, currentPrice);
+            // console.log(`[app/(authed)/page.tsx] - [YTD Calc Loop ${index}] Price lookup for ${stockSymbol}:`, currentPrice);
             
             if (currentPrice === null && (wallet.remainingShares ?? 0) > SHARE_EPSILON) {
                 partialDataUsed = true;
-                console.warn(`[YTD Calc Loop ${index}] Setting priceAvailable=false. Missing price for symbol: ${stockSymbol} (Wallet ID: ${wallet.id})`);
+                // console.warn(`[app/(authed)/page.tsx] - [YTD Calc Loop ${index}] Setting priceAvailable=false. Missing price for symbol: ${stockSymbol} (Wallet ID: ${wallet.id})`);
                 return;
             }
 
@@ -709,7 +709,7 @@ export default function HomePage() {
             }
         });
         
-        console.log('[YTD Calc] After Unrealized Loop:', { currentUnrealizedSwingPL, currentSwingCostBasis, currentUnrealizedHoldPL, currentHoldCostBasis });
+        // console.log('[app/(authed)/page.tsx] - [YTD Calc] After Unrealized Loop:', { currentUnrealizedSwingPL, currentSwingCostBasis, currentUnrealizedHoldPL, currentHoldCostBasis });
 
         const totalSwingYtdPL_dollars = ytdRealizedSwingPL + currentUnrealizedSwingPL;
         const totalHoldYtdPL_dollars = ytdRealizedHoldPL + currentUnrealizedHoldPL;
@@ -717,9 +717,9 @@ export default function HomePage() {
         const totalSwingYtdPL_percent = (currentSwingCostBasis > SHARE_EPSILON) ? (totalSwingYtdPL_dollars / currentSwingCostBasis) * 100 : (totalSwingYtdPL_dollars === 0 ? 0 : null);
         const totalHoldYtdPL_percent = (currentHoldCostBasis > SHARE_EPSILON) ? (totalHoldYtdPL_dollars / currentHoldCostBasis) * 100 : (totalHoldYtdPL_dollars === 0 ? 0 : null);
 
-        console.log('[YTD Calc Success] Calculation complete. Returning:', {
-            totalSwingYtdPL_dollars, totalSwingYtdPL_percent, totalHoldYtdPL_dollars, totalHoldYtdPL_percent
-        });
+        // console.log('[app/(authed)/page.tsx] - [YTD Calc Success] Calculation complete. Returning:', {
+        //     totalSwingYtdPL_dollars, totalSwingYtdPL_percent, totalHoldYtdPL_dollars, totalHoldYtdPL_percent
+        // });
         
         return {
             totalSwingYtdPL_dollars: parseFloat(totalSwingYtdPL_dollars.toFixed(CURRENCY_PRECISION)),
