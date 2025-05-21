@@ -9,6 +9,7 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 import PortfolioOverview from './components/PortfolioOverview';
 import ColumnVisibilityControls, { ReportColumnVisibilityState } from './components/ColumnVisibilityControls';
 import StockTable, { ReportDataItem, ReportColumnKey } from './components/StockTable';
+import { useAuthStatus } from '@/app/contexts/AuthStatusContext'; // Import useAuthStatus
 
 // const SHARE_EPSILON = 0.00001; // Example value, adjust as needed
 // const CURRENCY_PRECISION = 2;  // Example value (e.g., for dollars and cents)
@@ -79,7 +80,8 @@ export default function HomePage() {
 
     const [allTransactions, setAllTransactions] = useState<Schema['Transaction'][]>([]);
 
-    const { latestPrices, pricesLoading, pricesError, lastPriceFetchTimestamp } = usePrices(); // <-- Add timestamp
+    const { latestPrices, pricesLoading, pricesError, lastPriceFetchTimestamp, fetchLatestPricesForAllStocks, progressMessage } = usePrices(); // Added progressMessage
+    //const { user, accessStatus: authHookAccessStatus } = useAuthStatus(); // Renamed destructured accessStatus to avoid conflict
 
     const formatTimestamp = (date: Date | null): string => {
         if (!date) return "N/A";
@@ -98,7 +100,7 @@ export default function HomePage() {
         }
     }
 
-    const [accessStatus, setAccessStatus] = useState<'loading' | 'approved' | 'denied'>('loading');
+    const [pageAccessLevel, setPageAccessLevel] = useState<'loading' | 'approved' | 'denied'>('loading'); // Renamed state variable
 
     useEffect(() => {
         const checkUserGroup = async () => {
@@ -107,19 +109,19 @@ export default function HomePage() {
                 const accessToken = session.tokens?.accessToken;
                 if (!accessToken) {
                   console.log("Access token not found in session.");
-                  setAccessStatus('denied'); // Treat as denied if no token
+                  setPageAccessLevel('denied'); // Use renamed setter
                   return;
                 }
                 const groups = accessToken.payload['cognito:groups'] as string[] | undefined;
                 console.log("User groups:", groups); // For debugging
                 if (groups && groups.includes('ApprovedUsers')) {
-                  setAccessStatus('approved');
+                  setPageAccessLevel('approved'); // Use renamed setter
                 } else {
-                  setAccessStatus('denied');
+                  setPageAccessLevel('denied'); // Use renamed setter
                 }
               } catch (error) {
                 console.error("Error checking user group (or user not authenticated):", error);
-                setAccessStatus('denied'); // Deny access if not authenticated or error occurs
+                setPageAccessLevel('denied'); // Use renamed setter
               }
             };
         checkUserGroup();
@@ -857,11 +859,11 @@ export default function HomePage() {
     };
 
     // Handle access control
-    if (accessStatus === 'loading') {
+    if (pageAccessLevel === 'loading') { // Use renamed state variable
         return <p>Loading access...</p>;
     }
   
-    if (accessStatus === 'denied') {
+    if (pageAccessLevel === 'denied') { // Use renamed state variable
         return (
         <div style={{ padding: '2rem' }}>
             <h2>Access Denied</h2>
@@ -880,7 +882,7 @@ export default function HomePage() {
             <h2>Opportunity Report</h2>
             <div style={{ fontSize: '0.7em', color: "gray" }}>
                 {pricesLoading
-                ? 'Prices are refreshing...'
+                ? progressMessage || 'Prices are refreshing...' // Display progressMessage if available
                 : lastPriceFetchTimestamp
                     ? `Prices as of ${formatTimestamp(lastPriceFetchTimestamp)}`
                     : 'Prices not fetched yet.'
