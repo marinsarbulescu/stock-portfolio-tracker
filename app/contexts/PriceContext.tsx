@@ -35,6 +35,20 @@ interface PriceContextType {
 const PriceContext = createContext<PriceContextType | undefined>(undefined);
 const PRICES_STORAGE_KEY = 'portfolioAppLatestPrices';
 
+// --- Define your hardcoded list of symbols to exclude on the client-side ---
+const EXCLUDED_SYMBOLS_CLIENT: string[] = [
+    'DBA',
+    'IYZ',
+    'SOYB',
+    'AMD',
+];
+// --- End of Client-Side Excluded Symbols Definition ---
+
+// --- Define the batch size for fetching prices ---
+const PRICE_FETCH_BATCH_SIZE = 15; // You can experiment with this number
+// --- End of Batch Size Definition ---
+
+
 export const PriceProvider = ({ children }: { children: ReactNode }) => {
   const [latestPrices, setLatestPrices] = useState<PriceMap>(() => {
     if (typeof window !== 'undefined') {
@@ -89,77 +103,98 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
   const fetchLatestPricesForAllStocks = useCallback(async () => {
     setPricesLoading(true);
     setPricesError(null);
-    let priceMap: PriceMap = {};
+    let allFetchedPricesMap: PriceMap = {};
+    let overallError: string | null = null;
 
     try {
-      // --- START: Hardcoded symbols for testing batch approach ---
-      const symbols: string[] = ['BABA', 'DRI', 'VOO', 'AMZN']; // Example small list
-      console.log('Using hardcoded symbols for testing:', symbols);
-      // --- END: Hardcoded symbols for testing batch approach ---
-
-      /* --- COMMENTED OUT: Original logic to fetch all symbols ---
+      console.log('Fetching all stock symbols from backend...');
       const { data: stocksData, errors: stockErrors } = await client.models.PortfolioStock.list({
-        selectionSet: ['symbol'] // Only fetch symbols
+        selectionSet: ['symbol']
       });
 
-      if (stockErrors) throw stockErrors; // This will be caught by the outer catch
+      if (stockErrors) {
+        console.error("Error fetching stock list:", stockErrors);
+        const firstErrorMsg = Array.isArray(stockErrors) && stockErrors.length > 0 ? stockErrors[0].message : "Failed to fetch stock list";
+        throw new Error(firstErrorMsg);
+      }
 
-      // Ensure stocksData and its map method are safe to call
-      const symbols = stocksData?.map(stock => stock.symbol).filter(Boolean) as string[] ?? [];
-      */ // --- END: Original logic to fetch all symbols ---
+      const allSymbolsFromBackend = stocksData?.map(stock => stock.symbol).filter(Boolean) as string[] ?? [];
+      console.log(`Found ${allSymbolsFromBackend.length} symbols from backend.`);
+
+      // --- Filter out excluded symbols on the client-side ---
+      const symbolsToProcess = allSymbolsFromBackend.filter(symbol => {
+        const isExcluded = EXCLUDED_SYMBOLS_CLIENT.includes(symbol.toUpperCase());
+        if (isExcluded) {
+          console.log(`Client-side: Excluding symbol: ${symbol}`);
+        }
+        return !isExcluded;
+      });
+      console.log(`Processing ${symbolsToProcess.length} symbols after client-side exclusion.`);
+      // --- End of client-side filtering ---
 
 
-      if (symbols.length === 0) {
-        console.log('No symbols to fetch (hardcoded list might be empty or original fetch failed).');
+      if (symbolsToProcess.length === 0) {
+        console.log('No stocks found to fetch prices for after exclusion.');
         setLatestPrices({});
         setLastPriceFetchTimestamp(new Date());
       } else {
-        console.log('Fetching prices from backend for symbols:', symbols);
-        try {
-          const { data: priceResults, errors: priceErrors } = await client.queries.getLatestPrices({ symbols });
+        // Use the constant defined at the top
+        for (let i = 0; i < symbolsToProcess.length; i += PRICE_FETCH_BATCH_SIZE) {
+          const batchSymbols = symbolsToProcess.slice(i, i + PRICE_FETCH_BATCH_SIZE);
+          console.log(`Fetching prices for batch ${Math.floor(i / PRICE_FETCH_BATCH_SIZE) + 1}/${Math.ceil(symbolsToProcess.length / PRICE_FETCH_BATCH_SIZE)} (Size: ${PRICE_FETCH_BATCH_SIZE}):`, batchSymbols);
 
-          if (priceErrors) {
-            throw priceErrors;
-          }
+          try {
+            const { data: batchPriceResults, errors: batchPriceErrors } = await client.queries.getLatestPrices({ symbols: batchSymbols });
 
-          symbols.forEach(s => priceMap[s] = null);
+            if (batchPriceErrors) {
+              console.error(`Error fetching prices for batch ${batchSymbols.join(',')}:`, batchPriceErrors);
+              const batchErrMsg = Array.isArray(batchPriceErrors) && batchPriceErrors.length > 0 ? batchPriceErrors[0].message : "Failed to fetch prices for a batch";
+              if (!overallError) overallError = batchErrMsg;
+              batchSymbols.forEach(s => {
+                if (!(s in allFetchedPricesMap)) allFetchedPricesMap[s] = null;
+              });
+              continue;
+            }
 
-          if (priceResults) {
-            priceResults.forEach(result => {
-              if (result && result.symbol) {
-                const validHistoricalCloses = (result.historicalCloses ?? [])
-                  .filter((hc): hc is HistoricalCloseData => hc !== null && hc !== undefined);
-                priceMap[result.symbol] = {
-                  symbol: result.symbol,
-                  currentPrice: result.currentPrice ?? null,
-                  historicalCloses: validHistoricalCloses
-                };
-              }
+            batchSymbols.forEach(s => {
+                if (!(s in allFetchedPricesMap)) allFetchedPricesMap[s] = null;
+            });
+
+            if (batchPriceResults) {
+              batchPriceResults.forEach(result => {
+                if (result && result.symbol) {
+                  const validHistoricalCloses = (result.historicalCloses ?? [])
+                    .filter((hc): hc is HistoricalCloseData => hc !== null && hc !== undefined);
+                  allFetchedPricesMap[result.symbol] = {
+                    symbol: result.symbol,
+                    currentPrice: result.currentPrice ?? null,
+                    historicalCloses: validHistoricalCloses
+                  };
+                }
+              });
+            }
+            console.log(`Successfully processed batch ${Math.floor(i / PRICE_FETCH_BATCH_SIZE) + 1}`);
+          } catch (batchErr: any) {
+            console.error(`Unexpected error processing batch ${batchSymbols.join(',')}:`, batchErr);
+            const unexpectedBatchErrMsg = batchErr.message || "Unexpected error during batch price fetch";
+            if (!overallError) overallError = unexpectedBatchErrMsg;
+            batchSymbols.forEach(s => {
+                if (!(s in allFetchedPricesMap)) allFetchedPricesMap[s] = null;
             });
           }
-        } catch (priceErr: any) {
-          console.error("Error fetching latest prices (inner catch):", priceErr);
-          let specificPriceErrMsg = "Failed to fetch prices";
-          if (Array.isArray(priceErr) && priceErr.length > 0 && priceErr[0].message) {
-            specificPriceErrMsg = priceErr[0].message;
-          } else if (priceErr.message) {
-            specificPriceErrMsg = priceErr.message;
-          }
-          setPricesError(specificPriceErrMsg);
         }
-
-        setLatestPrices(priceMap);
+        
+        setLatestPrices(allFetchedPricesMap);
         setLastPriceFetchTimestamp(new Date());
-        console.log('Prices updated in context:', priceMap);
+        if (overallError) {
+            setPricesError(overallError + " (Some batches may have failed)");
+        }
+        console.log('All batches processed. Prices updated in context:', allFetchedPricesMap);
       }
     } catch (err: any) {
       console.error("Error in fetchLatestPricesForAllStocks (Outer catch):", err);
-      let outerErrMsg = "An unexpected error occurred";
-      // This catch block will now primarily handle errors from the commented-out section if it were active,
-      // or other unexpected issues if the hardcoded symbols logic itself had a problem (unlikely for this change).
-      if (Array.isArray(err) && err.length > 0 && err[0].message) {
-        outerErrMsg = err[0].message;
-      } else if (err.message) {
+      let outerErrMsg = "An unexpected error occurred while preparing to fetch prices.";
+      if (err.message) {
         outerErrMsg = err.message;
       }
       setPricesError(outerErrMsg);
@@ -192,6 +227,7 @@ export const usePrices = (): PriceContextType => {
   }
   return context;
 };
+
 
 
 
