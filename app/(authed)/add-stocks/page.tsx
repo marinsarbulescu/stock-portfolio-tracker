@@ -1,4 +1,4 @@
-// app/add-stocks/page.tsx
+// app/(authed)/add-stocks/page.tsx
 'use client'; // AddStockForm requires client-side rendering
 
 import AddStockForm from '@/app/components/AddStockForm'; // Adjust path
