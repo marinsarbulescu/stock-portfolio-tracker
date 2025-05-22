@@ -271,8 +271,8 @@ export default function HomePage() {
     type ProcessedTxnMap = Record<string, ProcessedStockTxnData>; // Keyed by stock ID
 
     interface ProcessedStockData {
-        lastSwingBuy: { date: string; price: number | null } | undefined;
-        lastSwingSell: { date: string } | undefined;
+        lastBuy: { date: string; price: number | null } | undefined; // Changed from lastSwingBuy
+        lastSell: { date: string } | undefined; 
         swingBuyCount: number;
         activeSwingWallets: StockWalletDataType[];
         lowestSwingBuyPriceWallet: StockWalletDataType | null;
@@ -298,8 +298,8 @@ export default function HomePage() {
             const stockWallets = allWallets.filter(w => w.portfolioStockId === stockId);
 
             const stockData: ProcessedStockData = {
-                lastSwingBuy: undefined,
-                lastSwingSell: undefined,
+                lastBuy: undefined, // Changed from lastSwingBuy
+                lastSell: undefined, 
                 swingBuyCount: 0,
                 activeSwingWallets: [],
                 lowestSwingBuyPriceWallet: null,
@@ -310,15 +310,21 @@ export default function HomePage() {
 
             const sortedStockTxns = [...stockTxns].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
             sortedStockTxns.forEach(txn => {
+                // Update swingBuyCount (specific to Swing and Split-to-Swing buys)
                 if (txn.action === 'Buy' && (txn.txnType === 'Swing' || (txn.txnType === 'Split' && (txn.swingShares ?? 0) > epsilon))) {
                     stockData.swingBuyCount++;
-                    if (!stockData.lastSwingBuy || (txn.date && txn.date >= stockData.lastSwingBuy.date)) {
-                        stockData.lastSwingBuy = { date: txn.date, price: txn.price ?? null };
+                }
+
+                // Update lastBuy (for any Buy action: Swing, Hold, Split)
+                if (txn.action === 'Buy') {
+                    if (!stockData.lastBuy || (txn.date && txn.date >= stockData.lastBuy.date)) {
+                        stockData.lastBuy = { date: txn.date, price: txn.price ?? null };
                     }
                 }
-                else if (txn.action === 'Sell' && txn.txnType === 'Swing') {
-                     if (!stockData.lastSwingSell || (txn.date && txn.date >= stockData.lastSwingSell.date)) {
-                        stockData.lastSwingSell = { date: txn.date };
+                // Modified to include 'Hold' type for lastSell (from previous step)
+                else if (txn.action === 'Sell' && (txn.txnType === 'Swing' || txn.txnType === 'Hold')) {
+                     if (!stockData.lastSell || (txn.date && txn.date >= stockData.lastSell.date)) {
+                        stockData.lastSell = { date: txn.date };
                     }
                 }
             });
@@ -380,7 +386,7 @@ export default function HomePage() {
             const currentPrice = priceData?.currentPrice ?? null;
 
             const procData = processedData[stockId] ?? {
-                lastSwingBuy: undefined, lastSwingSell: undefined, swingBuyCount: 0,
+                lastBuy: undefined, lastSell: undefined, swingBuyCount: 0, // Changed from lastSwingBuy
                 activeSwingWallets: [], lowestSwingBuyPriceWallet: null, lowestSwingTpWallet: null,
                 totalCurrentSwingShares: 0, totalCurrentHoldShares: 0,
             };
@@ -406,9 +412,9 @@ export default function HomePage() {
             }
 
             let lbdPercent: number | null = null;
-            const lastSwingBuyPrice = procData.lastSwingBuy?.price;
-            if (typeof currentPrice === 'number' && typeof lastSwingBuyPrice === 'number' && typeof pdp === 'number' && lastSwingBuyPrice > 0) {
-                const diffPercent = (currentPrice / lastSwingBuyPrice - 1) * 100;
+            const lastBuyPrice = procData.lastBuy?.price; // Changed from procData.lastSwingBuy?.price
+            if (typeof currentPrice === 'number' && typeof lastBuyPrice === 'number' && typeof pdp === 'number' && lastBuyPrice > 0) { // Used lastBuyPrice
+                const diffPercent = (currentPrice / lastBuyPrice - 1) * 100; // Used lastBuyPrice
                 if (diffPercent <= (pdp * -1)) {
                     lbdPercent = diffPercent;
                 }
@@ -427,8 +433,8 @@ export default function HomePage() {
                 percentToTp = (currentPrice / lowestSwingTpPrice - 1) * 100;
             }
 
-            const sinceBuyDays = calculateDaysAgo(procData.lastSwingBuy?.date);
-            const sinceSellDays = calculateDaysAgo(procData.lastSwingSell?.date);
+            const sinceBuyDays = calculateDaysAgo(procData.lastBuy?.date); // Changed from procData.lastSwingBuy?.date
+            const sinceSellDays = calculateDaysAgo(procData.lastSell?.date); 
             const swingBuyCountValue = procData.swingBuyCount;
             const totalShares = procData.totalCurrentSwingShares + procData.totalCurrentHoldShares;
             const swingWalletCountValue = procData.activeSwingWallets.length;
