@@ -46,7 +46,7 @@ const EXCLUDED_SYMBOLS_CLIENT: string[] = [
 // --- End of Client-Side Excluded Symbols Definition ---
 
 // --- Define the batch size for fetching prices ---
-const PRICE_FETCH_BATCH_SIZE = 10; // You can experiment with this number
+const PRICE_FETCH_BATCH_SIZE = 5; // You can experiment with this number
 // --- End of Batch Size Definition ---
 
 
