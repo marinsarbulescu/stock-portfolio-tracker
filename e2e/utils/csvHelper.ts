@@ -35,6 +35,12 @@ export interface AddTransactionInputScenario {
     plr: number;
     swingHoldRatio: number;
     lbd: number;
+    SwWtBuyPrice?: number; // Optional because not all rows might have it initially
+    SwWtTotalInvestment?: number;
+    SwWtRemainingShares?: number;
+    HlWtBuyPrice?: number;
+    HlWtTotalInvestment?: number;
+    HlWtRemainingShares?: number;
 }
 
 export function loadScenariosFromCSV<T extends object>(

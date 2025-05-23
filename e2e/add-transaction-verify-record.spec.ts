@@ -12,7 +12,7 @@ import {
 } from './utils/dataHelpers'; // Adjust path if needed
 
 // Import the generic loader and the specific interface for these scenarios
-import { loadScenariosFromCSV, type AddTransactionInputScenario } from './utils/csvHelper';
+import { loadScenariosFromCSV, type AddTransactionInputScenario } from '@/e2e/utils/csvHelper';
 
 import {
     SHARE_PRECISION,
@@ -46,11 +46,17 @@ const addTxnNumericColumns: ReadonlyArray<keyof AddTransactionInputScenario> = [
     'pdp',
     'plr',
     'swingHoldRatio',
-    'lbd'
+    'lbd',
+    'SwWtBuyPrice', // Added
+    'SwWtTotalInvestment', // Added
+    'SwWtRemainingShares', // Added
+    'HlWtBuyPrice', // Added
+    'HlWtTotalInvestment', // Added
+    'HlWtRemainingShares', // Added
 ];
 
 const transactionScenarios = loadScenariosFromCSV<AddTransactionInputScenario>(
-    '../add-transaction-input-scenarios.csv', // Adjust this path as needed
+    '../add-transaction-input-scenarios.csv', // Corrected path
     addTxnNumericColumns
 );
 
@@ -128,14 +134,15 @@ test.describe(`Wallet Page - Add Transactions from CSV for Stock: ${testStockSym
         // 2. Clear storage for the current origin
         try {
             await page.evaluate(() => {
-                localStorage.clear();
-                sessionStorage.clear();
-                console.log('localStorage and sessionStorage cleared via page.evaluate.');
+                window.localStorage.clear();
+                window.sessionStorage.clear();
+                // For IndexedDB, you might need more specific logic if used directly
+                // Example: const dbs = await window.indexedDB.databases();
+                // dbs.forEach(db => window.indexedDB.deleteDatabase(db.name!));
             });
+            console.log('BEFORE EACH: localStorage and sessionStorage cleared.');
         } catch (e) {
-            console.warn("BEFORE EACH: Could not clear localStorage/sessionStorage on current page, proceeding. Error:", e);
-            // This might happen if the page immediately redirects or has other restrictions.
-            // Cookies are more critical for Cognito sessions usually.
+            console.error('BEFORE EACH: Error clearing storage:', e);
         }
 
         // 3. Clear cookies for the entire browser context
@@ -177,6 +184,9 @@ test.describe(`Wallet Page - Add Transactions from CSV for Stock: ${testStockSym
         await expect(titleElement).toContainText(testStockSymbolForTransactions.toUpperCase(), { timeout: 5000 });
         console.log(`[add-transaction-verify-record.spec.ts] - BEFORE EACH: Successfully on wallet page for ${testStockSymbolForTransactions}.`);
     });
+
+    // New test for the first "Buy" scenario from CSV
+    const firstScenario = transactionScenarios[0];
 
     // --- Loop through each scenario from the CSV and create a test case ---
     for (const transactionInput of transactionScenarios) {
@@ -276,31 +286,32 @@ test.describe(`Wallet Page - Add Transactions from CSV for Stock: ${testStockSym
             console.log(`[add-transaction-verify-record.spec.ts] - TEST [${transactionInput.scenarioName}]: Submitting transaction form...`);
             await page.locator('[data-testid="txn-form-submit-button"]').click();
 
-            // Wait for the transaction to appear in the list.
-            // The locator for the row might need to be more specific if signals/dates aren't unique enough quickly.
             console.log(`[add-transaction-verify-record.spec.ts] - TEST [${transactionInput.scenarioName}]: Verifying transaction in the list...`);
             const transactionRow = page.locator(
                 `[data-testid="transaction-row"]:has-text("${transactionInput.signal}"):has-text("${transactionInput.displayDate}")`
-            ).last(); // Or .first() if new transactions appear at the top
+            ).last();
 
             await expect(transactionRow).toBeVisible({ timeout: 15000 });
 
-            // Assertions for each relevant field in the transaction row
+            // date
             await expect(transactionRow.locator('[data-testid="transaction-date-display"]'))
                 .toHaveText(transactionInput.displayDate);
             
+            // action
             await expect(transactionRow.locator('[data-testid="transaction-action-display"]'))
                 .toHaveText(transactionInput.action);
-
+            
+            // txnType
             if (transactionInput.action.toUpperCase() === 'BUY') {
                 await expect(transactionRow.locator('[data-testid="transaction-txnType-display"]'))
                     .toHaveText(transactionInput.txnType);
             }
             
+            // signal
             await expect(transactionRow.locator('[data-testid="transaction-signal-display"]'))
                 .toHaveText(transactionInput.signal);
 
-            // For 'transaction-price-display'
+            // price
             const priceValue = Number(transactionInput.price);
             const expectedPriceString = priceValue.toLocaleString(undefined, {
                 minimumFractionDigits: CURRENCY_PRECISION, // Assuming CURRENCY_PRECISION is 2
@@ -312,11 +323,12 @@ test.describe(`Wallet Page - Add Transactions from CSV for Stock: ${testStockSym
             await expect(transactionRow.locator('[data-testid="transaction-price-display"]'))
                 .toHaveText(priceRegExp);
             
+            // quantity
             const expectedDisplayQuantity = Number(transactionInput.quantity).toFixed(SHARE_PRECISION);
             await expect(transactionRow.locator('[data-testid="transaction-quantity-display"]'))
                 .toHaveText(expectedDisplayQuantity);
 
-            // For 'transaction-investment-display' (this is the one that failed)
+            // investment
             const investmentValue = Number(transactionInput.investment);
             const expectedInvestmentString = investmentValue.toLocaleString(undefined, {
                 minimumFractionDigits: CURRENCY_PRECISION, // Assuming CURRENCY_PRECISION is 2
@@ -328,7 +340,7 @@ test.describe(`Wallet Page - Add Transactions from CSV for Stock: ${testStockSym
             await expect(transactionRow.locator('[data-testid="transaction-investment-display"]'))
                 .toHaveText(investmentRegExp); // Use the new RegExp
 
-            // For 'transaction-investment-display' (this is the one that failed)
+            // lbd
             if (typeof transactionInput.pdp === 'number' && typeof transactionInput.lbd === 'number' && investmentValue) {
                 const lbd_raw = transactionInput.lbd;            
                 const lbdValue = parseFloat(lbd_raw.toFixed(CURRENCY_PRECISION));
@@ -345,6 +357,49 @@ test.describe(`Wallet Page - Add Transactions from CSV for Stock: ${testStockSym
             }           
 
             console.log(`[add-transaction-verify-record.spec.ts] - TEST [${transactionInput.scenarioName}]: Transaction verification successful!`);
+
+            // Verifying wallets
+            if (transactionInput === firstScenario) {
+                console.log(`[add-transaction-verify-record.spec.ts] - TEST [${transactionInput.scenarioName}] - Verifying wallets (first scenario ONLY)...`);
+                await page.waitForTimeout(2000); // Adjust as necessary, or wait for a specific element update
+
+                // Use values from CSV for expected wallet details
+                const expectedSwingBuyPrice = Number(transactionInput.SwWtBuyPrice).toFixed(CURRENCY_PRECISION);
+                const expectedSwingInvestment = Number(transactionInput.SwWtTotalInvestment).toFixed(CURRENCY_PRECISION);
+                const expectedSwingShares = Number(transactionInput.SwWtRemainingShares).toFixed(SHARE_PRECISION);
+
+                const expectedHoldBuyPrice = Number(transactionInput.HlWtBuyPrice).toFixed(CURRENCY_PRECISION);
+                const expectedHoldInvestment = Number(transactionInput.HlWtTotalInvestment).toFixed(CURRENCY_PRECISION);
+                const expectedHoldShares = Number(transactionInput.HlWtRemainingShares).toFixed(SHARE_PRECISION);
+
+                // Verify Swing Wallet
+                console.log('Verifying Swing wallet...');
+                await page.locator('[data-testid="wallet-swing-tab"]').click(); // Ensure Swing tab is active
+                await expect(page.locator('[data-testid="wallet-swing-tab"]')).toContainText('Swing (1)', { timeout: 15000 });
+                
+                const swingWalletRow = page.locator('table tbody tr').first(); // Select the first row
+                await expect(swingWalletRow.locator('[data-testid="wallet-buyPrice-display"]')).toHaveText(`$${expectedSwingBuyPrice}`);
+                await expect(swingWalletRow.locator('[data-testid="wallet-totalInvestment-display"]')).toHaveText(`$${expectedSwingInvestment}`);
+                await expect(swingWalletRow.locator('[data-testid="wallet-remainingShares-display"]')).toHaveText(expectedSwingShares);
+                console.log('Swing wallet verified.');
+
+                // Verify Hold Wallet
+                console.log('Verifying Hold wallet...');
+                await page.locator('[data-testid="wallet-hold-tab"]').click(); // Ensure Hold tab is active
+                await expect(page.locator('[data-testid="wallet-hold-tab"]')).toContainText('Hold (1)', { timeout: 5000 });
+
+                const holdWalletRow = page.locator('table tbody tr').first(); // Select the first row
+                await expect(holdWalletRow.locator('[data-testid="wallet-buyPrice-display"]')).toHaveText(`$${expectedHoldBuyPrice}`);
+                await expect(holdWalletRow.locator('[data-testid="wallet-totalInvestment-display"]')).toHaveText(`$${expectedHoldInvestment}`);
+                await expect(holdWalletRow.locator('[data-testid="wallet-remainingShares-display"]')).toHaveText(expectedHoldShares);
+                console.log('Hold wallet verified.');
+
+                console.log(`[Test End] Wallet verification for scenario: ${firstScenario.scenarioName} complete.`);
+            }
         });
     }
+
+    
+
+    
 });
