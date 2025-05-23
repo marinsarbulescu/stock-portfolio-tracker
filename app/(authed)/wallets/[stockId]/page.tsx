@@ -99,7 +99,7 @@ export default function StockWalletPage() {
     // Mapping from state keys to desired display labels
     const TXN_COLUMN_LABELS: Record<keyof TxnColumnVisibilityState, string> = {
         date:'Date',
-        action: 'Txn',
+        action: 'Action',
         txnType: 'Type',
         signal: 'Signal',
         price: 'Price',
@@ -2263,6 +2263,7 @@ For each matching "Currently Held Swing" wallet found:
                 {/* --- START: Wallets tabs --- */}
                 <div style={{ marginBottom: '1rem' }}>
                     <button
+                        data-testid="wallet-swing-tab"
                         onClick={() => setActiveTab('Swing')}
                         style={{
                             padding: '8px 15px', marginRight: '10px', cursor: 'pointer',
@@ -2274,6 +2275,7 @@ For each matching "Currently Held Swing" wallet found:
                         Swing ({swingWallets.length})
                     </button>
                     <button
+                        data-testid="wallet-hold-tab"
                         onClick={() => setActiveTab('Hold')}
                         style={{
                             padding: '8px 15px', cursor: 'pointer',
@@ -2364,32 +2366,74 @@ For each matching "Currently Held Swing" wallet found:
                                 const currentStockPrice = latestPrices[stockSymbol ?? '']?.currentPrice;
                                 return (
                                     <tr key={wallet.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
-                                        {walletColumnVisibility.id && <td style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>{truncateId(wallet.id)}</td>}
-                                        {walletColumnVisibility.buyPrice && <td style={{ padding: '5px' }}>{formatCurrency(wallet.buyPrice)}</td>}
-                                        {walletColumnVisibility.totalInvestment && <td style={{ padding: '5px' }}>{formatCurrency(wallet.totalInvestment)}</td>}
+                                        {walletColumnVisibility.id && 
+                                            <td data-testid="wallet-id-display" style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>
+                                                {truncateId(wallet.id)}
+                                            </td>
+                                        }
+                                        {walletColumnVisibility.buyPrice && 
+                                            <td data-testid="wallet-buyPrice-display" style={{ padding: '5px' }}>
+                                                {formatCurrency(wallet.buyPrice)}
+                                            </td>
+                                        }
+                                        {walletColumnVisibility.totalInvestment && 
+                                            <td data-testid="wallet-totalInvestment-display" style={{ padding: '5px' }}>
+                                                {formatCurrency(wallet.totalInvestment)}
+                                            </td>
+                                        }
                                         {/* {walletColumnVisibility.totalSharesQty && <td style={{ padding: '5px' }}>{formatShares(wallet.totalSharesQty)}</td>} */}
                                         {walletColumnVisibility.tpValue && (
-                                            <td style={{ padding: '5px', ...getTpCellStyle(wallet, currentStockPrice) }}>
+                                            <td data-testid="wallet-tpValue-display" style={{ padding: '5px', ...getTpCellStyle(wallet, currentStockPrice) }}>
                                                 {formatCurrency(wallet.tpValue)}
                                             </td>
                                         )}
-                                        {walletColumnVisibility.sellTxnCount && <td style={{ padding: '5px' }}>{wallet.sellTxnCount ?? 0}</td>}
-                                        {walletColumnVisibility.sharesSold && <td style={{ padding: '5px' }}>{formatShares(wallet.sharesSold)}</td>}
-                                        {walletColumnVisibility.realizedPl && <td style={{ padding: '5px' }}>{formatCurrency(wallet.realizedPl)}</td>}
-                                        {walletColumnVisibility.realizedPlPercent && <td style={{ padding: '5px' }}>{formatPercent(wallet.realizedPlPercent)}</td>}
-                                        {walletColumnVisibility.remainingShares && <td style={{ padding: '5px' }}>{formatShares(wallet.remainingShares)}</td>}
+                                        {walletColumnVisibility.sellTxnCount && 
+                                            <td data-testid="wallet-sellTxnCount-display" style={{ padding: '5px' }}>
+                                                {wallet.sellTxnCount ?? 0}
+                                            </td>
+                                        }
+                                        {walletColumnVisibility.sharesSold && 
+                                            <td data-testid="wallet-sharesSold-display" style={{ padding: '5px' }}>
+                                                {formatShares(wallet.sharesSold)}
+                                            </td>
+                                        }
+                                        {walletColumnVisibility.realizedPl && 
+                                            <td data-testid="wallet-realizedPl-display" style={{ padding: '5px' }}>
+                                                {formatCurrency(wallet.realizedPl)}
+                                            </td>
+                                        }
+                                        {walletColumnVisibility.realizedPlPercent && 
+                                            <td data-testid="wallet-realizedPlPercent-display" style={{ padding: '5px' }}>
+                                                {formatPercent(wallet.realizedPlPercent)}
+                                            </td>
+                                        }
+                                        {walletColumnVisibility.remainingShares && 
+                                            <td data-testid="wallet-remainingShares-display" style={{ padding: '5px' }}>
+                                                {formatShares(wallet.remainingShares)}
+                                            </td>
+                                        }
 
                                         {/* Actions - Always Visible */}
                                         <td style={{ padding: '5px', textAlign: 'center' }}>
                                             {/* Sell Button */}
                                             {wallet.remainingShares && wallet.remainingShares > SHARE_EPSILON ? ( // Use Epsilon
-                                                <button onClick={() => handleOpenSellModal(wallet)} title="Sell from wallet" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: '#28a745' }}>
+                                                <button 
+                                                    data-testid="wallet-sell-icon"
+                                                    onClick={() => handleOpenSellModal(wallet)} 
+                                                    title="Sell from wallet" 
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: '#28a745' }}
+                                                >
                                                     <FaDollarSign />
                                                 </button>
                                             ) : ''}
                                             {/* Delete Button */}
                                             {Math.abs(wallet.remainingShares ?? 0) < SHARE_EPSILON ? ( // Use Epsilon
-                                                <button onClick={() => handleDeleteWallet(wallet)}  title="Delete wallet" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray' }}>
+                                                <button 
+                                                    data-testid="wallet-delete-icon"
+                                                    onClick={() => handleDeleteWallet(wallet)}  
+                                                    title="Delete wallet" 
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray' }}
+                                                >
                                                     <FaTrashAlt />
                                                 </button>
                                             ) : ''}
