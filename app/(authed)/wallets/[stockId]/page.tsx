@@ -1728,7 +1728,7 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
         setWalletToSell(wallet);
         // Reset form fields when opening
         setSellDate(getTodayDateString());
-        setSellQuantity('');
+        setSellQuantity(wallet.remainingShares ? String(wallet.remainingShares) : ''); // Pre-fill with remaining shares
         setSellPrice('');
         setSellError(null);
         setIsSelling(false);
@@ -2627,11 +2627,11 @@ For each matching "Currently Held Swing" wallet found:
 
                             {/* Form Fields: Date, Quantity, Price */}
                             <div style={formGroupStyle}>
-                                <label htmlFor="sellDate" style={labelStyle}>Sell Date:</label>
+                                <label htmlFor="sellDate" style={labelStyle}>Date:</label>
                                 <input id="sellDate" type="date" value={sellDate} onChange={(e) => setSellDate(e.target.value)} required disabled={isSelling} style={inputStyle} />
                             </div>
                             <div style={formGroupStyle}>
-                                <label htmlFor="sellPrice" style={labelStyle}>Sell Price ($):</label>
+                                <label htmlFor="sellPrice" style={labelStyle}>Price ($):</label>
                                 <input id="sellPrice" type="number" /*...*/ value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} required disabled={isSelling} style={inputStyle} />
                             </div>
                             <div style={formGroupStyle}>
