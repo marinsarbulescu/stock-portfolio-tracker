@@ -95,7 +95,15 @@ export function formatCurrency(value: number, precision: number = CURRENCY_PRECI
         // console.warn(`Invalid input to formatCurrency: ${value}. Returning empty string.`);
         return ''; // Or throw an error, or return a default like 'N/A'
     }
-    return value.toFixed(precision);
+    // Use Intl.NumberFormat for proper currency formatting
+    // This will handle negative signs correctly and add currency symbols based on locale.
+    // For simplicity, using 'USD' and 'en-US' locale. Adjust if you need multi-currency/locale support.
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD', // Change if you support other currencies
+        minimumFractionDigits: precision,
+        maximumFractionDigits: precision,
+    }).format(value);
 }
 
 /**

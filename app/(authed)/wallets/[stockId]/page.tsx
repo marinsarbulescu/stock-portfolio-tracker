@@ -12,8 +12,8 @@ import { usePrices } from '@/app/contexts/PriceContext';
 import { useOwnerId } from '@/app/hooks/useOwnerId';
 import { formatToMDYYYY } from '@/app/utils/dateFormatter';
 
-
-import { calculateSingleSalePL, calculateTotalRealizedSwingPL } from '@/app/utils/financialCalculations';
+// --- IMPORT THE CORRECT formatCurrency ---
+import { calculateSingleSalePL, calculateTotalRealizedSwingPL, formatCurrency } from '@/app/utils/financialCalculations';
 
 // Needed for the handleUpdateTransaction to update the wallet
 import { adjustWalletContribution } from '@/app/services/walletService';
@@ -1670,7 +1670,8 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
 };
 
     // --- START: Replace your existing Formatting Helpers with this block ---
-    const formatCurrency = (value: number | null | undefined): string => {
+    /*
+const formatCurrency = (value: number | null | undefined): string => {
         // Check for non-number OR effectively zero using CURRENCY_EPSILON
         if (typeof value !== 'number' || isNaN(value) || Math.abs(value) < CURRENCY_EPSILON) { // <-- Corrected: Use CURRENCY_EPSILON
             return '-'; // Return '-' if value is not a valid number or is effectively zero
@@ -1681,9 +1682,10 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
             minimumFractionDigits: CURRENCY_PRECISION,
             maximumFractionDigits: CURRENCY_PRECISION,
         })}`;
-    };
+};
+*/
 
-    const formatPercent = (value: number | null | undefined): string => {
+const formatPercent = (value: number | null | undefined): string => {
         if (typeof value !== 'number' || isNaN(value)) { // Added isNaN check for robustness
             return '-';
         }
@@ -1691,7 +1693,7 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
         return `${value.toFixed(PERCENT_PRECISION)}%`;
     };
 
-    const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISION): string => {
+const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISION): string => {
         if (typeof value !== 'number' || isNaN(value) || Math.abs(value) < SHARE_EPSILON) {
             return '-'; // Returns '-' only for non-numbers
         }
