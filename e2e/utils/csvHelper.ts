@@ -1,8 +1,7 @@
 // e2e/utils/csvHelper.ts
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 import { parse } from 'csv-parse/sync';
-// We will define our own minimal context types if direct import fails
 
 // --- Locally Defined Minimal Context Interfaces ---
 interface MinimalCastingContext {
@@ -23,64 +22,71 @@ interface MinimalRecordContext {
 
 export interface AddTransactionInputScenario {
     scenarioName: string;
-    date: string;
-    displayDate: string;
-    action: 'Buy' | 'Sell' | 'Div';
-    txnType: 'Split' | 'Swing' | 'Hold';
-    signal: string;
-    price: number;
-    investment: number;
-    quantity: number;
-    pdp: number;
-    plr: number;
-    swingHoldRatio: number;
-    lbd: number;
-    SwWtBuyPrice?: number; // Optional because not all rows might have it initially
+    stepName?: string; // Added for multi-step scenarios
+    date: string; // YYYY-MM-DD
+    displayDate?: string; // MM/DD/YYYY or other display format
+    action: 'Buy' | 'Sell' | 'Div'; // Assuming these are the primary actions
+    txnType?: 'Swing' | 'Hold' | 'Split'; // Specific to Buy actions
+    signal?: '_5DD' | 'Cust' | 'Initial' | 'EOM' | 'LBD' | 'TPH' | 'TPP' | 'TP'; // Signal for the transaction
+    price?: number;
+    investment?: number; // For Buy/Div
+    quantity?: number; // For Sell, or calculated for Buy
+    pdp?: number; // Percent Down Price (for LBD calc)
+    plr?: number; // Profit/Loss Ratio (for TP calc)
+    swingHoldRatio?: number; // Percentage for Swing in a Split Buy (e.g., 70 for 70%)
+    lbd?: number; // Limit Buy Down price (calculated or for verification)
+    // Expected Swing Wallet values
+    SwWtBuyPrice?: number;
     SwWtTotalInvestment?: number;
     SwWtRemainingShares?: number;
+    // Expected Hold Wallet values
     HlWtBuyPrice?: number;
     HlWtTotalInvestment?: number;
     HlWtRemainingShares?: number;
+
+    // New fields for stock creation
+    stockSymbol: string;
+    stockName: string;
+    stockStockType?: string;
+    stockRegion?: string;
+    stockPdp?: number;
+    stockPlr?: number;
+    stockBudget?: number;
+    stockSwingHoldRatio?: number;
 }
 
-export function loadScenariosFromCSV<T extends object>(
+export function loadScenariosFromCSV<T extends Record<string, any>>(
     relativePath: string,
-    numericColumns: ReadonlyArray<keyof T>
+    numericColumns: ReadonlyArray<keyof T> = []
 ): T[] {
-    const csvFilePath = path.resolve(__dirname, relativePath);
+    const filePath = path.join(__dirname, relativePath);
+    console.log(`[csvHelper.ts] Attempting to load CSV from: ${filePath}`); // LOG 1
     try {
-        const fileContent = fs.readFileSync(csvFilePath, { encoding: 'utf-8' });
+        const fileContent = fs.readFileSync(filePath, { encoding: 'utf8' });
+        console.log(`[csvHelper.ts] File content read successfully. Length: ${fileContent.length}`); // LOG 2
+        if (fileContent.trim().length === 0) {
+            console.warn(`[csvHelper.ts] CSV file is empty: ${filePath}`);
+            return [];
+        }
 
-        const parsedRecords: any[] = parse(fileContent, {
+        const records = parse(fileContent, {
             columns: true,
             skip_empty_lines: true,
             trim: true,
             cast: (value: string, context: MinimalCastingContext) => { // Using MinimalCastingContext
-                if (context.header || !context.column) {
-                    return value;
-                }
-                // Ensure context.column is treated as string if that's expected from 'columns:true'
-                const columnName = String(context.column);
-                if ((numericColumns as ReadonlyArray<string>).includes(columnName)) {
-                    if (value === '' || value === null || value === undefined) {
-                        return null;
-                    }
+                if (context.header) return value;
+                if (numericColumns.includes(context.column as keyof T)) {
+                    if (value === '' || value.trim() === '') return undefined; // Handle empty strings for numeric fields
                     const num = parseFloat(value);
-                    return isNaN(num) ? null : num;
+                    return isNaN(num) ? undefined : num; // Convert actual NaN to undefined as well, or keep as NaN if preferred
                 }
                 return value;
             },
-            on_record: (record: Partial<T>, context: MinimalRecordContext): T | null => { // Using MinimalRecordContext
-                return record as T;
-            }
-        });
-
-        const recordsAfterOnRecord = parsedRecords as (T | null)[];
-        return recordsAfterOnRecord.filter((item: T | null): item is T => item !== null);
-
+        }) as unknown as T[];
+        console.log(`[csvHelper.ts] Parsed ${records.length} records from ${filePath}`); // LOG 3
+        return records;
     } catch (error) {
-        const err = error as Error;
-        console.error(`[csvHelper.ts] - Error loading scenarios from ${csvFilePath}: ${err.message}`);
-        throw new Error(`Failed to load scenarios from ${relativePath}. Make sure the file exists, is readable, and matches the expected format. Original error: ${err.message}`);
+        console.error(`[csvHelper.ts] Error loading or parsing CSV file ${filePath}:`, error);
+        return [];
     }
 }

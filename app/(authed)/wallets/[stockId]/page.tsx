@@ -1959,7 +1959,7 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
                     </p>
                 </div>         
                 
-                <button data-testid="wallet-page-add-transaction-button" onClick={handleOpenBuyModal} style={{ padding: '8px 15px' }}>Add Buy Transaction</button>
+                <button data-testid="add-buy-transaction-button" onClick={handleOpenBuyModal} style={{ padding: '8px 15px' }}>Add Buy Transaction</button>
             </div>
 
             {/* --- START: Overview section --- */}
@@ -2263,7 +2263,7 @@ For each matching "Currently Held Swing" wallet found:
                 {/* --- START: Wallets tabs --- */}
                 <div style={{ marginBottom: '1rem' }}>
                     <button
-                        data-testid="wallet-swing-tab"
+                        data-testid="wallet-tab-Swing"
                         onClick={() => setActiveTab('Swing')}
                         style={{
                             padding: '8px 15px', marginRight: '10px', cursor: 'pointer',
@@ -2275,7 +2275,7 @@ For each matching "Currently Held Swing" wallet found:
                         Swing ({swingWallets.length})
                     </button>
                     <button
-                        data-testid="wallet-hold-tab"
+                        data-testid="wallet-tab-Hold"
                         onClick={() => setActiveTab('Hold')}
                         style={{
                             padding: '8px 15px', cursor: 'pointer',
@@ -2292,7 +2292,7 @@ For each matching "Currently Held Swing" wallet found:
                 {error && <p style={{ color: 'red' }}>Error loading wallets: {error}</p>}
 
                 {/* --- START: Wallets table --- */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
+                <table data-testid="wallets-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
                             {walletColumnVisibility.id && (
@@ -2354,9 +2354,11 @@ For each matching "Currently Held Swing" wallet found:
                         {(activeTab === 'Swing' ? swingWallets : holdWallets).length === 0 ? (
                             <tr>
                                 {/* Calculate colspan dynamically */}
-                                <td colSpan={
-                                    (Object.values(walletColumnVisibility).filter(Boolean).length) + 2 // +1 for WalletID, +1 for Actions
-                                } style={{ textAlign: 'center', padding: '1rem' }}>
+                                <td
+                                    data-testid="wallet-notfound-display"
+                                    colSpan={(Object.values(walletColumnVisibility).filter(Boolean).length) + 2} 
+                                    style={{ textAlign: 'center', padding: '1rem' }}
+                                >
                                     No {activeTab} wallets found for this stock.
                                 </td>
                             </tr>

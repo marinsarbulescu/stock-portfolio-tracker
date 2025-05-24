@@ -1,0 +1,4 @@
+scenarioName,stepName,date,action,txnType,signal,price,investment,SwWtBuyPrice,SwWtTotalInvestment,SwWtRemainingShares,HlWtBuyPrice,HlWtTotalInvestment,HlWtRemainingShares,stockSymbol,stockName,stockStockType,stockRegion,stockPdp,stockPlr,stockBudget,stockSwingHoldRatio
+MultiBuySamePrice,1_BuySwingA,2025-07-01,Buy,Swing,Initial,10,100,10,100,10,,,,E2EMULTI,E2EMULTI Test Stock,Stock,US,5,2,1000,50
+MultiBuySamePrice,2_BuySplitB,2025-07-02,Buy,Split,Cust,10,200,10,200,20,10,100,10,E2EMULTI,E2EMULTI Test Stock,Stock,US,5,2,1000,50
+MultiBuySamePrice,3_BuyHoldC,2025-07-03,Buy,Hold,Cust,10,50,10,200,20,10,150,15,E2EMULTI,E2EMULTI Test Stock,Stock,US,5,2,1000,50

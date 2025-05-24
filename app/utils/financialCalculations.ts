@@ -83,3 +83,31 @@ export function calculateTotalRealizedSwingPL(
 
     return parseFloat(totalSwingPlDollars.toFixed(CURRENCY_PRECISION));
 }
+
+/**
+ * Formats a number as a currency string.
+ * @param value - The number to format.
+ * @param precision - The number of decimal places.
+ * @returns A string representing the formatted currency value.
+ */
+export function formatCurrency(value: number, precision: number = CURRENCY_PRECISION): string {
+    if (typeof value !== 'number' || isNaN(value)) {
+        // console.warn(`Invalid input to formatCurrency: ${value}. Returning empty string.`);
+        return ''; // Or throw an error, or return a default like 'N/A'
+    }
+    return value.toFixed(precision);
+}
+
+/**
+ * Formats a number as a share quantity string.
+ * @param value - The number to format.
+ * @param precision - The number of decimal places for shares.
+ * @returns A string representing the formatted share quantity.
+ */
+export function formatShares(value: number, precision: number): string {
+    if (typeof value !== 'number' || isNaN(value)) {
+        // console.warn(`Invalid input to formatShares: ${value}. Returning empty string.`);
+        return ''; // Or throw an error, or return a default like 'N/A'
+    }
+    return value.toFixed(precision);
+}

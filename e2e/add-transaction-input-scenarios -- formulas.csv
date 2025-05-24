@@ -1,5 +1,0 @@
-scenarioName,date,displayDate,action,txnType,signal,price,investment,quantity,pdp,plr,swingHoldRatio,lbd,SwWtBuyPrice,SwWtTotalInvestment,SwWtRemainingShares,HlWtBuyPrice,HlWtTotalInvestment,HlWtRemainingShares
-SplitBuyInitial,5/15/2025,5/15/2025,Buy,Split,Initial,10,200,20,5,2,50,9.5,10,100,10,10,100,10
-SwingBuyCust,5/16/2025,5/16/2025,Buy,Swing,Cust,25,500,20,5,2,50,23.75,25,500,25,0,0,0
-HoldBuyEOM,5/17/2025,5/17/2025,Buy,Hold,EOM,7,350,50,5,2,50,6.65,0,0,0,7,350,50
-AnotherSplitBuy,5/18/2025,5/18/2025,Buy,Split,LBD,100,1000,10,5,2,50,95,100,500,50,100,500,50
