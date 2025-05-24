@@ -2090,7 +2090,7 @@ a temporary map (walletBuyPriceMap) created from your wallets data.
                                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
                                     <p>
                                         <span data-testid="overview-realized-swing-pl-dollars">
-                                            {formatCurrency(plStats.totalSwingPlDollars)}
+                                            {formatCurrency(plStats.totalSwingPlDollars ?? 0)}
                                         </span>
                                         &nbsp;(
                                         <span data-testid="overview-realized-swing-pl-percent">
@@ -2101,7 +2101,7 @@ a temporary map (walletBuyPriceMap) created from your wallets data.
                                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
                                     <p>
                                         <span data-testid="overview-realized-hold-pl-dollars">
-                                            {formatCurrency(plStats.totalHoldPlDollars)}
+                                            {formatCurrency(plStats.totalHoldPlDollars ?? 0)}
                                         </span>
                                         &nbsp;(
                                         <span data-testid="overview-realized-hold-pl-percent">
@@ -2112,7 +2112,7 @@ a temporary map (walletBuyPriceMap) created from your wallets data.
                                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                                     <p>
                                         <span data-testid="overview-realized-stock-pl-dollars">
-                                            {formatCurrency(plStats.totalStockPlDollars)}
+                                            {formatCurrency(plStats.totalStockPlDollars ?? 0)}
                                         </span>
                                         &nbsp;(
                                         <span data-testid="overview-realized-stock-pl-percent">
@@ -2145,7 +2145,7 @@ For each matching "Currently Held Swing" wallet found:
                                     <p>
                                         {unrealizedPlStats.unrealizedSwingDollars === null
                                               ? (pricesLoading ? 'Loading Price...' : 'N/A')
-                                              : formatCurrency(unrealizedPlStats.unrealizedSwingDollars)
+                                              : formatCurrency(unrealizedPlStats.unrealizedSwingDollars ?? 0)
                                         }
                                         &nbsp;
                                         ({unrealizedPlStats.unrealizedSwingPercent === null
@@ -2158,7 +2158,7 @@ For each matching "Currently Held Swing" wallet found:
                                     <p>
                                         {unrealizedPlStats.unrealizedHoldDollars === null
                                               ? (pricesLoading ? 'Loading Price...' : 'N/A')
-                                              : formatCurrency(unrealizedPlStats.unrealizedHoldDollars)
+                                              : formatCurrency(unrealizedPlStats.unrealizedHoldDollars ?? 0)
                                         }
                                         &nbsp;
                                         ({unrealizedPlStats.unrealizedHoldPercent === null
@@ -2171,7 +2171,7 @@ For each matching "Currently Held Swing" wallet found:
                                     <p>
                                         {unrealizedPlStats.unrealizedTotalDollars === null
                                               ? (pricesLoading ? 'Loading Price...' : 'N/A')
-                                              : formatCurrency(unrealizedPlStats.unrealizedTotalDollars)
+                                              : formatCurrency(unrealizedPlStats.unrealizedTotalDollars ?? 0)
                                         }
                                         &nbsp;
                                         ({unrealizedPlStats.unrealizedTotalPercent === null
@@ -2191,7 +2191,7 @@ For each matching "Currently Held Swing" wallet found:
                                     <p>
                                         {totalPlStats.totalSwingDollars === null
                                             ? (pricesLoading ? 'Loading Price...' : 'N/A')
-                                            : formatCurrency(totalPlStats.totalSwingDollars)
+                                            : formatCurrency(totalPlStats.totalSwingDollars ?? 0)
                                         }
                                         &nbsp;
                                         {/* Add Percentage Display */}
@@ -2205,7 +2205,7 @@ For each matching "Currently Held Swing" wallet found:
                                     <p>
                                          {totalPlStats.totalHoldDollars === null
                                             ? (pricesLoading ? 'Loading Price...' : 'N/A')
-                                            : formatCurrency(totalPlStats.totalHoldDollars)
+                                            : formatCurrency(totalPlStats.totalHoldDollars ?? 0)
                                         }
                                          &nbsp;
                                         {/* Add Percentage Display */}
@@ -2219,7 +2219,7 @@ For each matching "Currently Held Swing" wallet found:
                                     <p>
                                          {totalPlStats.totalStockDollars === null
                                             ? (pricesLoading ? 'Loading Price...' : 'N/A')
-                                            : formatCurrency(totalPlStats.totalStockDollars)
+                                            : formatCurrency(totalPlStats.totalStockDollars ?? 0)
                                         }
                                          &nbsp;
                                         {/* Add Percentage Display */}
@@ -2377,18 +2377,18 @@ For each matching "Currently Held Swing" wallet found:
                                         }
                                         {walletColumnVisibility.buyPrice && 
                                             <td data-testid="wallet-buyPrice-display" style={{ padding: '5px' }}>
-                                                {formatCurrency(wallet.buyPrice)}
+                                                {formatCurrency(wallet.buyPrice ?? 0)}
                                             </td>
                                         }
                                         {walletColumnVisibility.totalInvestment && 
                                             <td data-testid="wallet-totalInvestment-display" style={{ padding: '5px' }}>
-                                                {formatCurrency(wallet.totalInvestment)}
+                                                {formatCurrency(wallet.totalInvestment ?? 0)}
                                             </td>
                                         }
                                         {/* {walletColumnVisibility.totalSharesQty && <td style={{ padding: '5px' }}>{formatShares(wallet.totalSharesQty)}</td>} */}
                                         {walletColumnVisibility.tpValue && (
                                             <td data-testid="wallet-tpValue-display" style={{ padding: '5px', ...getTpCellStyle(wallet, currentStockPrice) }}>
-                                                {formatCurrency(wallet.tpValue)}
+                                                {formatCurrency(wallet.tpValue ?? 0)}
                                             </td>
                                         )}
                                         {walletColumnVisibility.sellTxnCount && 
@@ -2403,7 +2403,7 @@ For each matching "Currently Held Swing" wallet found:
                                         }
                                         {walletColumnVisibility.realizedPl && 
                                             <td data-testid="wallet-realizedPl-display" style={{ padding: '5px' }}>
-                                                {formatCurrency(wallet.realizedPl)}
+                                                {formatCurrency(wallet.realizedPl ?? 0)}
                                             </td>
                                         }
                                         {walletColumnVisibility.realizedPlPercent && 
@@ -2588,13 +2588,13 @@ For each matching "Currently Held Swing" wallet found:
                                                 <td data-testid="transaction-signal-display" style={{ padding: '5px' }}>{txn.signal ?? '-'}</td>
                                                 )}
                                             {txnColumnVisibility.price && (
-                                                <td data-testid="transaction-price-display" style={{ padding: '5px' }}>{formatCurrency(txn.price)}</td>
+                                                <td data-testid="transaction-price-display" style={{ padding: '5px' }}>{formatCurrency(txn.price ?? 0)}</td>
                                                 )}
                                             {txnColumnVisibility.lbd && (
-                                                <td data-testid="transaction-lbd-display" style={{ padding: '5px' }}>{txn.action === 'Buy' ? formatCurrency(txn.lbd) : '-'}</td>
+                                                <td data-testid="transaction-lbd-display" style={{ padding: '5px' }}>{txn.action === 'Buy' ? formatCurrency(txn.lbd ?? 0) : '-'}</td>
                                                 )}
                                             {txnColumnVisibility.investment && (
-                                                <td data-testid="transaction-investment-display" style={{ padding: '5px' }}>{txn.action !== 'Sell' ? formatCurrency(txn.investment) : '-'}</td>
+                                                <td data-testid="transaction-investment-display" style={{ padding: '5px' }}>{txn.action !== 'Sell' ? formatCurrency(txn.investment ?? 0) : '-'}</td>
                                                 )}
                                             {txnColumnVisibility.quantity && (
                                                 <td data-testid="transaction-quantity-display" style={{ padding: '5px' }}>{formatShares(txn.quantity)}</td>
@@ -2612,7 +2612,7 @@ For each matching "Currently Held Swing" wallet found:
                                                     padding: '5px',
                                                     color: txn.action !== 'Sell' || txn.txnProfit == null ? 'inherit' : txn.txnProfit >= 0 ? '#01ff00' : '#ff0000'
                                                 }}>
-                                                    {txn.action === 'Sell' ? formatCurrency(txn.txnProfit) : '-'}
+                                                    {txn.action === 'Sell' ? formatCurrency(txn.txnProfit ?? 0) : '-'}
                                                 </td>
                                             )}
                                             {txnColumnVisibility.txnProfitPercent && (
@@ -2668,7 +2668,7 @@ For each matching "Currently Held Swing" wallet found:
                         <form onSubmit={handleSellSubmit}>
                             <h3>Sell Shares from Wallet</h3>
                             {/* Stock/Buy Price Info */}
-                            <p style={{ marginBottom: '15px' }}>Stock: <strong>{stockSymbol?.toUpperCase()}</strong> | Buy Price: <strong>{formatCurrency(walletToSell.buyPrice)}</strong></p>
+                            <p style={{ marginBottom: '15px' }}>Stock: <strong>{stockSymbol?.toUpperCase()}</strong> | Buy Price: <strong>{formatCurrency(walletToSell.buyPrice ?? 0)}</strong></p>
 
                             {/* Display Error */}
                             {sellError && <p style={{ color: 'red', /*...*/ }}>{sellError}</p>}
