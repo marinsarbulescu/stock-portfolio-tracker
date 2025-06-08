@@ -275,9 +275,9 @@ test.describe(`Wallet Page - Multi-Buy Same Price Scenarios from CSV`, () => {
                     const swingWalletRow = swingWalletRows.first(); 
                     
                     await expect(swingWalletRow.locator('[data-testid="wallet-buyPrice-display"]'))
-                        .toHaveText(`$${formatCurrency(step.SwWtBuyPrice ?? 0, CURRENCY_PRECISION)}`, { timeout: 5000 });
+                        .toHaveText(`${formatCurrency(step.SwWtBuyPrice ?? 0, CURRENCY_PRECISION)}`, { timeout: 5000 });
                     await expect(swingWalletRow.locator('[data-testid="wallet-totalInvestment-display"]'))
-                        .toHaveText(`$${formatCurrency(step.SwWtTotalInvestment ?? 0, CURRENCY_PRECISION)}`);
+                        .toHaveText(`${formatCurrency(step.SwWtTotalInvestment ?? 0, CURRENCY_PRECISION)}`);
                     await expect(swingWalletRow.locator('[data-testid="wallet-remainingShares-display"]'))
                         .toHaveText(formatShares(step.SwWtRemainingShares ?? 0, SHARE_PRECISION));
                     console.log(`[${scenarioName} - ${step.stepName}] Swing Wallet verified successfully.`);
@@ -318,9 +318,9 @@ test.describe(`Wallet Page - Multi-Buy Same Price Scenarios from CSV`, () => {
                     const holdWalletRow = holdWalletRows.first();
                     
                     await expect(holdWalletRow.locator('[data-testid="wallet-buyPrice-display"]'))
-                        .toHaveText(`$${formatCurrency(step.HlWtBuyPrice ?? 0, CURRENCY_PRECISION)}`, { timeout: 5000 });
+                        .toHaveText(`${formatCurrency(step.HlWtBuyPrice ?? 0, CURRENCY_PRECISION)}`, { timeout: 5000 });
                     await expect(holdWalletRow.locator('[data-testid="wallet-totalInvestment-display"]'))
-                        .toHaveText(`$${formatCurrency(step.HlWtTotalInvestment ?? 0, CURRENCY_PRECISION)}`);
+                        .toHaveText(`${formatCurrency(step.HlWtTotalInvestment ?? 0, CURRENCY_PRECISION)}`);
                     await expect(holdWalletRow.locator('[data-testid="wallet-remainingShares-display"]'))
                         .toHaveText(formatShares(step.HlWtRemainingShares ?? 0, SHARE_PRECISION));
                     console.log(`[${scenarioName} - ${step.stepName}] Hold Wallet verified successfully.`);

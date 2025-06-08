@@ -1103,7 +1103,14 @@ function StocksListingContent() {
             ) : (
               portfolioStocksData.map((stock, index) => (
                 <tr key={stock.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
-                  <td style={{ padding: '5px' }}><Link href={`/wallets/${stock.id}`}>{stock.symbol?.toUpperCase()}</Link></td>
+                  <td style={{ padding: '5px' }}>
+                    <Link 
+                      href={`/wallets/${stock.id}`} 
+                      data-testid={`stock-link-${stock.symbol?.toUpperCase()}`}
+                    >
+                      {stock.symbol?.toUpperCase()}
+                    </Link>
+                  </td>
                   <td style={{ padding: '5px' }}>
                     {stock.name ? 
                       (stock.name.length > 15 ? 

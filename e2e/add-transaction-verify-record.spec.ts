@@ -87,12 +87,6 @@ try {
     console.error('[add-transaction-verify-record.spec.ts] - CRITICAL: Error configuring Amplify in E2E spec file:', error);
 }
 
-// const TEST_USER_COGNITO_SUB = "e10b55e0-9031-70db-23f9-cdf5d997659c"; // marin.sarbulescu@gmail.com user is in local, used for testing
-// const E2E_TEST_USER_OWNER_ID = `${TEST_USER_COGNITO_SUB}::${TEST_USER_COGNITO_SUB}`;
-
-// const E2E_TEST_USERNAME = 'marin.sarbulescu@gmail.com';
-// const E2E_TEST_PASSWORD = 'T5u#PW4&!9wm4SzG';
-
 // --- Load Transaction Scenarios from CSV ---
 // Define which columns in your AddTransactionInputScenario CSV are numeric
 const addTxnNumericColumns: ReadonlyArray<keyof AddTransactionInputScenario> = [

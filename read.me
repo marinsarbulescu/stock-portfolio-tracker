@@ -33,10 +33,64 @@ Step 4: Manual Approval Process (Admin Task)
 
 ###############################
 
-Your Next Steps:
+Overall Test Strategy:
 
-Choose Your E2E Tool: Decide between Selenium, Playwright, or Cypress based on your comfort level and project needs.
-Set Up Test Environment: Ensure you have a stable deployment environment for testing.
-Plan Data Management: Decide how you will manage the initial state for your tests (setup/teardown, dedicated accounts, etc.). This is often the most time-consuming part.
-Prepare Excel/Data Source: Finalize your Excel sheet and decide how your test scripts will read the expected values.
-Write Your First E2E Test: Start with one of the scenarios you defined. Focus on getting the basic flow working: login -> navigate -> perform actions -> find element -> assert value.
+The goal is to create a suite of E2E tests using Playwright that cover the full lifecycle of "Buy" and "Sell" transactions, including updates, and meticulously verify the impact of these operations on the key financial overview statistics: Realized P/L, Unrealized P/L, and Total P/L, broken down by Swing, Hold, and overall Stock categories.
+
+Key Test Suites & Scenarios:
+
+Single Stock - Complete Lifecycle:
+
+Objective: Track a single stock through adding initial buy transactions (Swing, Hold, Split), updating these buy transactions (changing price, investment, or share distribution like SHR), mocking changes in the stock's current market price, creating sell transactions (partial and full, profitable and loss-making) from existing wallets, and finally updating these sell transactions.
+Verification: At each step, assert:
+Correct creation/update of transaction records.
+Correct creation/update of corresponding Swing and/or Hold wallets (buy price, shares, investment).
+Accurate recalculation of all Realized, Unrealized, and Total P/L figures in the stock's overview section.
+Multi-Wallet Interactions (Complex Scenarios):
+
+Objective: Test scenarios where multiple buy transactions at different prices or with different types (Swing/Hold/Split) create a more complex wallet structure. Then, perform sells that could draw from multiple wallets or test how updates to earlier transactions affect the overall picture.
+Verification: Similar to the single stock lifecycle, focusing on how the system aggregates P/L from multiple sources and handles updates in a multi-wallet context.
+Edge Cases and Error Handling:
+
+Objective: Ensure robustness by testing invalid inputs, actions that should be disallowed (e.g., selling more shares than available), and potentially disruptive actions (e.g., deleting a buy transaction that has linked sells).
+Verification: Correct error messages are displayed, disallowed actions are prevented, and the system state remains consistent. P/L figures should either remain unchanged or be correctly adjusted if an operation (like a permitted deletion) proceeds.
+Data Management & Test Structure:
+
+CSV-Driven Tests: Continue using CSV files to define detailed scenarios and steps. Each row will represent an action and its expected outcomes.
+CSV Columns:
+Identifiers: scenarioName, stepName, testDescription.
+Action Definition: actionToPerform (e.g., addBuy, updateBuy, createSellFromWallet, updateSell, mockCurrentPrice, deleteTransaction).
+Transaction Data: stockSymbol, date, transactionAction (Buy/Sell), txnType (Swing/Hold/Split), signal, price, investment (for Buy), quantity (for Sell), shrPercent (for Split Buys).
+Targeting for Updates/Deletes: targetTransactionId or targetWalletId (or a robust way to identify them, e.g., "latestBuyForStockXYZ").
+Mocking: newCurrentPrice (for mockCurrentPrice action).
+Crucial - Expected P/L Overview Stats: Detailed columns for every P/L metric that needs verification (e.g., expectedRealizedSwingPL_USD, expectedUnrealizedHoldPL_Percent, expectedTotalStockPL_USD).
+(Optional but Recommended) Expected Wallet States: Columns for key wallet attributes after an operation (e.g., expectedSwingWallet_RemainingShares, expectedHoldWallet_BuyPrice).
+Playwright Spec Files: Organize tests into logical .spec.ts files (e.g., full-transaction-lifecycle.spec.ts, pl-calculation-complex.spec.ts). These files will parse the CSVs and execute the defined steps.
+Essential Helper Functions (in pageHelpers.ts):
+
+Transaction Operations:
+addBuyTransaction(page, buyData)
+updateBuyTransaction(page, identifier, updateData)
+createSellTransactionFromWallet(page, walletIdentifier, sellData)
+updateSellTransaction(page, transactionIdentifier, updateData)
+deleteTransaction(page, transactionIdentifier)
+Data Retrieval & Verification:
+getStockOverviewStats(page, stockSymbol): Returns a structured object of all P/L values from the UI.
+getWalletDetails(page, walletIdentifier): Returns details for a specific wallet.
+getTransactionDetails(page, transactionIdentifier)
+Test Environment Control:
+mockCurrentStockPrice(page, stockSymbol, newPrice): This is critical. It will likely involve intercepting and modifying the API response that usePrices relies on, or using a test-specific backend endpoint if available.
+clearStockData(page, stockSymbol): Essential for ensuring test isolation by deleting all transactions and wallets for a given stock before each scenario.
+Navigation & Common UI Interactions: Continue using and expanding existing helpers.
+Key Implementation Considerations:
+
+Mocking Current Stock Price: This is paramount for testing Unrealized and Total P/L. The most robust E2E approach is to mock the API responses that provide this price data to the frontend. Playwright's network interception capabilities (page.route()) are ideal for this.
+State Management & Isolation: Each test scenario (or even major step block) must start from a known, clean state for the stock(s) involved. The clearStockData helper will be heavily used.
+Identifying Elements for Interaction/Verification:
+Use stable data-testid attributes extensively on all relevant UI elements (input fields, buttons, P/L display areas, wallet rows, transaction rows).
+When a transaction or wallet is created, if its ID is available in the UI or via a notification, capture it for use in subsequent steps (e.g., updating that specific item). Otherwise, rely on other unique attributes from your CSV data to locate it.
+Precision in Assertions: For financial values (currency, percentages, shares), always compare using an epsilon (a small tolerance) to account for potential floating-point arithmetic nuances. Do not use exact equality for these.
+Comprehensive Assertions: Don't just check one P/L value. Verify all relevant P/L categories (Swing, Hold, Stock for Realized, Unrealized, Total) to ensure calculations are correct across the board.
+Modularity and Reusability: Break down complex actions into smaller, reusable helper functions. This will make tests easier to write, read, and maintain.
+Debugging Aids: Include console.log statements within your test helpers (perhaps controlled by an environment variable) to output key data during test execution, which can be invaluable for debugging. Playwright's tracing capabilities are also excellent.
+This strategy should provide excellent coverage of the transaction and P/L calculation functionalities. The main challenges will be implementing robust price mocking and ensuring clean state management between tests.
