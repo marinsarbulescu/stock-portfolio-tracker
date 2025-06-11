@@ -1,5 +1,5 @@
 // app/utils/financialCalculations.ts
-import { CURRENCY_PRECISION } from '@/app/config/constants'; // Assuming you have this constant
+import { CURRENCY_PRECISION, PERCENT_PRECISION } from '@/app/config/constants'; // Assuming you have these constants
 
 // Define simplified types for mock data used in tests (can also be shared or defined in test file)
 interface MockTransaction {
@@ -114,8 +114,19 @@ export function formatCurrency(value: number, precision: number = CURRENCY_PRECI
  */
 export function formatShares(value: number, precision: number): string {
     if (typeof value !== 'number' || isNaN(value)) {
-        // console.warn(`Invalid input to formatShares: ${value}. Returning empty string.`);
         return ''; // Or throw an error, or return a default like 'N/A'
     }
     return value.toFixed(precision);
+}
+
+/**
+ * Formats a number as a percentage string.
+ * @param value - The number to format (e.g., 50 for 50%).
+ * @returns A string representing the formatted percentage value.
+ */
+export function formatPercent(value: number | null | undefined): string {
+    if (typeof value !== 'number' || isNaN(value)) {
+        return '-';
+    }
+    return `${value.toFixed(PERCENT_PRECISION)}%`;
 }

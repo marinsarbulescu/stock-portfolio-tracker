@@ -12,6 +12,8 @@ import { usePrices } from '@/app/contexts/PriceContext';
 import { useOwnerId } from '@/app/hooks/useOwnerId';
 import { formatToMDYYYY } from '@/app/utils/dateFormatter';
 import WalletsPageHeader from './components/WalletsPageHeader';
+import WalletsOverviewSection from './components/WalletsOverviewSection';
+import WalletsSection from './components/WalletsSection';
 
 // --- IMPORT THE CORRECT formatCurrency ---
 import { calculateSingleSalePL, calculateTotalRealizedSwingPL, formatCurrency } from '@/app/utils/financialCalculations';
@@ -1016,7 +1018,6 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                     setStockSymbol("Error");
                     setStockName("Error");
                     setStockBudget(null);
-                    setStockPdp(null); // Set related state to null on catch
                     setStockShr(null);
                     setStockPlr(null);
                 });
@@ -1958,494 +1959,39 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 pricesLoading={pricesLoading}
                 onAddBuy={handleOpenBuyModal}
             />
-            {/* --- START: Overview section --- */}
-            <div style={{
-                marginBottom: '1rem',
-                border: '1px solid #444', // Keep border for the whole section
-            }}>
-                <p
-                    style={{
-                        marginTop: 0, marginBottom: 0, // Remove bottom margin if collapsing
-                        padding: '10px 15px', // Keep padding on heading
-                        cursor: 'pointer', // Indicate clickable
-                        display: 'flex', // Use flex to align text and arrow
-                        justifyContent: 'space-between', // Push arrow to the right
-                        alignItems: 'center'
-                    }}
-                    onClick={() => setIsOverviewExpanded(prev => !prev)} // Toggle state on click
-                >                   
-                    Overview
-                    {/* Indicator Arrow */}
-                    <span style={{ fontSize: '0.8em' }}>{isOverviewExpanded ? '▼' : '▶'}</span>
-                </p>
-
-                {/* Conditionally render the details based on state */}
-                {isOverviewExpanded && (
-                    <div style={{
-                        padding: '0px 15px 10px 15px', // Add padding back for content
-                        borderTop: '1px solid #444', // Add divider when expanded
-                        fontSize: '0.8em'
-                    }}>
-                        {stockBudget === undefined || stockPdp === undefined || stockShr === undefined || stockPlr === undefined ? (
-                            <p>Loading details...</p>
-                        ) : (
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
-                                {/* Column 1 */}
-                                <div>
-                                    <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Settings</p>
-                                    
-                                    
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-                                        <div>
-                                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Budget</p>
-                                            <p>
-                                                {typeof stockBudget === 'number' ? formatCurrency(stockBudget) : 'Not set'}
-                                            </p>
-                                        </div>
-                                        <div>    
-                                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Available</p>
-                                            <p>
-                                                {typeof stockBudget === 'number' ? formatCurrency(stockBudget - totalTiedUpInvestment) : 'N/A'}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Price Drop Percent (PDP)</p>
-                                    <p>{typeof stockPdp === 'number' ? `${stockPdp}%` : 'Not set'}</p>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing-Hold Ratio (SHR)</p>
-                                    <p>{typeof stockShr === 'number' ? `${stockShr}% Swing` : 'Not set'}</p>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Profit-Loss Ratio (PLR)</p>
-                                    <p>{typeof stockPlr === 'number' ? stockPlr : 'Not set'}</p>                                    
-                                </div>
-
-                                {/* Column 2 */}
-                                <div>
-                                    <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Txns & Shs</p>
-                                    
-                                    
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-                                        <div>
-                                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Buys</p>
-                                            <p>
-                                                {transactionCounts.buys}
-                                            </p>
-
-                                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing Sells</p>
-                                            <p>
-                                                {transactionCounts.swingSells}
-                                            </p>
-
-                                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing shs</p>
-                                            <p>
-                                                {formatShares(currentShares.swing)}
-                                            </p>
-                                        </div>
-                                        <div>    
-                                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Sells</p>
-                                            <p>
-                                                {transactionCounts.totalSells}
-                                            </p>
-                                            
-                                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold Sells</p>
-                                            <p>
-                                                {transactionCounts.holdSells}
-                                            </p>
-
-                                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold shs</p>
-                                            <p>
-                                                {formatShares(currentShares.hold)}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Total shs</p>
-                                    <p>{formatShares(currentShares.total)}</p>
-                                </div>
-
-                                {/* --- START: Realized P/L --- */}
-                                <div>
-{/*
-Calculate all-time Realized P/L from all Swing Sells (Hold has the same logic).
-
-The code iterates through your transactions list. It looks for transactions that meet all these criteria:
-- action is 'Sell'
-- txnType is 'Swing'
-
-For each matching Swing Sell transaction found:
-- It finds the buyPrice of the shares sold by looking up the wallet ID stored in the transaction's completedTxnId field in 
-a temporary map (walletBuyPriceMap) created from your wallets data.
-- It calculates the profit/loss for that specific sale: profitForTxn = (Sell Price - Wallet Buy Price) * Quantity Sold.
-- It adds this profitForTxn to a running total called totalSwingPlDollars.                                 
-*/}
-                                    <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Realized P/L</p>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
-                                    <p>
-                                        <span data-testid="overview-realized-swing-pl-dollars">
-                                            {formatCurrency(plStats.totalSwingPlDollars ?? 0)}
-                                        </span>
-                                        &nbsp;(
-                                        <span data-testid="overview-realized-swing-pl-percent">
-                                            {formatPercent(plStats.avgSwingPlPercent)}
-                                        </span>
-                                        )
-                                    </p>
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
-                                    <p>
-                                        <span data-testid="overview-realized-hold-pl-dollars">
-                                            {formatCurrency(plStats.totalHoldPlDollars ?? 0)}
-                                        </span>
-                                        &nbsp;(
-                                        <span data-testid="overview-realized-hold-pl-percent">
-                                            {formatPercent(plStats.avgHoldPlPercent)}
-                                        </span>
-                                        )
-                                    </p>
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
-                                    <p>
-                                        <span data-testid="overview-realized-stock-pl-dollars">
-                                            {formatCurrency(plStats.totalStockPlDollars ?? 0)}
-                                        </span>
-                                        &nbsp;(
-                                        <span data-testid="overview-realized-stock-pl-percent">
-                                            {formatPercent(plStats.avgStockPlPercent)}
-                                        </span>
-                                        )
-                                    </p>
-                                </div>
-                                {/* --- END: Realized P/L --- */}
-
-                                {/* --- START: Unrealized P/L --- */}                               
-                                <div>
-{/*
-Calculate all-time Unrealized P/L from all Swing Sells (Hold has the same logic).
-
-It checks if the currentPrice for stock was successfully loaded from latestPrices. If not (currentPrice is null), 
-the entire calculation stops here and returns { dollars: null, percent: null }.
-
-The code then iterates through your wallets list for stock. It looks for wallets that meet all these criteria:
-- walletType is 'Swing'
-- remainingShares is greater than 0 (using SHARE_EPSILON for precision).
-
-For each matching "Currently Held Swing" wallet found:
-- It calculates the unrealized ("paper") P/L for that wallet: unrealizedForWallet = (Current Price - Wallet Buy Price) * Remaining Shares.
-- It adds this unrealizedForWallet to a running total called currentUnrealizedSwingPL.
-*/}                                     
-                                    <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Unrealized P/L</p>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
-                                    <p>
-                                        {unrealizedPlStats.unrealizedSwingDollars === null
-                                              ? (pricesLoading ? 'Loading Price...' : 'N/A')
-                                              : formatCurrency(unrealizedPlStats.unrealizedSwingDollars ?? 0)
-                                        }
-                                        &nbsp;
-                                        ({unrealizedPlStats.unrealizedSwingPercent === null
-                                              ? 'N/A'
-                                              : formatPercent(unrealizedPlStats.unrealizedSwingPercent)
-                                         })
-                                    </p>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
-                                    <p>
-                                        {unrealizedPlStats.unrealizedHoldDollars === null
-                                              ? (pricesLoading ? 'Loading Price...' : 'N/A')
-                                              : formatCurrency(unrealizedPlStats.unrealizedHoldDollars ?? 0)
-                                        }
-                                        &nbsp;
-                                        ({unrealizedPlStats.unrealizedHoldPercent === null
-                                              ? 'N/A'
-                                              : formatPercent(unrealizedPlStats.unrealizedHoldPercent)
-                                        })
-                                    </p>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
-                                    <p>
-                                        {unrealizedPlStats.unrealizedTotalDollars === null
-                                              ? (pricesLoading ? 'Loading Price...' : 'N/A')
-                                              : formatCurrency(unrealizedPlStats.unrealizedTotalDollars ?? 0)
-                                        }
-                                        &nbsp;
-                                        ({unrealizedPlStats.unrealizedTotalPercent === null
-                                              ? 'N/A'
-                                              : formatPercent(unrealizedPlStats.unrealizedTotalPercent)
-                                        })
-                                    </p>
-                                </div>
-                                 {/* --- END: Unrealized P/L --- */}
-
-
-                                {/* --- START: Total P/L --- */}                               
-                                <div>
-                                    <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Total P/L</p>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
-                                    <p>
-                                        {totalPlStats.totalSwingDollars === null
-                                            ? (pricesLoading ? 'Loading Price...' : 'N/A')
-                                            : formatCurrency(totalPlStats.totalSwingDollars ?? 0)
-                                        }
-                                        &nbsp;
-                                        {/* Add Percentage Display */}
-                                        ({totalPlStats.totalSwingPercent === null
-                                            ? 'N/A'
-                                            : formatPercent(totalPlStats.totalSwingPercent)
-                                        })
-                                    </p>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
-                                    <p>
-                                         {totalPlStats.totalHoldDollars === null
-                                            ? (pricesLoading ? 'Loading Price...' : 'N/A')
-                                            : formatCurrency(totalPlStats.totalHoldDollars ?? 0)
-                                        }
-                                         &nbsp;
-                                        {/* Add Percentage Display */}
-                                        ({totalPlStats.totalHoldPercent === null
-                                            ? 'N/A'
-                                            : formatPercent(totalPlStats.totalHoldPercent)
-                                        })
-                                    </p>
-
-                                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
-                                    <p>
-                                         {totalPlStats.totalStockDollars === null
-                                            ? (pricesLoading ? 'Loading Price...' : 'N/A')
-                                            : formatCurrency(totalPlStats.totalStockDollars ?? 0)
-                                        }
-                                         &nbsp;
-                                        {/* Add Percentage Display */}
-                                        ({totalPlStats.totalStockPercent === null
-                                            ? 'N/A'
-                                            : formatPercent(totalPlStats.totalStockPercent)
-                                        })
-                                    </p>
-                                </div>
-                                {/* --- END: Total P/L --- */} 
-                            </div> // End grid layout
-                        )}
-                    </div>
-                )}
-            </div>
-            {/* --- END: Overview section --- */}
-            
+            <WalletsOverviewSection
+                isExpanded={isOverviewExpanded}
+                onToggle={() => setIsOverviewExpanded(prev => !prev)}
+                stockBudget={stockBudget}
+                stockPdp={stockPdp}
+                stockShr={stockShr}
+                stockPlr={stockPlr}
+                totalTiedUpInvestment={totalTiedUpInvestment}
+                transactionCounts={transactionCounts}
+                currentShares={currentShares}
+                plStats={plStats}
+                unrealizedPlStats={unrealizedPlStats}
+                totalPlStats={totalPlStats}
+                pricesLoading={pricesLoading}
+            />
             {/* --- START: Wallets section --- */}
-            <div>
-                <p style={{ fontSize: '1.3em', marginTop: '40px' }}>Wallets</p>
-
-                {/* --- START: Wallets column toggles --- */}
-                <div style={{ marginBottom: '1rem', marginTop: '0.5rem', padding: '10px', border: '1px solid #353535', fontSize: '0.7em', color: "gray" }}>
-                    {(Object.keys(walletColumnVisibility) as Array<keyof WalletColumnVisibilityState>).map((key) => (
-                        <label key={key} style={{ marginLeft: '15px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={walletColumnVisibility[key]}
-                                onChange={() =>
-                                    setWalletColumnVisibility((prev) => ({
-                                        ...prev,
-                                        [key]: !prev[key],
-                                    }))
-                                }
-                                style={{ marginRight: '5px', cursor: 'pointer' }}
-                            />
-                            {WALLET_COLUMN_LABELS[key]}
-                        </label>
-                    ))}
-                </div>
-                {/* --- END: Wallets column toggles --- */}
-                
-                {/* --- START: Wallets tabs --- */}
-                <div style={{ marginBottom: '1rem' }}>
-                    <button
-                        data-testid="wallet-tab-Swing"
-                        onClick={() => setActiveTab('Swing')}
-                        style={{
-                            padding: '8px 15px', marginRight: '10px', cursor: 'pointer',
-                            border: 'none', borderBottom: activeTab === 'Swing' ? '2px solid lightblue' : '2px solid transparent',
-                            background: 'none', color: activeTab === 'Swing' ? 'lightblue' : 'inherit',
-                            fontSize: '1em'
-                        }}
-                    >
-                        Swing ({swingWallets.length})
-                    </button>
-                    <button
-                        data-testid="wallet-tab-Hold"
-                        onClick={() => setActiveTab('Hold')}
-                        style={{
-                            padding: '8px 15px', cursor: 'pointer',
-                            border: 'none', borderBottom: activeTab === 'Hold' ? '2px solid lightgreen' : '2px solid transparent',
-                            background: 'none', color: activeTab === 'Hold' ? 'lightgreen' : 'inherit',
-                            fontSize: '1em'
-                        }}
-                    >
-                        Hold ({holdWallets.length})
-                    </button>
-                </div>
-                {/* --- END: Wallets tabs --- */}
-                
-                {error && <p style={{ color: 'red' }}>Error loading wallets: {error}</p>}
-
-                {/* --- START: Wallets table --- */}
-                <table data-testid="wallets-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
-                    <thead>
-                        <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
-                            {walletColumnVisibility.id && (
-                                <th style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>Wallet ID</th>
-                            )}
-
-                            {walletColumnVisibility.buyPrice && (
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('buyPrice')}>
-                                    Buy Price {walletSortConfig?.key === 'buyPrice' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                </th>
-                            )}
-                            {walletColumnVisibility.totalInvestment && (
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('totalInvestment')}>
-                                    Inv {walletSortConfig?.key === 'totalInvestment' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                </th>
-                            )}
-                            {/* {walletColumnVisibility.totalSharesQty && (
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('totalSharesQty')}>
-                                    Shares {walletSortConfig?.key === 'totalSharesQty' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                </th>
-                            } */}
-                            {walletColumnVisibility.tpValue && (
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('tpValue')}>
-                                    TP {walletSortConfig?.key === 'tpValue' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                </th>
-                            )}
-                            {walletColumnVisibility.sellTxnCount && (
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('sellTxnCount')}>
-                                    Sells {walletSortConfig?.key === 'sellTxnCount' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                </th>
-                            )}
-                            {walletColumnVisibility.sharesSold && (
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('sharesSold')}>
-                                    Shs Sold {walletSortConfig?.key === 'sharesSold' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                </th>
-                            )}
-                            {walletColumnVisibility.realizedPl && (
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('realizedPl')}>
-                                    P/L {walletSortConfig?.key === 'realizedPl' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                </th>
-                            )}
-                            {walletColumnVisibility.realizedPlPercent && (
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('realizedPlPercent')}>
-                                    P/L (%) {walletSortConfig?.key === 'realizedPlPercent' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                </th>
-                            )}
-                            {walletColumnVisibility.remainingShares && (
-                                <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('remainingShares')}>
-                                    Shs Left {walletSortConfig?.key === 'remainingShares' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                </th>
-                            )}
-
-                            {/* Actions - Always visible */}
-                            <th style={{ padding: '5px', textAlign: 'center' }}>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {/* Check if the selected filtered list is empty */}
-                        {(activeTab === 'Swing' ? swingWallets : holdWallets).length === 0 ? (
-                            <tr>
-                                {/* Calculate colspan dynamically */}
-                                <td
-                                    data-testid="wallet-notfound-display"
-                                    colSpan={(Object.values(walletColumnVisibility).filter(Boolean).length) + 2} 
-                                    style={{ textAlign: 'center', padding: '1rem' }}
-                                >
-                                    No {activeTab} wallets found for this stock.
-                                </td>
-                            </tr>
-                        ) : (
-                            // Map over the correct list (swingWallets or holdWallets which are derived from sortedWallets)
-                            (activeTab === 'Swing' ? swingWallets : holdWallets).map((wallet, index) => {
-                                const currentStockPrice = latestPrices[stockSymbol ?? '']?.currentPrice;
-                                return (
-                                    <tr key={wallet.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
-                                        {walletColumnVisibility.id && 
-                                            <td data-testid="wallet-id-display" style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>
-                                                {truncateId(wallet.id)}
-                                            </td>
-                                        }
-                                        {walletColumnVisibility.buyPrice && 
-                                            <td data-testid="wallet-buyPrice-display" style={{ padding: '5px' }}>
-                                                {formatCurrency(wallet.buyPrice ?? 0)}
-                                            </td>
-                                        }
-                                        {walletColumnVisibility.totalInvestment && 
-                                            <td data-testid="wallet-totalInvestment-display" style={{ padding: '5px' }}>
-                                                {formatCurrency(wallet.totalInvestment ?? 0)}
-                                            </td>
-                                        }
-                                        {/* {walletColumnVisibility.totalSharesQty && <td style={{ padding: '5px' }}>{formatShares(wallet.totalSharesQty)}</td>} */}
-                                        {walletColumnVisibility.tpValue && (
-                                            <td data-testid="wallet-tpValue-display" style={{ padding: '5px', ...getTpCellStyle(wallet, currentStockPrice) }}>
-                                                {formatCurrency(wallet.tpValue ?? 0)}
-                                            </td>
-                                        )}
-                                        {walletColumnVisibility.sellTxnCount && 
-                                            <td data-testid="wallet-sellTxnCount-display" style={{ padding: '5px' }}>
-                                                {wallet.sellTxnCount ?? 0}
-                                            </td>
-                                        }
-                                        {walletColumnVisibility.sharesSold && 
-                                            <td data-testid="wallet-sharesSold-display" style={{ padding: '5px' }}>
-                                                {formatShares(wallet.sharesSold)}
-                                            </td>
-                                        }
-                                        {walletColumnVisibility.realizedPl && 
-                                            <td data-testid="wallet-realizedPl-display" style={{ padding: '5px' }}>
-                                                {formatCurrency(wallet.realizedPl ?? 0)}
-                                            </td>
-                                        }
-                                        {walletColumnVisibility.realizedPlPercent && 
-                                            <td data-testid="wallet-realizedPlPercent-display" style={{ padding: '5px' }}>
-                                                {formatPercent(wallet.realizedPlPercent)}
-                                            </td>
-                                        }
-                                        {walletColumnVisibility.remainingShares && 
-                                            <td data-testid="wallet-remainingShares-display" style={{ padding: '5px' }}>
-                                                {formatShares(wallet.remainingShares)}
-                                            </td>
-                                        }
-
-                                        {/* Actions - Always Visible */}
-                                        <td style={{ padding: '5px', textAlign: 'center' }}>
-                                            {/* Sell Button */}
-                                            {wallet.remainingShares && wallet.remainingShares > SHARE_EPSILON ? ( // Use Epsilon
-                                                <button 
-                                                    data-testid="wallet-sell-icon"
-                                                    onClick={() => handleOpenSellModal(wallet)} 
-                                                    title="Sell from wallet" 
-                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: '#28a745' }}
-                                                >
-                                                    <FaDollarSign />
-                                                </button>
-                                            ) : ''}
-                                            {/* Delete Button */}
-                                            {Math.abs(wallet.remainingShares ?? 0) < SHARE_EPSILON ? ( // Use Epsilon
-                                                <button 
-                                                    data-testid="wallet-delete-icon"
-                                                    onClick={() => handleDeleteWallet(wallet)}  
-                                                    title="Delete wallet" 
-                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray' }}
-                                                >
-                                                    <FaTrashAlt />
-                                                </button>
-                                            ) : ''}
-                                        </td>
-                                    </tr>
-                                );
-                            }) // End map
-                        )}
-                    </tbody>
-                </table>
-                {/* --- END: Wallets table --- */}
-                {/* --- END: Wallets section --- */}
-            </div>
-
+            <WalletsSection
+              swingWallets={swingWallets}
+              holdWallets={holdWallets}
+              walletColumnVisibility={walletColumnVisibility}
+              setWalletColumnVisibility={setWalletColumnVisibility}
+              walletSortConfig={walletSortConfig}
+              requestWalletSort={requestWalletSort}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              error={error}
+              latestPrices={latestPrices}
+              stockSymbol={stockSymbol}
+              onSell={handleOpenSellModal}
+              onDelete={handleDeleteWallet}
+              columnLabels={WALLET_COLUMN_LABELS} />
+            {/* --- END: Wallets section replaced by component --- */}
+            
             {/* --- START: Transactions section --- */}
             <div style={{ marginTop: '2rem' }}>
                 <p style={{ fontSize: '1.3em' }}>Transactions</p>
