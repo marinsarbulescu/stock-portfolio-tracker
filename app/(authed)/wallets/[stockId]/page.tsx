@@ -11,6 +11,7 @@ import { FaEdit, FaTrashAlt, FaDollarSign } from 'react-icons/fa';
 import { usePrices } from '@/app/contexts/PriceContext';
 import { useOwnerId } from '@/app/hooks/useOwnerId';
 import { formatToMDYYYY } from '@/app/utils/dateFormatter';
+import WalletsPageHeader from './components/WalletsPageHeader';
 
 // --- IMPORT THE CORRECT formatCurrency ---
 import { calculateSingleSalePL, calculateTotalRealizedSwingPL, formatCurrency } from '@/app/utils/financialCalculations';
@@ -1499,7 +1500,7 @@ const totalPlStats = useMemo(() => {
   
       const totalHoldPercentCalc = (combinedHoldBasis > SHARE_EPSILON)
           ? (totalHoldDollars / combinedHoldBasis) * 100
-          : (Math.abs(totalHoldDollars) < 0.001 ? 0 : null);
+          : (Math.abs(totalHoldDollars) < 0.001 ?  0 : null);
   
       const totalStockPercentCalc = (combinedStockBasis > SHARE_EPSILON)
           ? (totalStockDollars / combinedStockBasis) * 100
@@ -1950,20 +1951,13 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
 
     return (
         <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <div>
-                    <p style={{ fontSize: '1.5em' }}>{name} (<span data-testid="wallet-page-title">{stockSymbol?.toUpperCase()}</span>)</p>
-                    <p style={{ fontSize: '1.2em' }}>
-                        {typeof currentStockPriceForOverview === 'number'
-                            ? formatCurrency(currentStockPriceForOverview)
-                            : (pricesLoading ? 'Loading...' : 'N/A') // Show loading or N/A
-                        }
-                    </p>
-                </div>         
-                
-                <button data-testid="add-buy-transaction-button" onClick={handleOpenBuyModal} style={{ padding: '8px 15px' }}>Add Buy Transaction</button>
-            </div>
-
+            <WalletsPageHeader
+                name={name ?? ''}
+                symbol={stockSymbol}
+                price={currentStockPriceForOverview}
+                pricesLoading={pricesLoading}
+                onAddBuy={handleOpenBuyModal}
+            />
             {/* --- START: Overview section --- */}
             <div style={{
                 marginBottom: '1rem',
@@ -2315,7 +2309,7 @@ For each matching "Currently Held Swing" wallet found:
                                 <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('totalSharesQty')}>
                                     Shares {walletSortConfig?.key === 'totalSharesQty' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                                 </th>
-                            )} */}
+                            } */}
                             {walletColumnVisibility.tpValue && (
                                 <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('tpValue')}>
                                     TP {walletSortConfig?.key === 'tpValue' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}

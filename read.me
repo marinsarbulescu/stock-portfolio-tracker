@@ -33,6 +33,58 @@ Step 4: Manual Approval Process (Admin Task)
 
 ###############################
 
+Create a new components/ folder next to page.tsx (if you haven’t already)
+– app/(authed)/wallets/[stockId]/components/
+
+Extract top header
+• Component: WalletsPageHeader.tsx
+• Responsibilities: title, current stock price display, “Add Buy” button callback
+• Props: name, symbol, price, onAddBuy
+
+Extract overview panel
+• Component: WalletsOverviewSection.tsx
+• Responsibilities: expandable summary stats (budget, P/L ratios, share counts)
+• Props: plStats, unrealizedPlStats, totalPlStats, isExpanded, onToggle
+
+Extract P/L summary cards
+• Component: StatCard.tsx (or a small set of OverviewStatItem.tsx)
+• Responsibilities: render a label + dollar + percent, handling “–” cases
+• Props: label, dollarValue, percentValue
+
+Extract wallets table & controls
+• Component: WalletsSection.tsx (already exists)
+• Responsibilities: tab filter (Swing/Hold), sort controls, table rows, TP cell styling
+
+Extract transactions table & controls
+• Component: WalletsTransactionsSection.tsx
+• Responsibilities: date‐range or pagination (if any), table of transactions, delete/edit handlers
+
+Extract each modal into its own component under components/modals/
+• BuyTransactionModal.tsx
+• SellTransactionModal.tsx
+• EditTransactionModal.tsx
+– Each receives open/close flags, form data/handlers, and reports back via callbacks
+
+Pull out formatting & style utils
+• Move your inline formatCurrency, formatPercent, formatShares, and getTpCellStyle into a small helper module or into app/utils/displayHelpers.ts to keep presentation code DRY.
+
+Update types.ts
+• For each new component, define its prop interface in types.ts (e.g. WalletsPageHeaderProps, OverviewSectionProps, StatCardProps, etc.)
+
+Revise page.tsx to:
+a. Keep all useEffect, useMemo, data‐loading hooks.
+b. Pass data and callbacks down into the new components.
+c. Remove all chunks of JSX you’ve extracted.
+
+Compile and validate
+– Run npm run build (or your local compiler) to catch any broken imports or missing props
+– Run your E2E suite to confirm behavior is unchanged
+
+(Optional) Add tests per component
+– Unit-test each new component’s rendering and interaction in isolation
+
+###############################
+
 Overall Test Strategy:
 
 The goal is to create a suite of E2E tests using Playwright that cover the full lifecycle of "Buy" and "Sell" transactions, including updates, and meticulously verify the impact of these operations on the key financial overview statistics: Realized P/L, Unrealized P/L, and Total P/L, broken down by Swing, Hold, and overall Stock categories.
