@@ -103,3 +103,32 @@ export type WalletsTableSortableKey =
   | 'realizedPl'
   | 'realizedPlPercent'
   | 'remainingShares';
+
+// Table-specific types for Transactions section
+export interface TransactionTableColumnVisibilityState {
+  date: boolean;
+  action: boolean;
+  txnType: boolean;
+  signal: boolean;
+  price: boolean;
+  lbd: boolean;
+  investment: boolean;
+  quantity: boolean;
+  proceeds: boolean;
+  txnProfit: boolean;
+  txnProfitPercent: boolean;
+  completedTxnId: boolean;
+}
+
+export type SortableTxnKey =
+  | 'date'
+  | 'action'
+  | 'txnType'
+  | 'signal'
+  | 'price'
+  | 'lbd'
+  | 'investment'
+  | 'quantity'
+  | 'proceeds'
+  | 'txnProfit'
+  | 'txnProfitPercent';

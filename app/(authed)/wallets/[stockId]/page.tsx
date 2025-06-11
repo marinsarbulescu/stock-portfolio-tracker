@@ -14,6 +14,8 @@ import { formatToMDYYYY } from '@/app/utils/dateFormatter';
 import WalletsPageHeader from './components/WalletsPageHeader';
 import WalletsOverviewSection from './components/WalletsOverviewSection';
 import WalletsSection from './components/WalletsSection';
+import WalletsTransactionsSection from './components/WalletsTransactionsSection';
+import type { TransactionTableColumnVisibilityState, SortableTxnKey, SortConfig } from './types';
 
 // --- IMPORT THE CORRECT formatCurrency ---
 import { calculateSingleSalePL, calculateTotalRealizedSwingPL, formatCurrency } from '@/app/utils/financialCalculations';
@@ -67,40 +69,28 @@ export default function StockWalletPage() {
     const stockId = params.stockId as string; // Get stockId from dynamic route
 
     // --- START: Transactions Table Visibility & Sorting ---
-    // Define the shape of the visibility state
-    interface TxnColumnVisibilityState {
-        date: boolean;
-        action: boolean;
-        txnType: boolean;
-        signal: boolean;
-        price: boolean;
-        lbd: boolean;
-        investment: boolean;
-        quantity: boolean;
-        proceeds: boolean;
-        txnProfit: boolean;
-        txnProfitPercent: boolean;
-        completedTxnId: boolean;            
-    }
+    // Using shared types for transaction table
+ 
+    // Initialize the state with shared TransactionTableColumnVisibilityState
+    const [txnColumnVisibility, setTxnColumnVisibility] = useState<TransactionTableColumnVisibilityState>({
+     date: false,
+     action: true,
+     txnType: true,
+     signal: false,
+     price: true,
+     lbd: false,
+     investment: true,
+     quantity: false,
+     proceeds: true,
+     txnProfit: false,
+     txnProfitPercent: false,
+     completedTxnId: false,
+ });
 
-    // Initialize the state (decide defaults - here all are visible initially)
-    const [txnColumnVisibility, setTxnColumnVisibility] = useState<TxnColumnVisibilityState>({
-        date: false,
-        action: true,
-        txnType: true,
-        signal: false,
-        price: true,
-        lbd: false,
-        investment: true,
-        quantity: false,
-        proceeds: true,
-        txnProfit: false,
-        txnProfitPercent: false,
-        completedTxnId: false,
-    });
+    const [txnSortConfig, setTxnSortConfig] = useState<{ key: SortableTxnKey; direction: 'ascending' | 'descending' } | null>(null);
     
-    // Mapping from state keys to desired display labels
-    const TXN_COLUMN_LABELS: Record<keyof TxnColumnVisibilityState, string> = {
+    // Mapping from visibility state keys to display labels
+    const TXN_COLUMN_LABELS: Record<keyof TransactionTableColumnVisibilityState, string> = {
         date:'Date',
         action: 'Action',
         txnType: 'Type',
@@ -115,21 +105,6 @@ export default function StockWalletPage() {
         completedTxnId: 'Wallet ID',
     };
     
-    type SortableTxnKey =
-    | 'date'
-    | 'action'
-    | 'txnType'
-    | 'signal'
-    | 'price'
-    | 'lbd'
-    | 'investment'
-    | 'quantity'
-    | 'txnProfit' // Added for P/L $ sort
-    | 'txnProfitPercent' // Added for P/L % sort
-    | 'proceeds'; // Added key for sorting Proceeds
-    
-    const [txnSortConfig, setTxnSortConfig] = useState<{ key: SortableTxnKey; direction: 'ascending' | 'descending' } | null>(null);
-
     const requestTxnSort = (key: SortableTxnKey) => {
         let direction: 'ascending' | 'descending' = 'ascending';
         if (txnSortConfig && txnSortConfig.key === key && txnSortConfig.direction === 'ascending') {
@@ -1993,210 +1968,18 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
             {/* --- END: Wallets section replaced by component --- */}
             
             {/* --- START: Transactions section --- */}
-            <div style={{ marginTop: '2rem' }}>
-                <p style={{ fontSize: '1.3em' }}>Transactions</p>
-
-                {isTxnLoading && <p>Loading transaction history...</p>}
-                {txnError && <p style={{ color: 'red' }}>Error loading transactions: {txnError}</p>}
-
-                
-                {/* --- START: Transactions column toggles --- */}
-                <div style={{ marginBottom: '1rem', marginTop: '1rem', padding: '10px', border: '1px solid #353535', fontSize: '0.7em', color: "gray" }}>
-                    {(Object.keys(txnColumnVisibility) as Array<keyof TxnColumnVisibilityState>).map((key) => (
-                        <label key={key} style={{ marginLeft: '15px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
-                            <input
-                                data-testid={`toggle-txn-col-${key}`}
-                                type="checkbox"
-                                checked={txnColumnVisibility[key]}
-                                onChange={() =>
-                                    // Update the NEW state
-                                    setTxnColumnVisibility((prev) => ({
-                                        ...prev,
-                                        [key]: !prev[key],
-                                    }))
-                                }
-                                style={{ marginRight: '5px', cursor: 'pointer' }}
-                            />
-                            {/* Use the NEW labels */}
-                            {TXN_COLUMN_LABELS[key]}
-                        </label>
-                    ))}
-                </div>
-                {/* --- END: Transactions column toggles --- */}
-
-                {/* --- START: Transactions table --- */}
-                {!isTxnLoading && !txnError && (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
-                        <thead>
-                            <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
-                                {txnColumnVisibility.date && (
-                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('date')}>
-                                        {TXN_COLUMN_LABELS.date} {txnSortConfig?.key === 'date' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                    </th>
-                                )}
-                                {txnColumnVisibility.action && (
-                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('action')}>
-                                        {TXN_COLUMN_LABELS.action} {txnSortConfig?.key === 'action' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                    </th>
-                                )}
-                                {txnColumnVisibility.txnType && (
-                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('txnType')}>
-                                        {TXN_COLUMN_LABELS.txnType} {txnSortConfig?.key === 'txnType' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                    </th>
-                                )}
-                                {txnColumnVisibility.signal && (
-                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('signal')}>
-                                        {TXN_COLUMN_LABELS.signal} {txnSortConfig?.key === 'signal' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                    </th>
-                                )}
-                                {txnColumnVisibility.price && (
-                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('price')}>
-                                        {TXN_COLUMN_LABELS.price} {txnSortConfig?.key === 'price' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                    </th>
-                                )}
-                                {txnColumnVisibility.lbd && (
-                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('lbd')}>
-                                        {TXN_COLUMN_LABELS.lbd} {txnSortConfig?.key === 'lbd' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                    </th>
-                                )}
-                                {txnColumnVisibility.investment && (
-                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('investment')}>
-                                        {TXN_COLUMN_LABELS.investment} {txnSortConfig?.key === 'investment' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                    </th>
-                                )}
-                                {txnColumnVisibility.quantity && (
-                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('quantity')}>
-                                        {TXN_COLUMN_LABELS.quantity} {txnSortConfig?.key === 'quantity' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                    </th>
-                                )}
-                                {txnColumnVisibility.proceeds && (
-                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('proceeds')}>
-                                        {TXN_COLUMN_LABELS.proceeds} {txnSortConfig?.key === 'proceeds' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                    </th>
-                                )}
-                                {txnColumnVisibility.txnProfit && (
-                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('txnProfit')}>
-                                        {TXN_COLUMN_LABELS.txnProfit} {txnSortConfig?.key === 'txnProfit' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                    </th>
-                                )}
-                                {txnColumnVisibility.txnProfitPercent && (
-                                    <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestTxnSort('txnProfitPercent')}>
-                                        {TXN_COLUMN_LABELS.txnProfitPercent} {txnSortConfig?.key === 'txnProfitPercent' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-                                    </th>
-                                )}
-                                {txnColumnVisibility.completedTxnId && (
-                                    // Assuming Wallet ID isn't meant to be sortable by default, remove onClick if needed
-                                    <th style={{ padding: '5px', fontSize: '0.9em', color: 'grey' /*, cursor: 'pointer'*/ }} /* onClick={() => requestTxnSort('completedTxnId')} */ >
-                                        {TXN_COLUMN_LABELS.completedTxnId} {/* {txnSortConfig?.key === 'completedTxnId' ? (txnSortConfig.direction === 'ascending' ? '▲' : '▼') : ''} */}
-                                    </th>
-                                )}
-                                {/* Actions column is always visible */}
-                                <th style={{ padding: '5px', textAlign: 'center' }}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sortedTransactions.length === 0 ? (
-                                    <tr>
-                                        {/* Calculate colspan dynamically based on VISIBLE columns + Actions */}
-                                        <td colSpan={
-                                            (Object.values(txnColumnVisibility).filter(Boolean).length) + 1 // +1 for Actions
-                                            } 
-                                            style={{ textAlign: 'center', padding: '1rem' }}
-                                            data-testid="no-transactions-message"
-                                        >
-                                            No transactions found for this stock.
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    sortedTransactions.map((txn, index) => (
-                                        <tr
-                                            key={txn.id}
-                                            style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}
-                                            data-testid="transaction-row"
-                                        >
-                                            {/* Wrap each cell conditionally */}
-                                            {txnColumnVisibility.date && (
-                                                <td data-testid="transaction-date-display" style={{ padding: '5px' }}>{formatToMDYYYY(txn.date)}</td>
-                                            )}
-                                            {txnColumnVisibility.action && (
-                                                <td data-testid="transaction-action-display" style={{ padding: '5px' }}>{txn.action}</td>
-                                                )}
-                                            {txnColumnVisibility.txnType && (
-                                                <td data-testid="transaction-txnType-display" style={{ padding: '5px' }}>{txn.txnType ?? '-'}</td>
-                                                )}
-                                            {txnColumnVisibility.signal && (
-                                                <td data-testid="transaction-signal-display" style={{ padding: '5px' }}>{txn.signal ?? '-'}</td>
-                                                )}
-                                            {txnColumnVisibility.price && (
-                                                <td data-testid="transaction-price-display" style={{ padding: '5px' }}>{formatCurrency(txn.price ?? 0)}</td>
-                                                )}
-                                            {txnColumnVisibility.lbd && (
-                                                <td data-testid="transaction-lbd-display" style={{ padding: '5px' }}>{txn.action === 'Buy' ? formatCurrency(txn.lbd ?? 0) : '-'}</td>
-                                                )}
-                                            {txnColumnVisibility.investment && (
-                                                <td data-testid="transaction-investment-display" style={{ padding: '5px' }}>{txn.action !== 'Sell' ? formatCurrency(txn.investment ?? 0) : '-'}</td>
-                                                )}
-                                            {txnColumnVisibility.quantity && (
-                                                <td data-testid="transaction-quantity-display" style={{ padding: '5px' }}>{formatShares(txn.quantity)}</td>
-                                                )}
-                                            {txnColumnVisibility.proceeds && (
-                                                <td data-testid="transaction-proceeds-display" style={{ padding: '5px' }}>
-                                                    {(txn.action === 'Sell' && typeof txn.price === 'number' && typeof txn.quantity === 'number')
-                                                        ? formatCurrency(txn.price * txn.quantity) // Calculate Proceeds
-                                                        : '-'
-                                                    }
-                                                </td>
-                                            )}
-                                            {txnColumnVisibility.txnProfit && (
-                                                <td data-testid="transaction-txnProfit-display" style={{
-                                                    padding: '5px',
-                                                    color: txn.action !== 'Sell' || txn.txnProfit == null ? 'inherit' : txn.txnProfit >= 0 ? '#01ff00' : '#ff0000'
-                                                }}>
-                                                    {txn.action === 'Sell' ? formatCurrency(txn.txnProfit ?? 0) : '-'}
-                                                </td>
-                                            )}
-                                            {txnColumnVisibility.txnProfitPercent && (
-                                                <td data-testid="transaction-txnProfitPercent-display" style={{
-                                                    padding: '5px',
-                                                    color: txn.action !== 'Sell' || txn.txnProfitPercent == null ? 'inherit' : txn.txnProfitPercent >= 0 ? '#01ff00' : '#ff0000'
-                                                }}>
-                                                    {txn.action === 'Sell' ? formatPercent(txn.txnProfitPercent) : '-'}
-                                                </td>
-                                            )}
-                                            {txnColumnVisibility.completedTxnId && (
-                                                <td data-testid="transaction-completedTxnId-display" style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>
-                                                     {txn.action === 'Sell' ? truncateId(txn.completedTxnId) : '-'}
-                                                </td>
-                                            )}
-
-                                            {/* Actions column always visible */}
-                                            <td style={{ padding: '5px', textAlign: 'center' }}>
-                                                {/* Edit/Delete buttons */}
-                                                {/* Use 'as any' or ensure 'txn' from map matches TransactionDataType for handlers */}
-                                                <button 
-                                                    data-testid={`transaction-edit-button-${txn.id}`} 
-                                                    onClick={() => handleEditTxnClick(txn as any)} 
-                                                    title="Edit Transaction" 
-                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray', marginRight: '5px' }}>
-                                                        <FaEdit />
-                                                </button>
-                                                <button 
-                                                    data-testid={`transaction-delete-button-${txn.id}`} 
-                                                    onClick={() => handleDeleteTransaction(txn as any)} 
-                                                    title="Delete Transaction" 
-                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray' }}>
-                                                        <FaTrashAlt />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )
-                            }
-                        </tbody>
-                    </table>
-                )}
-                {/* --- END: Transactions table --- */}
-            </div>
+            <WalletsTransactionsSection
+                transactions={sortedTransactions}
+                isLoading={isTxnLoading}
+                error={txnError}
+                columnVisibility={txnColumnVisibility}
+                columnLabels={TXN_COLUMN_LABELS}
+                setColumnVisibility={setTxnColumnVisibility}
+                sortConfig={txnSortConfig}
+                requestSort={requestTxnSort}
+                onEdit={handleEditTxnClick}
+                onDelete={handleDeleteTransaction}
+            />
             {/* --- END: Transactions section --- */}
 
             
