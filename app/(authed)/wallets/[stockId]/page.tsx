@@ -6,11 +6,11 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource'; // Adjust path if needed
-import TransactionForm from '@/app/components/TransactionForm';
+import TransactionForm from './components/WalletsAddEditTransactionModal';
 import { FaEdit, FaTrashAlt, FaDollarSign } from 'react-icons/fa';
 import { usePrices } from '@/app/contexts/PriceContext';
 import { useOwnerId } from '@/app/hooks/useOwnerId';
-import { formatToMDYYYY } from '@/app/utils/dateFormatter';
+//import { formatToMDYYYY } from '@/app/utils/dateFormatter';
 import WalletsPageHeader from './components/WalletsPageHeader';
 import WalletsOverviewSection from './components/WalletsOverviewSection';
 import WalletsSection from './components/WalletsSection';
@@ -31,30 +31,21 @@ import {
     CURRENCY_EPSILON,
     FETCH_LIMIT_FOR_UNIQUE_WALLET
 } from '@/app/config/constants';
+import WalletsSellTransactionModal from './components/WalletsSellTransactionModal';
 
-// Define the type for the fetched wallet data (no longer needs nested stock)
 type StockWalletDataType = Schema['StockWallet']['type'];
 
-// Define the structure for stockInfo that adjustWalletContribution might need
 interface StockInfoForWalletService {
     owner: string; // Cognito User Sub ID
     plr?: number | null;
-    // Add other fields if calculateTpForWallet in walletService needs them
 }
 
 
-//type TransactionItem = Schema['Transaction']; // Already likely defined
 type TransactionDataType = Schema['Transaction']['type']; // Already likely defined
 type TransactionListResultType = Awaited<ReturnType<typeof client.models.Transaction.list>>;
 
 const client = generateClient<Schema>();
 
-//const logger = new ConsoleLogger('API');
-
-//Amplify.register(logger);
-//logger.logLevel = 'DEBUG'; 
-
-// Helper function to get today's date in YYYY-MM-DD format
 const getTodayDateString = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -64,14 +55,10 @@ const getTodayDateString = () => {
 };
 
 export default function StockWalletPage() {
-    // --- Get stockId from URL ---
     const params = useParams();
     const stockId = params.stockId as string; // Get stockId from dynamic route
 
     // --- START: Transactions Table Visibility & Sorting ---
-    // Using shared types for transaction table
- 
-    // Initialize the state with shared TransactionTableColumnVisibilityState
     const [txnColumnVisibility, setTxnColumnVisibility] = useState<TransactionTableColumnVisibilityState>({
      date: false,
      action: true,
@@ -209,9 +196,6 @@ export default function StockWalletPage() {
             }
     }, [ownerId, isLoading, error]);
 
-    // State for table sorting
-    //const [sortConfig, setSortConfig] = useState<{ key: SortableWalletKey; direction: 'ascending' | 'descending' } | null>(null);
-
     const { latestPrices, pricesLoading, pricesError, lastPriceFetchTimestamp } = usePrices(); // <<< Ensure lastPriceFetchTimestamp is included
 
     // --- ADD STATE for Transaction List ---
@@ -221,9 +205,6 @@ export default function StockWalletPage() {
     // State for Edit Modal
     const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Separate modal for editing
     const [txnToEdit, setTxnToEdit] = useState<TransactionDataType | null>(null);
-    // State for Sorting Txn Table
-    //type SortableTxnKey = 'date' | 'action' | 'signal' | 'txnType' |'price' | 'investment' | 'quantity' | 'lbd'; // Simplified keys
-    //const [txnSortConfig, setTxnSortConfig] = useState<{ key: SortableTxnKey; direction: 'ascending' | 'descending' } | null>(null);
     // --- END ADD STATE ---
 
     const sortedTransactions = useMemo(() => {
@@ -316,8 +297,6 @@ export default function StockWalletPage() {
             setError(null);
             //console.log(`[StockWalletPage] - [fetchWallets] Running fetch for stockId: ${stockId}`);
             try {
-                //console.log(`Workspaceing stock wallets for stockId: ${stockId}`);
-                // Define fields needed from the StockWallet model
                 const selectionSetNeeded = [
                     'id',
                     'buyPrice',
@@ -481,8 +460,6 @@ export default function StockWalletPage() {
             owner: ownerId, // Use the concatenated string
             plr: stockPlr,
         };
-
-        //const FETCH_LIMIT_FOR_UNIQUE_WALLET = 1000;
         
         // console.log('[StockWalletPage] - Attempting to update transaction via Edit modal:', updatedTxnDataFromForm);
         // console.log('[StockWalletPage] - Original transaction data:', txnToEdit);
@@ -1509,7 +1486,7 @@ const totalPlStats = useMemo(() => {
 
 const totalTiedUpInvestment = useMemo(() => {
     // Ensure wallets data is loaded
-    if (!wallets || wallets.length === 0) {
+    if (!wallets || wallets.length ===  0) {
         return 0;
     }
 
@@ -1629,7 +1606,6 @@ const totalHoldYtdPL = useMemo(() => {
         percent: roundedPercent
     };
 
-// Correct dependencies for this specific calculation
 }, [transactions, wallets, latestPrices, stockSymbol]); // Removed walletBuyPriceMap as it's internal now
 // --- End Total Hold YTD P/L Calc Memo ---
 
@@ -1645,22 +1621,6 @@ const truncateId = (id: string | null | undefined, length = 8): string => {
     //return `${id.substring(0, startLength)}...${id.substring(id.length - endLength)}`;
     return `${id.substring(0, startLength)}...`;
 };
-
-    // --- START: Replace your existing Formatting Helpers with this block ---
-    /*
-const formatCurrency = (value: number | null | undefined): string => {
-        // Check for non-number OR effectively zero using CURRENCY_EPSILON
-        if (typeof value !== 'number' || isNaN(value) || Math.abs(value) < CURRENCY_EPSILON) { // <-- Corrected: Use CURRENCY_EPSILON
-            return '-'; // Return '-' if value is not a valid number or is effectively zero
-        }
-        // Use toLocaleString for formatting with commas and correct decimal places
-        // Use CURRENCY_PRECISION (value 2) for the actual formatting digits
-        return `$${value.toLocaleString(undefined, {
-            minimumFractionDigits: CURRENCY_PRECISION,
-            maximumFractionDigits: CURRENCY_PRECISION,
-        })}`;
-};
-*/
 
 const formatPercent = (value: number | null | undefined): string => {
         if (typeof value !== 'number' || isNaN(value)) { // Added isNaN check for robustness
@@ -1982,61 +1942,23 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
             />
             {/* --- END: Transactions section --- */}
 
-            
             {/* --- START: Sell modal --- */}
-            {isSellModalOpen && walletToSell && (
-                <div style={modalOverlayStyle}> {/* Outer overlay div */}
-                    <div style={modalContentStyle}> {/* Modal content container */}
-                        {/* Wrap content in a form */}
-                        <form onSubmit={handleSellSubmit}>
-                            <h3>Sell Shares from Wallet</h3>
-                            {/* Stock/Buy Price Info */}
-                            <p style={{ marginBottom: '15px' }}>Stock: <strong>{stockSymbol?.toUpperCase()}</strong> | Buy Price: <strong>{formatCurrency(walletToSell.buyPrice ?? 0)}</strong></p>
-
-                            {/* Display Error */}
-                            {sellError && <p style={{ color: 'red', /*...*/ }}>{sellError}</p>}
-
-                            {/* Form Fields: Date, Quantity, Price */}
-                            <div style={formGroupStyle}>
-                                <label htmlFor="sellDate" style={labelStyle}>Date:</label>
-                                <input id="sellDate" type="date" value={sellDate} onChange={(e) => setSellDate(e.target.value)} required disabled={isSelling} style={inputStyle} />
-                            </div>
-                            <div style={formGroupStyle}>
-                                <label htmlFor="sellPrice" style={labelStyle}>Price ($):</label>
-                                <input id="sellPrice" type="number" /*...*/ value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} required disabled={isSelling} style={inputStyle} />
-                            </div>
-                            <div style={formGroupStyle}>
-                                <label htmlFor="sellQuantity" style={labelStyle}>Quantity:</label>
-                                <input id="sellQuantity" type="number" /*...*/ value={sellQuantity} onChange={(e) => setSellQuantity(e.target.value)} required disabled={isSelling} style={inputStyle} />
-                            </div>                            
-                            <div style={formGroupStyle}>
-                                <label htmlFor="sellSignal" style={labelStyle}>Signal:</label>
-                                <select
-                                    id="sellSignal"
-                                    value={sellSignal ?? ''} // Handle undefined state
-                                    onChange={(e) => setSellSignal(e.target.value as Schema['Transaction']['type']['signal'] || undefined)}
-                                    required // Make signal required for sell
-                                    disabled={isSelling}
-                                    style={inputStyle} // Reuse input style or create new
-                                >
-                                    <option value="">-- Select Signal --</option>
-                                    <option value="Cust">Cust</option>
-                                    <option value="TP">TP</option>
-                                </select>
-                            </div>
-                            {/* End Form Fields */}
-
-                            {/* Action Buttons */}
-                            <div style={{ display: 'flex', /*...*/ }}>
-                                <button type="button" onClick={handleCancelSell} disabled={isSelling}>Cancel</button>
-                                <button type="submit" disabled={isSelling || !sellQuantity || !sellPrice || !sellDate}>
-                                    {isSelling ? 'Selling...' : 'Confirm Sale'}
-                                </button>
-                            </div>
-                        </form>
-                    </div> 
-                </div>
-            )}
+            <WalletsSellTransactionModal
+              show={isSellModalOpen}
+              wallet={walletToSell!}
+              sellDate={sellDate}
+              sellQuantity={sellQuantity}
+              sellPrice={sellPrice}
+              sellSignal={sellSignal}
+              sellError={sellError}
+              isSelling={isSelling}
+              onDateChange={setSellDate}
+              onQuantityChange={setSellQuantity}
+              onPriceChange={setSellPrice}
+              onSignalChange={(sig: Schema['Transaction']['type']['signal']) => setSellSignal(sig)}
+              onCancel={handleCancelSell}
+              onSubmit={handleSellSubmit}
+           />
             {/* --- END: Sell modal --- */}
 
             {/* --- START: Buy modal --- */}

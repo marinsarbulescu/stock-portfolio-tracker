@@ -3,11 +3,11 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation'; // Hook to get URL params
-import TransactionForm from '@/app/components/TransactionForm'; // Adjust path if needed
+//import TransactionForm from '@/app/components/TransactionForm-old'; // Adjust path if needed
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
-import type { GraphQLError } from 'graphql';
+//import type { GraphQLError } from 'graphql';
 
 const client = generateClient<Schema>();
 type TransactionItem = Schema['Transaction'];
