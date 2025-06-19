@@ -35,12 +35,54 @@ type PriceMap = Record<string, number | null>; // Symbol -> Price or null
 
 const client = generateClient<Schema>();
 
+// Define sortable keys for the Stock Portfolio Table
+type SortableStockKey = 
+  | 'symbol'
+  | 'name'
+  | 'stockType'
+  | 'region'
+  | 'currentPrice'
+  | 'pdp'
+  | 'plr'
+  | 'budget'
+  | 'investment';
+
+interface StockSortConfig {
+  key: SortableStockKey;
+  direction: 'ascending' | 'descending';
+}
+
 // Create a wrapper component that safely uses the context
 function StocksListingContent() {
   // --- STATE using PortfolioStockDataType[] ---
   const [portfolioStocksData, setPortfolioStocksData] = useState<PortfolioStockDataType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // --- State for sorting ---
+  const [stockSortConfig, setStockSortConfig] = useState<StockSortConfig | null>(null);
+
+  // Column labels for the stock table
+  const STOCK_COLUMN_LABELS: Record<SortableStockKey, string> = {
+    symbol: 'Ticker',
+    name: 'Name',
+    stockType: 'Type',
+    region: 'Region',
+    currentPrice: 'Last Price',
+    pdp: 'PDP (%)',
+    plr: 'PLR (%)',
+    budget: 'Budget',
+    investment: 'Inv.',
+  };
+
+  // Sort request handler
+  const requestStockSort = (key: SortableStockKey) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (stockSortConfig && stockSortConfig.key === key && stockSortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setStockSortConfig({ key, direction });
+  };
 
   // --- State for editing and modal ---
   const [isAddModalOpen, setIsAddModalOpen] = useState(false); // For Add Stock modal
@@ -94,6 +136,90 @@ function StocksListingContent() {
     
     return invMap;
   }, [allWallets]);
+
+  // Sorted stocks for the table display
+  const sortedStocks = useMemo(() => {
+    let sortableItems = [...portfolioStocksData];
+
+    if (stockSortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        const handleNulls = (val: any) => {
+          if (val === null || val === undefined) {
+            return stockSortConfig.direction === 'ascending' ? Infinity : -Infinity;
+          }
+          return val;
+        };
+
+        let valA: any;
+        let valB: any;
+
+        // Get values based on sort key
+        switch (stockSortConfig.key) {
+          case 'symbol':
+            valA = a.symbol?.toLowerCase() ?? '';
+            valB = b.symbol?.toLowerCase() ?? '';
+            break;
+          case 'name':
+            valA = a.name?.toLowerCase() ?? '';
+            valB = b.name?.toLowerCase() ?? '';
+            break;
+          case 'stockType':
+            valA = a.stockType?.toLowerCase() ?? '';
+            valB = b.stockType?.toLowerCase() ?? '';
+            break;
+          case 'region':
+            valA = a.region?.toLowerCase() ?? '';
+            valB = b.region?.toLowerCase() ?? '';
+            break;
+          case 'currentPrice':
+            valA = latestPrices[a.symbol ?? '']?.currentPrice ?? null;
+            valB = latestPrices[b.symbol ?? '']?.currentPrice ?? null;
+            break;
+          case 'pdp':
+            valA = a.pdp;
+            valB = b.pdp;
+            break;
+          case 'plr':
+            valA = a.plr;
+            valB = b.plr;
+            break;
+          case 'budget':
+            valA = a.budget;
+            valB = b.budget;
+            break;
+          case 'investment':
+            valA = stockInvestments[a.id] ?? null;
+            valB = stockInvestments[b.id] ?? null;
+            break;
+          default:
+            valA = '';
+            valB = '';
+        }
+
+        const resolvedA = handleNulls(valA);
+        const resolvedB = handleNulls(valB);
+
+        let comparison = 0;
+
+        if (typeof resolvedA === 'string' && typeof resolvedB === 'string') {
+          comparison = resolvedA.localeCompare(resolvedB);
+        } else if (typeof resolvedA === 'number' && typeof resolvedB === 'number') {
+          comparison = resolvedA - resolvedB;
+        } else {
+          if (resolvedA < resolvedB) comparison = -1;
+          else if (resolvedA > resolvedB) comparison = 1;
+        }
+
+        return stockSortConfig.direction === 'ascending' ? comparison : comparison * -1;
+      });
+    } else {
+      // Default sort by symbol
+      sortableItems.sort((a, b) => (a.symbol ?? '').localeCompare(b.symbol ?? ''));
+    }
+
+    return sortableItems;
+  }, [portfolioStocksData, stockSortConfig, latestPrices, stockInvestments]);
+
   // Fetch Portfolio Function
   const fetchPortfolio = useCallback(async () => {
     setIsLoading(true); // Set loading at the start
@@ -700,8 +826,7 @@ function StocksListingContent() {
       totalInvestment: {
         stock: { value: stockTotalInvestment, pct: stockTotalPct },
         etf: { value: etfTotalInvestment, pct: etfTotalPct },
-        total: { value: totalInvestment, pct: 100 }
-      }
+        total: { value: totalInvestment, pct: 100 }      }
     };
     // Depend on visibleStocks now
   }, [visibleStocks]);
@@ -1105,31 +1230,47 @@ function StocksListingContent() {
       </button>
 
       {isLoading && <p>Loading stocks...</p>}
-      {error && <p style={{ color: 'red' }}>Error: {error}</p>}
-
-      {/* --- START: Stock Portfolio Table --- */}
+      {error && <p style={{ color: 'red' }}>Error: {error}</p>}      {/* --- START: Stock Portfolio Table --- */}
       {!isLoading && !error && (
         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
-              {/* Headers */}
-              <th style={{ padding: '5px' }}>Ticker</th>
-              <th style={{ padding: '5px' }}>Name</th>
-              <th style={{ padding: '5px' }}>Type</th>
-              <th style={{ padding: '5px' }}>Region</th>
-              <th style={{ padding: '5px' }}>Last Price</th>
-              <th style={{ padding: '5px' }}>PDP (%)</th>
-              <th style={{ padding: '5px' }}>PLR (%)</th>
-              <th style={{ padding: '5px' }}>Budget</th>
-              <th style={{ padding: '5px' }}>Inv</th>
+              {/* Clickable Headers with Sort Indicators */}
+              <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestStockSort('symbol')}>
+                {STOCK_COLUMN_LABELS.symbol} {stockSortConfig?.key === 'symbol' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+              <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestStockSort('name')}>
+                {STOCK_COLUMN_LABELS.name} {stockSortConfig?.key === 'name' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+              <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestStockSort('stockType')}>
+                {STOCK_COLUMN_LABELS.stockType} {stockSortConfig?.key === 'stockType' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+              <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestStockSort('region')}>
+                {STOCK_COLUMN_LABELS.region} {stockSortConfig?.key === 'region' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+              <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestStockSort('currentPrice')}>
+                {STOCK_COLUMN_LABELS.currentPrice} {stockSortConfig?.key === 'currentPrice' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+              <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestStockSort('pdp')}>
+                {STOCK_COLUMN_LABELS.pdp} {stockSortConfig?.key === 'pdp' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+              <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestStockSort('plr')}>
+                {STOCK_COLUMN_LABELS.plr} {stockSortConfig?.key === 'plr' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+              <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestStockSort('budget')}>
+                {STOCK_COLUMN_LABELS.budget} {stockSortConfig?.key === 'budget' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+              <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestStockSort('investment')}>
+                {STOCK_COLUMN_LABELS.investment} {stockSortConfig?.key === 'investment' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
               <th style={{ padding: '5px', textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {portfolioStocksData.length === 0 ? (
+            {sortedStocks.length === 0 ? (
               <tr><td colSpan={10} style={{ textAlign: 'center', padding: '1rem' }}>Your portfolio is empty.</td></tr>
             ) : (
-              portfolioStocksData.map((stock, index) => (
+              sortedStocks.map((stock, index) => (
                 <tr key={stock.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
                   <td style={{ padding: '5px' }}>
                     <Link 
