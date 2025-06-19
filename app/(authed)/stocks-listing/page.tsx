@@ -62,37 +62,38 @@ function StocksListingContent() {
 
   type StockWalletDataType = Schema['StockWallet']['type'];
 
-  const handleToggleHidden = async (stock: PortfolioStockDataType) => {
-    const newHiddenState = !stock.isHidden; // Calculate the new state
-    // Optional confirmation for clarity
-    if (!window.confirm(`Are you sure you want to ${newHiddenState ? 'hide' : 'show'} ${stock.symbol?.toUpperCase()} in reports?`)) {
-        return;
-    }
+  // State to hold all stock wallets for investment calculation
+  const [allWallets, setAllWallets] = useState<StockWalletDataType[]>([]);
 
-    console.log(`Attempting to set isHidden=${newHiddenState} for stock id: ${stock.id}`);
-    setError(null); // Clear previous errors
-
+  // Fetch all wallets separately for investment calculation
+  const fetchWallets = useCallback(async () => {
     try {
-        // Update only the isHidden field
-        const { data: updatedStock, errors } = await client.models.PortfolioStock.update({
-            id: stock.id,
-            isHidden: newHiddenState,
-        });
-
-        if (errors) {
-            console.error('Error updating stock hidden status:', errors);
-            setError(errors[0]?.message || 'Failed to update stock.');
-        } else {
-            console.log('Stock hidden status updated successfully:', updatedStock);
-            // Refresh the portfolio list to potentially update UI indication if needed
-            fetchPortfolio();
-        }
-    } catch (err: any) {
-        console.error('Unexpected error updating stock hidden status:', err);
-        setError(err.message || 'An error occurred during update.');
+      const { data, errors } = await client.models.StockWallet.list({
+        limit: 1000,
+        selectionSet: ['id', 'portfolioStockId', 'remainingShares', 'buyPrice'],
+      });
+      if (!errors && data) {
+        setAllWallets(data as StockWalletDataType[]);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch wallets for investment calculation:', err);
     }
-};
+  }, []);
 
+  // Compute total invested amount per stock by summing remainingShares × buyPrice for all wallets
+  const stockInvestments = useMemo(() => {
+    const invMap: Record<string, number> = {};
+    
+    // Group wallets by stock ID and calculate investment
+    allWallets.forEach(wallet => {
+      if (wallet.portfolioStockId) {
+        const investment = (wallet.remainingShares ?? 0) * (wallet.buyPrice ?? 0);
+        invMap[wallet.portfolioStockId] = (invMap[wallet.portfolioStockId] ?? 0) + investment;
+      }
+    });
+    
+    return invMap;
+  }, [allWallets]);
   // Fetch Portfolio Function
   const fetchPortfolio = useCallback(async () => {
     setIsLoading(true); // Set loading at the start
@@ -102,8 +103,7 @@ function StocksListingContent() {
       // --- Fetch Portfolio Stocks ONCE ---
       console.log("Fetching portfolio stocks...");
       const { data, errors } = await client.models.PortfolioStock.list({
-        selectionSet: [ // <-- Replace this array content
-          // PortfolioStock fields (keep existing ones)
+        selectionSet: [
           'id',
           'symbol',
           'name',
@@ -113,16 +113,9 @@ function StocksListingContent() {
           'pdp',
           'plr',
           'isHidden',
-          'swingHoldRatio', // Needed if you use it elsewhere, maybe not for tied-up inv.   
-          // --- ADD Nested StockWallet fields ---
-          'stockWallets.*', // Essential for current holdings
-          // Include these if needed for alternative calc, but buyPrice/remaining is better
-          // 'stockWallets.items.totalInvestment',
-          // 'stockWallets.items.totalSharesQty',
-          // --- END Add Nested Fields ---
+          'swingHoldRatio'
         ]
       });
-      // --- End Fetch ---
 
       if (errors) {
           console.error("Error fetching portfolio:", errors);
@@ -130,8 +123,11 @@ function StocksListingContent() {
       }
 
       // Set state with the fetched data (which includes isHidden)
-      setPortfolioStocksData(data as unknown as PortfolioStockDataType[]);
+      setPortfolioStocksData(data as PortfolioStockDataType[]);
       console.log('Fetched portfolio count:', data.length);
+
+      // Also fetch wallets for investment calculation
+      fetchWallets();
 
     } catch (err: any) {
       console.error("Error fetching portfolio:", err);
@@ -141,7 +137,7 @@ function StocksListingContent() {
     } finally {
       setIsLoading(false); // Set loading false when done (success or error)
     }
-  }, []);
+  }, [fetchWallets]);
   
   // Keep your useEffect to call fetchPortfolio
   useEffect(() => { fetchPortfolio(); }, [fetchPortfolio]);
@@ -204,6 +200,37 @@ function StocksListingContent() {
       console.error('Error updating stock:', err);
       const message = Array.isArray(err) ? err[0].message : err.message;
       setError(message || 'Failed to update stock.');
+    }
+  };
+
+  const handleToggleHidden = async (stock: PortfolioStockDataType) => {
+    const newHiddenState = !stock.isHidden; // Calculate the new state
+    // Optional confirmation for clarity
+    if (!window.confirm(`Are you sure you want to ${newHiddenState ? 'hide' : 'show'} ${stock.symbol?.toUpperCase()} in reports?`)) {
+        return;
+    }
+
+    console.log(`Attempting to set isHidden=${newHiddenState} for stock id: ${stock.id}`);
+    setError(null); // Clear previous errors
+
+    try {
+        // Update only the isHidden field
+        const { data: updatedStock, errors } = await client.models.PortfolioStock.update({
+            id: stock.id,
+            isHidden: newHiddenState,
+        });
+
+        if (errors) {
+            console.error('Error updating stock hidden status:', errors);
+            setError(errors[0]?.message || 'Failed to update stock.');
+        } else {
+            console.log('Stock hidden status updated successfully:', updatedStock);
+            // Refresh the portfolio list to potentially update UI indication if needed
+            fetchPortfolio();
+        }
+    } catch (err: any) {
+        console.error('Unexpected error updating stock hidden status:', err);
+        setError(err.message || 'An error occurred during update.');
     }
   };
 
@@ -1080,7 +1107,7 @@ function StocksListingContent() {
       {isLoading && <p>Loading stocks...</p>}
       {error && <p style={{ color: 'red' }}>Error: {error}</p>}
 
-      {/* Table Display */}
+      {/* --- START: Stock Portfolio Table --- */}
       {!isLoading && !error && (
         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
           <thead>
@@ -1099,7 +1126,7 @@ function StocksListingContent() {
           </thead>
           <tbody>
             {portfolioStocksData.length === 0 ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', padding: '1rem' }}>Your portfolio is empty.</td></tr>
+              <tr><td colSpan={10} style={{ textAlign: 'center', padding: '1rem' }}>Your portfolio is empty.</td></tr>
             ) : (
               portfolioStocksData.map((stock, index) => (
                 <tr key={stock.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
@@ -1122,10 +1149,10 @@ function StocksListingContent() {
                   <td style={{ padding: '5px' }}>{stock.region}</td>
                   <td style={{ padding: '5px' }}>
                     {pricesLoading ? '...' : (latestPrices[stock.symbol]?.currentPrice?.toFixed(2) ?? 'N/A')}
-                  </td>
-                  <td style={{ padding: '5px' }}>{stock.pdp ?? '-'}</td>
+                  </td>                  <td style={{ padding: '5px' }}>{stock.pdp ?? '-'}</td>
                   <td style={{ padding: '5px' }}>{stock.plr ?? '-'}</td>
                   <td style={{ padding: '5px' }}>{typeof stock.budget === 'number' ? stock.budget.toLocaleString('en-US', {style:'currency', currency:'USD'}) : '-'}</td>
+                  <td style={{ padding: '5px' }}>{typeof stockInvestments[stock.id] === 'number' ? stockInvestments[stock.id].toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '-'}</td>
                   {/* Actions */}
                   <td style={{ padding: '5px', textAlign: 'center' }}>
                     <button 
@@ -1148,6 +1175,7 @@ function StocksListingContent() {
           </tbody>
         </table>
       )}
+      {/* --- END: Stock Portfolio Table --- */}
 
       {/* Add Stock Modal */}
       {isAddModalOpen && (
