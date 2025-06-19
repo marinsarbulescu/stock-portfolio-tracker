@@ -1,3 +1,4 @@
+// app/(authed)/wallets/[stockId]/components/WalletsTransactionsSection.tsx
 import React from 'react';
 import type { TransactionDataType, TransactionTableColumnVisibilityState, SortableTxnKey, SortConfig } from '../types';
 import { formatCurrency, formatPercent, formatShares } from '@/app/utils/financialCalculations';
@@ -56,7 +57,7 @@ export default function WalletsTransactionsSection({
         ))}
       </div>
 
-      {/* Transactions table */}
+      {/* --- START: Wallets Transactions Table --- */}
       <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
         <thead>
           <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
@@ -103,6 +104,7 @@ export default function WalletsTransactionsSection({
             ))
           )}
         </tbody>
+        {/* --- END: Wallets Transactions Table --- */}
       </table>
     </div>
   );

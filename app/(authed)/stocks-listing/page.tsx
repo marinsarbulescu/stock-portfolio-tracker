@@ -8,7 +8,7 @@ import AddStockForm from '@/app/components/AddStockForm';
 import { FaEdit, FaTrashAlt, FaEye, FaEyeSlash } from 'react-icons/fa';
 import Link from 'next/link';
 import { usePrices } from '@/app/contexts/PriceContext';
-import { Pie } from 'react-chartjs-2';
+//import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
@@ -1121,6 +1121,7 @@ function StocksListingContent() {
               <th style={{ padding: '5px' }}>PDP (%)</th>
               <th style={{ padding: '5px' }}>PLR (%)</th>
               <th style={{ padding: '5px' }}>Budget</th>
+              <th style={{ padding: '5px' }}>Inv</th>
               <th style={{ padding: '5px', textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
