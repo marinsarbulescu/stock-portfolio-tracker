@@ -7,17 +7,21 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "npx jest"
+    "test": "npx jest",
+    "btc-price": "node scripts/fetch-btc-price.js",
+    "test-btc": "node scripts/test-btc-price.js"
   },
   "dependencies": {
     "@aws-amplify/adapter-nextjs": "^1.6.0",
     "@aws-amplify/data-schema": "^1.20.3",
     "@aws-amplify/ui-react": "^6.11.0",
     "@aws-sdk/client-ses": "^3.787.0",
+    "@types/jsdom": "^21.1.7",
     "aws-amplify": "^6.14.2",
     "chart.js": "^4.4.9",
     "chartjs-plugin-datalabels": "^2.2.0",
     "date-fns": "^4.1.0",
+    "jsdom": "^26.1.0",
     "lodash": "^4.17.21",
     "next": "^14.2.28",
     "react": "^18",
