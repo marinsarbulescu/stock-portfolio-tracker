@@ -26,6 +26,7 @@ interface DefaultFormStateType {
   plr: string;
   budget: string;
   swingHoldRatio: string; // <<< ADDED SHR state field
+  stockCommission: string; // <<< ADDED Commission state field
 }
 
 // --- Props for the component ---
@@ -47,6 +48,7 @@ const defaultFormState: DefaultFormStateType = {
   plr: '',
   budget: '',
   swingHoldRatio: '', // <<< ADDED SHR default
+  stockCommission: '', // <<< ADDED Commission default
 };
 
 export default function AddStockForm({
@@ -56,7 +58,6 @@ export default function AddStockForm({
   onUpdate,
   onCancel
 }: AddStockFormProps) {
-
   // --- State for each form field ---
   const [symbol, setSymbol] = useState(defaultFormState.symbol);
   const [stockType, setStockType] = useState<StockTypeValue>(defaultFormState.stockType);
@@ -66,10 +67,10 @@ export default function AddStockForm({
   const [plr, setPlr] = useState(defaultFormState.plr);
   const [budget, setBudget] = useState(defaultFormState.budget);
   const [swingHoldRatio, setSwingHoldRatio] = useState(defaultFormState.swingHoldRatio); // <<< ADDED SHR state
+  const [stockCommission, setStockCommission] = useState(defaultFormState.stockCommission); // <<< ADDED Commission state
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   // --- Effect to populate form using Partial<PortfolioStockDataType> ---
   useEffect(() => {
     setError(null);
@@ -83,6 +84,7 @@ export default function AddStockForm({
       setPlr(initialData.plr?.toString() ?? defaultFormState.plr);
       setBudget(initialData.budget?.toString() ?? defaultFormState.budget);
       setSwingHoldRatio(initialData.swingHoldRatio?.toString() ?? defaultFormState.swingHoldRatio); // <<< ADDED Populating SHR
+      setStockCommission(initialData.stockCommission?.toString() ?? defaultFormState.stockCommission); // <<< ADDED Populating Commission
     } else {
       // Reset form for Add mode
       setSymbol(defaultFormState.symbol);
@@ -93,6 +95,7 @@ export default function AddStockForm({
       setPlr(defaultFormState.plr);
       setBudget(defaultFormState.budget);
       setSwingHoldRatio(defaultFormState.swingHoldRatio); // <<< ADDED Resetting SHR
+      setStockCommission(defaultFormState.stockCommission); // <<< ADDED Resetting Commission
     }
   }, [isEditMode, initialData]);
   // --- End Effect ---
@@ -111,9 +114,7 @@ export default function AddStockForm({
          setError('Swing-Hold Ratio must be a number between 0 and 100.');
          setIsLoading(false); return;
      }
-    // --- End Validation ---
-
-    // --- Prepare data payload (plain object with correct types) ---
+    // --- End Validation ---    // --- Prepare data payload (plain object with correct types) ---
     const stockDataPayload = {
       symbol: symbol.toUpperCase(),
       stockType: stockType as StockTypeValue,
@@ -123,6 +124,7 @@ export default function AddStockForm({
       plr: plr ? parseFloat(plr) : null,
       budget: budget ? parseFloat(budget) : null,
       swingHoldRatio: shrValue, // <<< ADDED SHR value (already parsed or null)
+      stockCommission: stockCommission ? parseFloat(stockCommission) : null, // <<< ADDED Commission value
       // isHidden will default to false based on schema if not provided
     };
     // --- End Payload Prep ---
@@ -151,9 +153,7 @@ export default function AddStockForm({
         console.log('Creating stock input:', stockDataPayload);
         // Pass payload matching create input type (PortfolioStockCreateInput)
         const { errors } = await client.models.PortfolioStock.create(stockDataPayload);
-        if (errors) throw errors;
-
-        console.log('Stock added successfully!');
+        if (errors) throw errors;        console.log('Stock added successfully!');
         // Reset form fields only on successful ADD using default state values
         setSymbol(defaultFormState.symbol);
         setStockType(defaultFormState.stockType);
@@ -163,6 +163,7 @@ export default function AddStockForm({
         setPlr(defaultFormState.plr);
         setBudget(defaultFormState.budget);
         setSwingHoldRatio(defaultFormState.swingHoldRatio);
+        setStockCommission(defaultFormState.stockCommission);
         onStockAdded?.(); // Notify parent
       }
     } catch (err: any) {
@@ -288,8 +289,7 @@ export default function AddStockForm({
               style={{width: '100%', padding: '8px'}}
           />
       </div>
-      
-      <div>
+        <div>
         <label htmlFor="budget" style={{display: 'block', marginBottom: '3px'}}>Annual Budget:</label>
         <input 
           id="budget" 
@@ -298,6 +298,20 @@ export default function AddStockForm({
           value={budget} 
           onChange={(e) => setBudget(e.target.value)}
           placeholder="e.g., 1500 or best guess if unknown" 
+          disabled={isLoading}
+          style={{width: '100%', padding: '8px'}}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="commission" style={{display: 'block', marginBottom: '3px'}}>Commission:</label>
+        <input 
+          id="commission" 
+          type="number" 
+          step="any" 
+          value={stockCommission} 
+          onChange={(e) => setStockCommission(e.target.value)}
+          placeholder="e.g., 1.00 for commission per trade" 
           disabled={isLoading}
           style={{width: '100%', padding: '8px'}}
         />

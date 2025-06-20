@@ -227,8 +227,7 @@ function StocksListingContent() {
 
     try {
       // --- Fetch Portfolio Stocks ONCE ---
-      console.log("Fetching portfolio stocks...");
-      const { data, errors } = await client.models.PortfolioStock.list({
+      console.log("Fetching portfolio stocks...");      const { data, errors } = await client.models.PortfolioStock.list({
         selectionSet: [
           'id',
           'symbol',
@@ -239,7 +238,8 @@ function StocksListingContent() {
           'pdp',
           'plr',
           'isHidden',
-          'swingHoldRatio'
+          'swingHoldRatio',
+          'stockCommission'
         ]
       });
 

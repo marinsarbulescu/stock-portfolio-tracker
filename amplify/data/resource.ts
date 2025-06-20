@@ -32,6 +32,7 @@ const schema = a.schema({
       budget: a.float(), // Annual budget, optional number
       isHidden: a.boolean().default(false), // Hide the stock from the reporting table
       swingHoldRatio: a.float(),
+      stockCommission: a.float(), // Commission for stock trades, optional
       transactions: a.hasMany('Transaction', 'portfolioStockId'),
       stockWallets: a.hasMany('StockWallet', 'portfolioStockId'),
       // Add owner field if not implicitly added by .authorization
