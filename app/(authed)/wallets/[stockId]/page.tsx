@@ -38,6 +38,8 @@ type StockWalletDataType = Schema['StockWallet']['type'];
 interface StockInfoForWalletService {
     owner: string; // Cognito User Sub ID
     plr?: number | null;
+    pdp?: number | null; // Add PDP for base TP calculation
+    stockCommission?: number | null; // Add commission for TP adjustment
 }
 
 
@@ -278,6 +280,7 @@ export default function StockWalletPage() {
     const [stockPdp, setStockPdp] = useState<number | null | undefined>(undefined);
     const [stockShr, setStockShr] = useState<number | null | undefined>(undefined); // Swing-Hold Ratio
     const [stockPlr, setStockPlr] = useState<number | null | undefined>(undefined);
+    const [stockCommission, setStockCommission] = useState<number | null | undefined>(undefined);
 
     const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
 
@@ -454,11 +457,11 @@ export default function StockWalletPage() {
         if (!ownerId) {
             alert("[StockWalletPage] - Owner ID not yet available. Please try again shortly.");
             return;
-        }
-
-        const stockInfoForService: StockInfoForWalletService = { // Ensure this type matches what walletService expects
+        }        const stockInfoForService: StockInfoForWalletService = { // Ensure this type matches what walletService expects
             owner: ownerId, // Use the concatenated string
             plr: stockPlr,
+            pdp: stockPdp,
+            stockCommission: stockCommission,
         };
         
         // console.log('[StockWalletPage] - Attempting to update transaction via Edit modal:', updatedTxnDataFromForm);
@@ -933,45 +936,44 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
 
 
     // --- Fetch Stock Symbol for Title ---
-    useEffect(() => {
-        if (stockId) {
+    useEffect(() => {        if (stockId) {
             //console.log(`Workspaceing symbol for stockId: ${stockId}`);
             client.models.PortfolioStock.get(
                 { id: stockId }, 
-                { selectionSet: ['symbol', 'name', 'budget', 'pdp', 'swingHoldRatio', 'plr'] })
+                { selectionSet: ['symbol', 'name', 'budget', 'pdp', 'swingHoldRatio', 'plr', 'stockCommission'] })
                 .then(({ data, errors }) => {
                     if (errors) {
                         //console.error("[StockWalletPage] - Error fetching stock symbol:", errors);
-                        setError(prev => prev ? `${prev} | Failed to fetch symbol.` : 'Failed to fetch symbol.');
-                        setStockSymbol("Error");
+                        setError(prev => prev ? `${prev} | Failed to fetch symbol.` : 'Failed to fetch symbol.');                        setStockSymbol("Error");
                         setStockName("Error");
                         setStockBudget(null);
                         setStockPdp(null);
                         setStockShr(null);
                         setStockPlr(null);
+                        setStockCommission(null);
                     } else if (data) {
-                        setStockSymbol(data.symbol ?? "Unknown");
-                        setStockName(data.name ?? "Unknown");
+                        setStockSymbol(data.symbol ?? "Unknown");                        setStockName(data.name ?? "Unknown");
                         setStockBudget(data.budget);
                         setStockPdp(data.pdp);       // <<< Set PDP state
                         setStockShr(data.swingHoldRatio); // <<< Set SHR state
                         setStockPlr(data.plr);       // <<< Set PLR state
+                        setStockCommission(data.stockCommission); // <<< Set Commission state
                     } else {
-                        setStockSymbol("Not Found");
-                        setStockName("Not Found");
+                        setStockSymbol("Not Found");                        setStockName("Not Found");
                         setStockBudget(null);
                         setStockPdp(null); // Set related state to null if not found
                         setStockShr(null);
                         setStockPlr(null);
+                        setStockCommission(null);
                     }
                 }).catch(err => {
                     //console.error("[StockWalletPage] - Error fetching stock symbol:", err);
                     setError(prev => prev ? `${prev} | Failed to fetch symbol.` : 'Failed to fetch symbol.');
                     setStockSymbol("Error");
-                    setStockName("Error");
-                    setStockBudget(null);
+                    setStockName("Error");                    setStockBudget(null);
                     setStockShr(null);
                     setStockPlr(null);
+                    setStockCommission(null);
                 });
         } else {
             setStockSymbol(undefined);
@@ -980,6 +982,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
             setStockPdp(undefined);
             setStockShr(undefined);
             setStockPlr(undefined);
+            setStockCommission(undefined);
         }
     }, [stockId]); // Dependency on stockId
 

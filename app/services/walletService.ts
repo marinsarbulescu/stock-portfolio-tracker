@@ -18,7 +18,9 @@ type AmplifyClient = ReturnType<typeof generateClient<Schema>>;
 interface StockInfoForTp {
     owner: string;
     plr?: number | null;
-    // Add any other fields needed for TP calculation (e.g., pdp, specific overrides?)
+    pdp?: number | null; // Add PDP for base TP calculation
+    stockCommission?: number | null; // Add commission for TP adjustment
+    // Add any other fields needed for TP calculation (e.g., specific overrides?)
 }
 
 // Define the return type for TP calculation (customize as needed)
@@ -47,26 +49,52 @@ type QueriedWalletData = Pick<Schema['StockWallet']['type'],
 // --- End type definition ---
 
 // --- Placeholder for TP Calculation Logic ---
-// You MUST replace this with your actual TP calculation logic
+// Commission-adjusted TP calculation function
 function calculateTpForWallet(
     totalInvestment: number,
     totalShares: number,
     stockInfo: StockInfoForTp
 ): TpCalculationResult {
-    console.warn("TP Calculation Logic is a placeholder in walletService.ts!");
     const plr = stockInfo.plr;
+    const pdp = stockInfo.pdp;
+    const stockCommission = stockInfo.stockCommission;
 
-    // --- Replace with your actual logic ---
-    // Example placeholder logic (likely incorrect for your needs):
     let tpValue: number | null = null;
     let tpPercent: number | null = null;
-    if (typeof plr === 'number' && plr > 0 && totalShares > SHARE_EPSILON && totalInvestment > CURRENCY_EPSILON) {
+    
+    if (typeof plr === 'number' && typeof pdp === 'number' && plr > 0 && pdp > 0 && 
+        totalShares > SHARE_EPSILON && totalInvestment > CURRENCY_EPSILON) {
+        
         const buyPrice = totalInvestment / totalShares;
-        // Example: TP = Buy Price * (1 + (PLR * some_factor?)) - Needs refinement
-        tpValue = buyPrice * (1 + (plr * 0.1)); // <<< Placeholder calculation
-        tpPercent = ((tpValue - buyPrice) / buyPrice) * 100; // <<< Placeholder calculation
+        
+        // Calculate base TP using the same formula as TransactionForm
+        const baseTP = buyPrice + (buyPrice * (pdp * plr / 100));
+          // Apply commission adjustment if commission is available and > 0
+        console.log(`[Wallet TP Debug] Stock Commission: ${stockCommission}, Type: ${typeof stockCommission}`);
+        console.log(`[Wallet TP Debug] Base TP: ${baseTP}, Buy Price: ${buyPrice}`);
+        
+        if (typeof stockCommission === 'number' && stockCommission > 0) {
+            const commissionRate = stockCommission / 100;
+            console.log(`[Wallet TP Debug] Commission Rate: ${commissionRate}`);
+            
+            // Prevent division by zero or negative values
+            if (commissionRate >= 1) {
+                console.warn(`Commission rate (${stockCommission}%) is too high for wallet TP calculation, using base TP`);
+                tpValue = baseTP;
+            } else {
+                // Commission-adjusted TP: baseTP / (1 - commissionRate)
+                tpValue = baseTP / (1 - commissionRate);
+                console.log(`[Wallet TP Debug] Commission-adjusted TP: ${tpValue}`);
+            }
+        } else {
+            console.log(`[Wallet TP Debug] No commission or invalid commission, using base TP`);
+            // No commission or invalid commission, use base TP
+            tpValue = baseTP;
+        }
+        
+        // Calculate TP percentage
+        tpPercent = ((tpValue - buyPrice) / buyPrice) * 100;
     }
-    // --- End Replace ---
 
     return {
         tpValue: tpValue !== null ? parseFloat(tpValue.toFixed(CURRENCY_PRECISION)) : null,

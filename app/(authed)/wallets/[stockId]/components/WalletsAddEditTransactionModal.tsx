@@ -1,4 +1,4 @@
-// app/components/TransactionForm.tsx
+// app/(authed)/wallets/[stockId]/components/WalletsAddEditTransactionForm.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -177,18 +177,18 @@ export default function TransactionForm({
           // --- End Rounding ---
         } else {
             setError("Investment and positive Price are required to calculate quantity for Buy.");
-            setIsLoading(false); return;
-        }
+            setIsLoading(false); return;        }
 
         // Fetch stock details (ratio, pdp, plr)
         let ratio = 1.0; // Default to 100% Swing
         try {
             //console.log("Fetching stock details for ratio/TP/LBD...");
             const { data: stock } = await client.models.PortfolioStock.get(
-                { id: portfolioStockId }, { selectionSet: ['swingHoldRatio', 'pdp', 'plr'] }
+                { id: portfolioStockId }, { selectionSet: ['swingHoldRatio', 'pdp', 'plr', 'stockCommission'] }
             );
             pdpValue = stock?.pdp;
             plrValue = stock?.plr;
+            const stockCommissionValue = stock?.stockCommission;
 
             if (buyType === 'Split') {
                 if (typeof stock?.swingHoldRatio === 'number' && stock.swingHoldRatio >= 0 && stock.swingHoldRatio <= 100) {
@@ -200,12 +200,29 @@ export default function TransactionForm({
                 }
             } else if (buyType === 'Hold') {
                 ratio = 0.0; // 0% Swing (100% Hold)
-            } // Default ratio remains 1.0 (100% Swing) for 'Swing' type
-
-            // Calculate LBD/TP
+            } // Default ratio remains 1.0 (100% Swing) for 'Swing' type            // Calculate LBD/TP
             if (typeof pdpValue === 'number' && typeof plrValue === 'number' && priceValue) {
               lbd_raw = priceValue - (priceValue * (pdpValue / 100));
-              tp_raw = priceValue + (priceValue * (pdpValue * plrValue / 100));
+              
+              // Calculate base TP using current formula
+              const baseTP = priceValue + (priceValue * (pdpValue * plrValue / 100));
+                // Apply commission adjustment if commission is available and > 0
+              if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
+                const commissionRate = stockCommissionValue / 100;
+                
+                // Prevent division by zero or negative values
+                if (commissionRate >= 1) {
+                  console.warn(`Commission rate (${stockCommissionValue}%) is too high, using base TP calculation`);
+                  tp_raw = baseTP;
+                } else {
+                  // Commission-adjusted TP: baseTP / (1 - commissionRate)
+                  tp_raw = baseTP / (1 - commissionRate);
+                }
+              } else {
+                // No commission or invalid commission, use base TP
+                console.log(`[Wallet TP Debug] No commission or invalid commission, using base TP`);
+                tp_raw = baseTP;
+              }
 
               // --- Round LBD/TP (Optional but good practice for currency) ---
               lbd_final = parseFloat(lbd_raw.toFixed(CURRENCY_PRECISION));
