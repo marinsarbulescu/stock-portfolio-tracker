@@ -202,11 +202,31 @@ export default function TransactionForm({
                 ratio = 0.0; // 0% Swing (100% Hold)
             } // Default ratio remains 1.0 (100% Swing) for 'Swing' type            // Calculate LBD/TP
             if (typeof pdpValue === 'number' && typeof plrValue === 'number' && priceValue) {
-              lbd_raw = priceValue - (priceValue * (pdpValue / 100));
+              // Calculate target LBD (without commission adjustment)
+              const targetLBD = priceValue - (priceValue * (pdpValue / 100));
+              
+              // Apply commission adjustment to LBD if commission is available and > 0
+              if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
+                const commissionRate = stockCommissionValue / 100;
+                
+                // Prevent division by zero or extreme values
+                if (commissionRate >= 1) {
+                  console.warn(`Commission rate (${stockCommissionValue}%) is too high, using target LBD without adjustment`);
+                  lbd_raw = targetLBD;
+                } else {
+                  // Commission-adjusted LBD: targetLBD / (1 + commissionRate)
+                  // This ensures that LBD + commission = target LBD
+                  lbd_raw = targetLBD / (1 + commissionRate);
+                  console.log(`[LBD Debug] Target LBD: ${targetLBD}, Commission: ${stockCommissionValue}%, Commission-adjusted LBD: ${lbd_raw}`);
+                }
+              } else {
+                // No commission or invalid commission, use target LBD
+                lbd_raw = targetLBD;
+              }
               
               // Calculate base TP using current formula
               const baseTP = priceValue + (priceValue * (pdpValue * plrValue / 100));
-                // Apply commission adjustment if commission is available and > 0
+                // Apply commission adjustment to TP if commission is available and > 0
               if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
                 const commissionRate = stockCommissionValue / 100;
                 
@@ -220,7 +240,6 @@ export default function TransactionForm({
                 }
               } else {
                 // No commission or invalid commission, use base TP
-                console.log(`[Wallet TP Debug] No commission or invalid commission, using base TP`);
                 tp_raw = baseTP;
               }
 
