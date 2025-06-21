@@ -65,9 +65,9 @@ export default function StockWalletPage() {
      date: false,
      action: true,
      txnType: true,
-     signal: false,
+     signal: true,
      price: true,
-     lbd: false,
+     lbd: true,
      investment: true,
      quantity: false,
      proceeds: true,
@@ -179,6 +179,7 @@ export default function StockWalletPage() {
     const [stockBudget, setStockBudget] = useState<number | null | undefined>(undefined); // undefined: not loaded, null: no budget set, number: budget value
 
     const [activeTab, setActiveTab] = useState<'Swing' | 'Hold'>('Swing');
+    const [showEmptyWallets, setShowEmptyWallets] = useState<boolean>(false);
 
     // State for fetched wallet data for THIS stock
     const [wallets, setWallets] = useState<StockWalletDataType[]>([]);
@@ -1910,8 +1911,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 plStats={plStats}
                 unrealizedPlStats={unrealizedPlStats}
                 totalPlStats={totalPlStats}
-                pricesLoading={pricesLoading}
-            />
+                pricesLoading={pricesLoading}            />
             {/* --- START: Wallets section --- */}
             <WalletsSection
               swingWallets={swingWallets}
@@ -1927,7 +1927,10 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
               stockSymbol={stockSymbol}
               onSell={handleOpenSellModal}
               onDelete={handleDeleteWallet}
-              columnLabels={WALLET_COLUMN_LABELS} />
+              columnLabels={WALLET_COLUMN_LABELS}
+              showEmptyWallets={showEmptyWallets}
+              setShowEmptyWallets={setShowEmptyWallets}
+            />
             {/* --- END: Wallets section replaced by component --- */}
             
             {/* --- START: Transactions section --- */}

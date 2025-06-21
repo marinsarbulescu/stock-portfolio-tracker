@@ -1,3 +1,4 @@
+//app/(authed)/wallets/[stockId]/components/WalletsSection.tsx
 import React from 'react';
 import type { StockWalletDataType, WalletsTableColumnVisibilityState, WalletsTableSortableKey } from '../types';
 import type { Dispatch, SetStateAction } from 'react';
@@ -20,6 +21,8 @@ export interface WalletsSectionProps {
   stockSymbol?: string;
   onSell: (wallet: StockWalletDataType) => void;
   onDelete: (wallet: StockWalletDataType) => void;
+  showEmptyWallets: boolean;
+  setShowEmptyWallets: Dispatch<SetStateAction<boolean>>;
 }
 
 export default function WalletsSection({
@@ -37,6 +40,8 @@ export default function WalletsSection({
   stockSymbol,
   onSell,
   onDelete,
+  showEmptyWallets,
+  setShowEmptyWallets,
 }: WalletsSectionProps) {
   const truncateId = (id: string | null | undefined, length = 8): string => {
     if (!id) return '-';
@@ -61,6 +66,25 @@ export default function WalletsSection({
 
   const currentPrice = latestPrices[stockSymbol ?? '']?.currentPrice;
 
+  // Filter wallets based on showEmptyWallets toggle
+  const filterWallets = (wallets: StockWalletDataType[]) => {
+    if (showEmptyWallets) return wallets;
+    return wallets.filter(wallet => (wallet.remainingShares ?? 0) > SHARE_EPSILON);
+  };
+
+  const filteredSwingWallets = filterWallets(swingWallets);
+  const filteredHoldWallets = filterWallets(holdWallets);
+
+  // Count wallets for display
+  const getWalletCounts = (wallets: StockWalletDataType[]) => {
+    const total = wallets.length;
+    const withShares = wallets.filter(wallet => (wallet.remainingShares ?? 0) > SHARE_EPSILON).length;
+    return { total, withShares };
+  };
+
+  const swingCounts = getWalletCounts(swingWallets);
+  const holdCounts = getWalletCounts(holdWallets);
+
   return (
     <div>
       <p style={{ fontSize: '1.3em', marginTop: '40px' }}>Wallets</p>
@@ -77,39 +101,54 @@ export default function WalletsSection({
             {columnLabels[key]}
           </label>
         ))}
-      </div>
-
-      <div style={{ marginBottom: '1rem' }}>
+      </div>      <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <button
+            data-testid="wallet-tab-Swing"
+            onClick={() => setActiveTab('Swing')}
+            style={{
+              padding: '8px 15px',
+              marginRight: '10px',
+              cursor: 'pointer',
+              border: 'none',
+              borderBottom: activeTab === 'Swing' ? '2px solid lightblue' : '2px solid transparent',
+              background: 'none',
+              color: activeTab === 'Swing' ? 'lightblue' : 'inherit',
+              fontSize: '1em',
+            }}
+          >
+            Swing ({showEmptyWallets ? swingCounts.total : swingCounts.withShares})
+          </button>
+          <button
+            data-testid="wallet-tab-Hold"
+            onClick={() => setActiveTab('Hold')}
+            style={{
+              padding: '8px 15px',
+              cursor: 'pointer',
+              border: 'none',
+              borderBottom: activeTab === 'Hold' ? '2px solid lightgreen' : '2px solid transparent',
+              background: 'none',
+              color: activeTab === 'Hold' ? 'lightgreen' : 'inherit',
+              fontSize: '1em',
+            }}
+          >
+            Hold ({showEmptyWallets ? holdCounts.total : holdCounts.withShares})
+          </button>
+        </div>
         <button
-          data-testid="wallet-tab-Swing"
-          onClick={() => setActiveTab('Swing')}
+          data-testid="wallet-toggle-empty"
+          onClick={() => setShowEmptyWallets(!showEmptyWallets)}
           style={{
-            padding: '8px 15px',
-            marginRight: '10px',
+            padding: '6px 12px',
             cursor: 'pointer',
-            border: 'none',
-            borderBottom: activeTab === 'Swing' ? '2px solid lightblue' : '2px solid transparent',
-            background: 'none',
-            color: activeTab === 'Swing' ? 'lightblue' : 'inherit',
-            fontSize: '1em',
+            border: '1px solid #555',
+            borderRadius: '4px',
+            background: '#2a2a2a',
+            color: 'inherit',
+            fontSize: '0.9em',
           }}
         >
-          Swing ({swingWallets.length})
-        </button>
-        <button
-          data-testid="wallet-tab-Hold"
-          onClick={() => setActiveTab('Hold')}
-          style={{
-            padding: '8px 15px',
-            cursor: 'pointer',
-            border: 'none',
-            borderBottom: activeTab === 'Hold' ? '2px solid lightgreen' : '2px solid transparent',
-            background: 'none',
-            color: activeTab === 'Hold' ? 'lightgreen' : 'inherit',
-            fontSize: '1em',
-          }}
-        >
-          Hold ({holdWallets.length})
+          {showEmptyWallets ? 'Hide Empty' : 'Show All'}
         </button>
       </div>
 
@@ -129,16 +168,18 @@ export default function WalletsSection({
             {walletColumnVisibility.remainingShares && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('remainingShares')}>Shs Left {walletSortConfig?.key === 'remainingShares' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
             <th style={{ padding: '5px', textAlign: 'center' }}>Actions</th>
           </tr>
-        </thead>
-        <tbody>
-          {(activeTab === 'Swing' ? swingWallets : holdWallets).length === 0 ? (
+        </thead>        <tbody>
+          {(activeTab === 'Swing' ? filteredSwingWallets : filteredHoldWallets).length === 0 ? (
             <tr>
               <td data-testid="wallet-notfound-display" colSpan={visibleColumns.filter(col => walletColumnVisibility[col]).length + 2} style={{ textAlign: 'center', padding: '1rem' }}>
-                No {activeTab} wallets found for this stock.
+                {showEmptyWallets 
+                  ? `No ${activeTab} wallets found for this stock.`
+                  : `No ${activeTab} wallets with shares found for this stock.`
+                }
               </td>
             </tr>
           ) : (
-            (activeTab === 'Swing' ? swingWallets : holdWallets).map((wallet, index) => {
+            (activeTab === 'Swing' ? filteredSwingWallets : filteredHoldWallets).map((wallet, index) => {
               return (
                 <tr key={wallet.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
                   {walletColumnVisibility.id && <td data-testid="wallet-id-display" style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>{truncateId(wallet.id)}</td>}
