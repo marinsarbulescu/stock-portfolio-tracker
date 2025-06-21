@@ -1,4 +1,4 @@
-// app/(authed)/stocks-listing/page.tsx - Refactored with ["type"] pattern
+// app/(authed)/stocks-listing/page.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -11,6 +11,7 @@ import { usePrices } from '@/app/contexts/PriceContext';
 //import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
+import { formatCurrency, formatPercent, formatShares } from '@/app/utils/financialCalculations';
 
 //const SHARE_EPSILON = 0.00001;
 
@@ -1286,14 +1287,13 @@ function StocksListingContent() {
                         `${stock.name.substring(0, 15)}...` : 
                         stock.name) 
                       : '-'}
+                  </td>                  <td style={{ padding: '5px' }}>{stock.stockType}</td>
+                  <td style={{ padding: '5px' }}>{stock.region}</td>                  <td style={{ padding: '5px' }}>
+                    {pricesLoading ? '...' : (latestPrices[stock.symbol]?.currentPrice && typeof latestPrices[stock.symbol]?.currentPrice === 'number' ? formatCurrency(latestPrices[stock.symbol]!.currentPrice!) : 'N/A')}
                   </td>
-                  <td style={{ padding: '5px' }}>{stock.stockType}</td>
-                  <td style={{ padding: '5px' }}>{stock.region}</td>
-                  <td style={{ padding: '5px' }}>
-                    {pricesLoading ? '...' : (latestPrices[stock.symbol]?.currentPrice?.toFixed(2) ?? 'N/A')}
-                  </td>                  <td style={{ padding: '5px' }}>{stock.pdp ?? '-'}</td>
+                  <td style={{ padding: '5px' }}>{stock.pdp ?? '-'}</td>
                   <td style={{ padding: '5px' }}>{stock.plr ?? '-'}</td>
-                  <td style={{ padding: '5px' }}>{typeof stock.budget === 'number' ? stock.budget.toLocaleString('en-US', {style:'currency', currency:'USD'}) : '-'}</td>
+                  <td style={{ padding: '5px' }}>{typeof stock.budget === 'number' ? formatCurrency(stock.budget??0) : '-'}</td>
                   <td style={{ padding: '5px' }}>{typeof stockInvestments[stock.id] === 'number' ? stockInvestments[stock.id].toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '-'}</td>
                   {/* Actions */}
                   <td style={{ padding: '5px', textAlign: 'center' }}>

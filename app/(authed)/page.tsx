@@ -50,7 +50,7 @@ export default function HomePage() {
         swingWalletCount: true,
         sinceBuy: true,
         sinceSell: false,
-        currentPrice: true,
+        currentPrice: false,
         percentToBe: false,
         ltpiaTakeProfitPrice: true,
         percentToTp: true,

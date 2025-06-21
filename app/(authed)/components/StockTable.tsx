@@ -4,6 +4,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ReportColumnVisibilityState } from './ColumnVisibilityControls';
+import { formatCurrency, formatPercent, formatShares } from '@/app/utils/financialCalculations';
 
 export interface ReportDataItem {
     id: string;
@@ -177,7 +178,7 @@ export default function StockTable({
                             )}
                             {reportColumnVisibility.currentPrice && (
                                 <td style={{ padding: '5px' }}>
-                                    {typeof item.currentPrice === 'number' ? `$${item.currentPrice.toFixed(2)}` : '-'}
+                                    {typeof item.currentPrice === 'number' ? formatCurrency(item.currentPrice??0) : '-'}
                                 </td>
                             )}
                             {reportColumnVisibility.percentToBe && (
@@ -189,7 +190,7 @@ export default function StockTable({
                             )}
                             {reportColumnVisibility.ltpiaTakeProfitPrice && (
                                 <td style={{ padding: '5px' }}>
-                                    {typeof item.ltpiaTakeProfitPrice === 'number' ? `$${item.ltpiaTakeProfitPrice.toFixed(2)}` : '-'}
+                                    {typeof item.ltpiaTakeProfitPrice === 'number' ? formatCurrency(item.ltpiaTakeProfitPrice??0) : '-'}
                                 </td>
                             )}
                             {reportColumnVisibility.percentToTp && (
