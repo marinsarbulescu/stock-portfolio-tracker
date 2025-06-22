@@ -4,16 +4,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
-import AddStockForm from '@/app/components/AddStockForm';
-import { FaEdit, FaTrashAlt, FaEye, FaEyeSlash } from 'react-icons/fa';
-import Link from 'next/link';
 import { usePrices } from '@/app/contexts/PriceContext';
-//import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
-import { formatCurrency, formatPercent, formatShares } from '@/app/utils/financialCalculations';
-
-//const SHARE_EPSILON = 0.00001;
+import { formatCurrency } from '@/app/utils/financialCalculations';
 
 import {
   SHARE_PRECISION,
@@ -21,18 +15,23 @@ import {
   PERCENT_PRECISION,
   SHARE_EPSILON,
   CURRENCY_EPSILON,
-  PERCENT_EPSILON // Import if your logic uses it
+  PERCENT_EPSILON
 } from '@/app/config/constants';
+
+// Import the new components
+import PortfolioOverviewSection from './components/PortfolioOverviewSection';
+import PortfolioTable from './components/PortfolioTable';
+import AddStockModal from './components/AddStockModal';
+import EditStockModal from './components/EditStockModal';
 
 // Register Chart.js components and plugins
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, ChartDataLabels);
 
-// Use the simpler data type for state
 type PortfolioStockDataType = Schema["PortfolioStock"]["type"];
 // Define type needed for update payload
 type PortfolioStockUpdateInput = Partial<PortfolioStockDataType> & { id: string };
 
-type PriceMap = Record<string, number | null>; // Symbol -> Price or null
+type PriceMap = Record<string, { currentPrice: number | null; [key: string]: any } | null>;
 
 const client = generateClient<Schema>();
 
@@ -59,22 +58,8 @@ function StocksListingContent() {
   const [portfolioStocksData, setPortfolioStocksData] = useState<PortfolioStockDataType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   // --- State for sorting ---
   const [stockSortConfig, setStockSortConfig] = useState<StockSortConfig | null>(null);
-
-  // Column labels for the stock table
-  const STOCK_COLUMN_LABELS: Record<SortableStockKey, string> = {
-    symbol: 'Ticker',
-    name: 'Name',
-    stockType: 'Type',
-    region: 'Region',
-    currentPrice: 'Last Price',
-    pdp: 'PDP (%)',
-    plr: 'PLR (%)',
-    budget: 'Budget',
-    investment: 'Inv.',
-  };
 
   // Sort request handler
   const requestStockSort = (key: SortableStockKey) => {
@@ -308,7 +293,6 @@ function StocksListingContent() {
     setEditingStockId(null);
     setStockToEditData(null);
   };
-
   // Update Stock Handler (receives plain object from form, uses ID from state)
   const handleUpdateStock = async (updatePayload: PortfolioStockUpdateInput) => {
     if (!editingStockId) return;
@@ -358,33 +342,8 @@ function StocksListingContent() {
     } catch (err: any) {
         console.error('Unexpected error updating stock hidden status:', err);
         setError(err.message || 'An error occurred during update.');
-    }
-  };
+    }  };
 
-  // Modal styles
-  const modalOverlayStyle: React.CSSProperties = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000
-  };
-
-  const modalContentStyle: React.CSSProperties = {
-    backgroundColor: '#1e1e1e',
-    borderRadius: '8px',
-    maxHeight: '90vh',
-    width: '90%',
-    maxWidth: '500px',
-    overflowY: 'auto',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
-  };
-  
   // Calculate region distribution
   const regionDistribution = useMemo(() => {
     // Initialize counters for each region
@@ -831,393 +790,23 @@ function StocksListingContent() {
     };
     // Depend on visibleStocks now
   }, [visibleStocks]);
-
   return (
     <div>
       <h2 data-testid="portfolio-page-title">Portfolio</h2>
 
-      {/* --- START: Portfolio Overview section --- */}
-      <div
-        data-testid="portfolio-page-overview-section"
-        style={{
-        marginBottom: '1rem',
-        border: '1px solid #444',
-      }}>
-        <p
-          data-testid="portfolio-page-overview-header"
-          style={{
-              marginTop: 0, marginBottom: 0,
-              padding: '10px 15px',
-              cursor: 'pointer',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-          }}
-          onClick={() => setIsOverviewExpanded(!isOverviewExpanded)}
-        >                   
-          <span data-testid="portfolio-page-overview-title">Overview</span>
-          <span data-testid="portfolio-page-overview-toggle" style={{ fontSize: '0.8em' }}>{isOverviewExpanded ? '▼' : '▶'}</span>
-        </p>
-
-        {isOverviewExpanded && (
-          <div data-testid="portfolio-page-overview-expanded" style={{ padding: '15px', borderTop: '1px solid #444', fontSize: '0.8em' }}>            
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>              
-              {/* Region Distribution - Text only */}    
-              <div style={{ borderRight: '1px solid #444', marginRight: '5px', paddingRight: '5px' }}>
-                <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '5px' }}>Holdings By Region</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>US</p>
-                    <p>{percentages.US}% ({regionDistribution.US})</p>
-                  </div>
-                  <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>EU</p>
-                    <p>{percentages.EU}% ({regionDistribution.EU})</p>
-                  </div>
-                  <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Intl</p>
-                    <p>{percentages.Intl}% ({regionDistribution.Intl})</p>
-                  </div>
-                  <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>APAC</p>
-                    <p>{percentages.APAC}% ({regionDistribution.APAC})</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Stock Type Distribution - Text only */}
-              <div>
-                <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '5px' }}>Holdings By Type</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
-                    <p>{stockTypePercentages.Stock}% ({stockTypeDistribution.Stock})</p>
-                  </div>
-                  <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>ETF</p>
-                    <p>{stockTypePercentages.ETF}% ({stockTypeDistribution.ETF})</p>
-                  </div>
-                  <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Crypto</p>
-                    <p>{stockTypePercentages.Crypto}% ({stockTypeDistribution.Crypto})</p>
-                  </div>
-                </div>
-              </div>               
-            </div>
-            
-            {/* US Region Statistics Table */}
-            <div style={{ marginTop: '20px', marginBottom: '20px' }}>
-              <p style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '10px' }}>Tied-up Investment by Region</p>
-              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #444' }}>
-                {/* Table Header */}
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #444', background: '#1e1e1e' }}>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%' }}>US</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Stock</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>ETF</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>All Holdings</th>
-                  </tr>
-                </thead>
-                
-                {/* Table Body */}
-                <tbody>
-                  {/* Count of stocks row */}
-                  <tr style={{ borderBottom: '1px solid #444' }}>
-                    <td style={{ padding: '8px', fontSize: '0.9em' }}># Holdings</td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      {usRegionStats.counts.stock} ({Math.round((usRegionStats.counts.stock / usRegionStats.counts.total) * 100) || 0}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      {usRegionStats.counts.etf} ({Math.round((usRegionStats.counts.etf / usRegionStats.counts.total) * 100) || 0}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
-                      {usRegionStats.counts.total} (100%)
-                    </td>
-                  </tr>
-                  
-                  {/* Swing Investment row */}
-                  <tr style={{ borderBottom: '1px solid #444' }}>
-                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Swing Inv</td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(usRegionStats.swingInvestment.stock.value).toLocaleString()} ({usRegionStats.swingInvestment.stock.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(usRegionStats.swingInvestment.etf.value).toLocaleString()} ({usRegionStats.swingInvestment.etf.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
-                      ${Math.round(usRegionStats.swingInvestment.total.value).toLocaleString()} (100%)
-                    </td>
-                  </tr>
-                  
-                  {/* Hold Investment row */}
-                  <tr style={{ borderBottom: '1px solid #444' }}>
-                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Hold Inv</td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(usRegionStats.holdInvestment.stock.value).toLocaleString()} ({usRegionStats.holdInvestment.stock.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(usRegionStats.holdInvestment.etf.value).toLocaleString()} ({usRegionStats.holdInvestment.etf.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
-                      ${Math.round(usRegionStats.holdInvestment.total.value).toLocaleString()} (100%)
-                    </td>
-                  </tr>
-                  
-                  {/* Total Investment row */}
-                  <tr>
-                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Total Inv</td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(usRegionStats.totalInvestment.stock.value).toLocaleString()} ({usRegionStats.totalInvestment.stock.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(usRegionStats.totalInvestment.etf.value).toLocaleString()} ({usRegionStats.totalInvestment.etf.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
-                      ${Math.round(usRegionStats.totalInvestment.total.value).toLocaleString()} (100%)
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* EU Region Statistics Table */}
-            <div style={{ marginTop: '20px', marginBottom: '20px' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #444' }}>
-                {/* Table Header */}
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #444', background: '#1e1e1e' }}>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%' }}>EU</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Stock</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>ETF</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>All Holdings</th>
-                  </tr>
-                </thead>
-                
-                {/* Table Body */}
-                <tbody>
-                  {/* Count of stocks row */}
-                  <tr style={{ borderBottom: '1px solid #444' }}>
-                    <td style={{ padding: '8px', fontSize: '0.9em' }}># Holdings</td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      {euRegionStats.counts.stock} ({Math.round((euRegionStats.counts.stock / euRegionStats.counts.total) * 100) || 0}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      {euRegionStats.counts.etf} ({Math.round((euRegionStats.counts.etf / euRegionStats.counts.total) * 100) || 0}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
-                      {euRegionStats.counts.total} (100%)
-                    </td>
-                  </tr>
-                  
-                  {/* Swing Investment row */}
-                  <tr style={{ borderBottom: '1px solid #444' }}>
-                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Swing Inv</td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(euRegionStats.swingInvestment.stock.value).toLocaleString()} ({euRegionStats.swingInvestment.stock.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(euRegionStats.swingInvestment.etf.value).toLocaleString()} ({euRegionStats.swingInvestment.etf.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
-                      ${Math.round(euRegionStats.swingInvestment.total.value).toLocaleString()} (100%)
-                    </td>
-                  </tr>
-                  
-                  {/* Hold Investment row */}
-                  <tr style={{ borderBottom: '1px solid #444' }}>
-                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Hold Inv</td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(euRegionStats.holdInvestment.stock.value).toLocaleString()} ({euRegionStats.holdInvestment.stock.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(euRegionStats.holdInvestment.etf.value).toLocaleString()} ({euRegionStats.holdInvestment.etf.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
-                      ${Math.round(euRegionStats.holdInvestment.total.value).toLocaleString()} (100%)
-                    </td>
-                  </tr>
-                  
-                  {/* Total Investment row */}
-                  <tr>
-                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Total Inv</td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(euRegionStats.totalInvestment.stock.value).toLocaleString()} ({euRegionStats.totalInvestment.stock.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(euRegionStats.totalInvestment.etf.value).toLocaleString()} ({euRegionStats.totalInvestment.etf.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
-                      ${Math.round(euRegionStats.totalInvestment.total.value).toLocaleString()} (100%)
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div style={{ marginTop: '20px' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #444' }}>
-                {/* Table Header */}
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #444', background: '#1e1e1e' }}>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '20%' }}>Intl</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '20%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Stock</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '20%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>ETF</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '20%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Crypto</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '20%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>All Holdings</th>
-                  </tr>
-                </thead>
-                
-                {/* Table Body */}
-                <tbody>
-                  {/* Count of stocks row */}
-                  <tr style={{ borderBottom: '1px solid #444' }}>
-                    <td style={{ padding: '8px', fontSize: '0.9em' }}># Holdings</td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      {intlRegionStats.counts.stock} ({Math.round((intlRegionStats.counts.stock / intlRegionStats.counts.total) * 100) || 0}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      {intlRegionStats.counts.etf} ({Math.round((intlRegionStats.counts.etf / intlRegionStats.counts.total) * 100) || 0}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                        {intlRegionStats.counts.crypto} ({Math.round((intlRegionStats.counts.crypto / intlRegionStats.counts.total) * 100) || 0}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
-                      {intlRegionStats.counts.total} (100%)
-                    </td>
-                  </tr>
-                  
-                  {/* Swing Investment row */}
-                  <tr style={{ borderBottom: '1px solid #444' }}>
-                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Swing Inv</td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(intlRegionStats.swingInvestment.stock.value).toLocaleString()} ({intlRegionStats.swingInvestment.stock.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(intlRegionStats.swingInvestment.etf.value).toLocaleString()} ({intlRegionStats.swingInvestment.etf.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(intlRegionStats.swingInvestment.crypto.value).toLocaleString()} ({intlRegionStats.swingInvestment.crypto.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
-                      ${Math.round(intlRegionStats.swingInvestment.total.value).toLocaleString()} (100%)
-                    </td>
-                  </tr>
-                  
-                  {/* Hold Investment row */}
-                  <tr style={{ borderBottom: '1px solid #444' }}>
-                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Hold Inv</td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(intlRegionStats.holdInvestment.stock.value).toLocaleString()} ({intlRegionStats.holdInvestment.stock.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(intlRegionStats.holdInvestment.etf.value).toLocaleString()} ({intlRegionStats.holdInvestment.etf.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(intlRegionStats.holdInvestment.crypto.value).toLocaleString()} ({intlRegionStats.holdInvestment.crypto.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
-                      ${Math.round(intlRegionStats.holdInvestment.total.value).toLocaleString()} (100%)
-                    </td>
-                  </tr>
-                  
-                  {/* Total Investment row */}
-                  <tr>
-                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Total Inv</td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(intlRegionStats.totalInvestment.stock.value).toLocaleString()} ({intlRegionStats.totalInvestment.stock.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(intlRegionStats.totalInvestment.etf.value).toLocaleString()} ({intlRegionStats.totalInvestment.etf.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(intlRegionStats.totalInvestment.crypto.value).toLocaleString()} ({intlRegionStats.totalInvestment.crypto.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
-                      ${Math.round(intlRegionStats.totalInvestment.total.value).toLocaleString()} (100%)
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* APAC Region Statistics Table */}
-            <div style={{ marginTop: '20px' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #444' }}>
-                {/* Table Header */}
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #444', background: '#1e1e1e' }}>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%' }}>APAC</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>Stock</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>ETF</th>
-                    <th style={{ padding: '8px', textAlign: 'center', width: '25%', borderLeft: '1px solid #444', fontSize: '0.9em' }}>All Holdings</th>
-                  </tr>
-                </thead>
-                
-                {/* Table Body */}
-                <tbody>
-                  {/* Count of stocks row */}
-                  <tr style={{ borderBottom: '1px solid #444' }}>
-                    <td style={{ padding: '8px', fontSize: '0.9em' }}># Holdings</td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      {apacRegionStats.counts.stock} ({Math.round((apacRegionStats.counts.stock / apacRegionStats.counts.total) * 100) || 0}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      {apacRegionStats.counts.etf} ({Math.round((apacRegionStats.counts.etf / apacRegionStats.counts.total) * 100) || 0}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
-                      {apacRegionStats.counts.total} (100%)
-                    </td>
-                  </tr>
-                  
-                  {/* Swing Investment row */}
-                  <tr style={{ borderBottom: '1px solid #444' }}>
-                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Swing Inv</td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(apacRegionStats.swingInvestment.stock.value).toLocaleString()} ({apacRegionStats.swingInvestment.stock.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(apacRegionStats.swingInvestment.etf.value).toLocaleString()} ({apacRegionStats.swingInvestment.etf.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
-                      ${Math.round(apacRegionStats.swingInvestment.total.value).toLocaleString()} (100%)
-                    </td>
-                  </tr>
-                  
-                  {/* Hold Investment row */}
-                  <tr style={{ borderBottom: '1px solid #444' }}>
-                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Hold Inv</td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(apacRegionStats.holdInvestment.stock.value).toLocaleString()} ({apacRegionStats.holdInvestment.stock.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(apacRegionStats.holdInvestment.etf.value).toLocaleString()} ({apacRegionStats.holdInvestment.etf.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
-                      ${Math.round(apacRegionStats.holdInvestment.total.value).toLocaleString()} (100%)
-                    </td>
-                  </tr>
-                  
-                  {/* Total Investment row */}
-                  <tr>
-                    <td style={{ padding: '8px', fontSize: '0.9em' }}>Total Inv</td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(apacRegionStats.totalInvestment.stock.value).toLocaleString()} ({apacRegionStats.totalInvestment.stock.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', borderLeft: '1px solid #444' }}>
-                      ${Math.round(apacRegionStats.totalInvestment.etf.value).toLocaleString()} ({apacRegionStats.totalInvestment.etf.pct}%)
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', borderLeft: '1px solid #444' }}>
-                      ${Math.round(apacRegionStats.totalInvestment.total.value).toLocaleString()} (100%)
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-      {/* --- END: Portfolio Overview section --- */}
+      {/* Portfolio Overview Section */}
+      <PortfolioOverviewSection
+        isOverviewExpanded={isOverviewExpanded}
+        setIsOverviewExpanded={setIsOverviewExpanded}
+        regionDistribution={regionDistribution}
+        stockTypeDistribution={stockTypeDistribution}
+        percentages={percentages}
+        stockTypePercentages={stockTypePercentages}
+        usRegionStats={usRegionStats}
+        euRegionStats={euRegionStats}
+        intlRegionStats={intlRegionStats}
+        apacRegionStats={apacRegionStats}
+      />
       
       {/* Button to open Add Stock modal */}
       <button 
@@ -1235,187 +824,34 @@ function StocksListingContent() {
         Add New Stock
       </button>
 
-      {isLoading && <p>Loading stocks...</p>}
-      {error && <p style={{ color: 'red' }}>Error: {error}</p>}
-      
-      {/* --- START: Portfolio Table --- */}
-      {!isLoading && !error && (
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
-              <th 
-                data-testid="portfolio-page-table-symbol-header"
-                style={{ padding: '5px', cursor: 'pointer' }} 
-                onClick={() => requestStockSort('symbol')}
-              >
-                {STOCK_COLUMN_LABELS.symbol} {stockSortConfig?.key === 'symbol' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-              </th>
-              <th 
-                data-testid="portfolio-page-table-name-header"
-                style={{ padding: '5px', cursor: 'pointer' }} 
-                onClick={() => requestStockSort('name')}
-              >
-                {STOCK_COLUMN_LABELS.name} {stockSortConfig?.key === 'name' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-              </th>
-              <th
-                data-testid="portfolio-page-table-stockType-header"
-                style={{ padding: '5px', cursor: 'pointer' }} 
-                onClick={() => requestStockSort('stockType')}
-              >
-                {STOCK_COLUMN_LABELS.stockType} {stockSortConfig?.key === 'stockType' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-              </th>
-              <th
-                data-testid="portfolio-page-table-region-header"
-                style={{ padding: '5px', cursor: 'pointer' }}
-                onClick={() => requestStockSort('region')}
-              >
-                {STOCK_COLUMN_LABELS.region} {stockSortConfig?.key === 'region' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-              </th>
-              <th
-                data-testid="portfolio-page-table-currentPrice-header"
-                style={{ padding: '5px', cursor: 'pointer' }}
-                onClick={() => requestStockSort('currentPrice')}
-              >
-                {STOCK_COLUMN_LABELS.currentPrice} {stockSortConfig?.key === 'currentPrice' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-              </th>
-              <th
-                data-testid="portfolio-page-table-pdp-header"
-                style={{ padding: '5px', cursor: 'pointer' }}
-                onClick={() => requestStockSort('pdp')}
-              >
-                {STOCK_COLUMN_LABELS.pdp} {stockSortConfig?.key === 'pdp' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-              </th>
-              <th
-                data-testid="portfolio-page-table-plr-header"
-                style={{ padding: '5px', cursor: 'pointer' }}
-                onClick={() => requestStockSort('plr')}
-              >
-                {STOCK_COLUMN_LABELS.plr} {stockSortConfig?.key === 'plr' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-              </th>
-              <th
-                data-testid="portfolio-page-table-budget-header"
-                style={{ padding: '5px', cursor: 'pointer' }}
-                onClick={() => requestStockSort('budget')}
-              >
-                {STOCK_COLUMN_LABELS.budget} {stockSortConfig?.key === 'budget' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-              </th>
-              <th
-                data-testid="portfolio-page-table-investment-header"
-                style={{ padding: '5px', cursor: 'pointer' }}
-                onClick={() => requestStockSort('investment')}
-              >
-                {STOCK_COLUMN_LABELS.investment} {stockSortConfig?.key === 'investment' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-              </th>
-              <th style={{ padding: '5px', textAlign: 'center' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedStocks.length === 0 ? (
-              <tr>
-                <td
-                  data-testid="portfolio-page-table-empty-message"
-                  colSpan={10}
-                  style={{ textAlign: 'center', padding: '1rem' }}
-                >
-                  Your portfolio is empty.
-                </td>
-              </tr>
-            ) : (
-              sortedStocks.map((stock, index) => (
-                <tr key={stock.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
-                  <td style={{ padding: '5px' }}>
-                    <Link 
-                      href={`/wallets/${stock.id}`} 
-                      data-testid={`portfolio-page-table-wallet-link-${stock.symbol?.toUpperCase()}`}
-                    >
-                      {stock.symbol?.toUpperCase()}
-                    </Link>
-                  </td>
-                  <td
-                    data-testid={`portfolio-page-table-name-${stock.symbol?.toUpperCase()}`}
-                    style={{ padding: '5px' }}>
-                    {stock.name ? 
-                      (stock.name.length > 15 ? 
-                        `${stock.name.substring(0, 15)}...` : 
-                        stock.name) 
-                      : '-'}
-                  </td>
-                  <td
-                    data-testid={`portfolio-page-table-type-${stock.symbol?.toUpperCase()}`}
-                    style={{ padding: '5px' }}>{stock.stockType}</td>
-                  <td
-                    data-testid={`portfolio-page-table-region-${stock.symbol?.toUpperCase()}`}
-                    style={{ padding: '5px' }}>{stock.region}</td>
-                  <td
-                    data-testid={`portfolio-page-table-price-${stock.symbol?.toUpperCase()}`}
-                    style={{ padding: '5px' }}>
-                    {pricesLoading ? '...' : (latestPrices[stock.symbol]?.currentPrice && typeof latestPrices[stock.symbol]?.currentPrice === 'number' ? formatCurrency(latestPrices[stock.symbol]!.currentPrice!) : 'N/A')}
-                  </td>
-                  <td
-                    data-testid={`portfolio-page-table-pdp-${stock.symbol?.toUpperCase()}`}
-                    style={{ padding: '5px' }}>{stock.pdp ?? '-'}</td>
-                  <td
-                    data-testid={`portfolio-page-table-plr-${stock.symbol?.toUpperCase()}`}
-                    style={{ padding: '5px' }}>{stock.plr ?? '-'}</td>
-                  <td
-                    data-testid={`portfolio-page-table-budget-${stock.symbol?.toUpperCase()}`}
-                    style={{ padding: '5px' }}>{typeof stock.budget === 'number' ? formatCurrency(stock.budget??0) : '-'}</td>
-                  <td
-                    data-testid={`portfolio-page-table-investment-${stock.symbol?.toUpperCase()}`}
-                    style={{ padding: '5px' }}>{typeof stockInvestments[stock.id] === 'number' ? stockInvestments[stock.id].toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '-'}</td>
-                  {/* Actions */}
-                  <td style={{ padding: '5px', textAlign: 'center' }}>
-                    <button 
-                      data-testid="portfolio-page-table-action-edit-button"
-                      onClick={() => handleEditClick(stock)} 
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray', marginRight: '5px' }}
-                      title="Edit Stock">
-                        <FaEdit />
-                    </button>
-                    <button
-                      data-testid="portfolio-page-table-action-hide-button"
-                      onClick={() => handleToggleHidden(stock)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray' }}
-                      title={stock.isHidden ? "Show in Reports" : "Hide from Reports"}>
-                        {stock.isHidden ? <FaEyeSlash /> : <FaEye />}
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      )}
-      {/* --- END: Portfolio Table --- */}
+      {/* Portfolio Table */}
+      <PortfolioTable
+        isLoading={isLoading}
+        error={error}
+        sortedStocks={sortedStocks}
+        stockSortConfig={stockSortConfig}
+        stockInvestments={stockInvestments}
+        latestPrices={latestPrices}
+        pricesLoading={pricesLoading}
+        requestStockSort={requestStockSort}
+        handleEditClick={handleEditClick}
+        handleToggleHidden={handleToggleHidden}
+      />
 
-      {/* --- START: Add Stock Modal --- */}
-      {isAddModalOpen && (
-        <div style={modalOverlayStyle}>
-          <div style={modalContentStyle}>
-            <AddStockForm
-              isEditMode={false}
-              onStockAdded={handleAddSuccess}
-              onCancel={closeAddModal}
-            />
-          </div>
-        </div>
-      )}
-      {/* --- END: Add Stock Modal --- */}
+      {/* Add Stock Modal */}
+      <AddStockModal
+        isOpen={isAddModalOpen}
+        onStockAdded={handleAddSuccess}
+        onCancel={closeAddModal}
+      />
 
-      {/* --- START: Edit Stock Modal --- */}
-      {isEditModalOpen && stockToEditData && (
-        <div style={modalOverlayStyle}>
-          <div style={modalContentStyle}>
-            <AddStockForm
-              isEditMode={true}
-              initialData={stockToEditData}
-              onUpdate={handleUpdateStock}
-              onCancel={handleCancelEdit}
-            />
-          </div>
-        </div>
-      )}
-      {/* --- END: Edit Stock Modal --- */}
+      {/* Edit Stock Modal */}
+      <EditStockModal
+        isOpen={isEditModalOpen}
+        stockToEditData={stockToEditData}
+        onUpdate={handleUpdateStock}
+        onCancel={handleCancelEdit}
+      />
     </div>
   );
 }
