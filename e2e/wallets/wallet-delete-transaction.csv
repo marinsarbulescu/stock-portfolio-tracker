@@ -1,0 +1,4 @@
+name,type,signal,price,investment,expectedSwingShares,expectedHoldShares,expectedSwingInvestment,expectedHoldInvestment
+Split Transaction,Split,Initial,10.00,200.00,10,10,100,100
+Swing Transaction,Swing,Cust,25.00,500.00,20,0,500,0
+Hold Transaction,Hold,EOM,7.00,350.00,0,50,0,350

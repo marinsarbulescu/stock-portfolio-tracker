@@ -1,7 +1,7 @@
 // e2e/wallets/wallet-delete-transaction.spec.ts
 
 // This Playwright test suite verifies the deletion of stock transactions and the subsequent state of stock wallets (Swing and Hold).
-// The suite tests each transaction type (Split, Swing, Hold) by:
+// The suite tests each transaction type (Split, Swing, Hold) using scenarios defined in a CSV file (`wallet-delete-transaction.csv`) by:
 // 1. Creating a transaction
 // 2. Deleting the transaction via UI
 // 3. Verifying the wallet state after deletion
@@ -40,6 +40,7 @@ import {
 } from '../utils/dataHelpers';
 import { E2E_TEST_USER_OWNER_ID, E2E_TEST_USERNAME, E2E_TEST_PASSWORD } from '../utils/testCredentials';
 import { clearBrowserState, loginUser, navigateToStockWalletPage } from '../utils/pageHelpers';
+import { loadScenariosFromCSV } from '../utils/csvHelper';
 
 import {
     SHARE_PRECISION,
@@ -51,46 +52,27 @@ import { formatCurrency, formatShares } from '../../app/utils/financialCalculati
 try {
     Amplify.configure(amplifyOutputs);
     console.log('[wallet-delete-transaction.spec.ts] - Amplify configured successfully for E2E test spec.');
-} catch (error) {
-    console.error('[wallet-delete-transaction.spec.ts] - CRITICAL: Error configuring Amplify in E2E spec file:', error);
+} catch (error) {    console.error('[wallet-delete-transaction.spec.ts] - CRITICAL: Error configuring Amplify in E2E spec file:', error);
 }
 
-// Test data for different transaction types
-const transactionScenarios = [
-    {
-        name: 'Split Transaction',
-        type: 'Split',
-        signal: 'Initial',
-        price: 10.00,
-        investment: 200.00,
-        expectedSwingShares: 10, // 50% of 20 shares
-        expectedHoldShares: 10,  // 50% of 20 shares
-        expectedSwingInvestment: 100, // 50% of $200
-        expectedHoldInvestment: 100,  // 50% of $200
-    },
-    {
-        name: 'Swing Transaction',
-        type: 'Swing',
-        signal: 'Cust',
-        price: 25.00,
-        investment: 500.00,
-        expectedSwingShares: 20, // All shares go to Swing
-        expectedHoldShares: 0,   // No shares to Hold
-        expectedSwingInvestment: 500, // All investment to Swing
-        expectedHoldInvestment: 0,    // No investment to Hold
-    },
-    {
-        name: 'Hold Transaction',
-        type: 'Hold',
-        signal: 'EOM',
-        price: 7.00,
-        investment: 350.00,
-        expectedSwingShares: 0,  // No shares to Swing
-        expectedHoldShares: 50,  // All shares go to Hold (350/7 = 50)
-        expectedSwingInvestment: 0,   // No investment to Swing
-        expectedHoldInvestment: 350,  // All investment to Hold
-    },
-];
+// Define the interface for delete transaction scenarios
+interface DeleteTransactionScenario {
+    name: string;
+    type: 'Split' | 'Swing' | 'Hold';
+    signal: string;
+    price: number;
+    investment: number;
+    expectedSwingShares: number;
+    expectedHoldShares: number;
+    expectedSwingInvestment: number;
+    expectedHoldInvestment: number;
+}
+
+// Load scenarios from CSV
+const transactionScenarios = loadScenariosFromCSV<DeleteTransactionScenario>(
+    '../wallets/wallet-delete-transaction.csv',
+    ['price', 'investment', 'expectedSwingShares', 'expectedHoldShares', 'expectedSwingInvestment', 'expectedHoldInvestment']
+);
 
 // Global test state
 let sharedTestPortfolioStockId: string | null = null;
