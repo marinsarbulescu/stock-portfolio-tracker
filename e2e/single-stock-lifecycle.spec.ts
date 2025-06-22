@@ -365,7 +365,7 @@ test.describe('Single Stock Lifecycle E2E Tests', () => {
 
 async function getStockIdBySymbol(page: Page, symbol: string): Promise<string | null> {
     console.log(`[getStockIdBySymbol] Attempting to find stock ID for symbol: ${symbol}`);
-    await page.goto('/stocks-listing', { waitUntil: 'networkidle' });
+    await page.goto('/portfolio', { waitUntil: 'networkidle' });
     //await page.pause(); 
 
     // Screenshot before waiting for selector

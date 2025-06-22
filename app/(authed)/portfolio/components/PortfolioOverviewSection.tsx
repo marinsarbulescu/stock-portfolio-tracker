@@ -1,4 +1,4 @@
-// app/(authed)/stocks-listing/components/PortfolioOverviewSection.tsx
+// app/(authed)/portfolio/components/PortfolioOverviewSection.tsx
 'use client';
 
 import React from 'react';
@@ -404,8 +404,7 @@ export default function PortfolioOverviewSection({
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        </div>      )}
     </div>
   );
 }

@@ -61,7 +61,7 @@ export default function NavBar({ accessStatus }: NavBarProps) {
                 {isApproved && (
                     <>
                         <Link href="/" style={linkStyles}>Home</Link>
-                        <Link href="/stocks-listing" style={linkStyles}>Portfolio</Link>
+                        <Link href="/portfolio" style={linkStyles}>Portfolio</Link>
                         <Link href="/goals" style={linkStyles}>Goals</Link>
                     </>
                 )}

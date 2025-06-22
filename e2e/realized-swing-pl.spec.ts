@@ -234,20 +234,18 @@ for (const scenario of scenarios) {
                     throw new Error("Login failed during beforeEach setup.");
                 }             
 
-                // Navigate to the starting page for tests IF needed after login
-                console.log('BEFORE EACH: Navigating to /stocks-listing...');
-                await page.goto('/stocks-listing');
+                // Navigate to the starting page for tests IF needed after login                console.log('BEFORE EACH: Navigating to /portfolio...');
+                await page.goto('/portfolio');
                 await expect(page.locator('h2:has-text("Portfolio")')).toBeVisible({ timeout: 10000 });
-                console.log('BEFORE EACH: Setup complete, on /stocks-listing page.');
+                console.log('BEFORE EACH: Setup complete, on /portfolio page.');
             });
     
 
             // --- Test Case ---
-            test(`should display correct Realized Swing P/L in Overview`, async ({ page }) => {
-                // Arrange (Data is set up by beforeAll, user is logged in by beforeEach, already on /stocks-listing)
+            test(`should display correct Realized Swing P/L in Overview`, async ({ page }) => {                // Arrange (Data is set up by beforeAll, user is logged in by beforeEach, already on /portfolio)
 
                 // Act
-                console.log(`TEST [${scenario.scenarioName}]: Currently on /stocks-listing page.`);
+                console.log(`TEST [${scenario.scenarioName}]: Currently on /portfolio page.`);
                 // ---> ADD A WAIT for the specific stock link to be visible <---
                 console.log(`TEST [${scenario.scenarioName}]: Waiting for stock link "${scenario.testStockSymbol}" to appear...`);
                 

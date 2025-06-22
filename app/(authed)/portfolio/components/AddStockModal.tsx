@@ -1,4 +1,4 @@
-// app/(authed)/stocks-listing/components/AddStockModal.tsx
+// app/(authed)/portfolio/components/AddStockModal.tsx
 'use client';
 
 import React, { useState } from 'react';

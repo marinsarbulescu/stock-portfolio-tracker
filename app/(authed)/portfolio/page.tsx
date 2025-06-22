@@ -1,4 +1,4 @@
-// app/(authed)/stocks-listing/page.tsx
+// app/(authed)/portfolio/page.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -53,7 +53,7 @@ interface StockSortConfig {
 }
 
 // Create a wrapper component that safely uses the context
-function StocksListingContent() {
+function PortfolioContent() {
   // --- STATE using PortfolioStockDataType[] ---
   const [portfolioStocksData, setPortfolioStocksData] = useState<PortfolioStockDataType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -857,7 +857,7 @@ function StocksListingContent() {
 }
 
 // Main page component wrapped with error handling
-export default function StocksListingPage() {
+export default function PortfolioPage() {
   // Use error boundary pattern to catch any context errors
   const [hasError, setHasError] = useState(false);
 
@@ -866,7 +866,7 @@ export default function StocksListingPage() {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
         <h2>Something went wrong</h2>
-        <p>There was an issue loading the stocks listing page.</p>
+        <p>There was an issue loading the portfolio page.</p>
         <button 
           onClick={() => window.location.reload()}
           style={{
@@ -886,9 +886,9 @@ export default function StocksListingPage() {
 
   // Try to render the content component
   try {
-    return <StocksListingContent />;
+    return <PortfolioContent />;
   } catch (error) {
-    console.error("Error in StocksListingPage:", error);
+    console.error("Error in PortfolioPage:", error);
     setHasError(true);
     return null; // Will re-render with the error state
   }

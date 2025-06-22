@@ -1,4 +1,4 @@
-// app/(authed)/stocks-listing/components/PortfolioTable.tsx
+// app/(authed)/portfolio/components/PortfolioTable.tsx
 'use client';
 
 import React from 'react';
