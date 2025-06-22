@@ -21,8 +21,8 @@ import {
 // Import the new components
 import PortfolioOverviewSection from './components/PortfolioOverviewSection';
 import PortfolioTable from './components/PortfolioTable';
-import AddStockModal from './components/AddStockModal';
-import EditStockModal from './components/EditStockModal';
+import AddStockModal from './components/PortfolioAddStockModal';
+import EditStockModal from './components/PortfolioEditStockModal';
 
 // Register Chart.js components and plugins
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, ChartDataLabels);

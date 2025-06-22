@@ -1,4 +1,4 @@
-// app/(authed)/portfolio/components/EditStockModal.tsx
+// app/(authed)/portfolio/components/PortfolioEditStockModal.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
