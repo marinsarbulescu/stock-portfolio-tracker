@@ -464,40 +464,22 @@ export async function updateSellTransaction(page: Page, stockId: string, transac
 
 /**
  * Deletes a transaction (either Buy or Sell) from the stock's wallet page.
- * @param page - The Playwright Page object.
- * @param stockId - The ID of the stock to which the transaction belongs (for verification and logging).
- * @param transactionId - The unique ID of the transaction to delete.
- * @param stockSymbol - The symbol of the stock (for logging).
+ * COMMENTED OUT - Replaced by simpler deleteTransaction function below
  */
-export async function deleteTransaction(page: Page, stockId: string, transactionId: string, stockSymbol: string) {
-    console.log(`[PageHelper] Attempting to delete transaction ID ${transactionId} for stock ${stockSymbol} (ID: ${stockId})`);
-
-    // Ensure we are on the wallet page, or navigate if needed
-    // await navigateToStockWalletPage(page, stockId, stockSymbol);
-
-    const deleteButtonLocator = page.locator(`[data-testid="transaction-delete-button-${transactionId}"]`);
-    await expect(deleteButtonLocator).toBeVisible({ timeout: 10000 });
-
-    page.once('dialog', async dialog => {
-        console.log(`[PageHelper] Dialog message for delete: "${dialog.message()}". Accepting.`);
-        await dialog.accept();
-    });
-
-    await deleteButtonLocator.click();
-    console.log(`[PageHelper] Clicked delete button for transaction ID ${transactionId}.`);
-
-    // Wait for the transaction to be removed. This could be a specific wait for the element to disappear
-    // or for a notification, or a general wait for network idle if the page reloads/refreshes data.
-    // For simplicity, using a timeout and then verifying the element is gone.
-    await page.waitForTimeout(1500); // Adjust as needed, or use a more robust wait like waitForResponse
-
-    // Verify the element is no longer present
-    await expect(deleteButtonLocator).not.toBeVisible({ timeout: 5000 });
-    console.log(`[PageHelper] Transaction ID ${transactionId} successfully deleted for stock ${stockSymbol}.`);
-
-    // The page should still be (or refresh to) the wallet page
-    // await expect(page).toHaveURL(`**/wallets/${stockId}`); // Optional verification
-}
+// export async function deleteTransaction(page: Page, stockId: string, transactionId: string, stockSymbol: string) {
+//     console.log(`[PageHelper] Attempting to delete transaction ID ${transactionId} for stock ${stockSymbol} (ID: ${stockId})`);
+//     const deleteButtonLocator = page.locator(`[data-testid="transaction-delete-button-${transactionId}"]`);
+//     await expect(deleteButtonLocator).toBeVisible({ timeout: 10000 });
+//     page.once('dialog', async dialog => {
+//         console.log(`[PageHelper] Dialog message for delete: "${dialog.message()}". Accepting.`);
+//         await dialog.accept();
+//     });
+//     await deleteButtonLocator.click();
+//     console.log(`[PageHelper] Clicked delete button for transaction ID ${transactionId}.`);
+//     await page.waitForTimeout(1500);
+//     await expect(deleteButtonLocator).not.toBeVisible({ timeout: 5000 });
+//     console.log(`[PageHelper] Transaction ID ${transactionId} successfully deleted for stock ${stockSymbol}.`);
+// }
 
 
 /**
@@ -783,4 +765,102 @@ export async function logoutUser(page: Page) {
     // await page.locator('[data-testid="sign-out-button"]').click(); // Or whatever your sign out button is
     // await expect(page.locator('input[name="username"]')).toBeVisible({ timeout: 10000 }); // Expect to be back on login page
     console.warn('[PageHelper] logoutUser function called, but it is a placeholder. Implement if needed.');
+}
+
+// Transaction helper interfaces and functions
+export interface TransactionData {
+    date?: string; // YYYY-MM-DD format, defaults to today if not provided
+    type: 'Split' | 'Swing' | 'Hold';
+    signal: string;
+    price: number;
+    investment: number;
+}
+
+/**
+ * Adds a transaction via the UI modal.
+ * This function assumes the page is already on the wallet page for the stock.
+ * @param page - The Playwright Page object.
+ * @param transactionData - The transaction data to fill in the form.
+ */
+export async function addTransaction(page: Page, transactionData: TransactionData) {
+    console.log(`[PageHelper] Adding ${transactionData.type} transaction:`, transactionData);
+    
+    // Open Add Transaction modal
+    const addTransactionButton = page.locator('[data-testid="add-buy-transaction-button"]');
+    await expect(addTransactionButton).toBeVisible({ timeout: 10000 });
+    await addTransactionButton.click();
+    
+    const transactionModal = page.locator('[data-testid="add-buy-transaction-form-modal"]');
+    await expect(transactionModal).toBeVisible({ timeout: 10000 });
+    console.log(`[PageHelper] Add Transaction modal opened.`);
+    
+    // Fill transaction form
+    const date = transactionData.date || new Date().toISOString().split('T')[0]; // Default to today
+    await page.locator('[data-testid="txn-form-date"]').fill(date);
+    await page.locator('[data-testid="txn-form-price"]').fill(transactionData.price.toString());
+    await page.locator('[data-testid="txn-form-investment"]').fill(transactionData.investment.toString());
+    
+    // Select transaction type using radio buttons
+    console.log(`[PageHelper] Selecting transaction type: ${transactionData.type}`);
+    if (transactionData.type === 'Swing') {
+        const swingRadio = page.locator('[data-testid="txn-form-txnType-swing"]');
+        await expect(swingRadio).toBeVisible({ timeout: 5000 });
+        await swingRadio.click();
+    } else if (transactionData.type === 'Hold') {
+        const holdRadio = page.locator('[data-testid="txn-form-txnType-hold"]');
+        await expect(holdRadio).toBeVisible({ timeout: 5000 });
+        await holdRadio.click();
+    } else if (transactionData.type === 'Split') {
+        const splitRadio = page.locator('[data-testid="txn-form-txnType-split"]');
+        await expect(splitRadio).toBeVisible({ timeout: 5000 });
+        await splitRadio.click();
+    }
+    
+    // Select signal
+    await page.locator('[data-testid="txn-form-signal"]').selectOption(transactionData.signal);
+    
+    console.log(`[PageHelper] Form filled: Date=${date}, Type=${transactionData.type}, Signal=${transactionData.signal}, Price=${transactionData.price}, Investment=${transactionData.investment}`);
+    
+    // Submit the form
+    const submitButton = page.locator('[data-testid="txn-form-submit-button"]');
+    await submitButton.click();
+    
+    // Wait for modal to close
+    await expect(transactionModal).not.toBeVisible({ timeout: 15000 });
+    console.log(`[PageHelper] Transaction created successfully.`);
+    
+    // Wait for UI to update
+    await page.waitForTimeout(3000);
+}
+
+/**
+ * Deletes the first transaction found on the page via the UI.
+ * This function assumes the page is already on the wallet page for the stock.
+ * @param page - The Playwright Page object.
+ */
+export async function deleteTransaction(page: Page) {
+    console.log(`[PageHelper] Deleting transaction via UI.`);
+    
+    // Navigate to transactions section (scroll down if needed)
+    const transactionsSection = page.locator('text=Transactions').first();
+    await transactionsSection.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(1000);
+    
+    // Find the delete button for the transaction (should be the first/only one)
+    const deleteButton = page.locator('[data-testid^="transaction-delete-button-"]').first();
+    await expect(deleteButton).toBeVisible({ timeout: 10000 });
+    console.log(`[PageHelper] Delete button found, clicking...`);
+    
+    // Handle the confirmation dialog
+    page.once('dialog', async dialog => {
+        console.log(`[PageHelper] Confirmation dialog appeared: ${dialog.message()}`);
+        await dialog.accept();
+    });
+    
+    await deleteButton.click();
+    console.log(`[PageHelper] Transaction deletion confirmed.`);
+    
+    // Wait for deletion to process
+    await page.waitForTimeout(3000);
+    console.log(`[PageHelper] Transaction deleted successfully.`);
 }

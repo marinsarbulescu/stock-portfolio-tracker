@@ -77,7 +77,7 @@ import {
     type PortfolioStockCreateData,
 } from '../utils/dataHelpers'; // Adjust path if needed
 import { E2E_TEST_USER_OWNER_ID, E2E_TEST_USERNAME, E2E_TEST_PASSWORD } from '../utils/testCredentials'; // Added import
-import { clearBrowserState, loginUser, navigateToStockWalletPage } from '../utils/pageHelpers'; // Added import
+import { clearBrowserState, loginUser, navigateToStockWalletPage, addTransaction } from '../utils/pageHelpers'; // Added import
 
 // Import the generic loader and the specific interface for these scenarios
 import { loadScenariosFromCSV, type AddTransactionInputScenario } from '../utils/csvHelper';
@@ -283,70 +283,16 @@ test.describe(`Wallet Page - Add Transactions from CSV`, () => {
             // console.log(`[wallet-add-transaction.spec.ts] - TEST [${transactionInput.scenarioName}]: 'date' column toggle should now be checked.`);
             // (Add for other txn list columns if necessary)            // --- Form Filling and Submission (Only for 'Buy' actions as per current CSV focus) ---
             if (transactionInput.action === 'Buy') {
-                console.log(`[${transactionInput.scenarioName}] Opening Add Transaction modal.`);
-                const addBuyButton = page.locator('[data-testid="add-buy-transaction-button"]');
-                await expect(addBuyButton).toBeVisible({ timeout: 5000 });
-                await addBuyButton.click();
-
-                const transactionModal = page.locator('[data-testid="add-buy-transaction-form-modal"]');
-                await expect(transactionModal).toBeVisible({ timeout: 10000 });
-                console.log(`[${transactionInput.scenarioName}] Add Transaction modal is visible.`);
-
-                console.log(`[${transactionInput.scenarioName}] Filling form: Date=${transactionInput.date}, Action=${transactionInput.action}, Type=${transactionInput.txnType}, Signal=${transactionInput.signal}, Price=${transactionInput.price}, Investment=${transactionInput.investment}`);
+                console.log(`[${transactionInput.scenarioName}] Creating transaction via helper.`);
                 
-                // Fill form fields with better error handling
-                const dateField = transactionModal.locator('[data-testid="txn-form-date"]');
-                await expect(dateField).toBeVisible({ timeout: 5000 });
-                await dateField.fill(transactionInput.date);
-                
-                // Action is implicitly 'Buy' due to clicking "add-buy-transaction-button"
-
-                // Select Buy Type (txnType) with better selectors
-                console.log(`[${transactionInput.scenarioName}] Selecting transaction type: ${transactionInput.txnType}`);
-                if (transactionInput.txnType === 'Swing') {
-                    const swingRadio = page.locator('[data-testid="txn-form-txnType-swing"]');
-                    await expect(swingRadio).toBeVisible({ timeout: 5000 });
-                    await swingRadio.click();
-                } else if (transactionInput.txnType === 'Hold') {
-                    const holdRadio = page.locator('[data-testid="txn-form-txnType-hold"]');
-                    await expect(holdRadio).toBeVisible({ timeout: 5000 });
-                    await holdRadio.click();
-                } else if (transactionInput.txnType === 'Split') {
-                    const splitRadio = page.locator('[data-testid="txn-form-txnType-split"]');
-                    await expect(splitRadio).toBeVisible({ timeout: 5000 });
-                    await splitRadio.click();
-                }
-
-                // Fill signal if provided
-                if (transactionInput.signal) {
-                    const signalSelect = page.locator('[data-testid="txn-form-signal"]');
-                    await expect(signalSelect).toBeVisible({ timeout: 5000 });
-                    await signalSelect.selectOption(transactionInput.signal);
-                }
-                
-                // Fill price and investment
-                const priceField = page.locator('[data-testid="txn-form-price"]');
-                await expect(priceField).toBeVisible({ timeout: 5000 });
-                await priceField.fill(String(transactionInput.price));
-                
-                const investmentField = page.locator('[data-testid="txn-form-investment"]');
-                await expect(investmentField).toBeVisible({ timeout: 5000 });
-                await investmentField.fill(String(transactionInput.investment));
-
-                // Submit the form
-                console.log(`[${transactionInput.scenarioName}] Submitting transaction form...`);
-                const submitButton = transactionModal.locator('[data-testid="txn-form-submit-button"]');
-                await expect(submitButton).toBeVisible({ timeout: 5000 });
-                await expect(submitButton).toBeEnabled({ timeout: 5000 });
-                await submitButton.click();
-
-                // Wait for modal to close
-                await expect(transactionModal).not.toBeVisible({ timeout: 15000 });
-                console.log(`[${transactionInput.scenarioName}] Transaction form submitted and modal closed.`);
-                
-                // Wait for UI to update after submission
-                await page.waitForTimeout(3000);
-            }            // --- Wallet Verification (Only for 'Buy' actions as per current CSV focus) ---
+                await addTransaction(page, {
+                    date: transactionInput.date,
+                    type: transactionInput.txnType!,
+                    signal: transactionInput.signal!,
+                    price: transactionInput.price!,
+                    investment: transactionInput.investment!
+                });
+            }// --- Wallet Verification (Only for 'Buy' actions as per current CSV focus) ---
             if (transactionInput.action === 'Buy') {
                 console.log(`[${transactionInput.scenarioName}] Starting wallet verification.`);
 

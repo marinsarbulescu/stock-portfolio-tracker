@@ -39,7 +39,7 @@ import {
     deleteTransactionsForStockByStockId,
 } from '../utils/dataHelpers';
 import { E2E_TEST_USER_OWNER_ID, E2E_TEST_USERNAME, E2E_TEST_PASSWORD } from '../utils/testCredentials';
-import { clearBrowserState, loginUser, navigateToStockWalletPage } from '../utils/pageHelpers';
+import { clearBrowserState, loginUser, navigateToStockWalletPage, addTransaction, deleteTransaction } from '../utils/pageHelpers';
 import { loadScenariosFromCSV } from '../utils/csvHelper';
 
 import {
@@ -185,54 +185,15 @@ test.describe('Wallet Page - Delete Transactions and Verify Wallets', () => {
         test(`Delete ${scenario.name} - Create, Delete, Verify Wallet State`, async ({ page }) => {
             const scenarioName = `Delete${scenario.type}`;
             console.log(`[${scenarioName}] Starting test for ${scenario.name}.`);
-            
-            // Step 1: Create the transaction
+              // Step 1: Create the transaction
             console.log(`[${scenarioName}] Step 1: Creating ${scenario.type} transaction.`);
             
-            // Open Add Transaction modal
-            const addTransactionButton = page.locator('[data-testid="add-buy-transaction-button"]');
-            await expect(addTransactionButton).toBeVisible({ timeout: 10000 });
-            await addTransactionButton.click();
-              const transactionModal = page.locator('[data-testid="add-buy-transaction-form-modal"]');
-            await expect(transactionModal).toBeVisible({ timeout: 10000 });
-            console.log(`[${scenarioName}] Add Transaction modal opened.`);
-            
-            // Fill transaction form
-            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-            await page.locator('[data-testid="txn-form-date"]').fill(today);
-            await page.locator('[data-testid="txn-form-price"]').fill(scenario.price.toString());
-            await page.locator('[data-testid="txn-form-investment"]').fill(scenario.investment.toString());
-              // Select transaction type using radio buttons
-            console.log(`[${scenarioName}] Selecting transaction type: ${scenario.type}`);
-            if (scenario.type === 'Swing') {
-                const swingRadio = page.locator('[data-testid="txn-form-txnType-swing"]');
-                await expect(swingRadio).toBeVisible({ timeout: 5000 });
-                await swingRadio.click();
-            } else if (scenario.type === 'Hold') {
-                const holdRadio = page.locator('[data-testid="txn-form-txnType-hold"]');
-                await expect(holdRadio).toBeVisible({ timeout: 5000 });
-                await holdRadio.click();
-            } else if (scenario.type === 'Split') {
-                const splitRadio = page.locator('[data-testid="txn-form-txnType-split"]');
-                await expect(splitRadio).toBeVisible({ timeout: 5000 });
-                await splitRadio.click();
-            }
-            
-            // Select signal
-            await page.locator('[data-testid="txn-form-signal"]').selectOption(scenario.signal);
-            
-            console.log(`[${scenarioName}] Form filled: Date=${today}, Type=${scenario.type}, Signal=${scenario.signal}, Price=${scenario.price}, Investment=${scenario.investment}`);
-            
-            // Submit the form
-            const submitButton = page.locator('[data-testid="txn-form-submit-button"]');
-            await submitButton.click();
-            
-            // Wait for modal to close
-            await expect(transactionModal).not.toBeVisible({ timeout: 15000 });
-            console.log(`[${scenarioName}] Transaction created successfully.`);
-            
-            // Wait for UI to update
-            await page.waitForTimeout(3000);
+            await addTransaction(page, {
+                type: scenario.type,
+                signal: scenario.signal,
+                price: scenario.price,
+                investment: scenario.investment
+            });
             
             // Step 2: Verify wallets were created correctly
             console.log(`[${scenarioName}] Step 2: Verifying wallet creation.`);
@@ -292,31 +253,10 @@ test.describe('Wallet Page - Delete Transactions and Verify Wallets', () => {
                 await expect(holdNotFoundMessage).toBeVisible();
                 console.log(`[${scenarioName}] No Hold wallet confirmed.`);
             }
-            
-            // Step 3: Delete the transaction
+              // Step 3: Delete the transaction
             console.log(`[${scenarioName}] Step 3: Deleting the transaction.`);
             
-            // Navigate to transactions section (scroll down if needed)
-            const transactionsSection = page.locator('text=Transactions').first();
-            await transactionsSection.scrollIntoViewIfNeeded();
-            await page.waitForTimeout(1000);
-            
-            // Find the delete button for the transaction (should be the first/only one)
-            const deleteButton = page.locator('[data-testid^="transaction-delete-button-"]').first();
-            await expect(deleteButton).toBeVisible({ timeout: 10000 });
-            console.log(`[${scenarioName}] Delete button found, clicking...`);
-            
-            // Handle the confirmation dialog
-            page.once('dialog', async dialog => {
-                console.log(`[${scenarioName}] Confirmation dialog appeared: ${dialog.message()}`);
-                await dialog.accept();
-            });
-            
-            await deleteButton.click();
-            console.log(`[${scenarioName}] Transaction deletion confirmed.`);
-            
-            // Wait for deletion to process
-            await page.waitForTimeout(3000);
+            await deleteTransaction(page);
             
             // Step 4: Verify wallets are removed/cleared after deletion
             console.log(`[${scenarioName}] Step 4: Verifying wallet state after deletion.`);
