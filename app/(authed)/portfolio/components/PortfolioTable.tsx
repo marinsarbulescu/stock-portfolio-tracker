@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { FaEdit, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaEdit, FaEye, FaEyeSlash, FaArchive, FaTrashRestore } from 'react-icons/fa';
 import { formatCurrency } from '@/app/utils/financialCalculations';
 import type { Schema } from '@/amplify/data/resource';
 
@@ -41,9 +41,12 @@ export interface PortfolioTableProps {
   stockInvestments: Record<string, number>;
   latestPrices: LatestPrices;
   pricesLoading: boolean;
+  showArchived: boolean;
+  archivedCount: number;
   requestStockSort: (key: SortableStockKey) => void;
   handleEditClick: (stock: PortfolioStockDataType) => void;
   handleToggleHidden: (stock: PortfolioStockDataType) => void;
+  handleArchiveStock: (stock: PortfolioStockDataType) => void;
 }
 
 // Column labels for the stock table
@@ -67,9 +70,12 @@ export default function PortfolioTable({
   stockInvestments,
   latestPrices,
   pricesLoading,
+  showArchived,
+  archivedCount,
   requestStockSort,
   handleEditClick,
   handleToggleHidden,
+  handleArchiveStock,
 }: PortfolioTableProps) {
   if (isLoading) {
     return <p>Loading stocks...</p>;
@@ -80,7 +86,8 @@ export default function PortfolioTable({
   }
 
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
+    <div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
       <thead>
         <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
           <th 
@@ -212,12 +219,23 @@ export default function PortfolioTable({
                   title="Edit Stock">
                     <FaEdit />
                 </button>
+                
+                {!showArchived && (
+                  <button
+                    data-testid="portfolio-page-table-action-hide-button"
+                    onClick={() => handleToggleHidden(stock)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray', marginRight: '5px' }}
+                    title={stock.isHidden ? "Show in Reports" : "Hide from Reports"}>
+                      {stock.isHidden ? <FaEyeSlash /> : <FaEye />}
+                  </button>
+                )}
+                
                 <button
-                  data-testid="portfolio-page-table-action-hide-button"
-                  onClick={() => handleToggleHidden(stock)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray' }}
-                  title={stock.isHidden ? "Show in Reports" : "Hide from Reports"}>
-                    {stock.isHidden ? <FaEyeSlash /> : <FaEye />}
+                  data-testid="portfolio-page-table-action-archive-button"
+                  onClick={() => handleArchiveStock(stock)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: showArchived ? '#28a745' : '#dc3545' }}
+                  title={showArchived ? "Restore Stock" : "Archive Stock"}>
+                    {showArchived ? <FaTrashRestore /> : <FaArchive />}
                 </button>
               </td>
             </tr>
@@ -225,5 +243,6 @@ export default function PortfolioTable({
         )}
       </tbody>
     </table>
+    </div>
   );
 }

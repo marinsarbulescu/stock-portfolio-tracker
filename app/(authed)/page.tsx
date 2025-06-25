@@ -196,9 +196,12 @@ export default function HomePage() {
         try {
             const [stockResult, allTxnsData, walletResult] = await Promise.all([
                 client.models.PortfolioStock.list({
-                    selectionSet: ['id', 'symbol', 'pdp', 'name', 'budget', 'isHidden', 'region'], // Added region to selection
+                    selectionSet: ['id', 'symbol', 'pdp', 'name', 'budget', 'isHidden', 'archived', 'region'], // Added archived field
                     filter: {
-                        isHidden: { ne: true } // ne: not equal to true (i.e., fetch if false or null/undefined)
+                        and: [
+                            { isHidden: { ne: true } }, // not hidden
+                            { archived: { ne: true } }  // not archived
+                        ]
                     },
                     limit: 1000
                 }),
@@ -225,7 +228,7 @@ export default function HomePage() {
                  throw (stockResult as any).errors;
             }
             
-            const visibleStocks = (stockResult.data as any[]).filter(stock => stock.isHidden !== true);
+            const visibleStocks = (stockResult.data as any[]).filter(stock => !stock.isHidden && !stock.archived);
             setPortfolioStocks(visibleStocks);
             
             const visibleStockIds = new Set(visibleStocks.map(stock => stock.id));

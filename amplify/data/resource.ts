@@ -31,6 +31,8 @@ const schema = a.schema({
       plr: a.float(),   // Profit Loss Ratio
       budget: a.float(), // Annual budget, optional number
       isHidden: a.boolean().default(false), // Hide the stock from the reporting table
+      archived: a.boolean().default(false), // Soft delete flag for archived stocks
+      archivedAt: a.datetime(), // Timestamp when the stock was archived
       swingHoldRatio: a.float(),
       stockCommission: a.float(), // Commission for stock trades, optional
       transactions: a.hasMany('Transaction', 'portfolioStockId'),
@@ -56,6 +58,8 @@ const schema = a.schema({
       swingShares: a.float(),       // <<< RENAMED from playShares
       holdShares: a.float(),        // Existing field is fine
       txnType: a.string(),          // <<< ADDED: "Swing", "Hold", "Split", or null
+      archived: a.boolean().default(false), // Soft delete flag for archived transactions
+      archivedAt: a.datetime(), // Timestamp when the transaction was archived
       lbd: a.float(),             // Last Buy Dip ($). Calculated target price for a new Buy Signal. LBD = Buy Price - (Buy Price * PDP)
       tp: a.float(),              // Take Profit ($). Calculated target price, at which we get a Sell signal. TP = Buy Price + (Buy Price * PDP * PLR)
       completedTxnId: a.string(), // Link to another Txn ID (for Sell closing a Buy?)
@@ -100,6 +104,8 @@ const schema = a.schema({
       totalInvestment: a.float().required(), // Total investment EVER for this wallet (at this price)
       sharesSold: a.float().required().default(0), // Shares sold specifically from this wallet
       remainingShares: a.float(), // totalSharesQty - sharesSold (Must be updated on Buy/Sell)
+      archived: a.boolean().default(false), // Soft delete flag for archived wallets
+      archivedAt: a.datetime(), // Timestamp when the wallet was archived
       realizedPl: a.float().default(0), // Accumulated P/L $ from sales FROM this wallet
       tpValue: a.float(), // Calculated TP Price ($) based on buyPrice
       tpPercent: a.float(), // Calculated TP Percent (%) based on buyPrice

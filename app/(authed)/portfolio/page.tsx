@@ -80,13 +80,31 @@ function PortfolioContent() {
   // Inside your component function - this will now work because we're in a client component under the provider
   const { latestPrices, pricesLoading, pricesError } = usePrices();
 
+  // State to manage showing/hiding archived stocks
+  const [showArchived, setShowArchived] = useState(false);
+
+  // Create separate filtered arrays for active and archived stocks
+  const activeStocks = useMemo(() => {
+    console.log("Calculating activeStocks. Input length:", portfolioStocksData.length);
+    const filtered = portfolioStocksData.filter(stock => !stock.archived);
+    console.log("ActiveStocks count:", filtered.length);
+    return filtered;
+  }, [portfolioStocksData]);
+
+  const archivedStocks = useMemo(() => {
+    console.log("Calculating archivedStocks. Input length:", portfolioStocksData.length);
+    const filtered = portfolioStocksData.filter(stock => stock.archived);
+    console.log("ArchivedStocks count:", filtered.length);
+    return filtered;
+  }, [portfolioStocksData]);
+
   // Create a filteredStocks array that excludes hidden stocks for all calculations
   const visibleStocks = useMemo(() => {
-    console.log("Recalculating visibleStocks. Input length:", portfolioStocksData.length);
-    const filtered = portfolioStocksData.filter(stock => !stock.isHidden);
+    console.log("Recalculating visibleStocks. Input length:", activeStocks.length);
+    const filtered = activeStocks.filter(stock => !stock.isHidden);
     console.log("VisibleStocks count:", filtered.length);
     return filtered;
-  }, [portfolioStocksData]); // Depends only on the raw portfolio data
+  }, [activeStocks]); // Depends on activeStocks instead of portfolioStocksData
 
   type StockWalletDataType = Schema['StockWallet']['type'];
 
@@ -125,7 +143,9 @@ function PortfolioContent() {
 
   // Sorted stocks for the table display
   const sortedStocks = useMemo(() => {
-    let sortableItems = [...portfolioStocksData];
+    // Use either active or archived stocks based on current display mode
+    const stocksToSort = showArchived ? archivedStocks : activeStocks;
+    let sortableItems = [...stocksToSort];
 
     if (stockSortConfig !== null) {
       sortableItems.sort((a, b) => {
@@ -204,7 +224,7 @@ function PortfolioContent() {
     }
 
     return sortableItems;
-  }, [portfolioStocksData, stockSortConfig, latestPrices, stockInvestments]);
+  }, [activeStocks, archivedStocks, showArchived, stockSortConfig, latestPrices, stockInvestments]);
 
   // Fetch Portfolio Function
   const fetchPortfolio = useCallback(async () => {
@@ -224,6 +244,8 @@ function PortfolioContent() {
           'pdp',
           'plr',
           'isHidden',
+          'archived',
+          'archivedAt',
           'swingHoldRatio',
           'stockCommission'
         ]
@@ -343,6 +365,43 @@ function PortfolioContent() {
         console.error('Unexpected error updating stock hidden status:', err);
         setError(err.message || 'An error occurred during update.');
     }  };
+
+  // Archive Handler
+  const handleArchiveStock = async (stock: PortfolioStockDataType) => {
+    const isArchiving = !stock.archived;
+    const action = isArchiving ? 'archive' : 'restore';
+    
+    if (!window.confirm(`Are you sure you want to ${action} ${stock.symbol?.toUpperCase()}?`)) {
+      return;
+    }
+
+    console.log(`Attempting to ${action} stock: ${stock.id}`);
+    setError(null);
+
+    try {
+      const updateData = {
+        id: stock.id,
+        archived: isArchiving,
+        archivedAt: isArchiving ? new Date().toISOString() : null,
+      };
+
+      // TODO: In a full implementation, we should also archive related transactions and wallets
+      // For now, we'll just archive the stock itself
+      
+      const { data: updatedStock, errors } = await client.models.PortfolioStock.update(updateData);
+
+      if (errors) {
+        console.error(`Error ${action}ing stock:`, errors);
+        setError(errors[0]?.message || `Failed to ${action} stock.`);
+      } else {
+        console.log(`Stock ${action}d successfully:`, updatedStock);
+        fetchPortfolio(); // Refresh the list
+      }
+    } catch (err: any) {
+      console.error(`Unexpected error ${action}ing stock:`, err);
+      setError(err.message || `An error occurred during ${action}.`);
+    }
+  };
 
   // Calculate region distribution
   const regionDistribution = useMemo(() => {
@@ -786,7 +845,8 @@ function PortfolioContent() {
       totalInvestment: {
         stock: { value: stockTotalInvestment, pct: stockTotalPct },
         etf: { value: etfTotalInvestment, pct: etfTotalPct },
-        total: { value: totalInvestment, pct: 100 }      }
+        total: { value: totalInvestment, pct: 100 }
+      }
     };
     // Depend on visibleStocks now
   }, [visibleStocks]);
@@ -808,21 +868,53 @@ function PortfolioContent() {
         apacRegionStats={apacRegionStats}
       />
       
-      {/* Button to open Add Stock modal */}
-      <button 
-        data-testid="portfolio-page-add-stock-button"
-        onClick={openAddModal} 
-        style={{
-          marginTop: '1rem',
-          padding: '8px 16px',
-          background: '#557100',
-          borderRadius: '4px',
-          color: 'white',
-          cursor: 'pointer'
-        }}
-      >
-        Add New Stock
-      </button>
+      {/* Action buttons row */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginTop: '1rem' 
+      }}>
+        {/* Add New Stock button on the left */}
+        <button 
+          data-testid="portfolio-page-add-stock-button"
+          onClick={openAddModal} 
+          style={{
+            padding: '8px 16px',
+            background: '#557100',
+            borderRadius: '4px',
+            color: 'white',
+            cursor: 'pointer',
+            border: 'none'
+          }}
+        >
+          Add New Stock
+        </button>
+
+        {/* Archive toggle button on the right */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {showArchived && (
+            <span style={{ color: '#666', fontSize: '0.9em', fontStyle: 'italic' }}>
+              Viewing archived stocks
+            </span>
+          )}
+          <button
+            onClick={() => setShowArchived(!showArchived)}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: showArchived ? '#dc3545' : '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '0.9em'
+            }}
+            data-testid="portfolio-toggle-archived-button"
+          >
+            {showArchived ? 'Hide Archived' : `Show Archived (${archivedStocks.length})`}
+          </button>
+        </div>
+      </div>
 
       {/* Portfolio Table */}
       <PortfolioTable
@@ -833,9 +925,12 @@ function PortfolioContent() {
         stockInvestments={stockInvestments}
         latestPrices={latestPrices}
         pricesLoading={pricesLoading}
+        showArchived={showArchived}
+        archivedCount={archivedStocks.length}
         requestStockSort={requestStockSort}
         handleEditClick={handleEditClick}
         handleToggleHidden={handleToggleHidden}
+        handleArchiveStock={handleArchiveStock}
       />
 
       {/* Add Stock Modal */}
