@@ -1,10 +1,10 @@
-// app/(authed)/components/PortfolioOverview.tsx
+// app/(authed)/signals/components/SignalsOverview.tsx
 'use client';
 
 import React from 'react';
 
 // Define props for the component with all the data it needs
-interface PortfolioOverviewProps {
+interface SignalsOverviewProps {
     isExpanded: boolean;
     toggleExpand: () => void;
     portfolioBudgetStats: {
@@ -53,7 +53,7 @@ interface PortfolioOverviewProps {
     };
 }
 
-export default function PortfolioOverview({
+export default function SignalsOverview({
     isExpanded,
     toggleExpand,
     portfolioBudgetStats,
@@ -63,7 +63,7 @@ export default function PortfolioOverview({
     portfolioTotalPL,
     formatters,
     precision
-}: PortfolioOverviewProps) {
+}: SignalsOverviewProps) {
     const { formatCurrency, formatPercent } = formatters;
     const { CURRENCY_PRECISION, PERCENT_PRECISION } = precision;
 

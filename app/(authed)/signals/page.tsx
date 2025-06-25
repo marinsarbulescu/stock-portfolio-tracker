@@ -6,9 +6,8 @@ import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
 import { usePrices } from '@/app/contexts/PriceContext'; // Import context hook
 import { fetchAuthSession } from 'aws-amplify/auth';
-import PortfolioOverview from '../components/PortfolioOverview';
-import ColumnVisibilityControls, { ReportColumnVisibilityState } from '../components/ColumnVisibilityControls';
-import StockTable, { ReportDataItem, ReportColumnKey } from '../components/StockTable';
+import SignalsOverview from './components/SignalsOverview';
+import SignalsTable, { ReportColumnVisibilityState, ReportDataItem, ReportColumnKey } from './components/SignalsTable';
 import { useAuthStatus } from '@/app/contexts/AuthStatusContext'; // Import useAuthStatus
 
 // const SHARE_EPSILON = 0.00001; // Example value, adjust as needed
@@ -888,7 +887,7 @@ export default function HomePage() {
 
     return (
         <div>
-            <h2>Signals Report</h2>
+            <h2>Signals</h2>
             <div style={{ fontSize: '0.7em', color: "gray" }}>
                 {pricesLoading
                 ? progressMessage || 'Prices are refreshing...' // Display progressMessage if available
@@ -899,8 +898,8 @@ export default function HomePage() {
             </div>
             {pricesError && <p style={{ color: 'red' }}>Price Error: {pricesError}</p>}
 
-            {/* Portfolio Overview Component - no longer need to pass regionDistribution */}
-            <PortfolioOverview
+            {/* Signals Overview Component */}
+            <SignalsOverview
                 isExpanded={isOverviewExpanded}
                 toggleExpand={() => setIsOverviewExpanded(prev => !prev)}
                 portfolioBudgetStats={portfolioBudgetStats}
@@ -912,17 +911,12 @@ export default function HomePage() {
                 precision={precision}
             />
             
-            {/* Column Visibility Controls Component */}
-            <ColumnVisibilityControls
-                columnVisibility={reportColumnVisibility}
-                setColumnVisibility={setReportColumnVisibility}
-                columnLabels={COLUMN_LABELS}
-            />
-
-            {/* Stock Table Component */}
-            <StockTable
+            {/* Signals Table Component (includes column visibility controls) */}
+            <SignalsTable
                 isLoading={isLoading}
                 reportColumnVisibility={reportColumnVisibility}
+                setReportColumnVisibility={setReportColumnVisibility}
+                columnLabels={COLUMN_LABELS}
                 sortedTableData={sortedTableData}
                 visibleColumnCount={visibleColumnCount}
                 requestSort={requestSort}
