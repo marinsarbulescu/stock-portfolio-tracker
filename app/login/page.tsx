@@ -14,8 +14,8 @@ function LoginHandler() {
   // Effect to redirect signed-in users away from login page
   useEffect(() => {
     if (authStatus === 'authenticated') {
-      // Redirect to the homepage or a dashboard page after login
-      router.push('/'); // Or router.push('/dashboard'); etc.
+      // Redirect directly to signals page after login (our effective homepage)
+      router.push('/signals');
     }
   }, [authStatus, router]);
 

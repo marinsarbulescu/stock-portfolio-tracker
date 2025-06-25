@@ -57,10 +57,10 @@ export default function NavBar({ accessStatus }: NavBarProps) {
         <nav style={navStyles}>
             {/* Left Group: Conditional Links */}
             <div style={linkGroupStyles}>
-                {/* Show Home/Portfolio/Goals only if approved */}
+                {/* Show navigation links only if approved */}
                 {isApproved && (
                     <>
-                        <Link href="/" style={linkStyles}>Home</Link>
+                        <Link href="/signals" style={linkStyles}>Home</Link>
                         <Link href="/portfolio" style={linkStyles}>Portfolio</Link>
                         <Link href="/goals" style={linkStyles}>Goals</Link>
                     </>
