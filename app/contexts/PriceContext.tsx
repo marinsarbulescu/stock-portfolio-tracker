@@ -112,7 +112,7 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
     try {
       // console.log('[PriceContext.tsx] - Fetching all stock symbols from backend...');
       const { data: stocksData, errors: stockErrors } = await client.models.PortfolioStock.list({
-        selectionSet: ['symbol', 'archived']
+        selectionSet: ['symbol', 'archived', 'isHidden']
       });
 
       if (stockErrors) {
@@ -121,10 +121,10 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(firstErrorMsg);
       }
 
-      // Filter out archived stocks from price fetching
-      const activeStocksData = stocksData?.filter(stock => !stock.archived) ?? [];
+      // Filter out archived stocks AND hidden stocks from price fetching
+      const activeStocksData = stocksData?.filter(stock => !stock.archived && !stock.isHidden) ?? [];
       const allSymbolsFromBackend = activeStocksData.map(stock => stock.symbol).filter(Boolean) as string[];
-      // console.log(`[PriceContext.tsx] - Found ${allSymbolsFromBackend.length} active symbols from backend.`);
+      // console.log(`[PriceContext.tsx] - Found ${allSymbolsFromBackend.length} active, non-hidden symbols from backend.`);
 
       // --- Filter out excluded symbols on the client-side ---
       const symbolsToProcess = allSymbolsFromBackend.filter(symbol => {

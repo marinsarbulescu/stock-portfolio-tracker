@@ -98,10 +98,11 @@ function PortfolioContent() {
     return filtered;
   }, [portfolioStocksData]);
 
-  // Create a filteredStocks array that excludes hidden stocks for all calculations
+  // Create a visibleStocks array that includes ALL stocks (including hidden) for overview calculations
+  // Hidden stocks should now show up in reports per new requirements
   const visibleStocks = useMemo(() => {
     console.log("Recalculating visibleStocks. Input length:", activeStocks.length);
-    const filtered = activeStocks.filter(stock => !stock.isHidden);
+    const filtered = activeStocks; // No longer filtering out hidden stocks for overview calculations
     console.log("VisibleStocks count:", filtered.length);
     return filtered;
   }, [activeStocks]); // Depends on activeStocks instead of portfolioStocksData
@@ -338,8 +339,12 @@ function PortfolioContent() {
 
   const handleToggleHidden = async (stock: PortfolioStockDataType) => {
     const newHiddenState = !stock.isHidden; // Calculate the new state
-    // Optional confirmation for clarity
-    if (!window.confirm(`Are you sure you want to ${newHiddenState ? 'hide' : 'show'} ${stock.symbol?.toUpperCase()} in reports?`)) {
+    // Updated confirmation message with specific details about what happens
+    const confirmMessage = newHiddenState 
+      ? `This will hide ${stock.symbol} from the Signals Table and stop fetching the latest price.`
+      : `This will show ${stock.symbol} in the Signals Table and start fetching the latest price.`;
+    
+    if (!window.confirm(confirmMessage)) {
         return;
     }
 
