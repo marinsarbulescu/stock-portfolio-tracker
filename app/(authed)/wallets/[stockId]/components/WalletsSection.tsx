@@ -66,6 +66,18 @@ export default function WalletsSection({
     return {};
   };
 
+  // Helper function to check if TP is highlighted (take profit condition met)
+  const isTpHighlighted = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
+    const remaining = wallet.remainingShares ?? 0;
+    const tp = wallet.tpValue;
+    return (
+      remaining > SHARE_EPSILON &&
+      typeof tp === 'number' &&
+      typeof currentStockPrice === 'number' &&
+      tp <= currentStockPrice
+    );
+  };
+
   // HTP Sell Signal Logic - Only for Hold wallets
   const getHtpCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
     // Only apply HTP logic for Hold wallets
@@ -290,7 +302,18 @@ export default function WalletsSection({
                   {walletColumnVisibility.remainingShares && <td data-testid="wallet-remainingShares-display" style={{ padding: '5px' }}>{formatShares(wallet.remainingShares ?? 0, SHARE_PRECISION)}</td>}
                   <td style={{ padding: '5px', textAlign: 'center' }}>
                     {(wallet.remainingShares ?? 0) > SHARE_EPSILON && (
-                      <button data-testid="wallet-sell-icon" onClick={() => onSell(wallet)} title="Sell from wallet" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: '#28a745' }}>
+                      <button 
+                        data-testid="wallet-sell-icon" 
+                        onClick={() => onSell(wallet)} 
+                        title="Sell from wallet" 
+                        style={{ 
+                          background: 'none', 
+                          border: 'none', 
+                          cursor: 'pointer', 
+                          padding: '5px', 
+                          color: isTpHighlighted(wallet, currentPrice) ? 'lightgreen' : 'gray'
+                        }}
+                      >
                         Sell
                       </button>
                     )}
