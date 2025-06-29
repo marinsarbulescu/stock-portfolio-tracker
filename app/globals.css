@@ -55,6 +55,38 @@ a {
   text-decoration: none;
 }
 
+/* Remove blue outline on buttons and interactive elements */
+button:focus,
+button:active,
+input:focus,
+input:active,
+select:focus,
+select:active,
+textarea:focus,
+textarea:active,
+a:focus,
+a:active,
+*:focus,
+*:active {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove blue outline specifically for buttons */
+button {
+  outline: none;
+  border: none;
+}
+
+button:focus-visible {
+  outline: none;
+}
+
+/* Remove outline from all focusable elements */
+*:focus-visible {
+  outline: none;
+}
+
 /* Checkbox styling to prevent red background */
 input[type="checkbox"] {
   accent-color: gray; /* Blue accent color instead of red */

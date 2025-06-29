@@ -84,7 +84,7 @@ function PortfolioContent() {
     htp: true,
     plr: true,
     stockCommission: true,
-    budget: true,
+    budget: false,
     investment: true,
   });
 
