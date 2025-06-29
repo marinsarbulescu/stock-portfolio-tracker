@@ -105,7 +105,8 @@ export default function WalletsOverviewSection({
 
               <div>
                 <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Realized P/L</p>
-                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>
+                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
+                <p>
                   <span data-testid="overview-realized-swing-pl-dollars">{formatCurrency(plStats.totalSwingPlDollars ?? 0)}</span>
                   &nbsp;(
                   <span data-testid="overview-realized-swing-pl-percent">{`${plStats.avgSwingPlPercent ?? 0}%`}</span>
@@ -129,43 +130,39 @@ export default function WalletsOverviewSection({
 
               <div>
                 <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Unrealized P/L</p>
-                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>
+                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
+                <p>
                   {unrealizedPlStats.unrealizedSwingDollars === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(unrealizedPlStats.unrealizedSwingDollars ?? 0)}
-                  &nbsp;({unrealizedPlStats.unrealizedSwingPercent ?? 0}%
-                )
+                  &nbsp;({unrealizedPlStats.unrealizedSwingPercent ?? 0}%)
                 </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
                 <p>
                   {unrealizedPlStats.unrealizedHoldDollars === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(unrealizedPlStats.unrealizedHoldDollars ?? 0)}
-                  &nbsp;({unrealizedPlStats.unrealizedHoldPercent ?? 0}%
-                )
+                  &nbsp;({unrealizedPlStats.unrealizedHoldPercent ?? 0}%)
                 </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                 <p>
                   {unrealizedPlStats.unrealizedTotalDollars === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(unrealizedPlStats.unrealizedTotalDollars ?? 0)}
-                  &nbsp;({unrealizedPlStats.unrealizedTotalPercent ?? 0}%
-                )
+                  &nbsp;({unrealizedPlStats.unrealizedTotalPercent ?? 0}%)
                 </p>
               </div>
 
               <div>
                 <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Total P/L</p>
-                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>
+                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
+                <p>
                   {totalPlStats.totalSwingPlDollars === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(totalPlStats.totalSwingPlDollars ?? 0)}
                   &nbsp;({totalPlStats.avgSwingPlPercent ?? 0}%)
-                )
                 </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
                 <p>
                   {totalPlStats.totalHoldPlDollars === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(totalPlStats.totalHoldPlDollars ?? 0)}
                   &nbsp;({totalPlStats.avgHoldPlPercent ?? 0}%)
-                )
                 </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                 <p>
                   {totalPlStats.totalStockPlDollars === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(totalPlStats.totalStockPlDollars ?? 0)}
-                  &nbsp;({totalPlStats.totalStockPercent ?? 0}%
-                )
+                  &nbsp;({totalPlStats.totalStockPercent ?? 0}%)
                 </p>
               </div>
             </div>
