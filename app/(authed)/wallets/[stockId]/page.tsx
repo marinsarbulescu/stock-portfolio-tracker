@@ -11,10 +11,10 @@ import { FaEdit, FaTrashAlt, FaDollarSign } from 'react-icons/fa';
 import { usePrices } from '@/app/contexts/PriceContext';
 import { useOwnerId } from '@/app/hooks/useOwnerId';
 //import { formatToMDYYYY } from '@/app/utils/dateFormatter';
-import WalletsPageHeader from './components/WalletsPageHeader';
-import WalletsOverviewSection from './components/WalletsOverviewSection';
-import WalletsSection from './components/WalletsSection';
-import WalletsTransactionsSection from './components/WalletsTransactionsSection';
+import WalletsHeader from './components/WalletsHeader';
+import WalletsOverview from './components/WalletsOverview';
+import WalletsTabs from './components/WalletsTabs';
+import WalletsTransactionsTable from './components/WalletsTransactionsTable';
 import EditStockModal from '../../portfolio/components/PortfolioEditStockModal';
 import type { TransactionTableColumnVisibilityState, SortableTxnKey, SortConfig } from './types';
 
@@ -1978,7 +1978,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
 
     return (
         <div>
-            <WalletsPageHeader
+            <WalletsHeader
                 name={name ?? ''}
                 symbol={stockSymbol}
                 price={currentStockPriceForOverview}
@@ -1986,7 +1986,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 onAddBuy={handleOpenBuyModal}
                 onEditStock={handleEditStock}
             />
-            <WalletsOverviewSection
+            <WalletsOverview
                 isExpanded={isOverviewExpanded}
                 onToggle={() => setIsOverviewExpanded(prev => !prev)}
                 stockBudget={stockBudget}
@@ -2002,7 +2002,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 totalPlStats={totalPlStats}
                 pricesLoading={pricesLoading}            />
             {/* --- START: Wallets section --- */}
-            <WalletsSection
+            <WalletsTabs
               swingWallets={swingWallets}
               holdWallets={holdWallets}
               walletColumnVisibility={walletColumnVisibility}
@@ -2025,7 +2025,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
             {/* --- END: Wallets section replaced by component --- */}
             
             {/* --- START: Transactions section --- */}
-            <WalletsTransactionsSection
+            <WalletsTransactionsTable
                 transactions={sortedTransactions}
                 isLoading={isTxnLoading}
                 error={txnError}

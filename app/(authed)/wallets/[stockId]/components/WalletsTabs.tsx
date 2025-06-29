@@ -1,4 +1,4 @@
-//app/(authed)/wallets/[stockId]/components/WalletsSection.tsx
+//app/(authed)/wallets/[stockId]/components/WalletsTabs.tsx
 import React from 'react';
 import type { StockWalletDataType, WalletsTableColumnVisibilityState, WalletsTableSortableKey } from '../types';
 import type { Dispatch, SetStateAction } from 'react';
@@ -6,7 +6,7 @@ import { formatCurrency, formatShares } from '@/app/utils/financialCalculations'
 import { formatPercent } from '@/app/utils/financialCalculations';
 import { SHARE_EPSILON, SHARE_PRECISION } from '@/app/config/constants';
 
-export interface WalletsSectionProps {
+export interface WalletsTabsProps {
   swingWallets: StockWalletDataType[];
   holdWallets: StockWalletDataType[];
   walletColumnVisibility: WalletsTableColumnVisibilityState;
@@ -27,7 +27,7 @@ export interface WalletsSectionProps {
   stockCommission?: number | null;
 }
 
-export default function WalletsSection({
+export default function WalletsTabs({
   swingWallets,
   holdWallets,
   walletColumnVisibility,
@@ -46,7 +46,7 @@ export default function WalletsSection({
   setShowEmptyWallets,
   stockHtp,
   stockCommission,
-}: WalletsSectionProps) {
+}: WalletsTabsProps) {
   const truncateId = (id: string | null | undefined, length = 8): string => {
     if (!id) return '-';
     return id.slice(0, length) + (id.length > length ? '...' : '');

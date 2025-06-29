@@ -1,7 +1,7 @@
 import React from 'react';
 import { formatCurrency } from '@/app/utils/financialCalculations';
 
-export interface WalletsPageHeaderProps {
+export interface WalletsHeaderProps {
   name: string;
   symbol?: string | null;
   price?: number | null;
@@ -10,7 +10,7 @@ export interface WalletsPageHeaderProps {
   onEditStock: () => void;
 }
 
-export default function WalletsPageHeader({ name, symbol, price, pricesLoading, onAddBuy, onEditStock }: WalletsPageHeaderProps) {
+export default function WalletsHeader({ name, symbol, price, pricesLoading, onAddBuy, onEditStock }: WalletsHeaderProps) {
   const displayPrice =
     typeof price === 'number'
       ? formatCurrency(price)

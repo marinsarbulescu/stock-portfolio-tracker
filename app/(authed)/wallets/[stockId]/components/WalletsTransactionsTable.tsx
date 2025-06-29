@@ -1,4 +1,4 @@
-// app/(authed)/wallets/[stockId]/components/WalletsTransactionsSection.tsx
+// app/(authed)/wallets/[stockId]/components/WalletsTransactionsTable.tsx
 import React from 'react';
 import type { TransactionDataType, TransactionTableColumnVisibilityState, SortableTxnKey, SortConfig } from '../types';
 import { formatCurrency, formatPercent, formatShares } from '@/app/utils/financialCalculations';
@@ -6,7 +6,7 @@ import { formatToMDYYYY } from '@/app/utils/dateFormatter';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { SHARE_PRECISION } from '@/app/config/constants';
 
-export interface WalletsTransactionsSectionProps {
+export interface WalletsTransactionsTableProps {
   transactions: TransactionDataType[];
   isLoading: boolean;
   error: string | null;
@@ -19,7 +19,7 @@ export interface WalletsTransactionsSectionProps {
   onDelete: (txn: TransactionDataType) => void;
 }
 
-export default function WalletsTransactionsSection({
+export default function WalletsTransactionsTable({
   transactions,
   isLoading,
   error,
@@ -30,7 +30,7 @@ export default function WalletsTransactionsSection({
   requestSort,
   onEdit,
   onDelete,
-}: WalletsTransactionsSectionProps) {
+}: WalletsTransactionsTableProps) {
   const visibleKeys = Object.keys(columnVisibility) as (keyof TransactionTableColumnVisibilityState)[];
   const colspan = visibleKeys.filter(k => columnVisibility[k]).length + 1; // +1 for Actions
   const truncateId = (id?: string | null, length = 8) => !id ? '-' : (id.length <= length ? id : `${id.slice(0, length)}...`);

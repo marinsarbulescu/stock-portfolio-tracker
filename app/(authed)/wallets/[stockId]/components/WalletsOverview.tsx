@@ -3,7 +3,7 @@ import { formatCurrency, formatShares } from '@/app/utils/financialCalculations'
 import { SHARE_PRECISION } from '@/app/config/constants';
 import type { PLStats, UnrealizedPLStats, TotalPLStats, TransactionCounts, CurrentShares } from '../types';
 
-export interface WalletsOverviewSectionProps {
+export interface WalletsOverviewProps {
   isExpanded: boolean;
   onToggle: () => void;
   stockBudget?: number | null;
@@ -20,7 +20,7 @@ export interface WalletsOverviewSectionProps {
   pricesLoading: boolean;
 }
 
-export default function WalletsOverviewSection({
+export default function WalletsOverview({
   isExpanded,
   onToggle,
   stockBudget,
@@ -35,7 +35,7 @@ export default function WalletsOverviewSection({
   unrealizedPlStats,
   totalPlStats,
   pricesLoading,
-}: WalletsOverviewSectionProps) {
+}: WalletsOverviewProps) {
   return (
     <div style={{ marginBottom: '1rem', border: '1px solid #444' }}>
       <p
