@@ -5,62 +5,17 @@ import React from 'react';
 import Link from 'next/link';
 import { FaEdit, FaEye, FaEyeSlash, FaArchive, FaTrashRestore } from 'react-icons/fa';
 import { formatCurrency } from '@/app/utils/financialCalculations';
-import type { Schema } from '@/amplify/data/resource';
 
-type PortfolioStockDataType = Schema["PortfolioStock"]["type"];
+// Import types from the portfolio types file
+import type {
+  PortfolioStockDataType,
+  SortableStockKey,
+  StockSortConfig,
+  LatestPrices,
+  PortfolioTableProps,
+} from '../types';
 
-// Define sortable keys for the Stock Portfolio Table
-type SortableStockKey = 
-  | 'symbol'
-  | 'name'
-  | 'stockType'
-  | 'region'
-  | 'currentPrice'
-  | 'pdp'
-  | 'plr'
-  | 'budget'
-  | 'investment';
-
-interface StockSortConfig {
-  key: SortableStockKey;
-  direction: 'ascending' | 'descending';
-}
-
-type PriceData = {
-  currentPrice: number | null;
-  [key: string]: any;
-};
-
-type LatestPrices = Record<string, PriceData | null>;
-
-export interface PortfolioTableProps {
-  isLoading: boolean;
-  error: string | null;
-  sortedStocks: PortfolioStockDataType[];
-  stockSortConfig: StockSortConfig | null;
-  stockInvestments: Record<string, number>;
-  latestPrices: LatestPrices;
-  pricesLoading: boolean;
-  showArchived: boolean;
-  archivedCount: number;
-  requestStockSort: (key: SortableStockKey) => void;
-  handleEditClick: (stock: PortfolioStockDataType) => void;
-  handleToggleHidden: (stock: PortfolioStockDataType) => void;
-  handleArchiveStock: (stock: PortfolioStockDataType) => void;
-}
-
-// Column labels for the stock table
-const STOCK_COLUMN_LABELS: Record<SortableStockKey, string> = {
-  symbol: 'Ticker',
-  name: 'Name',
-  stockType: 'Type',
-  region: 'Region',
-  currentPrice: 'Last Price',
-  pdp: 'PDP (%)',
-  plr: 'PLR (%)',
-  budget: 'Budget',
-  investment: 'Inv.',
-};
+import { STOCK_COLUMN_LABELS } from '../types';
 
 export default function PortfolioTable({
   isLoading,

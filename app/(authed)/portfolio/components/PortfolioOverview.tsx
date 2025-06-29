@@ -3,53 +3,13 @@
 
 import React from 'react';
 
-interface RegionDistribution {
-  US: number;
-  Intl: number;
-  APAC: number;
-  EU: number;
-}
-
-interface StockTypeDistribution {
-  Stock: number;
-  ETF: number;
-  Crypto: number;
-}
-
-interface RegionStats {
-  counts: { stock: number; etf: number; crypto?: number; total: number };
-  swingInvestment: {
-    stock: { value: number; pct: number };
-    etf: { value: number; pct: number };
-    crypto?: { value: number; pct: number };
-    total: { value: number; pct: number };
-  };
-  holdInvestment: {
-    stock: { value: number; pct: number };
-    etf: { value: number; pct: number };
-    crypto?: { value: number; pct: number };
-    total: { value: number; pct: number };
-  };
-  totalInvestment: {
-    stock: { value: number; pct: number };
-    etf: { value: number; pct: number };
-    crypto?: { value: number; pct: number };
-    total: { value: number; pct: number };
-  };
-}
-
-export interface PortfolioOverviewProps {
-  isOverviewExpanded: boolean;
-  setIsOverviewExpanded: (expanded: boolean) => void;
-  regionDistribution: RegionDistribution;
-  stockTypeDistribution: StockTypeDistribution;
-  percentages: RegionDistribution;
-  stockTypePercentages: StockTypeDistribution;
-  usRegionStats: RegionStats;
-  euRegionStats: RegionStats;
-  intlRegionStats: RegionStats;
-  apacRegionStats: RegionStats;
-}
+// Import types from the portfolio types file
+import type {
+  RegionDistribution,
+  StockTypeDistribution,
+  RegionStats,
+  PortfolioOverviewProps,
+} from '../types';
 
 export default function PortfolioOverview({
   isOverviewExpanded,

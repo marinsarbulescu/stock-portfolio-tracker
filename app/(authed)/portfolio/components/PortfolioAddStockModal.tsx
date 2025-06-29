@@ -5,44 +5,18 @@ import React, { useState } from 'react';
 import { type Schema } from '@/amplify/data/resource';
 import { generateClient } from 'aws-amplify/data';
 
+// Import types from the portfolio types file
+import type {
+  PortfolioStockDataType,
+  PortfolioStockCreateInput,
+  StockTypeValue,
+  RegionValue,
+  AddStockModalProps,
+} from '../types';
+
+import { modalOverlayStyle, modalContentStyle } from '../types';
+
 const client = generateClient<Schema>();
-
-type PortfolioStockDataType = Schema["PortfolioStock"]["type"];
-// Omit 'transactions' and 'stockWallets' as they are relationships, not direct inputs
-type PortfolioStockCreateInput = Omit<PortfolioStockDataType, 'id' | 'createdAt' | 'updatedAt' | 'owner' | 'transactions' | 'stockWallets'>;
-
-// Define specific types for dropdowns/enums based on schema
-type StockTypeValue = PortfolioStockDataType['stockType'];
-type RegionValue = PortfolioStockDataType['region'];
-
-export interface AddStockModalProps {
-  isOpen: boolean;
-  onStockAdded: () => void;
-  onCancel: () => void;
-}
-
-const modalOverlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(0, 0, 0, 0.75)',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 1000
-};
-
-const modalContentStyle: React.CSSProperties = {
-  backgroundColor: '#1e1e1e',
-  borderRadius: '8px',
-  maxHeight: '90vh',
-  width: '90%',
-  maxWidth: '500px',
-  overflowY: 'auto',
-  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
-};
 
 export default function AddStockModal({
   isOpen,

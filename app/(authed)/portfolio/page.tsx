@@ -24,33 +24,23 @@ import PortfolioTable from './components/PortfolioTable';
 import AddStockModal from './components/PortfolioAddStockModal';
 import EditStockModal from './components/PortfolioEditStockModal';
 
+// Import types from the types file
+import type {
+  PortfolioStockDataType,
+  StockWalletDataType,
+  PortfolioStockUpdateInput,
+  SortableStockKey,
+  StockSortConfig,
+  RegionDistribution,
+  StockTypeDistribution,
+  RegionStats,
+  InvestmentBreakdown,
+} from './types';
+
 // Register Chart.js components and plugins
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, ChartDataLabels);
 
-type PortfolioStockDataType = Schema["PortfolioStock"]["type"];
-// Define type needed for update payload
-type PortfolioStockUpdateInput = Partial<PortfolioStockDataType> & { id: string };
-
-type PriceMap = Record<string, { currentPrice: number | null; [key: string]: any } | null>;
-
 const client = generateClient<Schema>();
-
-// Define sortable keys for the Stock Portfolio Table
-type SortableStockKey = 
-  | 'symbol'
-  | 'name'
-  | 'stockType'
-  | 'region'
-  | 'currentPrice'
-  | 'pdp'
-  | 'plr'
-  | 'budget'
-  | 'investment';
-
-interface StockSortConfig {
-  key: SortableStockKey;
-  direction: 'ascending' | 'descending';
-}
 
 // Create a wrapper component that safely uses the context
 function PortfolioContent() {
@@ -106,8 +96,6 @@ function PortfolioContent() {
     console.log("VisibleStocks count:", filtered.length);
     return filtered;
   }, [activeStocks]); // Depends on activeStocks instead of portfolioStocksData
-
-  type StockWalletDataType = Schema['StockWallet']['type'];
 
   // State to hold all stock wallets for investment calculation
   const [allWallets, setAllWallets] = useState<StockWalletDataType[]>([]);

@@ -4,42 +4,16 @@
 import React, { useState, useEffect } from 'react';
 import type { Schema } from '@/amplify/data/resource';
 
-type PortfolioStockDataType = Schema["PortfolioStock"]["type"];
-type PortfolioStockUpdateInput = Partial<PortfolioStockDataType> & { id: string };
+// Import types from the portfolio types file
+import type {
+  PortfolioStockDataType,
+  PortfolioStockUpdateInput,
+  StockTypeValue,
+  RegionValue,
+  EditStockModalProps,
+} from '../types';
 
-// Define specific types for dropdowns/enums based on schema
-type StockTypeValue = PortfolioStockDataType['stockType'];
-type RegionValue = PortfolioStockDataType['region'];
-
-export interface EditStockModalProps {
-  isOpen: boolean;
-  stockToEditData: PortfolioStockDataType | null;
-  onUpdate: (updatePayload: PortfolioStockUpdateInput) => Promise<void>;
-  onCancel: () => void;
-}
-
-const modalOverlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(0, 0, 0, 0.75)',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 1000
-};
-
-const modalContentStyle: React.CSSProperties = {
-  backgroundColor: '#1e1e1e',
-  borderRadius: '8px',
-  maxHeight: '90vh',
-  width: '90%',
-  maxWidth: '500px',
-  overflowY: 'auto',
-  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
-};
+import { modalOverlayStyle, modalContentStyle } from '../types';
 
 export default function EditStockModal({
   isOpen,
