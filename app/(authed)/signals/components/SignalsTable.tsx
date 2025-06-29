@@ -35,6 +35,7 @@ export interface ReportDataItem {
     tpShares: number | null;
     totalCurrentShares: number;
     incompleteBuyCount: number;
+    hasHtpSignal: boolean;
 }
 
 export type ReportColumnKey = 
@@ -198,16 +199,21 @@ export default function SignalsTable({
                                 <tr style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
                                     <td style={{ padding: '5px', textAlign: 'center' }}>
                                         <button
+                                            data-testid="signals-table-toggle-row-expansion-button"
                                             onClick={() => toggleRowExpansion(item.id)}
                                             style={{
-                                                background: 'none',
+                                                background: item.hasHtpSignal ? 'green' : 'none',
                                                 border: 'none',
                                                 cursor: 'pointer',
-                                                color: '#ccc',
+                                                color: item.hasHtpSignal ? 'white' : '#ccc',
                                                 fontSize: '0.8em',
                                                 padding: '2px'
                                             }}
-                                            title={expandedRows.has(item.id) ? 'Collapse details' : 'Expand details'}
+                                            title={
+                                                item.hasHtpSignal 
+                                                    ? `${expandedRows.has(item.id) ? 'Collapse' : 'Expand'} details (HTP Signal Active)`
+                                                    : `${expandedRows.has(item.id) ? 'Collapse' : 'Expand'} details`
+                                            }
                                         >
                                             {expandedRows.has(item.id) ? '▼' : '▶'}
                                         </button>

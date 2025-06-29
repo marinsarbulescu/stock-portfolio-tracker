@@ -31,6 +31,8 @@ type PortfolioStockDataType = { // Simplified representation needed for this pag
     budget?: number | null | undefined;
     isHidden?: boolean | null | undefined;
     region?: string | null | undefined; // Added region property
+    htp?: number | null | undefined; // HTP percentage for Hold TP signal
+    stockCommission?: number | null | undefined; // Commission percentage
 }
 
 type StockWalletDataType = Schema['StockWallet']['type'];
@@ -195,7 +197,7 @@ export default function HomePage() {
         try {
             const [stockResult, allTxnsData, walletResult] = await Promise.all([
                 client.models.PortfolioStock.list({
-                    selectionSet: ['id', 'symbol', 'pdp', 'name', 'budget', 'isHidden', 'archived', 'region'], // Added archived field
+                    selectionSet: ['id', 'symbol', 'pdp', 'name', 'budget', 'isHidden', 'archived', 'region', 'htp', 'stockCommission'], // Added htp and stockCommission fields
                     filter: {
                         and: [
                             { isHidden: { ne: true } }, // not hidden
@@ -379,6 +381,55 @@ export default function HomePage() {
         }
     }
 
+    // HTP Signal calculation function - checks if any Hold wallet for a stock has HTP signal
+    const checkHtpSignalForStock = useCallback((stockId: string, currentStockPrice: number | null): boolean => {
+        if (typeof currentStockPrice !== 'number') {
+            return false;
+        }
+
+        // Get the stock data to access HTP percentage
+        const stock = portfolioStocks.find(s => s.id === stockId);
+        if (!stock || typeof stock.htp !== 'number' || stock.htp <= 0) {
+            return false;
+        }
+
+        // Get commission percentage for the stock
+        const stockCommission = stock.stockCommission; // Add this field to PortfolioStockDataType if not present
+
+        // Get Hold wallets for this stock with remaining shares
+        const stockHoldWallets = allWallets.filter(wallet => 
+            wallet.portfolioStockId === stockId && 
+            wallet.walletType === 'Hold' &&
+            (wallet.remainingShares ?? 0) > SHARE_EPSILON
+        );
+
+        // Check if any Hold wallet has HTP signal
+        return stockHoldWallets.some(wallet => {
+            const tp = wallet.tpValue;
+            const htp = stock.htp;
+
+            // Must have valid TP and HTP
+            if (typeof tp !== 'number' || typeof htp !== 'number' || htp <= 0) {
+                return false;
+            }
+
+            // Calculate HTP trigger price using the same formula as WalletsSection
+            // Current Price >= TP Value + (TP Value × HTP%) + ((TP Value + HTP Amount) × Commission%)
+            const htpAmount = tp * (htp / 100); // HTP Amount = TP Value × HTP%
+            const tpPlusHtpAmount = tp + htpAmount; // TP Value + HTP Amount
+            
+            // Commission calculation: if commission is provided, calculate commission on (TP Value + HTP Amount)
+            const commissionAmount = (typeof stockCommission === 'number' && stockCommission > 0) 
+                ? (tpPlusHtpAmount * (stockCommission / 100))
+                : 0;
+            
+            const htpTriggerPrice = tp + htpAmount + commissionAmount;
+
+            // Check if current price meets or exceeds the HTP trigger price
+            return currentStockPrice >= htpTriggerPrice;
+        });
+    }, [portfolioStocks, allWallets]);
+
     const reportData = useMemo((): ReportDataItem[] => {
         return portfolioStocks.map(stock => {
             const stockId: string = stock.id;
@@ -441,6 +492,9 @@ export default function HomePage() {
             const totalShares = procData.totalCurrentSwingShares + procData.totalCurrentHoldShares;
             const swingWalletCountValue = procData.activeSwingWallets.length;
 
+            // Calculate HTP signal status for Hold wallets
+            const hasHtpSignal = checkHtpSignalForStock(stockId, currentPrice);
+
             return {
                 id: stockId,
                 symbol: symbol,
@@ -457,6 +511,7 @@ export default function HomePage() {
                 totalCurrentShares: totalShares,
                 incompleteBuyCount: 0,
                 swingWalletCount: swingWalletCountValue,
+                hasHtpSignal: hasHtpSignal,
             };
         });
     }, [portfolioStocks, latestPrices, processedData]);
