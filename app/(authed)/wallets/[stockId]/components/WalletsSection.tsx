@@ -215,7 +215,8 @@ export default function WalletsSection({
             {walletColumnVisibility.remainingShares && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('remainingShares')}>Shs Left {walletSortConfig?.key === 'remainingShares' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
             <th style={{ padding: '5px', textAlign: 'center' }}>Actions</th>
           </tr>
-        </thead>        <tbody>
+        </thead>
+        <tbody>
           {(activeTab === 'Swing' ? filteredSwingWallets : filteredHoldWallets).length === 0 ? (
             <tr>
               <td data-testid="wallet-notfound-display" colSpan={visibleColumns.filter(col => walletColumnVisibility[col]).length + 2} style={{ textAlign: 'center', padding: '1rem' }}>
