@@ -55,6 +55,16 @@ a {
   text-decoration: none;
 }
 
+/* Checkbox styling to prevent red background */
+input[type="checkbox"] {
+  accent-color: gray; /* Blue accent color instead of red */
+  background-color: transparent;
+}
+
+input[type="checkbox"]:checked {
+  background-color: transparent;
+}
+
 @media (prefers-color-scheme: dark) {
   html {
     color-scheme: dark;
