@@ -298,13 +298,12 @@ export default function SignalsTable({
                                                 {/* Show HTP values if HTP signal is active */}
                                                 {item.hasHtpSignal && item.htpValues.length > 0 && (
                                                     <p>
-                                                        <strong style={{ color: 'lightgreen' }}>HTP Signal Active:</strong>{' '}
+                                                        <strong style={{ color: 'lightgreen' }}>HTP:</strong>{' '}
                                                         <span style={{ color: 'lightgreen' }}>
                                                             {item.htpValues.join(', ')}
                                                         </span>
                                                     </p>
                                                 )}
-                                                <p>Additional details for {item.symbol} will be displayed here...</p>
                                             </div>
                                         </td>
                                     </tr>
