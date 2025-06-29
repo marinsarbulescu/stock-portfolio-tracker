@@ -39,29 +39,25 @@ export default defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
+    // Default project for chromium - only runs tests not matched by other projects
     {
       name: 'chromium',
+      testIgnore: [/.*wallets.*\.spec\.ts/, /.*transactions.*\.spec\.ts/],
       use: { ...devices['Desktop Chrome'] },
     },
     
-    // Wallet-specific tests
+    // Wallet-specific tests (including transaction tests in wallets folder)
     {
       name: 'wallet-tests',
       testMatch: /.*wallets.*\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
     
-    // Transaction-specific tests
+    // Transaction-specific tests (excluding wallet folder)
     {
       name: 'transaction-tests', 
-      testMatch: /.*transaction.*\.spec\.ts/,
-      use: { ...devices['Desktop Chrome'] },
-    },
-    
-    // All E2E tests (if you want to run everything)
-    {
-      name: 'all-e2e',
-      testMatch: /.*\.spec\.ts/,
+      testMatch: /.*transactions.*\.spec\.ts/,
+      testIgnore: /.*wallets.*\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
   ],

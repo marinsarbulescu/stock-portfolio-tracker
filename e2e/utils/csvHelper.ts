@@ -53,6 +53,7 @@ export interface AddTransactionInputScenario {
     stockPlr?: number;
     stockBudget?: number;
     stockSwingHoldRatio?: number;
+    stockCommission?: number;
 }
 
 export function loadScenariosFromCSV<T extends Record<string, any>>(
