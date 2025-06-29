@@ -2,56 +2,7 @@
 'use client';
 
 import React from 'react';
-
-// Define props for the component with all the data it needs
-interface SignalsOverviewProps {
-    isExpanded: boolean;
-    toggleExpand: () => void;
-    portfolioBudgetStats: {
-        totalBudget: number;
-        budgetLeft: number;
-    };
-    portfolioTransactionCounts: {
-        buys: number;
-        swingSells: number;
-        holdSells: number;
-        totalSells: number;
-    };
-    portfolioRealizedPL: {
-        totalSwingPlDollars: number;
-        avgSwingPlPercent: number | null;
-        totalHoldPlDollars: number;
-        avgHoldPlPercent: number | null;
-        totalStockPlDollars: number;
-        avgStockPlPercent: number | null;
-    };
-    portfolioUnrealizedPL: {
-        unrealizedSwingDollars: number;
-        unrealizedSwingPercent: number | null;
-        unrealizedHoldDollars: number;
-        unrealizedHoldPercent: number | null;
-        unrealizedTotalDollars: number;
-        unrealizedTotalPercent: number | null;
-        partialDataUsed: boolean;
-    };
-    portfolioTotalPL: {
-        totalSwingDollars: number;
-        totalSwingPercent: number | null;
-        totalHoldDollars: number;
-        totalHoldPercent: number | null;
-        totalStockDollars: number;
-        totalStockPercent: number | null;
-        partialDataUsed: boolean;
-    };
-    formatters: {
-        formatCurrency: (value: number | null | undefined) => string;
-        formatPercent: (value: number | null | undefined) => string;
-    };
-    precision: {
-        CURRENCY_PRECISION: number;
-        PERCENT_PRECISION: number;
-    };
-}
+import type { SignalsOverviewProps } from '../types';
 
 export default function SignalsOverview({
     isExpanded,

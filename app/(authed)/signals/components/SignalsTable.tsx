@@ -4,72 +4,12 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { formatCurrency } from '@/app/utils/financialCalculations';
-
-// Define types for the component
-export interface ReportColumnVisibilityState {
-    fiveDayDip: boolean;
-    lbd: boolean;
-    swingWalletCount: boolean;
-    sinceBuy: boolean;
-    sinceSell: boolean;
-    currentPrice: boolean;
-    percentToBe: boolean;
-    ltpiaTakeProfitPrice: boolean;
-    percentToTp: boolean;
-    tpShares: boolean;
-}
-
-export interface ReportDataItem {
-    id: string;
-    symbol: string;
-    currentPrice: number | null;
-    fiveDayDip: number | null;
-    lbd: number | null;
-    sinceBuy: number | null;
-    sinceSell: number | null;
-    swingWalletCount: number;
-    buys: number;
-    percentToBe: number | null;
-    ltpiaTakeProfitPrice: number | null;
-    percentToTp: number | null;
-    tpShares: number | null;
-    totalCurrentShares: number;
-    incompleteBuyCount: number;
-    hasHtpSignal: boolean;
-    htpValues: string[];
-}
-
-export type ReportColumnKey = 
-    'symbol' | 
-    'currentPrice' | 
-    'fiveDayDip' | 
-    'lbd' | 
-    'sinceBuy' |
-    'sinceSell' | 
-    'swingWalletCount' |
-    'incompleteBuyCount' | 
-    'percentToBe' | 
-    'percentToTp' | 
-    'ltpiaTakeProfitPrice' | 
-    'tpShares';
-
-interface SignalsTableProps {
-    isLoading: boolean;
-    reportColumnVisibility: ReportColumnVisibilityState;
-    setReportColumnVisibility: React.Dispatch<React.SetStateAction<ReportColumnVisibilityState>>;
-    columnLabels: Record<keyof ReportColumnVisibilityState, string>;
-    sortedTableData: ReportDataItem[];
-    visibleColumnCount: number;
-    requestSort: (key: ReportColumnKey) => void;
-    sortConfig: { key: ReportColumnKey; direction: 'ascending' | 'descending' } | null;
-    formatters: {
-        formatPercent: (value: number | null | undefined) => string;
-    };
-    cellStyles: {
-        getBreakEvenCellStyle: (percent: number | null) => React.CSSProperties;
-        getSinceBuyCellStyle: (days: number | null, swingWalletCount: number) => React.CSSProperties;
-    };
-}
+import type { 
+  ReportColumnVisibilityState, 
+  ReportDataItem, 
+  ReportColumnKey, 
+  SignalsTableProps 
+} from '../types';
 
 export default function SignalsTable({
     isLoading,

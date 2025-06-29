@@ -7,12 +7,17 @@ import type { Schema } from '@/amplify/data/resource';
 import { usePrices } from '@/app/contexts/PriceContext'; // Import context hook
 import { fetchAuthSession } from 'aws-amplify/auth';
 import SignalsOverview from './components/SignalsOverview';
-import SignalsTable, { ReportColumnVisibilityState, ReportDataItem, ReportColumnKey } from './components/SignalsTable';
+import SignalsTable from './components/SignalsTable';
 import { useAuthStatus } from '@/app/contexts/AuthStatusContext'; // Import useAuthStatus
-
-// const SHARE_EPSILON = 0.00001; // Example value, adjust as needed
-// const CURRENCY_PRECISION = 2;  // Example value (e.g., for dollars and cents)
-// const PERCENT_PRECISION = 2;   // Example value (e.g., 12.34%)
+import type { 
+  PortfolioStockDataType, 
+  StockWalletDataType, 
+  ReportColumnVisibilityState, 
+  ReportDataItem, 
+  ReportColumnKey,
+  PageAccessLevel,
+  SortConfig
+} from './types';
 
 import {
     SHARE_PRECISION,
@@ -22,22 +27,6 @@ import {
     //CURRENCY_EPSILON,
     //PERCENT_EPSILON // Import if your logic uses it
 } from '@/app/config/constants';
-
-type PortfolioStockDataType = { // Simplified representation needed for this page
-    id: string;
-    symbol: string;
-    pdp: number | null | undefined;
-    name?: string | null | undefined;
-    budget?: number | null | undefined;
-    isHidden?: boolean | null | undefined;
-    region?: string | null | undefined; // Added region property
-    htp?: number | null | undefined; // HTP percentage for Hold TP signal
-    stockCommission?: number | null | undefined; // Commission percentage
-}
-
-type StockWalletDataType = Schema['StockWallet']['type'];
-
-//type FiveDayDipResult = Record<string, number | null>; // Map: symbol -> dip percentage or null
 
 type TransactionListResultType = Awaited<ReturnType<typeof client.models.Transaction.list>>;
 
@@ -101,7 +90,7 @@ export default function HomePage() {
         }
     }
 
-    const [pageAccessLevel, setPageAccessLevel] = useState<'loading' | 'approved' | 'denied'>('loading'); // Renamed state variable
+    const [pageAccessLevel, setPageAccessLevel] = useState<PageAccessLevel>('loading'); // Renamed state variable
 
     useEffect(() => {
         const checkUserGroup = async () => {
@@ -857,7 +846,7 @@ export default function HomePage() {
         return count;
     }, [reportColumnVisibility]);
     
-    const [sortConfig, setSortConfig] = useState<{ key: ReportColumnKey; direction: 'ascending' | 'descending' } | null>(null);
+    const [sortConfig, setSortConfig] = useState<SortConfig<ReportColumnKey> | null>(null);
 
     const sortedTableData = useMemo(() => {
         let sortableItems = [...reportData];
