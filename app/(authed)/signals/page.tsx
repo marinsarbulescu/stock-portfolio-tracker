@@ -430,6 +430,61 @@ export default function HomePage() {
         });
     }, [portfolioStocks, allWallets]);
 
+    // Get HTP values for wallets with active HTP signals
+    const getHtpValuesForStock = useCallback((stockId: string, currentStockPrice: number | null): string[] => {
+        if (typeof currentStockPrice !== 'number') {
+            return [];
+        }
+
+        // Get the stock data to access HTP percentage
+        const stock = portfolioStocks.find(s => s.id === stockId);
+        if (!stock || typeof stock.htp !== 'number' || stock.htp <= 0) {
+            return [];
+        }
+
+        // Get commission percentage for the stock
+        const stockCommission = stock.stockCommission;
+
+        // Get Hold wallets for this stock with remaining shares
+        const stockHoldWallets = allWallets.filter(wallet => 
+            wallet.portfolioStockId === stockId && 
+            wallet.walletType === 'Hold' &&
+            (wallet.remainingShares ?? 0) > SHARE_EPSILON
+        );
+
+        // Collect HTP values for wallets with active HTP signals
+        const htpValues: string[] = [];
+        
+        stockHoldWallets.forEach(wallet => {
+            const tp = wallet.tpValue;
+            const buyPrice = wallet.buyPrice;
+            const htp = stock.htp;
+
+            // Must have valid TP, buy price and HTP
+            if (typeof tp !== 'number' || typeof buyPrice !== 'number' || typeof htp !== 'number' || htp <= 0 || buyPrice <= 0) {
+                return;
+            }
+
+            // Calculate HTP trigger price using the same formula as WalletsSection
+            const htpAmount = tp * (htp / 100);
+            const tpPlusHtpAmount = tp + htpAmount;
+            
+            const commissionAmount = (typeof stockCommission === 'number' && stockCommission > 0) 
+                ? (tpPlusHtpAmount * (stockCommission / 100))
+                : 0;
+            
+            const htpTriggerPrice = tp + htpAmount + commissionAmount;
+
+            // If HTP signal is active, calculate percentage gain
+            if (currentStockPrice >= htpTriggerPrice) {
+                const percentageGain = ((currentStockPrice - buyPrice) / buyPrice) * 100;
+                htpValues.push(`${percentageGain.toFixed(2)}%`);
+            }
+        });
+
+        return htpValues;
+    }, [portfolioStocks, allWallets]);
+
     const reportData = useMemo((): ReportDataItem[] => {
         return portfolioStocks.map(stock => {
             const stockId: string = stock.id;
@@ -492,8 +547,9 @@ export default function HomePage() {
             const totalShares = procData.totalCurrentSwingShares + procData.totalCurrentHoldShares;
             const swingWalletCountValue = procData.activeSwingWallets.length;
 
-            // Calculate HTP signal status for Hold wallets
+            // Calculate HTP signal status and values for Hold wallets
             const hasHtpSignal = checkHtpSignalForStock(stockId, currentPrice);
+            const htpValues = getHtpValuesForStock(stockId, currentPrice);
 
             return {
                 id: stockId,
@@ -512,6 +568,7 @@ export default function HomePage() {
                 incompleteBuyCount: 0,
                 swingWalletCount: swingWalletCountValue,
                 hasHtpSignal: hasHtpSignal,
+                htpValues: htpValues,
             };
         });
     }, [portfolioStocks, latestPrices, processedData]);

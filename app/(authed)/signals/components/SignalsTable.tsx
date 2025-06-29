@@ -36,6 +36,7 @@ export interface ReportDataItem {
     totalCurrentShares: number;
     incompleteBuyCount: number;
     hasHtpSignal: boolean;
+    htpValues: string[];
 }
 
 export type ReportColumnKey = 
@@ -294,9 +295,16 @@ export default function SignalsTable({
                                     <tr style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
                                         <td colSpan={visibleColumnCount + 1} style={{ padding: '10px', borderTop: '1px solid #333' }}>
                                             <div style={{ fontSize: '0.9em', color: '#ccc' }}>
-                                                {/* Placeholder for expanded content */}
+                                                {/* Show HTP values if HTP signal is active */}
+                                                {item.hasHtpSignal && item.htpValues.length > 0 && (
+                                                    <p>
+                                                        <strong style={{ color: 'lightgreen' }}>HTP Signal Active:</strong>{' '}
+                                                        <span style={{ color: 'lightgreen' }}>
+                                                            {item.htpValues.join(', ')}
+                                                        </span>
+                                                    </p>
+                                                )}
                                                 <p>Additional details for {item.symbol} will be displayed here...</p>
-                                                <p>This is where we can add more detailed information about the stock.</p>
                                             </div>
                                         </td>
                                     </tr>
