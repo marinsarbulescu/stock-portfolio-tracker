@@ -43,6 +43,27 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+    
+    // Wallet-specific tests
+    {
+      name: 'wallet-tests',
+      testMatch: /.*wallets.*\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    
+    // Transaction-specific tests
+    {
+      name: 'transaction-tests', 
+      testMatch: /.*transaction.*\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    
+    // All E2E tests (if you want to run everything)
+    {
+      name: 'all-e2e',
+      testMatch: /.*\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
   ],
 
   /* Run your local dev server before starting the tests */

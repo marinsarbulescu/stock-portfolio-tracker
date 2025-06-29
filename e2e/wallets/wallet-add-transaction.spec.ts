@@ -2,7 +2,15 @@
 
 // This Playwright test suite is designed to verify the creation of stock transactions and the subsequent state of stock wallets (Swing and Hold)
 // based on various input scenarios defined in a CSV file (`wallet-add-transaction.csv`).
-// Updated to work with the new portfolio structure where stocks-listing has been renamed to portfolio.
+// Includes:
+// 1. Login
+// 2. Creates a stock
+// 3. Navigation to the wallet page
+// 4. Add Buy Transaction
+// 5. Fill in the transaction form based on the CSV scenarios
+// 6. Submit the form
+// 7. Verify the wallet state (Swing and Hold) after the transaction is added.
+// 8. Verify buyPrice, totalInvestment, and remainingShares in both Swing and Hold wallets.
 //
 // The suite performs the following operations:
 //
@@ -87,6 +95,7 @@ import {
     CURRENCY_PRECISION,
 } from '../../app/config/constants'; // Adjusted path assuming @/ is app/
 import { formatCurrency, formatShares } from '../../app/utils/financialCalculations';
+import { formatToMDYYYY } from '../../app/utils/dateFormatter';
 
 // Configure Amplify (should run once per test worker)
 try {
@@ -292,6 +301,77 @@ test.describe(`Wallet Page - Add Transactions from CSV`, () => {
                     price: transactionInput.price!,
                     investment: transactionInput.investment!
                 });
+
+                // --- Verify transaction appears in WalletsTransactionsTable ---
+                console.log(`[${transactionInput.scenarioName}] Verifying transaction appears in WalletsTransactionsTable.`);
+                
+                // Ensure transaction columns are visible for verification
+                const dateColumnToggle = page.locator('[data-testid="wallets-transaction-table-toggle-column-date-checkbox"]');
+                await dateColumnToggle.check();
+                await expect(dateColumnToggle).toBeChecked();
+                
+                const actionColumnToggle = page.locator('[data-testid="wallets-transaction-table-toggle-column-action-checkbox"]');
+                await actionColumnToggle.check();
+                await expect(actionColumnToggle).toBeChecked();
+                
+                const txnTypeColumnToggle = page.locator('[data-testid="wallets-transaction-table-toggle-column-txnType-checkbox"]');
+                await txnTypeColumnToggle.check();
+                await expect(txnTypeColumnToggle).toBeChecked();
+                
+                const signalColumnToggle = page.locator('[data-testid="wallets-transaction-table-toggle-column-signal-checkbox"]');
+                await signalColumnToggle.check();
+                await expect(signalColumnToggle).toBeChecked();
+                
+                const priceColumnToggle = page.locator('[data-testid="wallets-transaction-table-toggle-column-price-checkbox"]');
+                await priceColumnToggle.check();
+                await expect(priceColumnToggle).toBeChecked();
+                
+                const lbdColumnToggle = page.locator('[data-testid="wallets-transaction-table-toggle-column-lbd-checkbox"]');
+                await lbdColumnToggle.check();
+                await expect(lbdColumnToggle).toBeChecked();
+
+                // Wait for the transaction table to be visible and contain the new transaction
+                const transactionTable = page.locator('[data-testid="wallets-transaction-table-transaction-row"]');
+                await expect(transactionTable).toBeVisible({ timeout: 10000 });
+                
+                // Get the first (most recent) transaction row
+                const firstTxnRow = transactionTable.first();
+                await expect(firstTxnRow).toBeVisible();
+                
+                // Verify date
+                const dateCell = firstTxnRow.locator('[data-testid="wallets-transaction-table-date-display"]');
+                const expectedDateDisplay = transactionInput.displayDate || formatToMDYYYY(transactionInput.date);
+                await expect(dateCell).toHaveText(expectedDateDisplay, { timeout: 5000 });
+                console.log(`[${transactionInput.scenarioName}] Date verified: ${expectedDateDisplay}`);
+                
+                // Verify action
+                const actionCell = firstTxnRow.locator('[data-testid="wallets-transaction-table-action-display"]');
+                await expect(actionCell).toHaveText(transactionInput.action, { timeout: 5000 });
+                console.log(`[${transactionInput.scenarioName}] Action verified: ${transactionInput.action}`);
+                
+                // Verify txnType
+                const txnTypeCell = firstTxnRow.locator('[data-testid="wallets-transaction-table-txnType-display"]');
+                await expect(txnTypeCell).toHaveText(transactionInput.txnType!, { timeout: 5000 });
+                console.log(`[${transactionInput.scenarioName}] TxnType verified: ${transactionInput.txnType}`);
+                
+                // Verify signal
+                const signalCell = firstTxnRow.locator('[data-testid="wallets-transaction-table-signal-display"]');
+                await expect(signalCell).toHaveText(transactionInput.signal!, { timeout: 5000 });
+                console.log(`[${transactionInput.scenarioName}] Signal verified: ${transactionInput.signal}`);
+                
+                // Verify price
+                const priceCell = firstTxnRow.locator('[data-testid="wallets-transaction-table-price-display"]');
+                const expectedPrice = formatCurrency(transactionInput.price!);
+                await expect(priceCell).toHaveText(expectedPrice, { timeout: 5000 });
+                console.log(`[${transactionInput.scenarioName}] Price verified: ${expectedPrice}`);
+                
+                // Verify LBD (Loss Buffer Discount)
+                const lbdCell = firstTxnRow.locator('[data-testid="wallets-transaction-table-lbd-display"]');
+                const expectedLbd = formatCurrency(transactionInput.lbd!);
+                await expect(lbdCell).toHaveText(expectedLbd, { timeout: 5000 });
+                console.log(`[${transactionInput.scenarioName}] LBD verified: ${expectedLbd}`);
+                
+                console.log(`[${transactionInput.scenarioName}] WalletsTransactionsTable verification completed successfully.`);
             }// --- Wallet Verification (Only for 'Buy' actions as per current CSV focus) ---
             if (transactionInput.action === 'Buy') {
                 console.log(`[${transactionInput.scenarioName}] Starting wallet verification.`);

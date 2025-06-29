@@ -9,7 +9,12 @@
     "lint": "next lint",
     "test": "npx jest",
     "btc-price": "node scripts/fetch-btc-price.js",
-    "test-btc": "node scripts/test-btc-price.js"
+    "test-btc": "node scripts/test-btc-price.js",
+    "e2e": "npx playwright test --headed",
+    "e2e:headless": "npx playwright test",
+    "e2e:wallets": "npx playwright test --project=wallet-tests --headed",
+    "e2e:transactions": "npx playwright test --project=transaction-tests --headed",
+    "e2e:all": "npx playwright test --project=all-e2e --headed"
   },
   "dependencies": {
     "@aws-amplify/adapter-nextjs": "^1.6.0",

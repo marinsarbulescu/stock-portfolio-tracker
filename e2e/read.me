@@ -1,0 +1,27 @@
+# Run All Tests in a Directory
+npx playwright test e2e/wallets/ --headed
+
+---
+
+# Run all E2E tests (most convenient)
+npm run e2e
+
+# Run just wallet tests
+npm run e2e:wallets
+
+# Run just transaction tests  
+npm run e2e:transactions
+
+# Run everything in headless mode (faster)
+npm run e2e:headless
+
+---
+
+# Run specific file patterns
+npx playwright test e2e/**/*wallet*.spec.ts --headed
+
+# Run by directory
+npx playwright test e2e/wallets/ --headed
+
+# Run by tags (if you add @tag comments to tests)
+npx playwright test --grep "@smoke" --headed

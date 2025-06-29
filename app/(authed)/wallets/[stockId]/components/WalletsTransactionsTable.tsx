@@ -47,6 +47,7 @@ export default function WalletsTransactionsTable({
         {visibleKeys.map(key => (
           <label key={key} style={{ marginLeft: '15px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
             <input
+              data-testid={`wallets-transaction-table-toggle-column-${key}-checkbox`}
               type="checkbox"
               checked={columnVisibility[key]}
               onChange={() => setColumnVisibility(prev => ({ ...prev, [key]: !prev[key] }))}
@@ -61,44 +62,152 @@ export default function WalletsTransactionsTable({
       <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
         <thead>
           <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
-            {columnVisibility.date && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('date')}>{columnLabels.date} {sortConfig?.key === 'date' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
-            {columnVisibility.action && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('action')}>{columnLabels.action} {sortConfig?.key === 'action' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
-            {columnVisibility.txnType && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('txnType')}>{columnLabels.txnType} {sortConfig?.key === 'txnType' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
-            {columnVisibility.signal && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('signal')}>{columnLabels.signal} {sortConfig?.key === 'signal' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
-            {columnVisibility.price && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('price')}>{columnLabels.price} {sortConfig?.key === 'price' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
-            {columnVisibility.lbd && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('lbd')}>{columnLabels.lbd} {sortConfig?.key === 'lbd' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
-            {columnVisibility.investment && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('investment')}>{columnLabels.investment} {sortConfig?.key === 'investment' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
-            {columnVisibility.quantity && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('quantity')}>{columnLabels.quantity} {sortConfig?.key === 'quantity' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
-            {columnVisibility.proceeds && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('proceeds')}>{columnLabels.proceeds} {sortConfig?.key === 'proceeds' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
-            {columnVisibility.txnProfit && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('txnProfit')}>{columnLabels.txnProfit} {sortConfig?.key === 'txnProfit' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
-            {columnVisibility.txnProfitPercent && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('txnProfitPercent')}>{columnLabels.txnProfitPercent} {sortConfig?.key === 'txnProfitPercent' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
-            {columnVisibility.completedTxnId && <th style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>{columnLabels.completedTxnId}</th>}
-            <th style={{ padding: '5px', textAlign: 'center' }}>Actions</th>
+            {columnVisibility.date && 
+              <th data-testid={`wallets-transaction-table-date-header`} style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('date')}>
+                {columnLabels.date} {sortConfig?.key === 'date' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+            }
+            {columnVisibility.action && 
+              <th data-testid={`wallets-transaction-table-action-header`} style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('action')}>
+                {columnLabels.action} {sortConfig?.key === 'action' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+            }
+            {columnVisibility.txnType && 
+              <th data-testid={`wallets-transaction-table-txnType-header`} style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('txnType')}>
+                {columnLabels.txnType} {sortConfig?.key === 'txnType' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+            }
+            {columnVisibility.signal && 
+              <th data-testid={`wallets-transaction-table-signal-header`} style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('signal')}>
+                {columnLabels.signal} {sortConfig?.key === 'signal' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+            }
+            {columnVisibility.price && 
+              <th data-testid={`wallets-transaction-table-price-header`} style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('price')}>
+                {columnLabels.price} {sortConfig?.key === 'price' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+            }
+            {columnVisibility.lbd && 
+              <th data-testid={`wallets-transaction-table-lbd-header`} style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('lbd')}>
+                {columnLabels.lbd} {sortConfig?.key === 'lbd' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+            }
+            {columnVisibility.investment && 
+              <th data-testid={`wallets-transaction-table-investment-header`} style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('investment')}>
+                {columnLabels.investment} {sortConfig?.key === 'investment' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+            }
+            {columnVisibility.quantity && 
+              <th data-testid={`wallets-transaction-table-quantity-header`} style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('quantity')}>
+                {columnLabels.quantity} {sortConfig?.key === 'quantity' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+            }
+            {columnVisibility.proceeds && 
+              <th data-testid={`wallets-transaction-table-proceeds-header`} style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('proceeds')}>
+                {columnLabels.proceeds} {sortConfig?.key === 'proceeds' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+            }
+            {columnVisibility.txnProfit && 
+              <th data-testid={`wallets-transaction-table-txnProfit-header`} style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('txnProfit')}>
+                {columnLabels.txnProfit} {sortConfig?.key === 'txnProfit' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+            }
+            {columnVisibility.txnProfitPercent && 
+              <th data-testid={`wallets-transaction-table-txnProfitPercent-header`} style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('txnProfitPercent')}>
+                {columnLabels.txnProfitPercent} {sortConfig?.key === 'txnProfitPercent' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+            }
+            {columnVisibility.completedTxnId && 
+              <th data-testid={`wallets-transaction-table-completedTxnId-header`} style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>
+                {columnLabels.completedTxnId}
+              </th>
+            }
+            <th data-testid={`wallets-transaction-table-actions-header`} style={{ padding: '5px', textAlign: 'center' }}>Actions</th>
           </tr>
         </thead>
         <tbody>
           {transactions.length === 0 ? (
             <tr>
-              <td colSpan={colspan} style={{ textAlign:'center', padding:'1rem' }} data-testid="no-transactions-message">No transactions found for this stock.</td>
+              <td colSpan={colspan} style={{ textAlign:'center', padding:'1rem' }} data-testid="wallets-transaction-table-no-transactions-message">No transactions found for this stock.</td>
             </tr>
           ) : (
             transactions.map((txn, index) => (
-              <tr key={txn.id} style={{ backgroundColor:index%2!==0?'#151515':'transparent' }} data-testid="transaction-row">
-                {columnVisibility.date && <td style={{ padding: '5px' }} data-testid="transaction-date-display">{formatToMDYYYY(txn.date)}</td>}
-                {columnVisibility.action && <td style={{ padding: '5px' }} data-testid="transaction-action-display">{txn.action}</td>}
-                {columnVisibility.txnType && <td style={{ padding: '5px' }} data-testid="transaction-txnType-display">{txn.txnType??'-'}</td>}
-                {columnVisibility.signal && <td style={{ padding: '5px' }} data-testid="transaction-signal-display">{txn.signal??'-'}</td>}
-                {columnVisibility.price && <td style={{ padding: '5px' }} data-testid="transaction-price-display">{formatCurrency(txn.price??0)}</td>}
-                {columnVisibility.lbd && <td style={{ padding: '5px' }} data-testid="transaction-lbd-display">{txn.action==='Buy'?formatCurrency(txn.lbd??0):'-'}</td>}
-                {columnVisibility.investment && <td style={{ padding: '5px' }} data-testid="transaction-investment-display">{txn.action!=='Sell'?formatCurrency(txn.investment??0):'-'}</td>}
-                {columnVisibility.quantity && <td style={{ padding: '5px' }} data-testid="transaction-quantity-display">{formatShares(txn.quantity ?? 0, SHARE_PRECISION)}</td>}
-                {columnVisibility.proceeds && <td style={{ padding: '5px' }} data-testid="transaction-proceeds-display">{txn.action==='Sell'&&typeof txn.price==='number'&&typeof txn.quantity==='number'?formatCurrency(txn.price*txn.quantity):'-'}</td>}
-                {columnVisibility.txnProfit && <td style={{ padding: '5px', color:txn.action!=='Sell'||txn.txnProfit==null?'inherit':(txn.txnProfit>=0?'#01ff00':'#ff0000')}} data-testid="transaction-txnProfit-display">{txn.action==='Sell'?formatCurrency(txn.txnProfit??0):'-'}</td>}
-                {columnVisibility.txnProfitPercent && <td style={{ padding: '5px', color: txn.action!=='Sell' || txn.txnProfitPercent == null ? 'inherit' : (txn.txnProfitPercent >= 0 ? '#01ff00' : '#ff0000') }} data-testid="transaction-txnProfitPercent-display">{txn.action === 'Sell' ? formatPercent(txn.txnProfitPercent ?? 0) : '-'}</td>}
-                {columnVisibility.completedTxnId && <td style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }} data-testid="transaction-completedTxnId-display">{txn.action==='Sell'?truncateId(txn.completedTxnId):'-'}</td>}
+              <tr key={txn.id} style={{ backgroundColor:index%2!==0?'#151515':'transparent' }} data-testid="wallets-transaction-table-transaction-row">
+                {columnVisibility.date && 
+                  <td style={{ padding: '5px' }} data-testid="wallets-transaction-table-date-display">
+                    {formatToMDYYYY(txn.date)}
+                  </td>
+                }
+                {columnVisibility.action && 
+                  <td style={{ padding: '5px' }} data-testid="wallets-transaction-table-action-display">
+                    {txn.action}
+                  </td>
+                }
+                {columnVisibility.txnType && 
+                  <td style={{ padding: '5px' }} data-testid="wallets-transaction-table-txnType-display">
+                    {txn.txnType??'-'}
+                  </td>
+                }
+                {columnVisibility.signal && 
+                  <td style={{ padding: '5px' }} data-testid="wallets-transaction-table-signal-display">
+                    {txn.signal??'-'}
+                  </td>
+                }
+                {columnVisibility.price && 
+                  <td style={{ padding: '5px' }} data-testid="wallets-transaction-table-price-display">
+                    {formatCurrency(txn.price??0)}
+                  </td>
+                }
+                {columnVisibility.lbd && 
+                  <td style={{ padding: '5px' }} data-testid="wallets-transaction-table-lbd-display">
+                    {txn.action==='Buy'?formatCurrency(txn.lbd??0):'-'}
+                  </td>
+                }
+                {columnVisibility.investment && 
+                  <td style={{ padding: '5px' }} data-testid="wallets-transaction-table-investment-display">
+                    {txn.action!=='Sell'?formatCurrency(txn.investment??0):'-'}
+                  </td>
+                }
+                {columnVisibility.quantity && 
+                  <td style={{ padding: '5px' }} data-testid="wallets-transaction-table-quantity-display">
+                    {formatShares(txn.quantity ?? 0, SHARE_PRECISION)}
+                  </td>
+                }
+                {columnVisibility.proceeds && 
+                  <td style={{ padding: '5px' }} data-testid="wallets-transaction-table-proceeds-display">
+                    {txn.action==='Sell'&&typeof txn.price==='number'&&typeof txn.quantity==='number'?formatCurrency(txn.price*txn.quantity):'-'}
+                  </td>
+                }
+                {columnVisibility.txnProfit && 
+                  <td style={{ padding: '5px', color:txn.action!=='Sell'||txn.txnProfit==null?'inherit':(txn.txnProfit>=0?'#01ff00':'#ff0000')}} data-testid="wallets-transaction-table-txnProfit-display">
+                    {txn.action==='Sell'?formatCurrency(txn.txnProfit??0):'-'}
+                  </td>
+                }
+                {columnVisibility.txnProfitPercent && 
+                  <td style={{ padding: '5px', color: txn.action!=='Sell' || txn.txnProfitPercent == null ? 'inherit' : (txn.txnProfitPercent >= 0 ? '#01ff00' : '#ff0000') }} data-testid="wallets-transaction-table-txnProfitPercent-display">
+                    {txn.action === 'Sell' ? formatPercent(txn.txnProfitPercent ?? 0) : '-'}
+                  </td>
+                }
+                {columnVisibility.completedTxnId && 
+                  <td style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }} data-testid="wallets-transaction-table-completedTxnId-display">
+                    {txn.action==='Sell'?truncateId(txn.completedTxnId):'-'}
+                  </td>
+                }
                 <td style={{ padding: '5px', textAlign: 'center' }}>
-                  <button data-testid={`transaction-edit-button-${txn.id}`} onClick={() => onEdit(txn)} title="Edit Transaction" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray', marginRight: '5px' }}><FaEdit /></button>
-                  <button data-testid={`transaction-delete-button-${txn.id}`} onClick={() => onDelete(txn)} title="Delete Transaction" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray' }}><FaTrashAlt /></button>
+                  <button 
+                    data-testid={`wallets-transaction-table-txn-edit-button-${txn.id}`} 
+                    onClick={() => onEdit(txn)} 
+                    title="Edit Transaction" 
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray', marginRight: '5px' }}>
+                      <FaEdit />
+                    </button>
+                  <button 
+                    data-testid={`wallets-transaction-table-txn-delete-button-${txn.id}`} 
+                    onClick={() => onDelete(txn)} 
+                    title="Delete Transaction" 
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray' }}>
+                      <FaTrashAlt />
+                    </button>
                 </td>
               </tr>
             ))
