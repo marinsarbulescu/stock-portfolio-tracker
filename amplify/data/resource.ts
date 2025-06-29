@@ -1,6 +1,7 @@
 //amplify/backend/data/schema.ts
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 import { getYfinanceData } from '../functions/getYfinanceData/resource.js';
+import { getHistoricalData } from '../functions/getHistoricalData/resource.js';
 import { sendStockEmail } from '../functions/sendStockEmail/resource.js';
 
 // Define Enums first
@@ -136,6 +137,17 @@ const schema = a.schema({
     .authorization(allow => [allow.authenticated()])
     .handler(a.handler.function(getYfinanceData)), // Handler import assumed correct now
 
+  // Define the custom query to get historical data
+  getHistoricalData: a.query()
+    .arguments({ 
+      symbols: a.string().array().required(),
+      startDate: a.string().required(),
+      endDate: a.string().required()
+    })
+    .returns(a.ref('PriceResult').array())
+    .authorization(allow => [allow.authenticated()])
+    .handler(a.handler.function(getHistoricalData)),
+
   // Define the custom mutation to trigger sending the email
   sendPortfolioNotification: a.mutation()
     // Expect an array of PortfolioItemInput objects
@@ -146,7 +158,7 @@ const schema = a.schema({
 
     // --- Define Type for Historical Close ---
   HistoricalCloseInput: a.customType({ // Renamed slightly to avoid conflict if needed
-    date: a.date().required(), // Changed to date type
+    date: a.string().required(), // Use string for YYYY-MM-DD format
     close: a.float().required()
   }),
 

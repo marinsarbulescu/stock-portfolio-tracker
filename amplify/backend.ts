@@ -3,6 +3,7 @@ import { defineBackend } from '@aws-amplify/backend';
 import { auth } from './auth/resource.js';
 import { data } from './data/resource.js'; // Main data models
 import { defineFunction } from '@aws-amplify/backend-function';
+import { getHistoricalData } from './functions/getHistoricalData/resource.js';
 //import * as iam from 'aws-cdk-lib/aws-iam';
 //import * as cognito from 'aws-cdk-lib/aws-cognito';
 // Remove dynamodb/RemovalPolicy imports - table managed by allowlistData now
@@ -16,6 +17,7 @@ const backend = defineBackend({
   getYfinanceData: defineFunction({
       entry: './functions/getYfinanceData/handler.ts' // Verify path
   }),
+  getHistoricalData,    // New function for historical data
   // ... other resources ...
 });
 
