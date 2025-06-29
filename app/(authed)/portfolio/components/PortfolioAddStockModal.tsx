@@ -59,6 +59,7 @@ export default function AddStockModal({
   const [budget, setBudget] = useState('');
   const [swingHoldRatio, setSwingHoldRatio] = useState('');
   const [stockCommission, setStockCommission] = useState('');
+  const [htp, setHtp] = useState('0'); // Default to 0 as per requirement
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +76,7 @@ export default function AddStockModal({
       setBudget('');
       setSwingHoldRatio('');
       setStockCommission('');
+      setHtp('0'); // Reset to default value
       setError(null);
     }
   }, [isOpen]);
@@ -100,6 +102,14 @@ export default function AddStockModal({
       return;
     }
 
+    // Validate HTP (must be >= 0)
+    const htpValue = parseFloat(htp || '0');
+    if (isNaN(htpValue) || htpValue < 0) {
+      setError('HTP must be a number >= 0.');
+      setIsLoading(false);
+      return;
+    }
+
     // --- Prepare data payload ---
     const stockDataPayload = {
       symbol: symbol.toUpperCase(),
@@ -111,6 +121,7 @@ export default function AddStockModal({
       budget: budget ? parseFloat(budget) : null,
       swingHoldRatio: shrValue,
       stockCommission: stockCommission ? parseFloat(stockCommission) : null,
+      htp: htpValue, // Always include HTP value
     };
 
     try {
@@ -286,6 +297,22 @@ export default function AddStockModal({
               placeholder="e.g., 1.00 for commission per trade" 
               disabled={isLoading}
               style={{width: '100%', padding: '8px'}}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="htp" style={{display: 'block', marginBottom: '3px'}}>HTP (%):</label>
+            <input 
+              id="htp" 
+              type="number" 
+              step="any" 
+              min="0"
+              value={htp} 
+              onChange={(e) => setHtp(e.target.value)}
+              placeholder="e.g., 10 for 10% Hold Take Profit" 
+              disabled={isLoading}
+              style={{width: '100%', padding: '8px'}}
+              required
             />
           </div>
 

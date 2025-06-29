@@ -1,7 +1,7 @@
 // app/(authed)/signals/components/SignalsTable.tsx
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { formatCurrency } from '@/app/utils/financialCalculations';
 
@@ -84,6 +84,22 @@ export default function SignalsTable({
     const { formatPercent } = formatters;
     const { getBreakEvenCellStyle, getSinceBuyCellStyle } = cellStyles;
 
+    // State to track which rows are expanded
+    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+    // Function to toggle row expansion
+    const toggleRowExpansion = (stockId: string) => {
+        setExpandedRows(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(stockId)) {
+                newSet.delete(stockId);
+            } else {
+                newSet.add(stockId);
+            }
+            return newSet;
+        });
+    };
+
     if (isLoading) return <p>Loading...</p>;
 
     return (
@@ -112,6 +128,9 @@ export default function SignalsTable({
             <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
                 <thead>
                     <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
+                        <th style={{ padding: '5px', width: '30px' }}>
+                            {/* Empty header for expand/collapse column */}
+                        </th>
                         <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('symbol')}>
                             Ticker {sortConfig?.key === 'symbol' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                         </th>
@@ -169,24 +188,41 @@ export default function SignalsTable({
                 <tbody>
                     {sortedTableData.length === 0 ? (
                         <tr>
-                            <td colSpan={visibleColumnCount} style={{ textAlign: 'center', padding: '1rem' }}>
+                            <td colSpan={visibleColumnCount + 1} style={{ textAlign: 'center', padding: '1rem' }}>
                                 No stocks in portfolio.
                             </td>
                         </tr>
                     ) : (
                         sortedTableData.map((item, index) => (
-                            <tr key={item.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
-                                <td style={{ padding: '5px' }}>
-                                    <Link
-                                        href={`/wallets/${item.id}`}
-                                        style={{
-                                            textDecoration: 'none',
-                                            color: item.totalCurrentShares === 0 ? 'red' : 'inherit'
-                                        }}
-                                    >
-                                        {item.symbol}
-                                    </Link>
-                                </td>                                
+                            <React.Fragment key={item.id}>
+                                <tr style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
+                                    <td style={{ padding: '5px', textAlign: 'center' }}>
+                                        <button
+                                            onClick={() => toggleRowExpansion(item.id)}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                color: '#ccc',
+                                                fontSize: '0.8em',
+                                                padding: '2px'
+                                            }}
+                                            title={expandedRows.has(item.id) ? 'Collapse details' : 'Expand details'}
+                                        >
+                                            {expandedRows.has(item.id) ? '▼' : '▶'}
+                                        </button>
+                                    </td>
+                                    <td style={{ padding: '5px' }}>
+                                        <Link
+                                            href={`/wallets/${item.id}`}
+                                            style={{
+                                                textDecoration: 'none',
+                                                color: item.totalCurrentShares === 0 ? 'red' : 'inherit'
+                                            }}
+                                        >
+                                            {item.symbol}
+                                        </Link>
+                                    </td>                                
                                 {reportColumnVisibility.fiveDayDip && (
                                     <td style={{ padding: '5px' }}>
                                         {typeof item.fiveDayDip === 'number' && Math.abs(item.fiveDayDip) > 0.0001 ? `${item.fiveDayDip.toFixed(2)}%` : '-'}
@@ -246,7 +282,20 @@ export default function SignalsTable({
                                             : '-'}
                                     </td>
                                 )}
-                            </tr>
+                                </tr>
+                                {/* Expanded row content */}
+                                {expandedRows.has(item.id) && (
+                                    <tr style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
+                                        <td colSpan={visibleColumnCount + 1} style={{ padding: '10px', borderTop: '1px solid #333' }}>
+                                            <div style={{ fontSize: '0.9em', color: '#ccc' }}>
+                                                {/* Placeholder for expanded content */}
+                                                <p>Additional details for {item.symbol} will be displayed here...</p>
+                                                <p>This is where we can add more detailed information about the stock.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </React.Fragment>
                         ))
                     )}
                 </tbody>

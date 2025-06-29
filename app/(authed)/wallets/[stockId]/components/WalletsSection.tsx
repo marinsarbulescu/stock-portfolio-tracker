@@ -23,6 +23,8 @@ export interface WalletsSectionProps {
   onDelete: (wallet: StockWalletDataType) => void;
   showEmptyWallets: boolean;
   setShowEmptyWallets: Dispatch<SetStateAction<boolean>>;
+  stockHtp?: number | null;
+  stockCommission?: number | null;
 }
 
 export default function WalletsSection({
@@ -42,6 +44,8 @@ export default function WalletsSection({
   onDelete,
   showEmptyWallets,
   setShowEmptyWallets,
+  stockHtp,
+  stockCommission,
 }: WalletsSectionProps) {
   const truncateId = (id: string | null | undefined, length = 8): string => {
     if (!id) return '-';
@@ -59,6 +63,49 @@ export default function WalletsSection({
     ) {
       return { color: 'lightgreen' };
     }
+    return {};
+  };
+
+  // HTP Sell Signal Logic - Only for Hold wallets
+  const getHtpCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
+    // Only apply HTP logic for Hold wallets
+    if (wallet.walletType !== 'Hold') {
+      return {};
+    }
+
+    const remaining = wallet.remainingShares ?? 0;
+    const tp = wallet.tpValue;
+    const htp = stockHtp; // HTP percentage from stock settings
+    const commission = stockCommission; // Commission from stock settings
+
+    // Must have remaining shares, valid TP, valid current price, and valid HTP
+    if (
+      remaining <= SHARE_EPSILON ||
+      typeof tp !== 'number' ||
+      typeof currentStockPrice !== 'number' ||
+      typeof htp !== 'number' ||
+      htp <= 0
+    ) {
+      return {};
+    }
+
+    // Calculate HTP trigger price using the formula:
+    // Current Price >= TP Value + (TP Value × HTP%) + ((TP Value + HTP Amount) × Commission%)
+    const htpAmount = tp * (htp / 100); // HTP Amount = TP Value × HTP%
+    const tpPlusHtpAmount = tp + htpAmount; // TP Value + HTP Amount
+    
+    // Commission calculation: if commission is provided, calculate commission on (TP Value + HTP Amount)
+    const commissionAmount = (typeof commission === 'number' && commission > 0) 
+      ? (tpPlusHtpAmount * (commission / 100))
+      : 0;
+    
+    const htpTriggerPrice = tp + htpAmount + commissionAmount;
+
+    // Check if current price meets or exceeds the HTP trigger price
+    if (currentStockPrice >= htpTriggerPrice) {
+      return { backgroundColor: 'green', color: 'white' };
+    }
+
     return {};
   };
 
@@ -190,7 +237,7 @@ export default function WalletsSection({
                   {walletColumnVisibility.sharesSold && <td data-testid="wallet-sharesSold-display" style={{ padding: '5px' }}>{formatShares(wallet.sharesSold ?? 0, SHARE_PRECISION)}</td>}
                   {walletColumnVisibility.realizedPl && <td data-testid="wallet-realizedPl-display" style={{ padding: '5px' }}>{formatCurrency(wallet.realizedPl ?? 0)}</td>}
                   {walletColumnVisibility.realizedPlPercent && <td data-testid="wallet-realizedPlPercent-display" style={{ padding: '5px' }}>{formatPercent(wallet.realizedPlPercent ?? 0)}</td>}
-                  {walletColumnVisibility.remainingShares && <td data-testid="wallet-remainingShares-display" style={{ padding: '5px' }}>{formatShares(wallet.remainingShares ?? 0, SHARE_PRECISION)}</td>}
+                  {walletColumnVisibility.remainingShares && <td data-testid="wallet-remainingShares-display" style={{ padding: '5px', ...getHtpCellStyle(wallet, currentPrice) }}>{formatShares(wallet.remainingShares ?? 0, SHARE_PRECISION)}</td>}
                   <td style={{ padding: '5px', textAlign: 'center' }}>
                     {(wallet.remainingShares ?? 0) > SHARE_EPSILON && (
                       <button data-testid="wallet-sell-icon" onClick={() => onSell(wallet)} title="Sell from wallet" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: '#28a745' }}>

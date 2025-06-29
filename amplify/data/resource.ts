@@ -35,6 +35,7 @@ const schema = a.schema({
       archivedAt: a.datetime(), // Timestamp when the stock was archived
       swingHoldRatio: a.float(),
       stockCommission: a.float(), // Commission for stock trades, optional
+      htp: a.float().default(0), // Hold Take Profit percentage, required, default 0
       transactions: a.hasMany('Transaction', 'portfolioStockId'),
       stockWallets: a.hasMany('StockWallet', 'portfolioStockId'),
       // Add owner field if not implicitly added by .authorization

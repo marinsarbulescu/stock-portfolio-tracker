@@ -57,6 +57,7 @@ export default function EditStockModal({
   const [budget, setBudget] = useState('');
   const [swingHoldRatio, setSwingHoldRatio] = useState('');
   const [stockCommission, setStockCommission] = useState('');
+  const [htp, setHtp] = useState('0'); // Default to 0
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +76,7 @@ export default function EditStockModal({
       setBudget(stockToEditData.budget?.toString() ?? '');
       setSwingHoldRatio(stockToEditData.swingHoldRatio?.toString() ?? '');
       setStockCommission(stockToEditData.stockCommission?.toString() ?? '');
+      setHtp(stockToEditData.htp?.toString() ?? '0'); // Default to 0 if not set
     }
   }, [isOpen, stockToEditData]);
 
@@ -99,6 +101,14 @@ export default function EditStockModal({
       return;
     }
 
+    // Validate HTP (must be >= 0)
+    const htpValue = parseFloat(htp || '0');
+    if (isNaN(htpValue) || htpValue < 0) {
+      setError('HTP must be a number >= 0.');
+      setIsLoading(false);
+      return;
+    }
+
     if (!stockToEditData?.id) {
       setError('Cannot update: Missing stock ID.');
       setIsLoading(false);
@@ -116,6 +126,7 @@ export default function EditStockModal({
       budget: budget ? parseFloat(budget) : null,
       swingHoldRatio: shrValue,
       stockCommission: stockCommission ? parseFloat(stockCommission) : null,
+      htp: htpValue, // Always include HTP value
     };
 
     // Construct payload matching PortfolioStockUpdateInput type
@@ -293,6 +304,22 @@ export default function EditStockModal({
               placeholder="e.g., 1.00 for commission per trade" 
               disabled={isLoading}
               style={{width: '100%', padding: '8px'}}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="htp" style={{display: 'block', marginBottom: '3px'}}>HTP (%):</label>
+            <input 
+              id="htp" 
+              type="number" 
+              step="any" 
+              min="0"
+              value={htp} 
+              onChange={(e) => setHtp(e.target.value)}
+              placeholder="e.g., 10 for 10% Hold Take Profit" 
+              disabled={isLoading}
+              style={{width: '100%', padding: '8px'}}
+              required
             />
           </div>
 

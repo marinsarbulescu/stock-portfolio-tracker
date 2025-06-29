@@ -282,6 +282,7 @@ export default function StockWalletPage() {
     const [stockShr, setStockShr] = useState<number | null | undefined>(undefined); // Swing-Hold Ratio
     const [stockPlr, setStockPlr] = useState<number | null | undefined>(undefined);
     const [stockCommission, setStockCommission] = useState<number | null | undefined>(undefined);
+    const [stockHtp, setStockHtp] = useState<number | null | undefined>(undefined); // HTP percentage
 
     const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
 
@@ -941,7 +942,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
             //console.log(`Workspaceing symbol for stockId: ${stockId}`);
             client.models.PortfolioStock.get(
                 { id: stockId }, 
-                { selectionSet: ['symbol', 'name', 'budget', 'pdp', 'swingHoldRatio', 'plr', 'stockCommission'] })
+                { selectionSet: ['symbol', 'name', 'budget', 'pdp', 'swingHoldRatio', 'plr', 'stockCommission', 'htp'] })
                 .then(({ data, errors }) => {
                     if (errors) {
                         //console.error("[StockWalletPage] - Error fetching stock symbol:", errors);
@@ -952,6 +953,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                         setStockShr(null);
                         setStockPlr(null);
                         setStockCommission(null);
+                        setStockHtp(null);
                     } else if (data) {
                         setStockSymbol(data.symbol ?? "Unknown");                        setStockName(data.name ?? "Unknown");
                         setStockBudget(data.budget);
@@ -959,6 +961,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                         setStockShr(data.swingHoldRatio); // <<< Set SHR state
                         setStockPlr(data.plr);       // <<< Set PLR state
                         setStockCommission(data.stockCommission); // <<< Set Commission state
+                        setStockHtp(data.htp);       // <<< Set HTP state
                     } else {
                         setStockSymbol("Not Found");                        setStockName("Not Found");
                         setStockBudget(null);
@@ -966,6 +969,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                         setStockShr(null);
                         setStockPlr(null);
                         setStockCommission(null);
+                        setStockHtp(null);
                     }
                 }).catch(err => {
                     //console.error("[StockWalletPage] - Error fetching stock symbol:", err);
@@ -975,6 +979,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                     setStockShr(null);
                     setStockPlr(null);
                     setStockCommission(null);
+                    setStockHtp(null);
                 });
         } else {
             setStockSymbol(undefined);
@@ -984,6 +989,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
             setStockShr(undefined);
             setStockPlr(undefined);
             setStockCommission(undefined);
+            setStockHtp(undefined);
         }
     }, [stockId]); // Dependency on stockId
 
@@ -1930,6 +1936,8 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
               columnLabels={WALLET_COLUMN_LABELS}
               showEmptyWallets={showEmptyWallets}
               setShowEmptyWallets={setShowEmptyWallets}
+              stockHtp={stockHtp}
+              stockCommission={stockCommission}
             />
             {/* --- END: Wallets section replaced by component --- */}
             

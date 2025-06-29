@@ -248,7 +248,8 @@ function PortfolioContent() {
           'archived',
           'archivedAt',
           'swingHoldRatio',
-          'stockCommission'
+          'stockCommission',
+          'htp'
         ]
       });
 
