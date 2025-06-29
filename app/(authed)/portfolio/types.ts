@@ -23,6 +23,22 @@ export interface PriceData {
 export type LatestPrices = Record<string, PriceData | null>;
 export type PriceMap = Record<string, { currentPrice: number | null; [key: string]: any } | null>;
 
+// ===== COLUMN VISIBILITY TYPES =====
+export interface PortfolioColumnVisibilityState {
+  name: boolean;
+  stockType: boolean;
+  region: boolean;
+  currentPrice: boolean;
+  pdp: boolean;
+  htp: boolean;
+  plr: boolean;
+  stockCommission: boolean;
+  budget: boolean;
+  investment: boolean;
+}
+
+export type PortfolioColumnKey = keyof PortfolioColumnVisibilityState;
+
 // ===== SORTING TYPES =====
 export type SortableStockKey = 
   | 'symbol'
@@ -31,7 +47,9 @@ export type SortableStockKey =
   | 'region'
   | 'currentPrice'
   | 'pdp'
+  | 'htp'
   | 'plr'
+  | 'stockCommission'
   | 'budget'
   | 'investment';
 
@@ -84,6 +102,9 @@ export interface PortfolioTableProps {
   pricesLoading: boolean;
   showArchived: boolean;
   archivedCount: number;
+  columnVisibility: PortfolioColumnVisibilityState;
+  setColumnVisibility: React.Dispatch<React.SetStateAction<PortfolioColumnVisibilityState>>;
+  visibleColumnCount: number;
   requestStockSort: (key: SortableStockKey) => void;
   handleEditClick: (stock: PortfolioStockDataType) => void;
   handleToggleHidden: (stock: PortfolioStockDataType) => void;
@@ -124,9 +145,24 @@ export const STOCK_COLUMN_LABELS: Record<SortableStockKey, string> = {
   region: 'Region',
   currentPrice: 'Last Price',
   pdp: 'PDP (%)',
+  htp: 'HTP (%)',
   plr: 'PLR (%)',
+  stockCommission: 'Comm (%)',
   budget: 'Budget',
-  investment: 'Inv.',
+  investment: 'Inv',
+};
+
+export const PORTFOLIO_COLUMN_LABELS: Record<PortfolioColumnKey, string> = {
+  name: 'Name',
+  stockType: 'Type',
+  region: 'Region',
+  currentPrice: 'Last Price',
+  pdp: 'PDP (%)',
+  htp: 'HTP (%)',
+  plr: 'PLR (%)',
+  stockCommission: 'Comm (%)',
+  budget: 'Budget',
+  investment: 'Inv',
 };
 
 // ===== MODAL STYLES =====

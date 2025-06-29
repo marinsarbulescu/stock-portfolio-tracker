@@ -35,6 +35,7 @@ import type {
   StockTypeDistribution,
   RegionStats,
   InvestmentBreakdown,
+  PortfolioColumnVisibilityState,
 } from './types';
 
 // Register Chart.js components and plugins
@@ -72,6 +73,25 @@ function PortfolioContent() {
 
   // State to manage showing/hiding archived stocks
   const [showArchived, setShowArchived] = useState(false);
+
+  // --- State for column visibility ---
+  const [columnVisibility, setColumnVisibility] = useState<PortfolioColumnVisibilityState>({
+    name: false,
+    stockType: false,
+    region: false,
+    currentPrice: false,
+    pdp: true,
+    htp: true,
+    plr: true,
+    stockCommission: true,
+    budget: true,
+    investment: true,
+  });
+
+  // Calculate visible column count
+  const visibleColumnCount = useMemo(() => {
+    return Object.values(columnVisibility).filter(Boolean).length + 2; // +2 for symbol and actions columns
+  }, [columnVisibility]);
 
   // Create separate filtered arrays for active and archived stocks
   const activeStocks = useMemo(() => {
@@ -174,9 +194,17 @@ function PortfolioContent() {
             valA = a.pdp;
             valB = b.pdp;
             break;
+          case 'htp':
+            valA = a.htp;
+            valB = b.htp;
+            break;
           case 'plr':
             valA = a.plr;
             valB = b.plr;
+            break;
+          case 'stockCommission':
+            valA = a.stockCommission;
+            valB = b.stockCommission;
             break;
           case 'budget':
             valA = a.budget;
@@ -921,6 +949,9 @@ function PortfolioContent() {
         pricesLoading={pricesLoading}
         showArchived={showArchived}
         archivedCount={archivedStocks.length}
+        columnVisibility={columnVisibility}
+        setColumnVisibility={setColumnVisibility}
+        visibleColumnCount={visibleColumnCount}
         requestStockSort={requestStockSort}
         handleEditClick={handleEditClick}
         handleToggleHidden={handleToggleHidden}
