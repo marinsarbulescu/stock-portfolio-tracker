@@ -908,7 +908,7 @@ function PortfolioContent() {
             onClick={() => setShowArchived(!showArchived)}
             style={{
               padding: '8px 16px',
-              backgroundColor: showArchived ? '#dc3545' : '#6c757d',
+              backgroundColor: showArchived ? '#dc3545' : '#313131',
               color: 'white',
               border: 'none',
               borderRadius: '4px',

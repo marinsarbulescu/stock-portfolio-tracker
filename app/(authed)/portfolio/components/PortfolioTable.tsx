@@ -168,19 +168,30 @@ export default function PortfolioTable({
             </td>
           </tr>
         ) : (
-          sortedStocks.map((stock, index) => (
-            <tr key={stock.id} style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
-              <td style={{ padding: '5px' }}>
+          sortedStocks.map((stock, index) => {
+            const isHidden = stock.isHidden;
+            const rowStyle = {
+              backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent',
+              color: isHidden ? '#595959' : 'inherit'
+            };
+            const cellStyle = { 
+              padding: '5px',
+              color: isHidden ? '#595959' : 'inherit'
+            };
+            
+            return (
+            <tr key={stock.id} style={rowStyle}>
+              <td style={cellStyle}>
                 <Link 
                   href={`/wallets/${stock.id}`} 
-                  data-testid={`portfolio-page-table-wallet-link-${stock.symbol?.toUpperCase()}`}
+                  data-testid={`portfolio-page-table-wallet-link-${stock.symbol?.toUpperCase()}`}                  
                 >
                   {stock.symbol?.toUpperCase()}
                 </Link>
               </td>
               <td
                 data-testid={`portfolio-page-table-name-${stock.symbol?.toUpperCase()}`}
-                style={{ padding: '5px' }}>
+                style={cellStyle}>
                 {stock.name ? 
                   (stock.name.length > 15 ? 
                     `${stock.name.substring(0, 15)}...` : 
@@ -189,27 +200,27 @@ export default function PortfolioTable({
               </td>
               <td
                 data-testid={`portfolio-page-table-type-${stock.symbol?.toUpperCase()}`}
-                style={{ padding: '5px' }}>{stock.stockType}</td>
+                style={cellStyle}>{stock.stockType}</td>
               <td
                 data-testid={`portfolio-page-table-region-${stock.symbol?.toUpperCase()}`}
-                style={{ padding: '5px' }}>{stock.region}</td>
+                style={cellStyle}>{stock.region}</td>
               <td
                 data-testid={`portfolio-page-table-price-${stock.symbol?.toUpperCase()}`}
-                style={{ padding: '5px' }}>
+                style={cellStyle}>
                 {pricesLoading ? '...' : (latestPrices[stock.symbol]?.currentPrice !== null && typeof latestPrices[stock.symbol]?.currentPrice === 'number' ? formatCurrency(latestPrices[stock.symbol]!.currentPrice!) : 'N/A')}
               </td>
               <td
                 data-testid={`portfolio-page-table-pdp-${stock.symbol?.toUpperCase()}`}
-                style={{ padding: '5px' }}>{stock.pdp ?? '-'}</td>
+                style={cellStyle}>{stock.pdp ?? '-'}</td>
               <td
                 data-testid={`portfolio-page-table-plr-${stock.symbol?.toUpperCase()}`}
-                style={{ padding: '5px' }}>{stock.plr ?? '-'}</td>
+                style={cellStyle}>{stock.plr ?? '-'}</td>
               <td
                 data-testid={`portfolio-page-table-budget-${stock.symbol?.toUpperCase()}`}
-                style={{ padding: '5px' }}>{typeof stock.budget === 'number' ? formatCurrency(stock.budget??0) : '-'}</td>
+                style={cellStyle}>{typeof stock.budget === 'number' ? formatCurrency(stock.budget??0) : '-'}</td>
               <td
                 data-testid={`portfolio-page-table-investment-${stock.symbol?.toUpperCase()}`}
-                style={{ padding: '5px' }}>{typeof stockInvestments[stock.id] === 'number' ? stockInvestments[stock.id].toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '-'}</td>
+                style={cellStyle}>{typeof stockInvestments[stock.id] === 'number' ? stockInvestments[stock.id].toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '-'}</td>
               {/* Actions */}
               <td style={{ padding: '5px', textAlign: 'center' }}>
                 <button 
@@ -233,13 +244,14 @@ export default function PortfolioTable({
                 <button
                   data-testid="portfolio-page-table-action-archive-button"
                   onClick={() => handleArchiveStock(stock)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: showArchived ? '#28a745' : '#dc3545' }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray' }}
                   title={showArchived ? "Restore Stock" : "Archive Stock"}>
                     {showArchived ? <FaTrashRestore /> : <FaArchive />}
                 </button>
               </td>
             </tr>
-          ))
+          );
+          })
         )}
       </tbody>
     </table>
