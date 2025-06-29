@@ -19,7 +19,7 @@ import {
 } from '@/app/config/constants';
 
 // Import the new components
-import PortfolioOverviewSection from './components/PortfolioOverviewSection';
+import PortfolioOverview from './components/PortfolioOverview';
 import PortfolioTable from './components/PortfolioTable';
 import AddStockModal from './components/PortfolioAddStockModal';
 import EditStockModal from './components/PortfolioEditStockModal';
@@ -861,7 +861,7 @@ function PortfolioContent() {
       <h2 data-testid="portfolio-page-title">Portfolio</h2>
 
       {/* Portfolio Overview Section */}
-      <PortfolioOverviewSection
+      <PortfolioOverview
         isOverviewExpanded={isOverviewExpanded}
         setIsOverviewExpanded={setIsOverviewExpanded}
         regionDistribution={regionDistribution}

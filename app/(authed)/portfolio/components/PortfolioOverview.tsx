@@ -1,4 +1,4 @@
-// app/(authed)/portfolio/components/PortfolioOverviewSection.tsx
+// app/(authed)/portfolio/components/PortfolioOverview.tsx
 'use client';
 
 import React from 'react';
@@ -38,7 +38,7 @@ interface RegionStats {
   };
 }
 
-export interface PortfolioOverviewSectionProps {
+export interface PortfolioOverviewProps {
   isOverviewExpanded: boolean;
   setIsOverviewExpanded: (expanded: boolean) => void;
   regionDistribution: RegionDistribution;
@@ -51,7 +51,7 @@ export interface PortfolioOverviewSectionProps {
   apacRegionStats: RegionStats;
 }
 
-export default function PortfolioOverviewSection({
+export default function PortfolioOverview({
   isOverviewExpanded,
   setIsOverviewExpanded,
   regionDistribution,
@@ -62,7 +62,7 @@ export default function PortfolioOverviewSection({
   euRegionStats,
   intlRegionStats,
   apacRegionStats,
-}: PortfolioOverviewSectionProps) {
+}: PortfolioOverviewProps) {
   return (
     <div
       data-testid="portfolio-page-overview-section"
