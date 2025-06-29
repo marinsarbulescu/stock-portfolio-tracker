@@ -10,6 +10,7 @@ export interface WalletsOverviewSectionProps {
   stockPdp?: number | null;
   stockShr?: number | null;
   stockPlr?: number | null;
+  stockHtp?: number | null;
   totalTiedUpInvestment: number;
   transactionCounts: TransactionCounts;
   currentShares: CurrentShares;
@@ -26,6 +27,7 @@ export default function WalletsOverviewSection({
   stockPdp,
   stockShr,
   stockPlr,
+  stockHtp,
   totalTiedUpInvestment,
   transactionCounts,
   currentShares,
@@ -54,7 +56,7 @@ export default function WalletsOverviewSection({
 
       {isExpanded && (
         <div style={{ padding: '0px 15px 10px 15px', borderTop: '1px solid #444', fontSize: '0.8em' }}>
-          {stockBudget === undefined || stockPdp === undefined || stockShr === undefined || stockPlr === undefined ? (
+          {stockBudget === undefined || stockPdp === undefined || stockShr === undefined || stockPlr === undefined || stockHtp === undefined ? (
             <p>Loading details...</p>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
@@ -77,6 +79,8 @@ export default function WalletsOverviewSection({
                 <p>{stockShr != null ? `${stockShr}% Swing` : 'Not set'}</p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Profit-Loss Ratio (PLR)</p>
                 <p>{stockPlr != null ? stockPlr : 'Not set'}</p>
+                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold Take Profit (HTP)</p>
+                <p>{stockHtp != null ? `${stockHtp}%` : 'Not set'}</p>
               </div>
 
               <div>

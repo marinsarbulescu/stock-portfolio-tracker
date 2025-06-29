@@ -7,9 +7,10 @@ export interface WalletsPageHeaderProps {
   price?: number | null;
   pricesLoading: boolean;
   onAddBuy: () => void;
+  onEditStock: () => void;
 }
 
-export default function WalletsPageHeader({ name, symbol, price, pricesLoading, onAddBuy }: WalletsPageHeaderProps) {
+export default function WalletsPageHeader({ name, symbol, price, pricesLoading, onAddBuy, onEditStock }: WalletsPageHeaderProps) {
   const displayPrice =
     typeof price === 'number'
       ? formatCurrency(price)
@@ -17,11 +18,27 @@ export default function WalletsPageHeader({ name, symbol, price, pricesLoading, 
       ? 'Loading...'
       : 'N/A';
 
+  // Truncate name to 27 characters
+  const truncatedName = name.length > 36 ? `${name.substring(0, 36)}...` : name;
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
       <div>
         <p style={{ fontSize: '1.5em' }}>
-          {name} (<span data-testid="wallet-page-title">{symbol?.toUpperCase()}</span>)
+          {truncatedName} (
+          <span 
+            data-testid="wallet-page-title"
+            onClick={onEditStock}
+            style={{ 
+              cursor: 'pointer', 
+              textDecoration: 'underline',
+              color: '#0078d4'
+            }}
+            title="Click to edit stock settings"
+          >
+            {symbol?.toUpperCase()}
+          </span>
+          )
         </p>
         <p style={{ fontSize: '1.2em' }}>{displayPrice}</p>
       </div>

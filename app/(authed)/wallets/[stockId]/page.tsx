@@ -15,6 +15,7 @@ import WalletsPageHeader from './components/WalletsPageHeader';
 import WalletsOverviewSection from './components/WalletsOverviewSection';
 import WalletsSection from './components/WalletsSection';
 import WalletsTransactionsSection from './components/WalletsTransactionsSection';
+import EditStockModal from '../../portfolio/components/PortfolioEditStockModal';
 import type { TransactionTableColumnVisibilityState, SortableTxnKey, SortConfig } from './types';
 
 // --- IMPORT THE CORRECT formatCurrency ---
@@ -34,6 +35,8 @@ import {
 import WalletsSellTransactionModal from './components/WalletsSellTransactionModal';
 
 type StockWalletDataType = Schema['StockWallet']['type'];
+type PortfolioStockDataType = Schema["PortfolioStock"]["type"];
+type PortfolioStockUpdateInput = Partial<PortfolioStockDataType> & { id: string };
 
 interface StockInfoForWalletService {
     owner: string; // Cognito User Sub ID
@@ -291,6 +294,10 @@ export default function StockWalletPage() {
     const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
 
     const [isOverviewExpanded, setIsOverviewExpanded] = useState(false); // Collapsed by default
+
+    // --- Edit Stock Modal State ---
+    const [isEditStockModalOpen, setIsEditStockModalOpen] = useState(false);
+    const [stockToEditData, setStockToEditData] = useState<PortfolioStockDataType | null>(null);
 
     // --- Function to fetch wallets FOR THIS STOCK ---
     const fetchWallets = useCallback(async () => {
@@ -1884,6 +1891,76 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
         // You might also need to refresh other data if the Buy impacts other calculations on the page
     };
     // --- END HANDLERS ---
+
+    // --- Edit Stock Modal Handlers ---
+    const handleEditStock = () => {
+        // Create stock data object from current state
+        if (stockId && stockSymbol && name) {
+            const stockData = {
+                id: stockId,
+                symbol: stockSymbol,
+                name: name,
+                stockType: 'Stock' as const, // Default value
+                region: 'US' as const, // Default value
+                budget: stockBudget,
+                pdp: stockPdp,
+                swingHoldRatio: stockShr,
+                plr: stockPlr,
+                stockCommission: stockCommission,
+                htp: stockHtp,
+                owner: ownerId ?? '',
+                isHidden: null,
+                archived: null,
+                archivedAt: null,
+                createdAt: '',
+                updatedAt: '',
+                transactions: null as any, // Not needed for edit
+                stockWallets: null as any, // Not needed for edit
+            };
+            
+            setStockToEditData(stockData);
+            setIsEditStockModalOpen(true);
+        }
+    };
+
+    const handleCancelEditStock = () => {
+        setIsEditStockModalOpen(false);
+        setStockToEditData(null);
+    };
+
+    const handleUpdateStock = async (updatePayload: PortfolioStockUpdateInput) => {
+        if (!stockId) return;
+        console.log('Attempting to update stock:', stockId, updatePayload);
+
+        try {
+            const { data: updatedStock, errors } = await client.models.PortfolioStock.update({
+                ...updatePayload,
+                id: stockId, // Ensure id is this specific stockId
+            });
+
+            if (errors) {
+                console.error('Error updating stock:', errors);
+                setError(errors[0].message || 'Failed to update stock.');
+            } else {
+                console.log('Stock updated successfully:', updatedStock);
+                // Update local state with new values
+                if (updatedStock) {
+                    setStockName(updatedStock.name ?? name);
+                    setStockBudget(updatedStock.budget);
+                    setStockPdp(updatedStock.pdp);
+                    setStockShr(updatedStock.swingHoldRatio);
+                    setStockPlr(updatedStock.plr);
+                    setStockCommission(updatedStock.stockCommission);
+                    setStockHtp(updatedStock.htp);
+                }
+                handleCancelEditStock();
+            }
+        } catch (err: any) {
+            console.error('Unexpected error updating stock:', err);
+            setError(err.message || 'An error occurred during update.');
+        }
+    };
+    // --- END Edit Stock Modal Handlers ---
     
     // --- Render Logic ---
     // Show loading indicator until stock symbol AND wallets are potentially loaded
@@ -1907,6 +1984,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 price={currentStockPriceForOverview}
                 pricesLoading={pricesLoading}
                 onAddBuy={handleOpenBuyModal}
+                onEditStock={handleEditStock}
             />
             <WalletsOverviewSection
                 isExpanded={isOverviewExpanded}
@@ -1915,6 +1993,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 stockPdp={stockPdp}
                 stockShr={stockShr}
                 stockPlr={stockPlr}
+                stockHtp={stockHtp}
                 totalTiedUpInvestment={totalTiedUpInvestment}
                 transactionCounts={transactionCounts}
                 currentShares={currentShares}
@@ -2019,6 +2098,15 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 </div>
             )}
             {/* --- END: Edit modal --- */}        
+
+            {/* --- START: Edit Stock Modal --- */}
+            <EditStockModal
+                isOpen={isEditStockModalOpen}
+                stockToEditData={stockToEditData}
+                onUpdate={handleUpdateStock}
+                onCancel={handleCancelEditStock}
+            />
+            {/* --- END: Edit Stock Modal --- */}
         </div>
     );
 }
