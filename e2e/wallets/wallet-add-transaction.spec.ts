@@ -10,7 +10,8 @@
 // 5. Fill in the transaction form based on the CSV scenarios
 // 6. Submit the form
 // 7. Verify the wallet state (Swing and Hold) after the transaction is added.
-// 8. Verify buyPrice, totalInvestment, and remainingShares in both Swing and Hold wallets.
+// 8. Verify data, action, transaction type, signal, price, investment, and LBD in the Transaction table.
+// 9. Verify buyPrice, totalInvestment, and remainingShares in both Swing and Hold wallets.
 //
 // The suite performs the following operations:
 //
