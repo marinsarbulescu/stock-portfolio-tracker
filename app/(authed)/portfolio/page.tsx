@@ -358,8 +358,8 @@ function PortfolioContent() {
     const newHiddenState = !stock.isHidden; // Calculate the new state
     // Updated confirmation message with specific details about what happens
     const confirmMessage = newHiddenState 
-      ? `This will hide ${stock.symbol} from the Signals Table and stop fetching the latest price.`
-      : `This will show ${stock.symbol} in the Signals Table and start fetching the latest price.`;
+      ? `This ation will hide ${stock.symbol} from the Signals table and stop fetching the latest price.`
+      : `This action will show ${stock.symbol} in the Signals table and start fetching the latest price.`;
     
     if (!window.confirm(confirmMessage)) {
         return;
@@ -393,7 +393,12 @@ function PortfolioContent() {
     const isArchiving = !stock.archived;
     const action = isArchiving ? 'archive' : 'restore';
     
-    if (!window.confirm(`Are you sure you want to ${action} ${stock.symbol?.toUpperCase()}?`)) {
+    // Custom confirmation messages based on action
+    const confirmMessage = isArchiving 
+      ? `This action will hide ${stock.symbol?.toUpperCase()} from everywhere (reporting and UI). To see it again, click "Show Archived" button and restore it.`
+      : `This action will restore ${stock.symbol?.toUpperCase()} and it will be reincluded in the reporting and UI.`;
+    
+    if (!window.confirm(confirmMessage)) {
       return;
     }
 
