@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { type Schema } from '@/amplify/data/resource'; // Adjust path if needed
 import { generateClient } from 'aws-amplify/data';
+import { calculateSingleSalePL } from '@/app/utils/financialCalculations';
 
 const client = generateClient<Schema>();
 
@@ -37,7 +38,7 @@ type BuyTypeValue = 'Swing' | 'Hold' | 'Split';
 import {
     SHARE_PRECISION,
     CURRENCY_PRECISION,
-    //PERCENT_PRECISION,
+    PERCENT_PRECISION,
     SHARE_EPSILON,
     //CURRENCY_EPSILON,
     //PERCENT_EPSILON // Import if your logic uses it
@@ -289,15 +290,59 @@ export default function TransactionForm({
     // --- End Buy action calculations ---
 
 
-    // --- TxnProfit Calculation (Only for Editing a Sell - Simplified) ---
+    // --- TxnProfit Calculation (Enhanced for Sell Edits) ---
     let txnProfit: number | null = null;
     let calculatedTxnProfitPercent: number | null = null;
+    
     if (isEditMode && action === 'Sell') {
-        txnProfit = initialData?.txnProfit ?? null;
-        calculatedTxnProfitPercent = initialData?.txnProfitPercent ?? null;
-        console.warn("Profit calculation skipped during Sell edit. Retaining initial values if available.");
-        // Ensure quantity uses the value from the form if edited
-        quantity = sharesInput ? parseFloat(sharesInput) : initialData?.quantity;
+        const originalPrice = initialData?.price;
+        const newPrice = priceValue;
+        const currentQuantity = sharesInput ? parseFloat(sharesInput) : initialData?.quantity;
+        
+        // Check if price changed
+        if (typeof originalPrice === 'number' && typeof newPrice === 'number' && 
+            Math.abs(originalPrice - newPrice) > 0.0001) {
+            
+            console.log("[Sell Edit] Price changed, recalculating P/L...");
+            
+            // Fetch wallet buy price using completedTxnId
+            if (completedTxnId && currentQuantity) {
+                try {
+                    const { data: wallet } = await client.models.StockWallet.get(
+                        { id: completedTxnId },
+                        { selectionSet: ['buyPrice'] }
+                    );
+                    
+                    if (wallet?.buyPrice && typeof wallet.buyPrice === 'number') {
+                        // Recalculate P/L using new price
+                        txnProfit = calculateSingleSalePL(newPrice, wallet.buyPrice, currentQuantity);
+                        
+                        // Calculate percentage
+                        const costBasis = wallet.buyPrice * currentQuantity;
+                        calculatedTxnProfitPercent = costBasis !== 0 ? (txnProfit / costBasis) * 100 : 0;
+                        
+                        console.log(`[Sell Edit] Recalculated P/L: ${txnProfit}, %: ${calculatedTxnProfitPercent}`);
+                    } else {
+                        console.warn("[Sell Edit] Could not fetch wallet buy price");
+                        txnProfit = initialData?.txnProfit ?? null;
+                        calculatedTxnProfitPercent = initialData?.txnProfitPercent ?? null;
+                    }
+                } catch (error) {
+                    console.error("[Sell Edit] Error fetching wallet:", error);
+                    txnProfit = initialData?.txnProfit ?? null;
+                    calculatedTxnProfitPercent = initialData?.txnProfitPercent ?? null;
+                }
+            } else {
+                txnProfit = initialData?.txnProfit ?? null;
+                calculatedTxnProfitPercent = initialData?.txnProfitPercent ?? null;
+            }
+        } else {
+            // Price didn't change, keep original values
+            txnProfit = initialData?.txnProfit ?? null;
+            calculatedTxnProfitPercent = initialData?.txnProfitPercent ?? null;
+        }
+        
+        quantity = currentQuantity;
     }
     // --- End TxnProfit ---
 
@@ -336,12 +381,11 @@ export default function TransactionForm({
                 ...finalPayload // Spread the prepared fields
             };
             //console.log("Submitting Update Payload:", updatePayload);
-            await onUpdate(updatePayload); // Call parent's update handler
-            setSuccess('Transaction updated successfully!');
-             // @ts-ignore Simulate result for consistency if needed downstream
-             savedTransaction = { ...initialData, ...updatePayload };
+            
+            // @ts-ignore Simulate result for consistency if needed downstream
+            savedTransaction = { ...initialData, ...updatePayload };
 
-             // ================================================================
+            // ================================================================
             // === START: WALLET UPDATE LOGIC ON TRANSACTION EDIT =============
             // ================================================================
 
@@ -518,8 +562,73 @@ export default function TransactionForm({
           } // End if action === 'Buy'
 
           // ================================================================
+          // === WALLET UPDATE LOGIC FOR SELL TRANSACTION EDITS ============
+          // ================================================================
+
+          if (savedTransaction && savedTransaction.action === 'Sell') {
+              const originalPrice = initialData?.price;
+              const newPrice = savedTransaction.price;
+              const originalTxnProfit = initialData?.txnProfit ?? 0;
+              const newTxnProfit = savedTransaction.txnProfit ?? 0;
+              
+              // Check if price changed (and thus P/L changed)
+              if (typeof originalPrice === 'number' && typeof newPrice === 'number' && 
+                  Math.abs(originalPrice - newPrice) > 0.0001) {
+                  
+                  console.log("[Sell Edit] Updating wallet P/L due to price change...");
+                  
+                  const walletId = savedTransaction.completedTxnId;
+                  if (walletId) {
+                      try {
+                          // Fetch current wallet state
+                          const { data: wallet, errors: fetchErrors } = await client.models.StockWallet.get(
+                              { id: walletId },
+                              { selectionSet: ['realizedPl', 'realizedPlPercent', 'sharesSold', 'buyPrice'] }
+                          );
+                          
+                          if (fetchErrors) throw fetchErrors;
+                          if (!wallet) throw new Error(`Wallet ${walletId} not found`);
+                          
+                          // Calculate the P/L difference
+                          const plDifference = newTxnProfit - originalTxnProfit;
+                          
+                          // Update wallet P/L
+                          const newRealizedPl = (wallet.realizedPl ?? 0) + plDifference;
+                          
+                          // Recalculate wallet P/L percentage
+                          const totalCostBasis = (wallet.buyPrice ?? 0) * (wallet.sharesSold ?? 0);
+                          const newRealizedPlPercent = totalCostBasis !== 0 ? (newRealizedPl / totalCostBasis) * 100 : 0;
+                          
+                          // Update wallet
+                          const { errors: updateErrors } = await client.models.StockWallet.update({
+                              id: walletId,
+                              realizedPl: parseFloat(newRealizedPl.toFixed(CURRENCY_PRECISION)),
+                              realizedPlPercent: parseFloat(newRealizedPlPercent.toFixed(PERCENT_PRECISION))
+                          });
+                          
+                          if (updateErrors) throw updateErrors;
+                          
+                          console.log(`[Sell Edit] Wallet ${walletId} P/L updated: ${newRealizedPl}`);
+                          
+                      } catch (walletError: any) {
+                          console.error("[Sell Edit] Failed to update wallet P/L:", walletError);
+                          setWarning("Transaction updated, but wallet P/L update failed. Please check wallet manually.");
+                      }
+                  }
+              }
+          } // End if action === 'Sell'
+
+          // ================================================================
+          // === END: WALLET UPDATE LOGIC FOR SELL TRANSACTION EDITS =======
+          // ================================================================
+
+          // ================================================================
           // === END: WALLET UPDATE LOGIC ON TRANSACTION EDIT ===============
           // ================================================================
+
+          // Now call parent's update handler after all wallet updates are complete
+          await onUpdate(updatePayload); // Call parent's update handler
+          setSuccess('Transaction updated successfully!');
 
         } else {
             // --- CREATE ---
