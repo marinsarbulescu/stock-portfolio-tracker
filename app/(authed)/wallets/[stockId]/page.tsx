@@ -19,7 +19,7 @@ import EditStockModal from '../../portfolio/components/PortfolioEditStockModal';
 import type { TransactionTableColumnVisibilityState, SortableTxnKey, SortConfig } from './types';
 
 // --- IMPORT THE CORRECT formatCurrency ---
-import { calculateSingleSalePL, calculateTotalRealizedSwingPL, formatCurrency } from '@/app/utils/financialCalculations';
+import { calculateSingleSalePL, calculateSingleSalePLWithCommission, calculateTotalRealizedSwingPL, formatCurrency } from '@/app/utils/financialCalculations';
 
 // Needed for the handleUpdateTransaction to update the wallet
 import { adjustWalletContribution } from '@/app/services/walletService';
@@ -1096,9 +1096,8 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                 if (typeof walletBuyPrice === 'number') {
                     const costBasisForTxn = walletBuyPrice * txn.quantity;
 
-                    // Calculate P/L for this transaction (used for Hold, and potentially if you didn't use the aggregate for Swing)
-                    // You are already using calculateSingleSalePL in YTD, ensure it's robust for this general use too.
-                    const profitForTxn = calculateSingleSalePL(txn.price, walletBuyPrice, txn.quantity);
+                    // Use stored txnProfit instead of recalculating, as it contains commission-adjusted P/L
+                    const profitForTxn = txn.txnProfit ?? calculateSingleSalePL(txn.price, walletBuyPrice, txn.quantity);
 
                     if (txn.txnType === 'Swing') {
                         // totalSwingPlDollars is now handled by calculateTotalRealizedSwingPL
@@ -1291,7 +1290,8 @@ const totalSwingYtdPL = useMemo(() => {
             if (typeof walletBuyPrice === 'number') {
                 //const profitForTxn = (txn.price - walletBuyPrice) * txn.quantity;
                 //ytdRealizedSwingPL += profitForTxn;
-                const profitForThisOneSale = calculateSingleSalePL(txn.price!, walletBuyPrice, txn.quantity!);
+                // Use stored txnProfit instead of recalculating, as it contains commission-adjusted P/L
+                const profitForThisOneSale = txn.txnProfit ?? calculateSingleSalePL(txn.price!, walletBuyPrice, txn.quantity!);
                 ytdRealizedSwingPL += profitForThisOneSale;
             } else {
                 // Wallet link or buy price was missing for a YTD Swing Sell
@@ -1568,7 +1568,8 @@ const totalHoldYtdPL = useMemo(() => {
             if (typeof walletBuyPrice === 'number') {
                 //const profitForTxn = (txn.price - walletBuyPrice) * txn.quantity;
                 //ytdRealizedHoldPL += profitForTxn;
-                const profitForThisOneSale = calculateSingleSalePL(txn.price!, walletBuyPrice, txn.quantity!);
+                // Use stored txnProfit instead of recalculating, as it contains commission-adjusted P/L
+                const profitForThisOneSale = txn.txnProfit ?? calculateSingleSalePL(txn.price!, walletBuyPrice, txn.quantity!);
                 ytdRealizedHoldPL += profitForThisOneSale;
             } else {
                 // Wallet link or buy price was missing for a YTD Hold Sell
@@ -1757,9 +1758,13 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
     
         // --- Database Operations ---
         try {
-            // 1. Calculate raw P/L for this specific sale
-            //const realizedPlForSale = (price - buyPrice) * quantity;
-            const realizedPlForSale = calculateSingleSalePL(price, buyPrice, quantity);
+            // 1. Calculate raw P/L for this specific sale (with commission adjustment)
+            const realizedPlForSale = calculateSingleSalePLWithCommission(
+                price, 
+                buyPrice, 
+                quantity, 
+                stockCommission ?? 0 // Use 0 if no commission is set
+            );
     
             // 2. Calculate NEW raw totals
             const newTotalSharesSold_raw = (walletToSell.sharesSold ?? 0) + quantity;

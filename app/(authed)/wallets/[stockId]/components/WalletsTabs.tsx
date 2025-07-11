@@ -266,7 +266,21 @@ export default function WalletsTabs({
             {walletColumnVisibility.id && <th style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }}>Wallet ID</th>}
             {walletColumnVisibility.buyPrice && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('buyPrice')}>Buy Price {walletSortConfig?.key === 'buyPrice' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
             {walletColumnVisibility.totalInvestment && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('totalInvestment')}>Inv {walletSortConfig?.key === 'totalInvestment' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
-            {walletColumnVisibility.tpValue && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('tpValue')}>TP {walletSortConfig?.key === 'tpValue' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
+            {walletColumnVisibility.tpValue && (
+              <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('tpValue')}>
+                TP
+                {typeof stockCommission === 'number' && stockCommission > 0 && (
+                  <span 
+                    title={`TP includes the ${stockCommission}% stock commission`}
+                    style={{ color: 'orange', marginLeft: '2px', fontSize: '0.8em' }}
+                  >
+                    *
+                  </span>
+                )}
+                {' '}
+                {walletSortConfig?.key === 'tpValue' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+            )}
             {walletColumnVisibility.htp && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('htp')}>HTP (%) {walletSortConfig?.key === 'htp' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
             {walletColumnVisibility.sellTxnCount && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('sellTxnCount')}>Sells {walletSortConfig?.key === 'sellTxnCount' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
             {walletColumnVisibility.sharesSold && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('sharesSold')}>Shs Sold {walletSortConfig?.key === 'sharesSold' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}

@@ -10,6 +10,7 @@ interface MockTransaction {
     quantity?: number | null;
     price?: number | null;
     date?: string;
+    txnProfit?: number | null; // Add txnProfit for commission-adjusted calculations
 }
 
 interface MockWallet {
@@ -41,6 +42,41 @@ export function calculateSingleSalePL(
     return (sellPrice - buyPrice) * quantity;
 }
 
+/**
+ * Calculates the profit or loss for a single sale transaction, accounting for commission.
+ * @param sellPrice - The price at which shares were sold.
+ * @param buyPrice - The original buy price of the shares.
+ * @param quantity - The number of shares sold.
+ * @param commissionPercent - The commission percentage (e.g., 1 for 1%).
+ * @returns The calculated profit (if positive) or loss (if negative), net of commission.
+ */
+export function calculateSingleSalePLWithCommission(
+    sellPrice: number,
+    buyPrice: number,
+    quantity: number,
+    commissionPercent: number
+): number {
+    // Input validation
+    if (
+        typeof sellPrice !== 'number' || isNaN(sellPrice) ||
+        typeof buyPrice !== 'number' || isNaN(buyPrice) ||
+        typeof quantity !== 'number' || isNaN(quantity) ||
+        typeof commissionPercent !== 'number' || isNaN(commissionPercent)
+    ) {
+        console.warn("Invalid input to calculateSingleSalePLWithCommission. Returning 0.");
+        return 0;
+    }
+    
+    // Calculate gross P/L
+    const grossPL = (sellPrice - buyPrice) * quantity;
+    
+    // Calculate commission on the sale amount
+    const saleValue = sellPrice * quantity;
+    const commission = saleValue * (commissionPercent / 100);
+    
+    // Return net P/L after commission
+    return grossPL - commission;
+}
 
 /**
  * Calculates the total realized P/L for all 'Swing' type sales.
@@ -72,8 +108,8 @@ export function calculateTotalRealizedSwingPL(
             const walletBuyPrice = walletBuyPriceMap.get(txn.completedTxnId);
 
             if (typeof walletBuyPrice === 'number') {
-                // Call calculateSingleSalePL directly as it's in the same file
-                const profitForTxn = calculateSingleSalePL(txn.price, walletBuyPrice, txn.quantity);
+                // Use stored txnProfit if available (commission-adjusted), otherwise calculate
+                const profitForTxn = txn.txnProfit ?? calculateSingleSalePL(txn.price, walletBuyPrice, txn.quantity);
                 totalSwingPlDollars += profitForTxn;
             } else {
                 console.warn(`[calculateTotalRealizedSwingPL] Buy price not found for wallet ID: ${txn.completedTxnId} on Swing Sell Txn ID: ${txn.id}`);

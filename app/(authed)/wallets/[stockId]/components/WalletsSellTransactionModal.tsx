@@ -1,6 +1,6 @@
 import React from 'react';
 import type { StockWalletDataType } from '../types';
-import { formatCurrency, calculateSingleSalePL } from '@/app/utils/financialCalculations';
+import { formatCurrency } from '@/app/utils/financialCalculations';
 //import { SHARE_EPSILON, SHARE_PRECISION, CURRENCY_PRECISION, PERCENT_PRECISION } from '@/app/config/constants';
 import type { Schema } from '@/amplify/data/resource';
 //import { formatToMDYYYY } from '@/app/utils/dateFormatter';

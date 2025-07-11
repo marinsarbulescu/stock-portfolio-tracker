@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { type Schema } from '@/amplify/data/resource'; // Adjust path if needed
 import { generateClient } from 'aws-amplify/data';
-import { calculateSingleSalePL } from '@/app/utils/financialCalculations';
+import { calculateSingleSalePL, calculateSingleSalePLWithCommission } from '@/app/utils/financialCalculations';
 
 const client = generateClient<Schema>();
 
@@ -314,8 +314,20 @@ export default function TransactionForm({
                     );
                     
                     if (wallet?.buyPrice && typeof wallet.buyPrice === 'number') {
-                        // Recalculate P/L using new price
-                        txnProfit = calculateSingleSalePL(newPrice, wallet.buyPrice, currentQuantity);
+                        // Fetch stock commission for commission-adjusted P/L calculation
+                        let stockCommissionValue = 0;
+                        try {
+                            const { data: stock } = await client.models.PortfolioStock.get(
+                                { id: portfolioStockId },
+                                { selectionSet: ['stockCommission'] }
+                            );
+                            stockCommissionValue = stock?.stockCommission ?? 0;
+                        } catch (error) {
+                            console.warn("[Sell Edit] Could not fetch stock commission, using 0:", error);
+                        }
+                        
+                        // Recalculate P/L using new price with commission adjustment
+                        txnProfit = calculateSingleSalePLWithCommission(newPrice, wallet.buyPrice, currentQuantity, stockCommissionValue);
                         
                         // Calculate percentage
                         const costBasis = wallet.buyPrice * currentQuantity;
