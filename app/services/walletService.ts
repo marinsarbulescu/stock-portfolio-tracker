@@ -69,13 +69,10 @@ function calculateTpForWallet(
         
         // Calculate base TP using the same formula as TransactionForm
         const baseTP = buyPrice + (buyPrice * (pdp * plr / 100));
-          // Apply commission adjustment if commission is available and > 0
-        console.log(`[Wallet TP Debug] Stock Commission: ${stockCommission}, Type: ${typeof stockCommission}`);
-        console.log(`[Wallet TP Debug] Base TP: ${baseTP}, Buy Price: ${buyPrice}`);
+        // Apply commission adjustment if commission is available and > 0
         
         if (typeof stockCommission === 'number' && stockCommission > 0) {
             const commissionRate = stockCommission / 100;
-            console.log(`[Wallet TP Debug] Commission Rate: ${commissionRate}`);
             
             // Prevent division by zero or negative values
             if (commissionRate >= 1) {
@@ -84,10 +81,8 @@ function calculateTpForWallet(
             } else {
                 // Commission-adjusted TP: baseTP / (1 - commissionRate)
                 tpValue = baseTP / (1 - commissionRate);
-                console.log(`[Wallet TP Debug] Commission-adjusted TP: ${tpValue}`);
             }
         } else {
-            console.log(`[Wallet TP Debug] No commission or invalid commission, using base TP`);
             // No commission or invalid commission, use base TP
             tpValue = baseTP;
         }
@@ -97,7 +92,7 @@ function calculateTpForWallet(
     }
 
     return {
-        tpValue: tpValue !== null ? parseFloat(tpValue.toFixed(CURRENCY_PRECISION)) : null,
+        tpValue: tpValue !== null ? parseFloat(tpValue.toFixed(4)) : null, // Use 4 decimal places for TP precision
         tpPercent: tpPercent !== null ? parseFloat(tpPercent.toFixed(PERCENT_PRECISION)) : null,
     };
 }

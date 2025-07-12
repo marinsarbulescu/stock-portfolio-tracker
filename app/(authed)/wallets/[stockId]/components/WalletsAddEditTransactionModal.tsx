@@ -164,6 +164,7 @@ export default function TransactionForm({
 
     let pdpValue: number | null | undefined = null;
     let plrValue: number | null | undefined = null;
+    let stockCommissionValue: number | null | undefined = null;
 
 
     // --- Calculations for Buy action ---
@@ -189,7 +190,7 @@ export default function TransactionForm({
             );
             pdpValue = stock?.pdp;
             plrValue = stock?.plr;
-            const stockCommissionValue = stock?.stockCommission;
+            stockCommissionValue = stock?.stockCommission;
 
             if (buyType === 'Split') {
                 if (typeof stock?.swingHoldRatio === 'number' && stock.swingHoldRatio >= 0 && stock.swingHoldRatio <= 100) {
@@ -246,7 +247,8 @@ export default function TransactionForm({
 
               // --- Round LBD/TP (Optional but good practice for currency) ---
               lbd_final = parseFloat(lbd_raw.toFixed(CURRENCY_PRECISION));
-              tp_final = parseFloat(tp_raw.toFixed(CURRENCY_PRECISION));
+              // TP needs higher precision (4 decimals) to avoid $0.01 discrepancy when selling at commission-adjusted TP
+              tp_final = parseFloat(tp_raw.toFixed(4)); // Use 4 decimal places for TP precision
               // --- End Rounding ---
             } else { 
                 //console.log("Could not calculate LBD/TP (PDP/PLR invalid or price missing)"); 
@@ -737,11 +739,32 @@ export default function TransactionForm({
                           const finalInvestment = parseFloat(newInvestment_raw.toFixed(CURRENCY_PRECISION));
                           const finalRemainingShares = parseFloat(newRemaining_raw.toFixed(SHARE_PRECISION));
 
+                          // Recalculate TP for updated wallet using the same logic as new wallets
+                          let updatedTpValue = null;
+                          if (finalTotalShares > 0 && finalInvestment > 0 && typeof pdpValue === 'number' && typeof plrValue === 'number' && pdpValue > 0 && plrValue > 0) {
+                              const avgBuyPrice = finalInvestment / finalTotalShares;
+                              const baseTP = avgBuyPrice + (avgBuyPrice * (pdpValue * plrValue / 100));
+                              
+                              // Apply commission adjustment if available (use the same stockCommissionValue from earlier fetch)
+                              if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
+                                  const commissionRate = stockCommissionValue / 100;
+                                  if (commissionRate >= 1) {
+                                      updatedTpValue = baseTP;
+                                  } else {
+                                      updatedTpValue = baseTP / (1 - commissionRate);
+                                  }
+                              } else {
+                                  updatedTpValue = baseTP;
+                              }
+                              updatedTpValue = parseFloat(updatedTpValue.toFixed(4)); // Use 4 decimal places for TP precision
+                          }
+
                           const updatePayload = {
                               id: existingWallet.id,
                               totalSharesQty: (Math.abs(finalTotalShares) < epsilon) ? 0 : finalTotalShares,
                               totalInvestment: (Math.abs(finalInvestment) < 0.001) ? 0 : finalInvestment, // Currency epsilon
                               remainingShares: (Math.abs(finalRemainingShares) < epsilon) ? 0 : finalRemainingShares,
+                              tpValue: updatedTpValue, // Add recalculated TP
                           };
                           const { errors: updateErrors } = await client.models.StockWallet.update(updatePayload);
                           if (updateErrors) throw updateErrors;
