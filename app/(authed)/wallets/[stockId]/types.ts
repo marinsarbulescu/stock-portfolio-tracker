@@ -41,15 +41,18 @@ export interface UnrealizedPLStats {
 
 export interface TotalPLStats {
   totalSwingPlDollars?: number | null;
-  avgSwingPlPercent?: number | null;
+  totalSwingPercent?: number | null;
   totalHoldPlDollars?: number | null;
-  avgHoldPlPercent?: number | null;
+  totalHoldPercent?: number | null;
   totalStockPlDollars?: number | null;
+  totalStockPercent?: number | null;
+  // Legacy fields for compatibility (these are for realized P/L percentages, not total)
+  avgSwingPlPercent?: number | null;
+  avgHoldPlPercent?: number | null;
   avgStockPlPercent?: number | null;
   totalSwingCostBasis?: number | null;
   totalHoldCostBasis?: number | null;
   totalStockCostBasis?: number | null;
-  totalStockPercent?: number | null;
 }
 
 export interface WalletColumnVisibilityState {

@@ -156,12 +156,12 @@ export default function WalletsOverview({
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
                 <p>
                   {totalPlStats.totalSwingPlDollars === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(totalPlStats.totalSwingPlDollars ?? 0)}
-                  &nbsp;({totalPlStats.avgSwingPlPercent ?? 0}%)
+                  &nbsp;({totalPlStats.totalSwingPercent ?? 0}%)
                 </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
                 <p>
                   {totalPlStats.totalHoldPlDollars === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(totalPlStats.totalHoldPlDollars ?? 0)}
-                  &nbsp;({totalPlStats.avgHoldPlPercent ?? 0}%)
+                  &nbsp;({totalPlStats.totalHoldPercent ?? 0}%)
                 </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                 <p>

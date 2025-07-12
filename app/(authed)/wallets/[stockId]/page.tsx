@@ -1441,13 +1441,10 @@ const unrealizedPlStats = useMemo(() => {
 
 // --- START: Memo for All-Time TOTAL P/L (Realized + Unrealized) ---
 const totalPlStats = useMemo(() => {
-    //console.log("[Memo] Calculating totalPlStats ($)");
-
     // Check if unrealized calculation was possible (depends on current price)
     const unrealizedAvailable = unrealizedPlStats.unrealizedTotalDollars !== null;
 
     if (!unrealizedAvailable) {
-        //console.warn("[StockWalletPage] - [Total P/L] Cannot calculate: Unrealized P/L is unavailable.");
         return {
           totalSwingDollars: null, totalSwingPercent: null,
           totalHoldDollars: null, totalHoldPercent: null,
@@ -1455,7 +1452,7 @@ const totalPlStats = useMemo(() => {
         };
       }
   
-      // --- Calculate Total Dollar Amounts (as before) ---
+      // --- Calculate Total Dollar Amounts ---
       const totalSwingDollars = (plStats.totalSwingPlDollars ?? 0) + (unrealizedPlStats.unrealizedSwingDollars ?? 0);
       const totalHoldDollars = (plStats.totalHoldPlDollars ?? 0) + (unrealizedPlStats.unrealizedHoldDollars ?? 0);
       const totalStockDollars = (plStats.totalStockPlDollars ?? 0) + (unrealizedPlStats.unrealizedTotalDollars ?? 0);
@@ -1489,15 +1486,15 @@ const totalPlStats = useMemo(() => {
       const roundedHoldPercent = typeof totalHoldPercentCalc === 'number' ? parseFloat(totalHoldPercentCalc.toFixed(PERCENT_PRECISION)) : null;
       const roundedStockPercent = typeof totalStockPercentCalc === 'number' ? parseFloat(totalStockPercentCalc.toFixed(PERCENT_PRECISION)) : null;
   
-      //console.log(`[StockWalletPage] - [Total P/L] Swing: ${roundedSwingDollars} (${roundedSwingPercent}%), Hold: ${roundedHoldDollars} (${roundedHoldPercent}%), Stock: ${roundedStockDollars} (${roundedStockPercent}%)`);
+      //console.log(`[StockWalletPage] - [Total P/L] Final values - SwingPL: ${roundedSwingDollars} (${roundedSwingPercent}%), HoldPL: ${roundedHoldDollars} (${roundedHoldPercent}%), StockPL: ${roundedStockDollars} (${roundedStockPercent}%)`);
   
       // --- Return results including percentages ---
       return {
-        totalSwingDollars: roundedSwingDollars,
+        totalSwingPlDollars: roundedSwingDollars,
         totalSwingPercent: roundedSwingPercent,
-        totalHoldDollars: roundedHoldDollars,
+        totalHoldPlDollars: roundedHoldDollars,
         totalHoldPercent: roundedHoldPercent,
-        totalStockDollars: roundedStockDollars,
+        totalStockPlDollars: roundedStockDollars,
         totalStockPercent: roundedStockPercent,
       };
   // Depend on the results of the other two memos
