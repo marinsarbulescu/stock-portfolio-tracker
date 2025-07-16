@@ -79,6 +79,7 @@ function PortfolioContent() {
     name: false,
     stockType: false,
     region: false,
+    stockTrend: false,
     currentPrice: false,
     pdp: true,
     htp: true,
@@ -186,6 +187,10 @@ function PortfolioContent() {
             valA = a.region?.toLowerCase() ?? '';
             valB = b.region?.toLowerCase() ?? '';
             break;
+          case 'stockTrend':
+            valA = a.stockTrend?.toLowerCase() ?? '';
+            valB = b.stockTrend?.toLowerCase() ?? '';
+            break;
           case 'currentPrice':
             valA = latestPrices[a.symbol ?? '']?.currentPrice ?? null;
             valB = latestPrices[b.symbol ?? '']?.currentPrice ?? null;
@@ -257,6 +262,7 @@ function PortfolioContent() {
           'name',
           'region',
           'stockType',
+          'stockTrend',
           'budget',
           'pdp',
           'plr',

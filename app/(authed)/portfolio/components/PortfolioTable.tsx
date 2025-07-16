@@ -104,6 +104,15 @@ export default function PortfolioTable({
               {STOCK_COLUMN_LABELS.region} {stockSortConfig?.key === 'region' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
             </th>
           )}
+          {columnVisibility.stockTrend && (
+            <th
+              data-testid="portfolio-page-table-stockTrend-header"
+              style={{ padding: '5px', cursor: 'pointer' }}
+              onClick={() => requestStockSort('stockTrend')}
+            >
+              {STOCK_COLUMN_LABELS.stockTrend} {stockSortConfig?.key === 'stockTrend' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+            </th>
+          )}
           {columnVisibility.currentPrice && (
             <th
               data-testid="portfolio-page-table-currentPrice-header"
@@ -223,6 +232,11 @@ export default function PortfolioTable({
                 <td
                   data-testid={`portfolio-page-table-region-${stock.symbol?.toUpperCase()}`}
                   style={cellStyle}>{stock.region}</td>
+              )}
+              {columnVisibility.stockTrend && (
+                <td
+                  data-testid={`portfolio-page-table-stockTrend-${stock.symbol?.toUpperCase()}`}
+                  style={cellStyle}>{stock.stockTrend ?? '-'}</td>
               )}
               {columnVisibility.currentPrice && (
                 <td

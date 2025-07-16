@@ -10,6 +10,7 @@ import type {
   PortfolioStockUpdateInput,
   StockTypeValue,
   RegionValue,
+  StockTrendValue,
   EditStockModalProps,
 } from '../types';
 
@@ -25,6 +26,7 @@ export default function EditStockModal({
   const [symbol, setSymbol] = useState('');
   const [stockType, setStockType] = useState<StockTypeValue>('Stock');
   const [region, setRegion] = useState<RegionValue>('US');
+  const [stockTrend, setStockTrend] = useState<StockTrendValue>(null);
   const [name, setName] = useState('');
   const [pdp, setPdp] = useState('');
   const [plr, setPlr] = useState('');
@@ -45,6 +47,7 @@ export default function EditStockModal({
       setName(stockToEditData.name ?? '');
       setStockType(stockToEditData.stockType ?? 'Stock');
       setRegion(stockToEditData.region ?? 'US');
+      setStockTrend(stockToEditData.stockTrend ?? null);
       setPdp(stockToEditData.pdp?.toString() ?? '');
       setPlr(stockToEditData.plr?.toString() ?? '');
       setBudget(stockToEditData.budget?.toString() ?? '');
@@ -94,6 +97,7 @@ export default function EditStockModal({
       symbol: symbol.toUpperCase(),
       stockType: stockType as StockTypeValue,
       region: region as RegionValue,
+      stockTrend: stockTrend as StockTrendValue,
       name: name || undefined,
       pdp: pdp ? parseFloat(pdp) : null,
       plr: plr ? parseFloat(plr) : null,
@@ -195,6 +199,22 @@ export default function EditStockModal({
               <option value="APAC">APAC</option>
               <option value="EU">EU</option>
               <option value="Intl">Intl</option>
+            </select>
+          </div>
+          
+          <div>
+            <label htmlFor="stockTrend" style={{display: 'block', marginBottom: '3px'}}>Trend (Optional):</label>
+            <select 
+              id="stockTrend" 
+              value={stockTrend || ''} 
+              onChange={(e) => setStockTrend(e.target.value as StockTrendValue || null)} 
+              disabled={isLoading}
+              style={{width: '100%', padding: '8px'}}
+            >
+              <option value="">-- No Selection --</option>
+              <option value="Up">Up</option>
+              <option value="Down">Down</option>
+              <option value="Sideways">Sideways</option>
             </select>
           </div>
           

@@ -7,6 +7,7 @@ import { sendStockEmail } from '../functions/sendStockEmail/resource.js';
 // Define Enums first
 const stockTypeEnum = a.enum(['Stock', 'ETF', 'Crypto']); // Changed order to match default in form example
 const regionEnum = a.enum(['APAC', 'EU', 'Intl', 'US']); // Intl = International, EU = Europe, APAC = Asia-Pacific
+const stockTrendEnum = a.enum(['Down', 'Up', 'Sideways']); // Stock trend direction
 
 const txnActionEnum = a.enum(['Buy', 'Sell', 'Div']); // Div = Dividend
 const txnSignalEnum = a.enum(['_5DD', 'Cust', 'Initial', 'EOM', 'LBD', 'TPH', 'TPP', 'TP', 'Div']);
@@ -17,6 +18,7 @@ const walletTypeEnum = a.enum(['Swing', 'Hold']);
 const schema = a.schema({
   StockType: stockTypeEnum,
   Region: regionEnum,
+  StockTrend: stockTrendEnum,
   TxnAction: txnActionEnum,
   TxnSignal: txnSignalEnum,
   WalletType: walletTypeEnum,
@@ -27,6 +29,7 @@ const schema = a.schema({
       symbol: a.string().required(), // Stock symbol, required
       stockType: a.ref('StockType').required(), // Reference the StockType enum, required
       region: a.ref('Region').required(),   // Reference the Region enum, required
+      stockTrend: a.ref('StockTrend'), // Reference the StockTrend enum, optional
       name: a.string(), // Stock name, optional
       pdp: a.float(),   // Price Drop Percent
       plr: a.float(),   // Profit Loss Ratio

@@ -13,6 +13,7 @@ export type PortfolioStockCreateInput = Omit<PortfolioStockDataType, 'id' | 'cre
 // ===== ENUM/DROPDOWN TYPES =====
 export type StockTypeValue = PortfolioStockDataType['stockType'];
 export type RegionValue = PortfolioStockDataType['region'];
+export type StockTrendValue = PortfolioStockDataType['stockTrend'];
 
 // ===== PRICE-RELATED TYPES =====
 export interface PriceData {
@@ -28,6 +29,7 @@ export interface PortfolioColumnVisibilityState {
   name: boolean;
   stockType: boolean;
   region: boolean;
+  stockTrend: boolean;
   currentPrice: boolean;
   pdp: boolean;
   htp: boolean;
@@ -45,6 +47,7 @@ export type SortableStockKey =
   | 'name'
   | 'stockType'
   | 'region'
+  | 'stockTrend'
   | 'currentPrice'
   | 'pdp'
   | 'htp'
@@ -143,6 +146,7 @@ export const STOCK_COLUMN_LABELS: Record<SortableStockKey, string> = {
   name: 'Name',
   stockType: 'Type',
   region: 'Region',
+  stockTrend: 'Trend',
   currentPrice: 'Last Price',
   pdp: 'PDP (%)',
   htp: 'HTP (%)',
@@ -156,6 +160,7 @@ export const PORTFOLIO_COLUMN_LABELS: Record<PortfolioColumnKey, string> = {
   name: 'Name',
   stockType: 'Type',
   region: 'Region',
+  stockTrend: 'Trend',
   currentPrice: 'Last Price',
   pdp: 'PDP (%)',
   htp: 'HTP (%)',

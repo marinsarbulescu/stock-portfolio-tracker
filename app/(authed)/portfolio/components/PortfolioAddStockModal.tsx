@@ -11,6 +11,7 @@ import type {
   PortfolioStockCreateInput,
   StockTypeValue,
   RegionValue,
+  StockTrendValue,
   AddStockModalProps,
 } from '../types';
 
@@ -27,6 +28,7 @@ export default function AddStockModal({
   const [symbol, setSymbol] = useState('');
   const [stockType, setStockType] = useState<StockTypeValue>('Stock');
   const [region, setRegion] = useState<RegionValue>('US');
+  const [stockTrend, setStockTrend] = useState<StockTrendValue>(null);
   const [name, setName] = useState('');
   const [pdp, setPdp] = useState('');
   const [plr, setPlr] = useState('');
@@ -44,6 +46,7 @@ export default function AddStockModal({
       setSymbol('');
       setStockType('Stock');
       setRegion('US');
+      setStockTrend(null);
       setName('');
       setPdp('');
       setPlr('');
@@ -89,6 +92,7 @@ export default function AddStockModal({
       symbol: symbol.toUpperCase(),
       stockType: stockType as StockTypeValue,
       region: region as RegionValue,
+      stockTrend: stockTrend as StockTrendValue,
       name: name || undefined,
       pdp: pdp ? parseFloat(pdp) : null,
       plr: plr ? parseFloat(plr) : null,
@@ -188,6 +192,22 @@ export default function AddStockModal({
               <option value="APAC">APAC</option>
               <option value="EU">EU</option>
               <option value="Intl">Intl</option>
+            </select>
+          </div>
+          
+          <div>
+            <label htmlFor="stockTrend" style={{display: 'block', marginBottom: '3px'}}>Trend (Optional):</label>
+            <select 
+              id="stockTrend" 
+              value={stockTrend || ''} 
+              onChange={(e) => setStockTrend(e.target.value as StockTrendValue || null)} 
+              disabled={isLoading}
+              style={{width: '100%', padding: '8px'}}
+            >
+              <option value="">-- No Selection --</option>
+              <option value="Up">Up</option>
+              <option value="Down">Down</option>
+              <option value="Sideways">Sideways</option>
             </select>
           </div>
           

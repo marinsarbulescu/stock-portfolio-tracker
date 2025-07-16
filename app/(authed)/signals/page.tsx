@@ -186,7 +186,7 @@ export default function HomePage() {
         try {
             const [stockResult, allTxnsData, walletResult] = await Promise.all([
                 client.models.PortfolioStock.list({
-                    selectionSet: ['id', 'symbol', 'pdp', 'name', 'budget', 'isHidden', 'archived', 'region', 'htp', 'stockCommission'], // Added htp and stockCommission fields
+                    selectionSet: ['id', 'symbol', 'pdp', 'name', 'budget', 'isHidden', 'archived', 'region', 'htp', 'stockCommission', 'stockTrend'], // Added htp, stockCommission, and stockTrend fields
                     filter: {
                         and: [
                             { isHidden: { ne: true } }, // not hidden

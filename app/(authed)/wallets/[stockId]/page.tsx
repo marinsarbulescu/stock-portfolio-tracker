@@ -953,7 +953,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
             //console.log(`Workspaceing symbol for stockId: ${stockId}`);
             client.models.PortfolioStock.get(
                 { id: stockId }, 
-                { selectionSet: ['symbol', 'name', 'budget', 'pdp', 'swingHoldRatio', 'plr', 'stockCommission', 'htp'] })
+                { selectionSet: ['symbol', 'name', 'budget', 'pdp', 'swingHoldRatio', 'plr', 'stockCommission', 'htp', 'stockTrend'] })
                 .then(({ data, errors }) => {
                     if (errors) {
                         //console.error("[StockWalletPage] - Error fetching stock symbol:", errors);
