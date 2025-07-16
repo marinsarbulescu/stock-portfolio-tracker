@@ -11,6 +11,22 @@ import type {
   SignalsTableProps 
 } from '../types';
 
+// Helper component for stock trend visual indicator
+const StockTrendIndicator: React.FC<{ stockTrend?: string | null }> = ({ stockTrend }) => {
+    if (!stockTrend || stockTrend === 'Sideways') return null;
+    
+    const dotStyle: React.CSSProperties = {
+        display: 'inline-block',
+        width: '8px',
+        height: '8px',
+        borderRadius: '50%',
+        marginLeft: '6px',
+        backgroundColor: stockTrend === 'Up' ? '#22c55e' : stockTrend === 'Down' ? '#ef4444' : 'transparent'
+    };
+    
+    return <span style={dotStyle} title={`Stock trend: ${stockTrend}`}></span>;
+};
+
 export default function SignalsTable({
     isLoading,
     reportColumnVisibility,
@@ -169,6 +185,7 @@ export default function SignalsTable({
                                         >
                                             {item.symbol}
                                         </Link>
+                                        <StockTrendIndicator stockTrend={item.stockTrend} />
                                     </td>                                
                                 {reportColumnVisibility.fiveDayDip && (
                                     <td style={{ padding: '5px' }}>

@@ -543,6 +543,7 @@ export default function HomePage() {
             return {
                 id: stockId,
                 symbol: symbol,
+                stockTrend: stock.stockTrend,
                 currentPrice: currentPrice,
                 fiveDayDip: fiveDayDipPercent,
                 lbd: lbdPercent,

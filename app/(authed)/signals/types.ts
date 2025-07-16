@@ -15,6 +15,7 @@ export interface PortfolioStockDataType {
   region?: string | null | undefined;
   htp?: number | null | undefined; // HTP percentage for Hold TP signal
   stockCommission?: number | null | undefined; // Commission percentage
+  stockTrend?: string | null | undefined; // Stock trend: "Down", "Up", "Sideways"
 }
 
 // Table column visibility state for signals table
@@ -35,6 +36,7 @@ export interface ReportColumnVisibilityState {
 export interface ReportDataItem {
   id: string;
   symbol: string;
+  stockTrend?: string | null; // Stock trend: "Down", "Up", "Sideways"
   currentPrice: number | null;
   fiveDayDip: number | null;
   lbd: number | null;
