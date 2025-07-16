@@ -116,21 +116,21 @@ export default function SignalsOverview({
 
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
                             <p>
-                                {formatCurrency(portfolioRealizedPL.totalSwingPlDollars??0)}
+                                {formatCurrencyWithProperNegative(portfolioRealizedPL.totalSwingPlDollars??0)}
                                 &nbsp;
                                 ({portfolioRealizedPL.avgSwingPlPercent !== null ? `${portfolioRealizedPL.avgSwingPlPercent.toFixed(PERCENT_PRECISION)}%` : 'N/A'})
                             </p>
 
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
                             <p>
-                                {formatCurrency(portfolioRealizedPL.totalHoldPlDollars??0)}
+                                {formatCurrencyWithProperNegative(portfolioRealizedPL.totalHoldPlDollars??0)}
                                 &nbsp;
                                 ({portfolioRealizedPL.avgHoldPlPercent !== null ? `${portfolioRealizedPL.avgHoldPlPercent.toFixed(PERCENT_PRECISION)}%` : 'N/A'})
                             </p>
 
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                             <p>
-                                {formatCurrency(portfolioRealizedPL.totalSwingPlDollars??0)}
+                                {formatCurrencyWithProperNegative(portfolioRealizedPL.totalStockPlDollars??0)}
                                 &nbsp;
                                 ({portfolioRealizedPL.avgStockPlPercent !== null ? `${portfolioRealizedPL.avgStockPlPercent.toFixed(PERCENT_PRECISION)}%` : 'N/A'})
                             </p>
@@ -153,21 +153,21 @@ export default function SignalsOverview({
                             
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
                             <p>
-                                {formatCurrency(portfolioUnrealizedPL.unrealizedSwingDollars??0)}
+                                {formatCurrencyWithProperNegative(portfolioUnrealizedPL.unrealizedSwingDollars??0)}
                                 &nbsp;
                                 ({formatPercent(portfolioUnrealizedPL.unrealizedSwingPercent)})
                             </p>
 
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
                             <p>
-                                {formatCurrency(portfolioUnrealizedPL.unrealizedHoldDollars??0)}
+                                {formatCurrencyWithProperNegative(portfolioUnrealizedPL.unrealizedHoldDollars??0)}
                                 &nbsp;
                                 ({formatPercent(portfolioUnrealizedPL.unrealizedHoldPercent)})
                             </p>
 
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                             <p>
-                                {formatCurrency(portfolioUnrealizedPL.unrealizedTotalDollars??0)}
+                                {formatCurrencyWithProperNegative(portfolioUnrealizedPL.unrealizedTotalDollars??0)}
                                 &nbsp;
                                 ({formatPercent(portfolioUnrealizedPL.unrealizedTotalPercent)})
                             </p>
@@ -190,21 +190,21 @@ export default function SignalsOverview({
                             
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
                             <p>
-                                {formatCurrency(portfolioTotalPL.totalSwingDollars??0)}
+                                {formatCurrencyWithProperNegative(portfolioTotalPL.totalSwingDollars??0)}
                                 &nbsp;
                                 ({formatPercent(portfolioTotalPL.totalSwingPercent)})
                             </p>
 
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
                             <p>
-                                {formatCurrency(portfolioTotalPL.totalHoldDollars??0)}
+                                {formatCurrencyWithProperNegative(portfolioTotalPL.totalHoldDollars??0)}
                                 &nbsp;
                                 ({formatPercent(portfolioTotalPL.totalHoldPercent)})
                             </p>
 
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                             <p>
-                                {formatCurrency(portfolioTotalPL.totalStockDollars??0)}
+                                {formatCurrencyWithProperNegative(portfolioTotalPL.totalStockDollars??0)}
                                 &nbsp;
                                 ({formatPercent(portfolioTotalPL.totalStockPercent)})
                             </p>
