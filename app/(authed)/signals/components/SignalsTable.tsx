@@ -176,6 +176,7 @@ export default function SignalsTable({
                                         </button>
                                     </td>
                                     <td style={{ padding: '5px' }}>
+                                        <StockTrendIndicator stockTrend={item.stockTrend} />&nbsp;
                                         <Link
                                             href={`/wallets/${item.id}`}
                                             style={{
@@ -184,8 +185,7 @@ export default function SignalsTable({
                                             }}
                                         >
                                             {item.symbol}
-                                        </Link>
-                                        <StockTrendIndicator stockTrend={item.stockTrend} />
+                                        </Link>                                        
                                     </td>                                
                                 {reportColumnVisibility.fiveDayDip && (
                                     <td style={{ padding: '5px' }}>
