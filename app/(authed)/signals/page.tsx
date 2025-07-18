@@ -579,6 +579,7 @@ export default function HomePage() {
 
         return {
             totalBudget: parseFloat(totalBudget.toFixed(CURRENCY_PRECISION)),
+            totalInvested: parseFloat(totalTiedUpInvestment.toFixed(CURRENCY_PRECISION)),
             budgetLeft: parseFloat(budgetLeft.toFixed(CURRENCY_PRECISION)),
         };
     }, [portfolioStocks, allWallets]);

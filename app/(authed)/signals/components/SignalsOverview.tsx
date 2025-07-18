@@ -66,20 +66,14 @@ export default function SignalsOverview({
                                     maximumFractionDigits: CURRENCY_PRECISION,
                                 })}
                             </p>
-                            
-                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Available</p>
+
+                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Invested</p>
                             <p>
-                                {portfolioBudgetStats.budgetLeft >= 0 
-                                    ? `$${portfolioBudgetStats.budgetLeft.toLocaleString(undefined, {
-                                        minimumFractionDigits: CURRENCY_PRECISION,
-                                        maximumFractionDigits: CURRENCY_PRECISION,
-                                    })}`
-                                    : `-$${Math.abs(portfolioBudgetStats.budgetLeft).toLocaleString(undefined, {
-                                        minimumFractionDigits: CURRENCY_PRECISION,
-                                        maximumFractionDigits: CURRENCY_PRECISION,
-                                    })}`
-                                }
-                            </p>                             
+                                ${portfolioBudgetStats.totalInvested.toLocaleString(undefined, {
+                                    minimumFractionDigits: CURRENCY_PRECISION,
+                                    maximumFractionDigits: CURRENCY_PRECISION,
+                                })}
+                            </p>                            
                         </div>
 
                         <div>

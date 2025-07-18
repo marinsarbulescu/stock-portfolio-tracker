@@ -69,18 +69,24 @@ export default function WalletsOverview({
                     <p>{formatCurrency(stockBudget ?? 0)}</p>
                   </div>
                   <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Available</p>
-                    <p>{formatCurrency((stockBudget ?? 0) - totalTiedUpInvestment)}</p>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Invested</p>
+                    <p>{formatCurrency(totalTiedUpInvestment)}</p>
                   </div>
                 </div>
-                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Price Drop Percent (PDP)</p>
-                <p>{stockPdp != null ? `${stockPdp}%` : 'Not set'}</p>
-                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing-Hold Ratio (SHR)</p>
-                <p>{stockShr != null ? `${stockShr}% Swing` : 'Not set'}</p>
-                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Profit-Loss Ratio (PLR)</p>
-                <p>{stockPlr != null ? stockPlr : 'Not set'}</p>
-                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold Take Profit (HTP)</p>
-                <p>{stockHtp != null ? `${stockHtp}%` : 'Not set'}</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                    <div>
+                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>PDP</p>
+                      <p>{stockPdp != null ? `${stockPdp}%` : 'Not set'}</p>
+                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>SHR</p>
+                      <p>{stockShr != null ? `${stockShr}% Swing` : 'Not set'}</p>
+                    </div>
+                    <div>
+                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>PLR</p>
+                      <p>{stockPlr != null ? stockPlr : 'Not set'}</p>
+                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>HTP</p>
+                      <p>{stockHtp != null ? `${stockHtp}%` : 'Not set'}</p>
+                    </div>
+                </div>
               </div>
 
               <div>

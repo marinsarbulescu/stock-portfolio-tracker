@@ -78,6 +78,7 @@ export interface SortConfig<K extends string | number | symbol> {
 // Portfolio budget statistics
 export interface PortfolioBudgetStats {
   totalBudget: number;
+  totalInvested: number;
   budgetLeft: number;
 }
 
