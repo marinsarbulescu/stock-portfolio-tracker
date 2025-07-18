@@ -1,0 +1,34 @@
+Wallets
+    
+    Add transaction & verify wallets ✅
+    npx playwright test e2e/wallets/wallet-add-transaction.spec.ts --headed
+        For each transaction type (Split, Swing, Hold):
+            Add transaction
+            Verify wallets
+    
+    Delete transaction & verify wallets ✅
+    npx playwright test e2e/wallets/wallet-delete-transaction.spec.ts --headed
+        For each transaction type (Split, Swing, Hold):
+            Add transaction
+            Delete transaction
+            Verify wallets
+
+    Same-price transactions & verify wallet behavior ✅
+    npx playwright test e2e/wallets/wallet-same-price-transactions.spec.ts --headed
+        Test that transactions with the same price update existing wallets instead of creating new ones:
+            Add Transaction A (Split, $100, $200) - creates initial wallets
+            Add Transaction B (Swing, $100, $300) - updates existing Swing wallet
+            Add Transaction C (Hold, $100, $400) - updates existing Hold wallet  
+            Add Transaction D (Split, $100, $500) - updates both existing wallets
+            Verify no new wallets are created, only existing ones are updated
+
+Portfolio
+
+    Create and edit stock ✅
+    npx playwright test e2e/portfolio/portfolio-create-and-edit-stock.spec.ts --headed
+        Create stock with initial attributes
+        Edit stock with new attributes
+        Verify stock appears correctly in portfolio table
+        Verify changes are persisted and displayed correctly
+
+    
