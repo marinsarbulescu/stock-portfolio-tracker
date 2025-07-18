@@ -11,4 +11,15 @@ export const SHARE_EPSILON: number = 1 / (10**(SHARE_PRECISION + 2)); // e.g., 0
 export const CURRENCY_EPSILON: number = 1 / (10**(CURRENCY_PRECISION + 2)); // e.g., 0.0001
 export const PERCENT_EPSILON: number = 1 / (10**(PERCENT_PRECISION + 2)); // e.g., 0.0001
 
+// DynamoDB Query Limits
+// Note: These limits affect how many records DynamoDB scans before filtering,
+// not just how many records are returned. Higher limits needed when filtering
+// for specific transaction types (e.g., finding last buy when recent records are sells)
+
 export const FETCH_LIMIT_FOR_UNIQUE_WALLET = 1000;
+export const FETCH_LIMIT_TRANSACTIONS_PAGINATED = 5000; // For large transaction fetches with pagination
+export const FETCH_LIMIT_TRANSACTIONS_STANDARD = 1000; // For standard transaction queries
+export const FETCH_LIMIT_STOCKS_STANDARD = 1000; // For portfolio stock queries
+export const FETCH_LIMIT_WALLETS_GENEROUS = 3000; // For wallet queries that need generous limits
+export const FETCH_LIMIT_WALLETS_CANDIDATES = 500; // For wallet candidate searches
+export const FETCH_LIMIT_SMALL_QUERIES = 100; // For smaller, targeted queries

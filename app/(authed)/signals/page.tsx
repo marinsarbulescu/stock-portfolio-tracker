@@ -24,6 +24,9 @@ import {
     CURRENCY_PRECISION,
     PERCENT_PRECISION,
     SHARE_EPSILON,
+    FETCH_LIMIT_TRANSACTIONS_PAGINATED,
+    FETCH_LIMIT_STOCKS_STANDARD,
+    FETCH_LIMIT_WALLETS_GENEROUS
     //CURRENCY_EPSILON,
     //PERCENT_EPSILON // Import if your logic uses it
 } from '@/app/config/constants';
@@ -150,7 +153,7 @@ export default function HomePage() {
 
                 const listResult: TransactionListResultType = await client.models.Transaction.list({
                     nextToken: currentToken,
-                    limit: 5000, // Fetch larger chunks
+                    limit: FETCH_LIMIT_TRANSACTIONS_PAGINATED, // Fetch larger chunks
                     selectionSet: selectionSetNeeded // Use defined selectionSet
                 });
 
@@ -193,7 +196,7 @@ export default function HomePage() {
                             { archived: { ne: true } }  // not archived
                         ]
                     },
-                    limit: 1000
+                    limit: FETCH_LIMIT_STOCKS_STANDARD
                 }),
                 fetchAllPaginatedTransactions(), // Call the pagination helper
 
@@ -210,7 +213,7 @@ export default function HomePage() {
                         'totalInvestment', // Add this for budget calculations
                         'totalSharesQty' // Add this for budget calculations
                     ],
-                    limit: 3000 // Adjust limit generously for wallets
+                    limit: FETCH_LIMIT_WALLETS_GENEROUS // Adjust limit generously for wallets
                 })
             ]);
 

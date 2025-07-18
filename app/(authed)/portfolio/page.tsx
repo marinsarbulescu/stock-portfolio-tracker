@@ -15,7 +15,8 @@ import {
   PERCENT_PRECISION,
   SHARE_EPSILON,
   CURRENCY_EPSILON,
-  PERCENT_EPSILON
+  PERCENT_EPSILON,
+  FETCH_LIMIT_STOCKS_STANDARD
 } from '@/app/config/constants';
 
 // Import the new components
@@ -125,7 +126,7 @@ function PortfolioContent() {
   const fetchWallets = useCallback(async () => {
     try {
       const { data, errors } = await client.models.StockWallet.list({
-        limit: 1000,
+        limit: FETCH_LIMIT_STOCKS_STANDARD,
         selectionSet: ['id', 'portfolioStockId', 'remainingShares', 'buyPrice'],
       });
       if (!errors && data) {

@@ -30,7 +30,10 @@ import {
     PERCENT_PRECISION,
     SHARE_EPSILON,
     CURRENCY_EPSILON,
-    FETCH_LIMIT_FOR_UNIQUE_WALLET
+    FETCH_LIMIT_FOR_UNIQUE_WALLET,
+    FETCH_LIMIT_TRANSACTIONS_STANDARD,
+    FETCH_LIMIT_SMALL_QUERIES,
+    FETCH_LIMIT_WALLETS_CANDIDATES
 } from '@/app/config/constants';
 import WalletsSellTransactionModal from './components/WalletsSellTransactionModal';
 
@@ -336,7 +339,7 @@ export default function StockWalletPage() {
                 const result = await client.models.StockWallet.list({
                     filter: { portfolioStockId: { eq: stockId } }, // Filter by stockId
                     selectionSet: selectionSetNeeded,
-                    limit: 1000
+                    limit: FETCH_LIMIT_TRANSACTIONS_STANDARD
                 });
 
                 //console.log(`[StockWalletPage] - [fetchWallets] Raw API result after edit/add:`, JSON.stringify(result, null, 2));
@@ -406,7 +409,7 @@ export default function StockWalletPage() {
                 const listResult: TransactionListResultType = await client.models.Transaction.list({
                     filter: { portfolioStockId: { eq: stockId } },
                     nextToken: currentToken,
-                    limit: 100, // Adjust limit as needed
+                    limit: FETCH_LIMIT_SMALL_QUERIES, // Adjust limit as needed
                     selectionSet: selectionSetNeeded, // Fetch required fields
                 });
 
@@ -846,7 +849,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                         const { data: candidates, errors: listErrors } = await client.models.StockWallet.list({
                             filter: { and: [ { portfolioStockId: { eq: stockId } }, { walletType: { eq: type } } ] },
                             selectionSet: ['id', 'buyPrice', 'sharesSold', 'sellTxnCount', 'totalSharesQty', 'totalInvestment', 'remainingShares'],
-                            limit: 500
+                            limit: FETCH_LIMIT_WALLETS_CANDIDATES
                         });
                         if (listErrors) { throw listErrors; } // Propagate list errors
 
