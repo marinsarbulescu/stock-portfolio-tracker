@@ -847,7 +847,7 @@ export async function deleteTransaction(page: Page) {
     await page.waitForTimeout(1000);
     
     // Find the delete button for the transaction (should be the first/only one)
-    const deleteButton = page.locator('[data-testid^="transaction-delete-button-"]').first();
+    const deleteButton = page.locator('[data-testid^="wallets-transaction-table-txn-delete-button-"]').first();
     await expect(deleteButton).toBeVisible({ timeout: 10000 });
     console.log(`[PageHelper] Delete button found, clicking...`);
     

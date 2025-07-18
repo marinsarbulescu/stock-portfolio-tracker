@@ -277,7 +277,7 @@ test.describe('Wallet Page - Delete Transactions and Verify Wallets', () => {
             await expect(holdNotFoundAfterDelete).toBeVisible();
             console.log(`[${scenarioName}] Hold wallet removed after deletion.`);
               // Verify no transactions remain
-            const noTransactionsMessage = page.locator('[data-testid="no-transactions-message"]');
+            const noTransactionsMessage = page.locator('[data-testid="wallets-transaction-table-no-transactions-message"]');
             await expect(noTransactionsMessage).toBeVisible();
             await expect(noTransactionsMessage).toContainText('No transactions found for this stock.');
             console.log(`[${scenarioName}] Transaction removal confirmed.`);
