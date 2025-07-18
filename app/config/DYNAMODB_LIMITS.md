@@ -46,10 +46,10 @@ If you want to find the "last buy transaction" with `limit: 1`, but the last 3 r
 - **Usage**: `wallets/[stockId]/page.tsx`
 - **Reason**: Sufficient for finding wallet matches with price tolerance
 
-### `FETCH_LIMIT_SMALL_QUERIES = 100`
-- **Purpose**: Small, targeted queries
+### `FETCH_LIMIT_SMALL_QUERIES = 5000`
+- **Purpose**: Paginated queries for single-stock transactions
 - **Usage**: `wallets/[stockId]/page.tsx`
-- **Reason**: Efficient for limited-scope queries
+- **Reason**: Efficient pagination for single-stock transaction fetching, future-proof for portfolio growth
 
 ## Best Practices
 
