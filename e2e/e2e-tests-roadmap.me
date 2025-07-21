@@ -22,6 +22,18 @@ Wallets
             Add Transaction D (Split, $100, $500) - updates both existing wallets
             Verify no new wallets are created, only existing ones are updated
 
+    Update transaction price & verify wallet behavior ✅
+    npx playwright test e2e/wallets/wallet-update-transactions-price.spec.ts --headed
+        JSON-based test with comprehensive wallet detail validation using restructured readable format:
+            Uses wallet-update-transactions-price.json with step-based structure (AddTransactionA/B, UpdateTransactionA/B)
+            Each step defines input (date, type, signal, price/newPrice) and output (expected wallet states)
+            Add Transaction A ($100, $200) - verify exact Buy Price, Investment, Shares Left
+            Add Transaction B ($100, $300) - verify updated wallet details, ensure only 2 wallets exist
+            Edit Transaction A to $10 - verify new $10 wallets created, original $100 wallets updated
+            Edit Transaction B to $8 - verify new $8 wallets created, $100 wallets removed, still 4 total wallets
+            Comprehensive validation of Buy Price, Investment, and Shares Left for each wallet state
+            Enhanced with verifyTransactionStepWallets helper for automated validation
+
 Portfolio
 
     Create and edit stock ✅

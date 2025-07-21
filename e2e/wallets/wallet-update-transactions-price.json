@@ -1,0 +1,146 @@
+{
+  "scenarioName": "UpdateTransactionPrice",
+  "stock": {
+    "symbol": "E2EUTP",
+    "name": "E2E Update Transaction Price",
+    "stockType": "ETF",
+    "region": "US",
+    "pdp": 5,
+    "plr": 2,
+    "budget": 600,
+    "swingHoldRatio": 30,
+    "commission": 0,
+    "htp": 12
+  },
+  "transactions": {
+    "AddTransactionA": {
+      "input": {
+        "date": "2025-07-18",
+        "type": "Split",
+        "signal": "Initial",
+        "price": 100,
+        "investment": 200
+      },
+      "output": {
+        "wallets": {
+          "swing": {
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 60,
+              "sharesLeft": 0.60000
+            }
+          },
+          "hold": {
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 140,
+              "sharesLeft": 1.40000
+            }
+          }
+        }
+      }
+    },
+    "AddTransactionB": {
+      "input": {
+        "date": "2025-07-18",
+        "type": "Split",
+        "signal": "Initial",
+        "price": 100,
+        "investment": 300
+      },
+      "output": {
+        "wallets": {
+          "swing": {
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 150,
+              "sharesLeft": 1.50000
+            }
+          },
+          "hold": {
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 350,
+              "sharesLeft": 3.50000
+            }
+          }
+        }
+      }
+    },
+    "UpdateTransactionA": {
+      "input": {
+        "date": "2025-07-18",
+        "type": "Split",
+        "signal": "Initial",
+        "newPrice": 10
+      },
+      "output": {
+        "wallets": {
+          "swing": {
+            "wallet10": {
+              "buyPrice": 10,
+              "investment": 60,
+              "sharesLeft": 6.00000
+            },
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 90,
+              "sharesLeft": 0.90000
+            }
+          },
+          "hold": {
+            "wallet10": {
+              "buyPrice": 10,
+              "investment": 140,
+              "sharesLeft": 14.00000
+            },
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 210,
+              "sharesLeft": 2.10000
+            }
+          }
+        }
+      }
+    },
+    "UpdateTransactionB": {
+      "input": {
+        "date": "2025-07-18",
+        "type": "Split",
+        "signal": "Initial",
+        "newPrice": 8
+      },
+      "output": {
+        "wallets": {
+          "swing": {
+            "wallet10": {
+              "buyPrice": 10,
+              "investment": 60,
+              "sharesLeft": 6.00000
+            },
+            "wallet8": {
+              "buyPrice": 8,
+              "investment": 90,
+              "sharesLeft": 11.25000
+            }
+          },
+          "hold": {
+            "wallet10": {
+              "buyPrice": 10,
+              "investment": 140,
+              "sharesLeft": 14.00000
+            },
+            "wallet8": {
+              "buyPrice": 8,
+              "investment": 210,
+              "sharesLeft": 26.25000
+            },
+            "wallet100": {
+              "deleted": true
+            }
+          }
+        }
+      }
+    }
+  }
+}
