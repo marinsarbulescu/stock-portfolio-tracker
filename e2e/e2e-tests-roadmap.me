@@ -2,9 +2,13 @@ Wallets
     
     Add transaction & verify wallets ✅
     npx playwright test e2e/wallets/wallet-add-transaction.spec.ts --headed
-        For each transaction type (Split, Swing, Hold):
-            Add transaction
-            Verify wallets
+        JSON-driven approach using wallet-add-transaction.json configuration:
+            SplitBuyInitial ($100, $200) - Creates initial Split (70%) and Hold (30%) wallets
+            SwingBuyCust ($250, $400) - Adds new Swing wallet, preserves existing wallets
+            HoldBuyEOM ($900, $350) - Adds new Hold wallet, preserves existing wallets  
+            AnotherSplitBuy ($500.34, $100) - Creates new Split/Hold wallets for new price
+            Comprehensive cumulative validation of Buy Price, Investment, and Shares across all steps
+            Enhanced wallet verification functions for automated multi-scenario testing
     
     Delete transaction & verify wallets ✅
     npx playwright test e2e/wallets/wallet-delete-transaction.spec.ts --headed
@@ -24,7 +28,7 @@ Wallets
 
     Update transaction price & verify wallet behavior ✅
     npx playwright test e2e/wallets/wallet-update-transactions-price.spec.ts --headed
-        JSON-based test with comprehensive wallet detail validation using restructured readable format:
+        Update the price of existing transactions and verify the wallets:
             Uses wallet-update-transactions-price.json with step-based structure (AddTransactionA/B, UpdateTransactionA/B)
             Each step defines input (date, type, signal, price/newPrice) and output (expected wallet states)
             Add Transaction A ($100, $200) - verify exact Buy Price, Investment, Shares Left

@@ -17,6 +17,7 @@ export interface TransactionStep {
         price?: number;
         investment?: number;
         newPrice?: number;
+        action?: 'Buy' | 'Sell';
     };
     output: {
         wallets: {
@@ -29,14 +30,14 @@ export interface TransactionStep {
 export interface StockConfig {
     symbol: string;
     name: string;
-    stockType: string;
-    region: string;
+    stockType: 'Stock' | 'ETF' | 'Crypto';
+    region: 'APAC' | 'EU' | 'Intl' | 'US';
     pdp: number;
     plr: number;
     budget: number;
     swingHoldRatio: number;
     commission: number;
-    htp: number;
+    htp?: number;
 }
 
 export interface TestConfig {
@@ -48,6 +49,12 @@ export interface TestConfig {
         UpdateTransactionA: TransactionStep;
         UpdateTransactionB: TransactionStep;
     };
+}
+
+export interface AddTransactionTestConfig {
+    scenario: string;
+    stock: StockConfig;
+    transactions: Record<string, TransactionStep>;
 }
 
 export function loadTestData(fileName: string): TestConfig {
@@ -64,6 +71,26 @@ export function loadTestData(fileName: string): TestConfig {
     try {
         const data = JSON.parse(fileContent) as TestConfig;
         console.log(`[jsonHelper.ts] Successfully parsed JSON for scenario: ${data.scenarioName}`);
+        return data;
+    } catch (error) {
+        throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
+    }
+}
+
+export function loadAddTransactionTestData(fileName: string): AddTransactionTestConfig {
+    const filePath = path.resolve(process.cwd(), fileName);
+    console.log(`[jsonHelper.ts] Attempting to load Add Transaction JSON from: ${filePath}`);
+    
+    if (!fs.existsSync(filePath)) {
+        throw new Error(`JSON file not found: ${filePath}`);
+    }
+    
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    console.log(`[jsonHelper.ts] File content read successfully. Length: ${fileContent.length}`);
+    
+    try {
+        const data = JSON.parse(fileContent) as AddTransactionTestConfig;
+        console.log(`[jsonHelper.ts] Successfully parsed JSON for scenario: ${data.scenario}`);
         return data;
     } catch (error) {
         throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);

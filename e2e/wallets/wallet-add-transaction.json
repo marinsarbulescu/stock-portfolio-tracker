@@ -1,0 +1,164 @@
+{
+  "scenario": "AddTransaction",
+  "stock": {
+    "symbol": "E2EATXJSON",
+    "name": "E2EATXJSON Global Ventures",
+    "stockType": "Stock",
+    "region": "US",
+    "pdp": 5,
+    "plr": 2,
+    "budget": 600,
+    "swingHoldRatio": 70,
+    "commission": 0.1,
+    "htp": 0
+  },
+  "transactions": {
+    "SplitBuyInitial": {
+      "input": {
+        "date": "2025-05-15",
+        "action": "Buy",
+        "type": "Split",
+        "signal": "Initial",
+        "price": 100,
+        "investment": 200
+      },
+      "output": {
+        "wallets": {
+          "swing": {
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 140,
+              "sharesLeft": 1.4
+            }
+          },
+          "hold": {
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 60,
+              "sharesLeft": 0.6
+            }
+          }
+        }
+      }
+    },
+    "SwingBuyCust": {
+      "input": {
+        "date": "2025-05-16",
+        "action": "Buy",
+        "type": "Swing",
+        "signal": "Cust",
+        "price": 250,
+        "investment": 400
+      },
+      "output": {
+        "wallets": {
+          "swing": {
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 140,
+              "sharesLeft": 1.4
+            },
+            "wallet250": {
+              "buyPrice": 250,
+              "investment": 400,
+              "sharesLeft": 1.6
+            }
+          },
+          "hold": {
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 60,
+              "sharesLeft": 0.6
+            }
+          }
+        }
+      }
+    },
+    "HoldBuyEOM": {
+      "input": {
+        "date": "2025-05-17",
+        "action": "Buy",
+        "type": "Hold",
+        "signal": "EOM",
+        "price": 900,
+        "investment": 350
+      },
+      "output": {
+        "wallets": {
+          "swing": {
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 140,
+              "sharesLeft": 1.4
+            },
+            "wallet250": {
+              "buyPrice": 250,
+              "investment": 400,
+              "sharesLeft": 1.6
+            }
+          },
+          "hold": {
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 60,
+              "sharesLeft": 0.6
+            },
+            "wallet900": {
+              "buyPrice": 900,
+              "investment": 350,
+              "sharesLeft": 0.38889
+            }
+          }
+        }
+      }
+    },
+    "AnotherSplitBuy": {
+      "input": {
+        "date": "2025-05-18",
+        "action": "Buy",
+        "type": "Split",
+        "signal": "_5DD",
+        "price": 500.34,
+        "investment": 100
+      },
+      "output": {
+        "wallets": {
+          "swing": {
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 140,
+              "sharesLeft": 1.4
+            },
+            "wallet250": {
+              "buyPrice": 250,
+              "investment": 400,
+              "sharesLeft": 1.6
+            },
+            "wallet500": {
+              "buyPrice": 500.34,
+              "investment": 70,
+              "sharesLeft": 0.13990
+            }
+          },
+          "hold": {
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 60,
+              "sharesLeft": 0.6
+            },
+            "wallet900": {
+              "buyPrice": 900,
+              "investment": 350,
+              "sharesLeft": 0.38889
+            },
+            "wallet500": {
+              "buyPrice": 500.34,
+              "investment": 30,
+              "sharesLeft": 0.05996
+            }
+          }
+        }
+      }
+    }
+  }
+}
