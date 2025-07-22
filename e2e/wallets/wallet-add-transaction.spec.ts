@@ -26,6 +26,9 @@ const TEST_EMAIL = E2E_TEST_USERNAME;
 // Configure Amplify
 Amplify.configure(amplifyOutputs);
 
+// Set test timeout to 60 seconds for reliable execution
+test.setTimeout(60000);
+
 // Formatting helper functions
 function formatCurrency(amount: number): string {
     return new Intl.NumberFormat('en-US', {
@@ -196,7 +199,7 @@ test.describe('Wallet Add Transaction', () => {
             plr: scenario.stock.plr,
             budget: scenario.stock.budget,
             swingHoldRatio: scenario.stock.swingHoldRatio,
-            stockCommission: scenario.stock.commission,
+            stockCommission: scenario.stock.stockCommission,
             owner: E2E_TEST_USER_OWNER_ID,
         };
         

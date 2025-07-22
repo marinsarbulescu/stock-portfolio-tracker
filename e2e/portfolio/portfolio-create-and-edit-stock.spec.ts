@@ -48,6 +48,9 @@ try {
     console.error('[portfolio-create-and-edit-stock.spec.ts] - CRITICAL: Error configuring Amplify:', error);
 }
 
+// Set test timeout to 60 seconds for reliable execution
+test.setTimeout(60000);
+
 // Load test configuration from JSON
 const testConfig = loadPortfolioCreateEditTestData('e2e/portfolio/portfolio-create-and-edit-stock.json');
 

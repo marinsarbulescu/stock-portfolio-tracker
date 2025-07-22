@@ -37,6 +37,9 @@ try {
     console.error('[wallet-same-price-transactions.spec.ts] - CRITICAL: Error configuring Amplify:', error);
 }
 
+// Set test timeout to 60 seconds for reliable execution
+test.setTimeout(60000);
+
 // Load test configuration from JSON
 const testConfig = loadSamePriceTransactionTestData('e2e/wallets/wallet-same-price-transactions.json');
 

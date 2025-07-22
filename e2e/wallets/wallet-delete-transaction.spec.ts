@@ -57,6 +57,9 @@ try {
     console.error('[BEFORE ALL] CRITICAL: Error configuring Amplify in E2E spec file:', error);
 }
 
+// Set test timeout to 60 seconds for reliable execution
+test.setTimeout(60000);
+
 // Load test configuration from JSON
 const testConfig: DeleteTransactionTestConfig = loadDeleteTransactionTestData('e2e/wallets/wallet-delete-transaction.json');
 

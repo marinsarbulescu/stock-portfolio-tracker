@@ -1,59 +1,54 @@
-e2e-tests-formulas.xlsx
+- All tests have the values defined in JSON files.
+- The JSON values have been caculated by AI based on the app logic, and they match the user logic in the e2e-tests-formulas.xlsx
+
 
 Wallets
     
     Add transaction & verify wallets ✅
     npx playwright test e2e/wallets/wallet-add-transaction.spec.ts --headed
-        JSON-driven approach using wallet-add-transaction.json configuration:
-            SplitBuyInitial ($100, $200) - Creates initial Split (70%) and Hold (30%) wallets
-            SwingBuyCust ($250, $400) - Adds new Swing wallet, preserves existing wallets
-            HoldBuyEOM ($900, $350) - Adds new Hold wallet, preserves existing wallets  
-            AnotherSplitBuy ($500.34, $100) - Creates new Split/Hold wallets for new price
-            Comprehensive cumulative validation of Buy Price, Investment, and Shares across all steps
-            Enhanced wallet verification functions for automated multi-scenario testing
+        SplitBuyInitial ($100, $200) - Creates initial Split (70%) and Hold (30%) wallets
+        SwingBuyCust ($250, $400) - Adds new Swing wallet, preserves existing wallets
+        HoldBuyEOM ($900, $350) - Adds new Hold wallet, preserves existing wallets  
+        AnotherSplitBuy ($500.34, $100) - Creates new Split/Hold wallets for new price
+        Comprehensive cumulative validation of Buy Price, Investment, and Shares across all steps
+            nhanced wallet verification functions for automated multi-scenario testing
     
     Delete transaction & verify wallets ✅
     npx playwright test e2e/wallets/wallet-delete-transaction.spec.ts --headed
-        JSON-driven approach using wallet-delete-transaction.json configuration:
-            SplitTransactionAdd ($10, $200) - Creates Split (50%) and Hold (50%) wallets, then deletes transaction
-            SwingTransactionAdd ($25, $500) - Creates Swing wallet only, then deletes transaction
-            HoldTransactionAdd ($7, $350) - Creates Hold wallet only, then deletes transaction
-            Each scenario verifies wallet creation, transaction deletion, and wallet removal
-            Comprehensive validation of wallet states before and after deletion
+        SplitTransactionAdd ($10, $200) - Creates Split (50%) and Hold (50%) wallets, then deletes transaction
+        SwingTransactionAdd ($25, $500) - Creates Swing wallet only, then deletes transaction
+        HoldTransactionAdd ($7, $350) - Creates Hold wallet only, then deletes transaction
+        Each scenario verifies wallet creation, transaction deletion, and wallet removal
+        Comprehensive validation of wallet states before and after deletion
 
     Same-price transactions & verify wallet behavior ✅
     npx playwright test e2e/wallets/wallet-same-price-transactions.spec.ts --headed
-        Test that transactions with the same price update existing wallets instead of creating new ones:
-            Add Transaction A (Split, $100, $200) - creates initial wallets
-            Add Transaction B (Swing, $100, $300) - updates existing Swing wallet
-            Add Transaction C (Hold, $100, $400) - updates existing Hold wallet  
-            Add Transaction D (Split, $100, $500) - updates both existing wallets
-            Verify no new wallets are created, only existing ones are updated
+        Add Transaction A (Split, $100, $200) - creates initial wallets
+        Add Transaction B (Swing, $100, $300) - updates existing Swing wallet
+        Add Transaction C (Hold, $100, $400) - updates existing Hold wallet  
+        Add Transaction D (Split, $100, $500) - updates both existing wallets
+        Verify no new wallets are created, only existing ones are updated
 
     Update transaction price & verify wallet behavior ✅
     npx playwright test e2e/wallets/wallet-update-transactions-price.spec.ts --headed
-        Update the price of existing transactions and verify the wallets:
-            Uses wallet-update-transactions-price.json with step-based structure (AddTransactionA/B, UpdateTransactionA/B)
-            Each step defines input (date, type, signal, price/newPrice) and output (expected wallet states)
-            Add Transaction A ($100, $200) - verify exact Buy Price, Investment, Shares Left
-            Add Transaction B ($100, $300) - verify updated wallet details, ensure only 2 wallets exist
-            Edit Transaction A to $10 - verify new $10 wallets created, original $100 wallets updated
-            Edit Transaction B to $8 - verify new $8 wallets created, $100 wallets removed, still 4 total wallets
-            Comprehensive validation of Buy Price, Investment, and Shares Left for each wallet state
-            Enhanced with verifyTransactionStepWallets helper for automated validation
+        Add Transaction A ($100, $200) - verify exact Buy Price, Investment, Shares Left
+        Add Transaction B ($100, $300) - verify updated wallet details, ensure only 2 wallets exist
+        Edit Transaction A to $10 - verify new $10 wallets created, original $100 wallets updated
+        Edit Transaction B to $8 - verify new $8 wallets created, $100 wallets removed, still 4 total wallets
+        Comprehensive validation of Buy Price, Investment, and Shares Left for each wallet state
+        Enhanced with verifyTransactionStepWallets helper for automated validation
 
 Portfolio
 
     Create and edit stock ✅
     npx playwright test e2e/portfolio/portfolio-create-and-edit-stock.spec.ts --headed
-        JSON-driven approach using portfolio-create-and-edit-stock.json configuration:
-            CreateAndEditStock scenario with initialStock and editedStock configurations
-            Create stock (ETF, US, Up trend, PDP=3, PLR=2, Budget=$1200, Commission=$1, HTP=12)
-            Verify all initial stock attributes in portfolio table (symbol, name, type, region, trend, etc.)
-            Open edit modal and verify prefilled values match initial configuration
-            Edit stock (Stock, APAC, Down trend, PDP=4, PLR=3, Budget=$1000, Commission=$2, HTP=16)
-            Verify all updated stock attributes are correctly displayed in portfolio table
-            Comprehensive UI validation including column visibility, form interactions, and data persistence
-            Enhanced with proper cleanup and error handling for reliable test execution
+        CreateAndEditStock scenario with initialStock and editedStock configurations
+        Create stock (ETF, US, Up trend, PDP=3, PLR=2, Budget=$1200, Commission=$1, HTP=12)
+        Verify all initial stock attributes in portfolio table (symbol, name, type, region, trend, etc.)
+        Open edit modal and verify prefilled values match initial configuration
+        Edit stock (Stock, APAC, Down trend, PDP=4, PLR=3, Budget=$1000, Commission=$2, HTP=16)
+        Verify all updated stock attributes are correctly displayed in portfolio table
+        Comprehensive UI validation including column visibility, form interactions, and data persistence
+        Enhanced with proper cleanup and error handling for reliable test execution
 
     
