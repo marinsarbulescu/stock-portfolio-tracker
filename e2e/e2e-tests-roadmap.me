@@ -1,3 +1,5 @@
+e2e-tests-formulas.xlsx
+
 Wallets
     
     Add transaction & verify wallets ✅
@@ -12,10 +14,12 @@ Wallets
     
     Delete transaction & verify wallets ✅
     npx playwright test e2e/wallets/wallet-delete-transaction.spec.ts --headed
-        For each transaction type (Split, Swing, Hold):
-            Add transaction
-            Delete transaction
-            Verify wallets
+        JSON-driven approach using wallet-delete-transaction.json configuration:
+            SplitTransactionAdd ($10, $200) - Creates Split (50%) and Hold (50%) wallets, then deletes transaction
+            SwingTransactionAdd ($25, $500) - Creates Swing wallet only, then deletes transaction
+            HoldTransactionAdd ($7, $350) - Creates Hold wallet only, then deletes transaction
+            Each scenario verifies wallet creation, transaction deletion, and wallet removal
+            Comprehensive validation of wallet states before and after deletion
 
     Same-price transactions & verify wallet behavior ✅
     npx playwright test e2e/wallets/wallet-same-price-transactions.spec.ts --headed

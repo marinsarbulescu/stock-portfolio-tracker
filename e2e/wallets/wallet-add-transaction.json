@@ -9,7 +9,7 @@
     "plr": 2,
     "budget": 600,
     "swingHoldRatio": 70,
-    "commission": 0.1,
+    "stockCommission": 0.1,
     "htp": 0
   },
   "transactions": {

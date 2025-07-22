@@ -1,0 +1,122 @@
+{
+  "scenario": "DeleteTransaction",
+  "stock": {
+    "symbol": "E2EDELJSON",
+    "name": "E2E Delete Transaction Test Stock",
+    "stockType": "Stock",
+    "region": "US",
+    "pdp": 5,
+    "plr": 2,
+    "budget": 600,
+    "swingHoldRatio": 50,
+    "stockCommission": 0.1,
+    "htp": 0
+  },
+  "transactions": {
+    "SplitTransactionAdd": {
+      "input": {
+        "date": "2025-05-15",
+        "action": "Buy",
+        "type": "Split",
+        "signal": "Initial",
+        "price": 10,
+        "investment": 200
+      },
+      "output": {
+        "wallets": {
+          "swing": {
+            "wallet10": {
+              "buyPrice": 10,
+              "investment": 100,
+              "sharesLeft": 10
+            }
+          },
+          "hold": {
+            "wallet10": {
+              "buyPrice": 10,
+              "investment": 100,
+              "sharesLeft": 10
+            }
+          }
+        }
+      }
+    },
+    "SplitTransactionDelete": {
+      "input": {
+        "action": "Delete"
+      },
+      "output": {
+        "wallets": {
+          "swing": {},
+          "hold": {}
+        }
+      }
+    },
+    "SwingTransactionAdd": {
+      "input": {
+        "date": "2025-05-16",
+        "action": "Buy",
+        "type": "Swing",
+        "signal": "Cust",
+        "price": 25,
+        "investment": 500
+      },
+      "output": {
+        "wallets": {
+          "swing": {
+            "wallet25": {
+              "buyPrice": 25,
+              "investment": 500,
+              "sharesLeft": 20
+            }
+          },
+          "hold": {}
+        }
+      }
+    },
+    "SwingTransactionDelete": {
+      "input": {
+        "action": "Delete"
+      },
+      "output": {
+        "wallets": {
+          "swing": {},
+          "hold": {}
+        }
+      }
+    },
+    "HoldTransactionAdd": {
+      "input": {
+        "date": "2025-05-17",
+        "action": "Buy",
+        "type": "Hold",
+        "signal": "EOM",
+        "price": 7,
+        "investment": 350
+      },
+      "output": {
+        "wallets": {
+          "swing": {},
+          "hold": {
+            "wallet7": {
+              "buyPrice": 7,
+              "investment": 350,
+              "sharesLeft": 50
+            }
+          }
+        }
+      }
+    },
+    "HoldTransactionDelete": {
+      "input": {
+        "action": "Delete"
+      },
+      "output": {
+        "wallets": {
+          "swing": {},
+          "hold": {}
+        }
+      }
+    }
+  }
+}

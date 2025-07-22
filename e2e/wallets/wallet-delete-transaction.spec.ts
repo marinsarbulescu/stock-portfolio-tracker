@@ -1,13 +1,14 @@
 // e2e/wallets/wallet-delete-transaction.spec.ts
 
 // This Playwright test suite verifies the deletion of stock transactions and the subsequent state of stock wallets (Swing and Hold).
-// The suite tests each transaction type (Split, Swing, Hold) using scenarios defined in a CSV file (`wallet-delete-transaction.csv`) by:
-// 1. Creating a transaction
+// The suite uses JSON configuration (wallet-delete-transaction.json) to define test scenarios with:
+// 1. Adding a transaction
 // 2. Deleting the transaction via UI
 // 3. Verifying the wallet state after deletion
 //
 // Test Flow:
 // 1. **Global Setup (`test.beforeAll`):**
+//    - Loads JSON configuration for delete transaction scenarios
 //    - Creates a single `PortfolioStock` record to be shared across all test scenarios
 //    - Stores the ID for use in subsequent tests and cleanup
 //
@@ -18,10 +19,10 @@
 //    - Cleans up any existing wallets/transactions for test isolation
 //
 // 3. **Test Execution (for each transaction type):**
-//    - Creates a transaction of the specified type
-//    - Verifies the wallet(s) are created correctly
+//    - Creates a transaction of the specified type using JSON configuration
+//    - Verifies the wallet(s) are created correctly based on JSON expectations
 //    - Deletes the transaction via UI
-//    - Verifies the wallet(s) are removed/updated correctly
+//    - Verifies the wallet(s) are removed/updated correctly based on JSON expectations
 //
 // 4. **Global Teardown (`test.afterAll`):**
 //    - Cleans up all test data (transactions, wallets, stock)
@@ -40,7 +41,7 @@ import {
 } from '../utils/dataHelpers';
 import { E2E_TEST_USER_OWNER_ID, E2E_TEST_USERNAME, E2E_TEST_PASSWORD } from '../utils/testCredentials';
 import { clearBrowserState, loginUser, navigateToStockWalletPage, addTransaction, deleteTransaction } from '../utils/pageHelpers';
-import { loadScenariosFromCSV } from '../utils/csvHelper';
+import { loadDeleteTransactionTestData, type DeleteTransactionTestConfig, type TransactionStep, type WalletExpectation } from '../utils/jsonHelper';
 
 import {
     SHARE_PRECISION,
@@ -51,238 +52,300 @@ import { formatCurrency, formatShares } from '../../app/utils/financialCalculati
 // Configure Amplify
 try {
     Amplify.configure(amplifyOutputs);
-    console.log('[wallet-delete-transaction.spec.ts] - Amplify configured successfully for E2E test spec.');
-} catch (error) {    console.error('[wallet-delete-transaction.spec.ts] - CRITICAL: Error configuring Amplify in E2E spec file:', error);
+    console.log('[BEFORE ALL] Amplify configured successfully for E2E test spec.');
+} catch (error) {
+    console.error('[BEFORE ALL] CRITICAL: Error configuring Amplify in E2E spec file:', error);
 }
 
-// Define the interface for delete transaction scenarios
-interface DeleteTransactionScenario {
-    name: string;
-    type: 'Split' | 'Swing' | 'Hold';
-    signal: string;
-    price: number;
-    investment: number;
-    expectedSwingShares: number;
-    expectedHoldShares: number;
-    expectedSwingInvestment: number;
-    expectedHoldInvestment: number;
-}
-
-// Load scenarios from CSV
-const transactionScenarios = loadScenariosFromCSV<DeleteTransactionScenario>(
-    '../wallets/wallet-delete-transaction.csv',
-    ['price', 'investment', 'expectedSwingShares', 'expectedHoldShares', 'expectedSwingInvestment', 'expectedHoldInvestment']
-);
+// Load test configuration from JSON
+const testConfig: DeleteTransactionTestConfig = loadDeleteTransactionTestData('e2e/wallets/wallet-delete-transaction.json');
 
 // Global test state
 let sharedTestPortfolioStockId: string | null = null;
-let currentStockSymbol: string | null = null;
 const client = generateClient<Schema>();
 
-test.describe('Wallet Page - Delete Transactions and Verify Wallets', () => {
+// Helper function to verify wallet details
+async function verifyWalletDetails(page: any, walletType: 'swing' | 'hold', walletKey: string, expected: WalletExpectation, stepName: string) {
+    console.log(`[PageHelper] Verifying ${walletType} wallet details ${walletKey} for ${stepName}...`);
+    console.log(`[PageHelper] Expected: Buy Price=$${expected.buyPrice.toFixed(2)}, Investment=$${expected.investment.toFixed(2)}, Shares=${expected.sharesLeft.toFixed(5)}`);
+    
+    const tabSelector = `[data-testid="wallet-tab-${walletType === 'swing' ? 'Swing' : 'Hold'}"]`;
+    const tab = page.locator(tabSelector);
+    await expect(tab).toBeVisible({ timeout: 5000 });
+    await tab.click();
+    await page.waitForTimeout(1000);
+    
+    // Use the correct selector pattern from the working add transaction test
+    const walletTable = page.locator('[data-testid="wallets-table"]');
+    await expect(walletTable).toBeVisible({ timeout: 10000 });
+    
+    const tableRows = walletTable.locator('tbody tr');
+    const rowCount = await tableRows.count();
+    console.log(`[PageHelper] Searching ${rowCount} rows for wallet with price $${expected.buyPrice.toFixed(2)}`);
+    
+    let foundWallet = false;
+    for (let i = 0; i < rowCount; i++) {
+        const row = tableRows.nth(i);
+        const buyPriceElement = row.locator('[data-testid="wallet-buyPrice-display"]');
+        const buyPriceText = await buyPriceElement.textContent();
+        console.log(`[PageHelper] Row ${i}: Buy Price = ${buyPriceText}`);
+        
+        if (buyPriceText && buyPriceText.includes(`$${expected.buyPrice.toFixed(2)}`)) {
+            console.log(`[PageHelper] Found matching buy price wallet, now verifying investment and shares...`);
+            
+            const investmentElement = row.locator('[data-testid="wallet-totalInvestment-display"]');
+            const sharesElement = row.locator('[data-testid="wallet-remainingShares-display"]');
+            
+            const investmentText = await investmentElement.textContent();
+            const sharesText = await sharesElement.textContent();
+            
+            console.log(`[PageHelper] Row ${i}: Investment = ${investmentText}, Expected = $${expected.investment.toFixed(2)}`);
+            console.log(`[PageHelper] Row ${i}: Shares = ${sharesText}, Expected = ${expected.sharesLeft.toFixed(5)}`);
+            
+            await expect(investmentElement).toContainText(`$${expected.investment.toFixed(2)}`);
+            await expect(sharesElement).toContainText(expected.sharesLeft.toFixed(5));
+            
+            foundWallet = true;
+            break;
+        }
+    }
+    
+    if (!foundWallet) {
+        throw new Error(`[PageHelper] Could not find ${walletType} wallet with buy price $${expected.buyPrice.toFixed(2)} for ${stepName}`);
+    }
+    
+    console.log(`[PageHelper] ✅ ${walletType} wallet verified: Buy Price=$${expected.buyPrice.toFixed(2)}, Investment=$${expected.investment.toFixed(2)}, Shares=${expected.sharesLeft.toFixed(5)}`);
+}
+
+// Helper function to verify wallet counts
+async function verifyWalletCounts(page: any, walletType: 'swing' | 'hold', expectedCount: number, stepName: string) {
+    console.log(`[PageHelper] Verifying ${walletType} wallet count for ${stepName}...`);
+    
+    const tabSelector = `[data-testid="wallet-tab-${walletType === 'swing' ? 'Swing' : 'Hold'}"]`;
+    const tab = page.locator(tabSelector);
+    await expect(tab).toBeVisible({ timeout: 5000 });
+    await tab.click();
+    await page.waitForTimeout(1000);
+    
+    if (expectedCount === 0) {
+        const notFoundSelector = '[data-testid="wallet-notfound-display"]';
+        const notFoundMessage = page.locator(notFoundSelector);
+        const expectedMessage = walletType === 'swing' ? 'No Swing wallets with shares found for this stock.' : 'No Hold wallets with shares found for this stock.';
+        await expect(notFoundMessage).toContainText(expectedMessage, { timeout: 5000 });
+        console.log(`[PageHelper] ✅ Confirmed no ${walletType} wallets exist for ${stepName}`);
+    } else {
+        // Use the correct selector pattern from the working add transaction test
+        const walletTable = page.locator('[data-testid="wallets-table"]');
+        await expect(walletTable).toBeVisible({ timeout: 10000 });
+        
+        const tableRows = walletTable.locator('tbody tr');
+        const actualCount = await tableRows.count();
+        
+        if (actualCount !== expectedCount) {
+            throw new Error(`[PageHelper] Expected ${expectedCount} ${walletType} wallets but found ${actualCount} for ${stepName}`);
+        }
+        
+        console.log(`[PageHelper] ✅ ${walletType} wallet count verified: ${actualCount} wallets for ${stepName}`);
+    }
+}
+
+// Helper function to verify transaction step wallets
+async function verifyTransactionStepWallets(page: any, step: TransactionStep, stepName: string) {
+    console.log(`[DeleteTransaction] Verifying wallets for ${stepName}...`);
+    
+    // Verify Swing wallets
+    const swingWallets = step.output.wallets.swing;
+    const swingCount = Object.keys(swingWallets).length;
+    await verifyWalletCounts(page, 'swing', swingCount, stepName);
+    
+    for (const [walletKey, walletExpectation] of Object.entries(swingWallets)) {
+        await verifyWalletDetails(page, 'swing', walletKey, walletExpectation, stepName);
+    }
+    
+    // Verify Hold wallets
+    const holdWallets = step.output.wallets.hold;
+    const holdCount = Object.keys(holdWallets).length;
+    await verifyWalletCounts(page, 'hold', holdCount, stepName);
+    
+    for (const [walletKey, walletExpectation] of Object.entries(holdWallets)) {
+        await verifyWalletDetails(page, 'hold', walletKey, walletExpectation, stepName);
+    }
+    
+    console.log(`[DeleteTransaction] ✅ All wallet verifications passed for ${stepName}`);
+}
+
+test.describe('Wallet Page - Delete Transactions and Verify Wallets (JSON-driven)', () => {
     
     test.beforeAll(async () => {
-        console.log('[wallet-delete-transaction.spec.ts] - BEFORE ALL: Starting test setup...');
+        console.log('[BEFORE ALL] Starting test setup...');
         
-        // Create a shared test stock
-        const testStockSymbol = 'E2EDEL';
-        const testStockName = 'E2E Delete Test Stock';
-        currentStockSymbol = testStockSymbol;
-        
-        console.log(`[wallet-delete-transaction.spec.ts] - BEFORE ALL: Setting up PortfolioStock: ${testStockSymbol} for owner: ${E2E_TEST_USER_OWNER_ID}`);
+        // Create a shared test stock using JSON configuration
+        const stockConfig = testConfig.stock;
+        console.log(`[BEFORE ALL] Creating test stock ${stockConfig.symbol}...`);
         
         try {
             const stockInput = {
-                symbol: testStockSymbol,
-                name: testStockName,
+                symbol: stockConfig.symbol,
+                name: stockConfig.name,
                 owner: E2E_TEST_USER_OWNER_ID,
-                stockType: 'Stock' as const,
-                region: 'US' as const,
-                pdp: 5,
-                plr: 2,
-                budget: 600,
-                swingHoldRatio: 50,
+                stockType: stockConfig.stockType as 'Stock' | 'ETF' | 'Crypto',
+                region: stockConfig.region as 'APAC' | 'EU' | 'Intl' | 'US',
+                pdp: stockConfig.pdp,
+                plr: stockConfig.plr,
+                budget: stockConfig.budget,
+                swingHoldRatio: stockConfig.swingHoldRatio,
+                stockCommission: stockConfig.stockCommission,
+                htp: stockConfig.htp || 0,
             };
-            
-            console.log('[wallet-delete-transaction.spec.ts] - BEFORE ALL: Creating PortfolioStock with input:', stockInput);
             
             const portfolioStock = await createPortfolioStock(stockInput);
             sharedTestPortfolioStockId = portfolioStock.id;
             
-            console.log(`[wallet-delete-transaction.spec.ts] - BEFORE ALL: PortfolioStock ${testStockSymbol} (ID: ${sharedTestPortfolioStockId}) created successfully.`);
+            console.log(`[BEFORE ALL] Stock created successfully with ID: ${sharedTestPortfolioStockId}`);
         } catch (error) {
-            console.error(`[wallet-delete-transaction.spec.ts] - BEFORE ALL: PortfolioStock setup for ${testStockSymbol} failed:`, error);
+            console.error(`[BEFORE ALL] Stock creation failed:`, error);
             throw error;
         }
     });
 
     test.afterAll(async () => {
         if (sharedTestPortfolioStockId) {
-            console.log(`[wallet-delete-transaction.spec.ts] - AFTER ALL: Starting cleanup for PortfolioStock ID: ${sharedTestPortfolioStockId} (${currentStockSymbol})`);
+            console.log(`[AFTER ALL] Starting cleanup...`);
             try {
-                console.log(`[wallet-delete-transaction.spec.ts] - AFTER ALL: Deleting transactions...`);
-                await deleteTransactionsForStockByStockId(sharedTestPortfolioStockId);
-                
-                console.log(`[wallet-delete-transaction.spec.ts] - AFTER ALL: Deleting stock wallets...`);
+                console.log(`[AFTER ALL] Deleting wallets for stock ID ${sharedTestPortfolioStockId}...`);
                 await deleteStockWalletsForStockByStockId(sharedTestPortfolioStockId);
                 
-                console.log(`[wallet-delete-transaction.spec.ts] - AFTER ALL: Deleting portfolio stock...`);
+                console.log(`[AFTER ALL] Deleting transactions for stock ID ${sharedTestPortfolioStockId}...`);
+                await deleteTransactionsForStockByStockId(sharedTestPortfolioStockId);
+                
+                console.log(`[AFTER ALL] Deleting stock ${sharedTestPortfolioStockId}...`);
                 await deletePortfolioStock(sharedTestPortfolioStockId);
                 
-                console.log(`[wallet-delete-transaction.spec.ts] - AFTER ALL: Full cleanup completed successfully for ${sharedTestPortfolioStockId}.`);
+                console.log(`[AFTER ALL] Cleanup completed successfully.`);
             } catch (error) {
-                console.error(`[wallet-delete-transaction.spec.ts] - AFTER ALL: Error during test cleanup for ${sharedTestPortfolioStockId}:`, error);
+                console.error(`[AFTER ALL] Error during cleanup:`, error);
             }
-        } else {
-            console.log('[wallet-delete-transaction.spec.ts] - AFTER ALL: No sharedTestPortfolioStockId found for cleanup.');
         }
     });
 
     test.beforeEach(async ({ page }) => {
-        console.log(`[wallet-delete-transaction.spec.ts] - BEFORE EACH: Starting fresh session setup...`);
+        console.log(`[BEFORE EACH] Starting fresh session setup...`);
         
         // Clear browser state
         await clearBrowserState(page);
-        console.log(`[wallet-delete-transaction.spec.ts] - BEFORE EACH: Browser state cleared.`);
+        console.log(`[BEFORE EACH] Browser state cleared.`);
         
         // Login
-        console.log(`[wallet-delete-transaction.spec.ts] - BEFORE EACH: Attempting login as ${E2E_TEST_USERNAME}...`);
+        console.log(`[BEFORE EACH] Attempting login as ${E2E_TEST_USERNAME}...`);
         await loginUser(page, E2E_TEST_USERNAME, E2E_TEST_PASSWORD);
-        console.log(`[wallet-delete-transaction.spec.ts] - BEFORE EACH: Login successful.`);
+        console.log(`[BEFORE EACH] Login successful.`);
         
         // Navigate to wallet page
-        if (!sharedTestPortfolioStockId || !currentStockSymbol) {
-            throw new Error("Test setup failed: Missing stock ID or symbol");
+        if (!sharedTestPortfolioStockId) {
+            throw new Error("Test setup failed: Missing stock ID");
         }
         
-        console.log(`[wallet-delete-transaction.spec.ts] - BEFORE EACH: Navigating to wallet page for ${currentStockSymbol} (ID: ${sharedTestPortfolioStockId})...`);
-        await navigateToStockWalletPage(page, sharedTestPortfolioStockId, currentStockSymbol);
-        console.log(`[wallet-delete-transaction.spec.ts] - BEFORE EACH: Successfully on wallet page for ${currentStockSymbol}.`);
+        console.log(`[BEFORE EACH] Navigating to wallet page for ${testConfig.stock.symbol} (ID: ${sharedTestPortfolioStockId})...`);
+        await navigateToStockWalletPage(page, sharedTestPortfolioStockId, testConfig.stock.symbol);
+        console.log(`[BEFORE EACH] Successfully on wallet page for ${testConfig.stock.symbol}.`);
         
         // Clean up any existing data for test isolation
-        if (sharedTestPortfolioStockId) {
-            try {
-                await deleteStockWalletsForStockByStockId(sharedTestPortfolioStockId);
-                await deleteTransactionsForStockByStockId(sharedTestPortfolioStockId);
-                
-                // Reload page to reflect cleanup
-                await page.reload();
-                
-                // Wait for page to be ready after reload
-                const titleElement = page.locator('[data-testid="wallet-page-title"]');
-                await expect(titleElement).toBeVisible({ timeout: 15000 });
-                await expect(titleElement).toContainText(currentStockSymbol.toUpperCase(), { timeout: 5000 });
-                
-                console.log(`[wallet-delete-transaction.spec.ts] - BEFORE EACH: Data cleanup and page reload completed.`);
-            } catch (error) {
-                console.warn(`[wallet-delete-transaction.spec.ts] - BEFORE EACH: Warning during cleanup:`, error);
-            }
+        try {
+            await deleteStockWalletsForStockByStockId(sharedTestPortfolioStockId);
+            await deleteTransactionsForStockByStockId(sharedTestPortfolioStockId);
+            
+            // Reload page to reflect cleanup
+            await page.reload();
+            
+            // Wait for page to be ready after reload
+            const titleElement = page.locator('[data-testid="wallet-page-title"]');
+            await expect(titleElement).toBeVisible({ timeout: 15000 });
+            await expect(titleElement).toContainText(testConfig.stock.symbol.toUpperCase(), { timeout: 5000 });
+            
+            console.log(`[BEFORE EACH] Data cleanup and page reload completed.`);
+        } catch (error) {
+            console.warn(`[BEFORE EACH] Warning during cleanup:`, error);
         }
     });
 
-    // Generate test for each transaction type
-    transactionScenarios.forEach((scenario) => {
-        test(`Delete ${scenario.name} - Create, Delete, Verify Wallet State`, async ({ page }) => {
-            const scenarioName = `Delete${scenario.type}`;
-            console.log(`[${scenarioName}] Starting test for ${scenario.name}.`);
-              // Step 1: Create the transaction
-            console.log(`[${scenarioName}] Step 1: Creating ${scenario.type} transaction.`);
+    // Generate tests for Split, Swing, and Hold transactions
+    const transactionTypes = ['Split', 'Swing', 'Hold'];
+    
+    transactionTypes.forEach((transactionType) => {
+        test(`Delete ${transactionType} Transaction - Create, Delete, Verify Wallet State`, async ({ page }) => {
+            const scenarioName = `Delete${transactionType}`;
+            const addStepKey = `${transactionType}TransactionAdd`;
+            const deleteStepKey = `${transactionType}TransactionDelete`;
+            
+            const addStep = testConfig.transactions[addStepKey];
+            const deleteStep = testConfig.transactions[deleteStepKey];
+            
+            if (!addStep || !deleteStep) {
+                throw new Error(`Missing configuration for ${scenarioName}: addStep=${!!addStep}, deleteStep=${!!deleteStep}`);
+            }
+            
+            console.log(`[${scenarioName}] Starting test...`);
+            
+            // Clean up any existing wallets/transactions first
+            try {
+                await deleteStockWalletsForStockByStockId(sharedTestPortfolioStockId!);
+                await deleteTransactionsForStockByStockId(sharedTestPortfolioStockId!);
+                await page.reload();
+                
+                const titleElement = page.locator('[data-testid="wallet-page-title"]');
+                await expect(titleElement).toBeVisible({ timeout: 15000 });
+            } catch (error) {
+                console.warn(`[${scenarioName}] Warning during initial cleanup:`, error);
+            }
+            
+            // Step 1: Verify no initial wallets or transactions exist
+            console.log(`[${scenarioName}] Step 1: Verifying no transactions or wallets exist...`);
+            await verifyWalletCounts(page, 'swing', 0, 'initially');
+            await verifyWalletCounts(page, 'hold', 0, 'initially');
+            
+            // Step 2: Add the transaction
+            console.log(`[${scenarioName}] Step 2: Adding ${transactionType} transaction...`);
             
             await addTransaction(page, {
-                type: scenario.type,
-                signal: scenario.signal,
-                price: scenario.price,
-                investment: scenario.investment
+                date: addStep.input.date!,
+                type: addStep.input.type,
+                signal: addStep.input.signal,
+                price: addStep.input.price!,
+                investment: addStep.input.investment!
             });
             
-            // Step 2: Verify wallets were created correctly
-            console.log(`[${scenarioName}] Step 2: Verifying wallet creation.`);
+            // Step 3: Verify wallets after transaction creation
+            console.log(`[${scenarioName}] Step 3: Verifying wallets after transaction creation...`);
             
-            // Verify Swing Wallet
-            const swingTab = page.locator('[data-testid="wallet-tab-Swing"]');
-            await expect(swingTab).toBeVisible({ timeout: 5000 });
-            await swingTab.click();
-            await page.waitForTimeout(1000);
+            // Reload page to ensure wallets are loaded properly
+            await page.reload();
             
-            if (scenario.expectedSwingShares > 0) {
-                console.log(`[${scenarioName}] Verifying Swing wallet exists with ${scenario.expectedSwingShares} shares.`);
-                
-                const swingNotFoundMessage = page.locator('text=No Swing wallets with shares found for this stock.');
-                await expect(swingNotFoundMessage).not.toBeVisible();
-                
-                const swingBuyPrice = page.locator('[data-testid="wallet-buyPrice-display"]').first();
-                const swingTotalInvestment = page.locator('[data-testid="wallet-totalInvestment-display"]').first();
-                const swingRemainingShares = page.locator('[data-testid="wallet-remainingShares-display"]').first();
-                
-                await expect(swingBuyPrice).toContainText(formatCurrency(scenario.price));
-                await expect(swingTotalInvestment).toContainText(formatCurrency(scenario.expectedSwingInvestment));
-                await expect(swingRemainingShares).toContainText(formatShares(scenario.expectedSwingShares, SHARE_PRECISION));
-                
-                console.log(`[${scenarioName}] Swing wallet verified successfully.`);
-            } else {
-                console.log(`[${scenarioName}] Verifying NO Swing wallet exists.`);
-                const swingNotFoundMessage = page.locator('text=No Swing wallets with shares found for this stock.');
-                await expect(swingNotFoundMessage).toBeVisible();
-                console.log(`[${scenarioName}] No Swing wallet confirmed.`);
-            }
+            // Wait for page to be ready after reload
+            const titleElement = page.locator('[data-testid="wallet-page-title"]');
+            await expect(titleElement).toBeVisible({ timeout: 15000 });
+            await expect(titleElement).toContainText(testConfig.stock.symbol.toUpperCase(), { timeout: 5000 });
             
-            // Verify Hold Wallet
-            const holdTab = page.locator('[data-testid="wallet-tab-Hold"]');
-            await expect(holdTab).toBeVisible({ timeout: 5000 });
-            await holdTab.click();
-            await page.waitForTimeout(1000);
+            // Additional wait for wallets to be loaded
+            await page.waitForTimeout(3000);
             
-            if (scenario.expectedHoldShares > 0) {
-                console.log(`[${scenarioName}] Verifying Hold wallet exists with ${scenario.expectedHoldShares} shares.`);
-                
-                const holdNotFoundMessage = page.locator('text=No Hold wallets with shares found for this stock.');
-                await expect(holdNotFoundMessage).not.toBeVisible();
-                
-                const holdBuyPrice = page.locator('[data-testid="wallet-buyPrice-display"]').first();
-                const holdTotalInvestment = page.locator('[data-testid="wallet-totalInvestment-display"]').first();
-                const holdRemainingShares = page.locator('[data-testid="wallet-remainingShares-display"]').first();
-                
-                await expect(holdBuyPrice).toContainText(formatCurrency(scenario.price));
-                await expect(holdTotalInvestment).toContainText(formatCurrency(scenario.expectedHoldInvestment));
-                await expect(holdRemainingShares).toContainText(formatShares(scenario.expectedHoldShares, SHARE_PRECISION));
-                
-                console.log(`[${scenarioName}] Hold wallet verified successfully.`);
-            } else {
-                console.log(`[${scenarioName}] Verifying NO Hold wallet exists.`);
-                const holdNotFoundMessage = page.locator('text=No Hold wallets with shares found for this stock.');
-                await expect(holdNotFoundMessage).toBeVisible();
-                console.log(`[${scenarioName}] No Hold wallet confirmed.`);
-            }
-              // Step 3: Delete the transaction
-            console.log(`[${scenarioName}] Step 3: Deleting the transaction.`);
+            await verifyTransactionStepWallets(page, addStep, `${transactionType}TransactionAdd`);
             
+            // Step 4: Delete the transaction
+            console.log(`[${scenarioName}] Step 4: Deleting the transaction...`);
             await deleteTransaction(page);
             
-            // Step 4: Verify wallets are removed/cleared after deletion
-            console.log(`[${scenarioName}] Step 4: Verifying wallet state after deletion.`);
+            // Step 5: Verify wallets after deletion
+            console.log(`[${scenarioName}] Step 5: Verifying wallets after transaction deletion...`);
+            await verifyTransactionStepWallets(page, deleteStep, `${transactionType}TransactionDelete`);
             
-            // Check Swing Wallet
-            await swingTab.click();
-            await page.waitForTimeout(1000);
-            
-            const swingNotFoundAfterDelete = page.locator('text=No Swing wallets with shares found for this stock.');
-            await expect(swingNotFoundAfterDelete).toBeVisible();
-            console.log(`[${scenarioName}] Swing wallet removed after deletion.`);
-            
-            // Check Hold Wallet
-            await holdTab.click();
-            await page.waitForTimeout(1000);
-            
-            const holdNotFoundAfterDelete = page.locator('text=No Hold wallets with shares found for this stock.');
-            await expect(holdNotFoundAfterDelete).toBeVisible();
-            console.log(`[${scenarioName}] Hold wallet removed after deletion.`);
-              // Verify no transactions remain
+            // Step 6: Verify no transactions remain
+            console.log(`[${scenarioName}] Step 6: Verifying no transactions remain...`);
             const noTransactionsMessage = page.locator('[data-testid="wallets-transaction-table-no-transactions-message"]');
             await expect(noTransactionsMessage).toBeVisible();
             await expect(noTransactionsMessage).toContainText('No transactions found for this stock.');
             console.log(`[${scenarioName}] Transaction removal confirmed.`);
             
-            console.log(`[${scenarioName}] Test completed successfully.`);
+            console.log(`[${scenarioName}] Test completed successfully!`);
         });
     });
 });
