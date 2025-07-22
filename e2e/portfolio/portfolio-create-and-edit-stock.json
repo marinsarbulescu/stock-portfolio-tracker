@@ -1,0 +1,29 @@
+{
+  "scenario": "CreateAndEditStock",
+  "initialStock": {
+    "symbol": "E2ETST",
+    "name": "E2E Test Stock",
+    "stockType": "ETF",
+    "region": "US",
+    "stockTrend": "Up",
+    "pdp": 3,
+    "plr": 2,
+    "budget": 1200,
+    "swingHoldRatio": 30,
+    "stockCommission": 1,
+    "htp": 12
+  },
+  "editedStock": {
+    "symbol": "E2ETST",
+    "name": "E2E Test Stock",
+    "stockType": "Stock",
+    "region": "APAC",
+    "stockTrend": "Down",
+    "pdp": 4,
+    "plr": 3,
+    "budget": 1000,
+    "swingHoldRatio": 50,
+    "stockCommission": 2,
+    "htp": 16
+  }
+}

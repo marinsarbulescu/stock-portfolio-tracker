@@ -46,9 +46,14 @@ Portfolio
 
     Create and edit stock ✅
     npx playwright test e2e/portfolio/portfolio-create-and-edit-stock.spec.ts --headed
-        Create stock with initial attributes
-        Edit stock with new attributes
-        Verify stock appears correctly in portfolio table
-        Verify changes are persisted and displayed correctly
+        JSON-driven approach using portfolio-create-and-edit-stock.json configuration:
+            CreateAndEditStock scenario with initialStock and editedStock configurations
+            Create stock (ETF, US, Up trend, PDP=3, PLR=2, Budget=$1200, Commission=$1, HTP=12)
+            Verify all initial stock attributes in portfolio table (symbol, name, type, region, trend, etc.)
+            Open edit modal and verify prefilled values match initial configuration
+            Edit stock (Stock, APAC, Down trend, PDP=4, PLR=3, Budget=$1000, Commission=$2, HTP=16)
+            Verify all updated stock attributes are correctly displayed in portfolio table
+            Comprehensive UI validation including column visibility, form interactions, and data persistence
+            Enhanced with proper cleanup and error handling for reliable test execution
 
     

@@ -1,2 +1,0 @@
-scenarioName,symbol,name,stockType,region,stockTrend,pdp,plr,swingHoldRatio,budget,stockCommission,htp,editStockType,editRegion,editStockTrend,editPdp,editPlr,editSwingHoldRatio,editBudget,editStockCommission,editHtp
-CreateAndEditStock,E2ETST,E2E Test Stock,ETF,US,Up,3,2,30,1200,1,12,Stock,APAC,Down,4,3,50,1000,2,16

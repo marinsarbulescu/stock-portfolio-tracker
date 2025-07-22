@@ -1,4 +1,4 @@
-// e2e/portfolio/portfolio-create-and-edit-stock.spec.ts
+// e2e/portfolio/portfolio-create-and-edit-stock-json.spec.ts
 
 // This Playwright test suite is designed to verify the creation and editing of portfolio stocks
 // based on test scenarios defined in a JSON file (`portfolio-create-and-edit-stock.json`).
@@ -43,9 +43,9 @@ import { formatCurrency } from '../../app/utils/financialCalculations';
 // Configure Amplify
 try {
     Amplify.configure(amplifyOutputs);
-    console.log('[portfolio-create-and-edit-stock.spec.ts] - Amplify configured successfully.');
+    console.log('[portfolio-create-and-edit-stock-json.spec.ts] - Amplify configured successfully.');
 } catch (error) {
-    console.error('[portfolio-create-and-edit-stock.spec.ts] - CRITICAL: Error configuring Amplify:', error);
+    console.error('[portfolio-create-and-edit-stock-json.spec.ts] - CRITICAL: Error configuring Amplify:', error);
 }
 
 // Load test configuration from JSON

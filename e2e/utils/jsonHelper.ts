@@ -69,6 +69,16 @@ export interface SamePriceTransactionTestConfig {
     transactions: Record<string, TransactionStep>;
 }
 
+export interface PortfolioCreateEditTestConfig {
+    scenario: string;
+    initialStock: StockConfig & {
+        stockTrend?: 'Up' | 'Down' | 'Sideways' | null;
+    };
+    editedStock: StockConfig & {
+        stockTrend?: 'Up' | 'Down' | 'Sideways' | null;
+    };
+}
+
 export function loadTestData(fileName: string): TestConfig {
     const filePath = path.resolve(process.cwd(), fileName);
     console.log(`[jsonHelper.ts] Attempting to load JSON from: ${filePath}`);
@@ -142,6 +152,26 @@ export function loadSamePriceTransactionTestData(fileName: string): SamePriceTra
     
     try {
         const data = JSON.parse(fileContent) as SamePriceTransactionTestConfig;
+        console.log(`[jsonHelper.ts] Successfully parsed JSON for scenario: ${data.scenario}`);
+        return data;
+    } catch (error) {
+        throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
+    }
+}
+
+export function loadPortfolioCreateEditTestData(fileName: string): PortfolioCreateEditTestConfig {
+    const filePath = path.resolve(process.cwd(), fileName);
+    console.log(`[jsonHelper.ts] Attempting to load Portfolio Create Edit JSON from: ${filePath}`);
+    
+    if (!fs.existsSync(filePath)) {
+        throw new Error(`JSON file not found: ${filePath}`);
+    }
+    
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    console.log(`[jsonHelper.ts] File content read successfully. Length: ${fileContent.length}`);
+    
+    try {
+        const data = JSON.parse(fileContent) as PortfolioCreateEditTestConfig;
         console.log(`[jsonHelper.ts] Successfully parsed JSON for scenario: ${data.scenario}`);
         return data;
     } catch (error) {

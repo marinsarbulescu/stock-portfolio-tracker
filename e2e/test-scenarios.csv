@@ -1,6 +1,0 @@
-scenarioName,testStockSymbol,stockPdp,stockPlr,stockShr,date,txnType,price,buyQuantity,investment,buySwingShares,buyHoldShares,sellDate,sellPrice,sellQuantity,sellTxnType,expectedFormattedSwingPL
-SwingProfitScenario1,E2E-SP1,10,1,50,1/10/2024,,100,10,1000,5,5,1/15/2024,110,2,Swing,$20.00 
-SwingLossScenario1,E2E-SL1,10,1,50,2/10/2024,,100,10,1000,5,5,2/15/2024,90,3,Swing,($30.00)
-NoSwingSales,E2E-NS1,10,1,50,3/10/2024,,100,10,1000,5,5,3/15/2024,110,2,Hold,$0.00 
-MixedSales,E2E-MX1,10,1,50,4/10/2024,,100,20,2000,10,10,4/15/2024,120,5,Swing,$100.00 
-MixedSales,E2E-MX1,10,1,50,4/10/2024,,100,20,2000,10,10,4/16/2024,105,3,Hold,$0.00 
