@@ -63,6 +63,12 @@ export interface DeleteTransactionTestConfig {
     transactions: Record<string, TransactionStep>;
 }
 
+export interface SamePriceTransactionTestConfig {
+    scenario: string;
+    stock: StockConfig;
+    transactions: Record<string, TransactionStep>;
+}
+
 export function loadTestData(fileName: string): TestConfig {
     const filePath = path.resolve(process.cwd(), fileName);
     console.log(`[jsonHelper.ts] Attempting to load JSON from: ${filePath}`);
@@ -116,6 +122,26 @@ export function loadDeleteTransactionTestData(fileName: string): DeleteTransacti
     
     try {
         const data = JSON.parse(fileContent) as DeleteTransactionTestConfig;
+        console.log(`[jsonHelper.ts] Successfully parsed JSON for scenario: ${data.scenario}`);
+        return data;
+    } catch (error) {
+        throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
+    }
+}
+
+export function loadSamePriceTransactionTestData(fileName: string): SamePriceTransactionTestConfig {
+    const filePath = path.resolve(process.cwd(), fileName);
+    console.log(`[jsonHelper.ts] Attempting to load Same Price Transaction JSON from: ${filePath}`);
+    
+    if (!fs.existsSync(filePath)) {
+        throw new Error(`JSON file not found: ${filePath}`);
+    }
+    
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    console.log(`[jsonHelper.ts] File content read successfully. Length: ${fileContent.length}`);
+    
+    try {
+        const data = JSON.parse(fileContent) as SamePriceTransactionTestConfig;
         console.log(`[jsonHelper.ts] Successfully parsed JSON for scenario: ${data.scenario}`);
         return data;
     } catch (error) {
