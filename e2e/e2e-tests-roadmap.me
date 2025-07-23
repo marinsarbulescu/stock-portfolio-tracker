@@ -51,4 +51,14 @@ Portfolio
         Comprehensive UI validation including column visibility, form interactions, and data persistence
         Enhanced with proper cleanup and error handling for reliable test execution
 
+    Signals price fetch ✅
+    npx playwright test e2e/portfolio/signals-price-fetch.spec.ts --headed
+        Create AAPL and BTC-USD stocks via UI
+        Navigate to Signals page and toggle Price column visibility
+        Verify stocks initially show no price values (display '-')
+        Use "Fetch Prices" button to retrieve current market prices
+        Verify both stocks now display actual price values from yahoo-finance2
+        Clean up by deleting created stocks
+        Validates end-to-end price fetching workflow and UI updates
+
     
