@@ -44,11 +44,7 @@ export default function NavBar({ accessStatus }: NavBarProps) {
 
     const {
         fetchLatestPricesForAllStocks,
-        pricesLoading,
-        // Removed unused notify variables for clarity
-        // sendNotificationEmail,
-        // notifyStatus,
-        // notifyError
+        pricesLoading
     } = usePrices();
 
     const isApproved = accessStatus === 'approved';

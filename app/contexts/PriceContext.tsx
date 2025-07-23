@@ -28,9 +28,6 @@ interface PriceContextType {
   pricesError: string | null;
   progressMessage: string | null; // Added for progress indication
   fetchLatestPricesForAllStocks: () => Promise<void>;
-  notifyStatus: 'idle' | 'sending' | 'success' | 'error';
-  notifyError: string | null;
-  sendNotificationEmail: () => Promise<void>;
 }
 
 const PriceContext = createContext<PriceContextType | undefined>(undefined);
@@ -85,8 +82,6 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
   const [pricesLoading, setPricesLoading] = useState<boolean>(false);
   const [pricesError, setPricesError] = useState<string | null>(null);
   const [progressMessage, setProgressMessage] = useState<string | null>(null); // New state for progress message
-  const [notifyStatus, setNotifyStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
-  const [notifyError, setNotifyError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -124,7 +119,7 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
       // Filter out archived stocks AND hidden stocks from price fetching
       const activeStocksData = stocksData?.filter(stock => !stock.archived && !stock.isHidden) ?? [];
       const allSymbolsFromBackend = activeStocksData.map(stock => stock.symbol).filter(Boolean) as string[];
-      // console.log(`[PriceContext.tsx] - Found ${allSymbolsFromBackend.length} active, non-hidden symbols from backend.`);
+      // console.log(`[PriceContext.tsx] - Found ${allSymbolsFromBackend.length} active, non-hidden symbols from backend:`, allSymbolsFromBackend);
 
       // --- Filter out excluded symbols on the client-side ---
       const symbolsToProcess = allSymbolsFromBackend.filter(symbol => {
@@ -134,7 +129,7 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
         }
         return !isExcluded;
       });
-      // console.log(`[PriceContext.tsx] - Processing ${symbolsToProcess.length} symbols after client-side exclusion.`);
+      // console.log(`[PriceContext.tsx] - Processing ${symbolsToProcess.length} symbols after client-side exclusion:`, symbolsToProcess);
       // --- End of client-side filtering ---
 
 
@@ -170,6 +165,7 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
             });
 
             if (batchPriceResults) {
+              // console.log(`[PriceContext.tsx] - Batch ${currentBatchNumber} results:`, batchPriceResults);
               batchPriceResults.forEach(result => {
                 if (result && result.symbol) {
                   const validHistoricalCloses = (result.historicalCloses ?? [])
@@ -216,18 +212,13 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const sendNotificationEmail = useCallback(async () => { /* ... */ }, [latestPrices]);
-
   const value = {
     latestPrices,
     lastPriceFetchTimestamp,
     pricesLoading,
     pricesError,
     progressMessage, // Add progressMessage to the context value
-    fetchLatestPricesForAllStocks,
-    notifyStatus,
-    notifyError,
-    sendNotificationEmail
+    fetchLatestPricesForAllStocks
   };
 
   return <PriceContext.Provider value={value}>{children}</PriceContext.Provider>;

@@ -2,7 +2,6 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 import { getYfinanceData } from '../functions/getYfinanceData/resource.js';
 import { getHistoricalData } from '../functions/getHistoricalData/resource.js';
-import { sendStockEmail } from '../functions/sendStockEmail/resource.js';
 
 // Define Enums first
 const stockTypeEnum = a.enum(['Stock', 'ETF', 'Crypto']); // Changed order to match default in form example
@@ -125,13 +124,6 @@ const schema = a.schema({
       // Add 'update' if your helpers might update
     ]),
 
-  // Define the input type for a single portfolio item
-  PortfolioItemInput: a.customType({
-    symbol: a.string().required(),
-    price: a.float(),     // Corresponds to number | null
-    name: a.string()      // Optional name
-  }),
-  
   // Define the custom query to get latest prices
   // --- Query definition (returns() already uses PriceResult) ---
   getLatestPrices: a.query()
@@ -150,14 +142,6 @@ const schema = a.schema({
     .returns(a.ref('PriceResult').array())
     .authorization(allow => [allow.authenticated()])
     .handler(a.handler.function(getHistoricalData)),
-
-  // Define the custom mutation to trigger sending the email
-  sendPortfolioNotification: a.mutation()
-    // Expect an array of PortfolioItemInput objects
-    .arguments({ portfolioSummary: a.ref('PortfolioItemInput').array().required() })
-    .returns(a.boolean())
-    .authorization(allow => [allow.authenticated()])
-    .handler(a.handler.function(sendStockEmail)), // Lambda handler stays the same
 
     // --- Define Type for Historical Close ---
   HistoricalCloseInput: a.customType({ // Renamed slightly to avoid conflict if needed
