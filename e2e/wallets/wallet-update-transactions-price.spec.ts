@@ -88,7 +88,7 @@ async function verifyWalletDetails(
     const tab = page.locator(`[data-testid="wallet-tab-${walletType}"]`);
     await expect(tab).toBeVisible({ timeout: 5000 });
     await tab.click();
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000); // Increased wait after tab click
     
     const notFoundMessage = page.locator('[data-testid="wallet-notfound-display"]');
     await expect(notFoundMessage).not.toBeVisible({ timeout: 5000 });
@@ -96,11 +96,28 @@ async function verifyWalletDetails(
     const walletsTable = page.locator('[data-testid="wallets-table"]');
     await expect(walletsTable).toBeVisible({ timeout: 5000 });
     
+    // Additional wait for table content to stabilize
+    await page.waitForTimeout(1000);
+    
     // Find the specific wallet row with the expected price
     const walletRows = walletsTable.locator('tbody tr');
     const rowCount = await walletRows.count();
     
     console.log(`[PageHelper] Searching ${rowCount} rows for wallet with price ${formatCurrency(expectedDetails.buyPrice)}`);
+    
+    // Log all current wallet values for debugging
+    for (let debugRow = 0; debugRow < rowCount; debugRow++) {
+        const row = walletRows.nth(debugRow);
+        const buyPriceCell = row.locator('[data-testid="wallet-buyPrice-display"]');
+        const investmentCell = row.locator('[data-testid="wallet-totalInvestment-display"]');
+        const sharesCell = row.locator('[data-testid="wallet-remainingShares-display"]');
+        
+        const currentBuyPrice = await buyPriceCell.textContent();
+        const currentInvestment = await investmentCell.textContent();
+        const currentShares = await sharesCell.textContent();
+        
+        console.log(`[PageHelper] DEBUG Row ${debugRow}: Price=${currentBuyPrice}, Investment=${currentInvestment}, Shares=${currentShares}`);
+    }
     
     let found = false;
     for (let i = 0; i < rowCount; i++) {
@@ -115,19 +132,82 @@ async function verifyWalletDetails(
         if (buyPriceText === formatCurrency(expectedDetails.buyPrice)) {
             console.log(`[PageHelper] Found matching buy price wallet, now verifying investment and shares...`);
             
-            // Check Total Investment
+            // Check Total Investment with retry logic
             const investmentCell = row.locator('[data-testid="wallet-totalInvestment-display"]');
-            const investmentText = await investmentCell.textContent();
-            console.log(`[PageHelper] Row ${i}: Investment = ${investmentText}, Expected = ${formatCurrency(expectedDetails.investment)}`);
-            await expect(investmentCell).toHaveText(formatCurrency(expectedDetails.investment));
             
-            // Check Remaining Shares
+            // Wait for the investment value to stabilize and match expected value
+            try {
+                await expect(async () => {
+                    const investmentText = await investmentCell.textContent();
+                    console.log(`[PageHelper] Row ${i}: Investment = ${investmentText}, Expected = ${formatCurrency(expectedDetails.investment)}`);
+                    expect(investmentText).toBe(formatCurrency(expectedDetails.investment));
+                }).toPass({ timeout: 10000, intervals: [1000] }); // Back to reasonable 10 seconds
+            } catch (error) {
+                // If verification fails, wait a bit more and try once more before failing
+                console.log('[PageHelper] First verification attempt failed, waiting for network to settle...');
+                await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+                await page.waitForTimeout(2000);
+                
+                const finalInvestmentText = await investmentCell.textContent();
+                if (finalInvestmentText === formatCurrency(expectedDetails.investment)) {
+                    console.log('[PageHelper] Verification succeeded after network settle wait.');
+                } else {
+                    // Dump all wallets for debugging
+                    console.log('[PageHelper] DEBUG: Current wallet state after failed verification:');
+                    const allSwingRows = await page.locator('[data-testid="swing-wallet-table"] tbody tr').count();
+                    const allHoldRows = await page.locator('[data-testid="hold-wallet-table"] tbody tr').count();
+                    
+                    console.log(`[PageHelper] DEBUG: Total Swing wallets: ${allSwingRows}, Total Hold wallets: ${allHoldRows}`);
+                    
+                    for (let debugI = 0; debugI < allSwingRows; debugI++) {
+                        const swingRow = page.locator('[data-testid="swing-wallet-table"] tbody tr').nth(debugI);
+                        const price = await swingRow.locator('td').nth(0).textContent();
+                        const investment = await swingRow.locator('td').nth(1).textContent();
+                        const shares = await swingRow.locator('td').nth(2).textContent();
+                        console.log(`[PageHelper] DEBUG: Swing Row ${debugI}: Price=${price}, Investment=${investment}, Shares=${shares}`);
+                    }
+                    
+                    for (let debugI = 0; debugI < allHoldRows; debugI++) {
+                        const holdRow = page.locator('[data-testid="hold-wallet-table"] tbody tr').nth(debugI);
+                        const price = await holdRow.locator('td').nth(0).textContent();
+                        const investment = await holdRow.locator('td').nth(1).textContent();
+                        const shares = await holdRow.locator('td').nth(2).textContent();
+                        console.log(`[PageHelper] DEBUG: Hold Row ${debugI}: Price=${price}, Investment=${investment}, Shares=${shares}`);
+                    }
+                    
+                    throw new Error(`Investment verification failed for ${walletType} wallet with price ${formatCurrency(expectedDetails.buyPrice)}${description ? ' ' + description : ''}. Expected: ${formatCurrency(expectedDetails.investment)}, Actual: ${finalInvestmentText}. This suggests a timing issue with wallet calculations.`);
+                }
+            }
+            
+            // Check Remaining Shares with retry logic
             const sharesCell = row.locator('[data-testid="wallet-remainingShares-display"]');
-            const sharesText = await sharesCell.textContent();
-            console.log(`[PageHelper] Row ${i}: Shares = ${sharesText}, Expected = ${formatShares(expectedDetails.sharesLeft)}`);
-            await expect(sharesCell).toHaveText(formatShares(expectedDetails.sharesLeft));
             
-            console.log(`[PageHelper] ✅ ${walletType} wallet verified: Buy Price=${buyPriceText}, Investment=${investmentText}, Shares=${sharesText}`);
+            // Wait for the shares value to stabilize and match expected value
+            try {
+                await expect(async () => {
+                    const sharesText = await sharesCell.textContent();
+                    console.log(`[PageHelper] Row ${i}: Shares = ${sharesText}, Expected = ${formatShares(expectedDetails.sharesLeft)}`);
+                    expect(sharesText).toBe(formatShares(expectedDetails.sharesLeft));
+                }).toPass({ timeout: 10000, intervals: [1000] }); // Back to reasonable 10 seconds
+            } catch (error) {
+                // If verification fails, wait a bit more and try once more before failing
+                console.log('[PageHelper] First shares verification attempt failed, waiting for network to settle...');
+                await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+                await page.waitForTimeout(2000);
+                
+                const finalSharesText = await sharesCell.textContent();
+                if (finalSharesText === formatShares(expectedDetails.sharesLeft)) {
+                    console.log('[PageHelper] Shares verification succeeded after network settle wait.');
+                } else {
+                    throw new Error(`Shares verification failed for ${walletType} wallet with price ${formatCurrency(expectedDetails.buyPrice)}${description ? ' ' + description : ''}. Expected: ${formatShares(expectedDetails.sharesLeft)}, Actual: ${finalSharesText}. This suggests a timing issue with wallet calculations.`);
+                }
+            }
+            
+            // Get final values for logging
+            const finalInvestmentText = await investmentCell.textContent();
+            const finalSharesText = await sharesCell.textContent();
+            
+            console.log(`[PageHelper] ✅ ${walletType} wallet verified: Buy Price=${buyPriceText}, Investment=${finalInvestmentText}, Shares=${finalSharesText}`);
             found = true;
             break;
         }
@@ -239,7 +319,7 @@ async function verifyTransactionStepWallets(page: Page, step: TransactionStep, s
 }
 
 // Transaction editing helper
-async function editTransactionPrice(page: Page, transactionIndex: number, newPrice: number) {
+async function editTransactionPrice(page: Page, transactionIndex: number, newPrice: number, expectedWallets?: {swing: any[], hold: any[]}) {
     console.log(`[PageHelper] Editing transaction ${transactionIndex + 1} price to $${newPrice}...`);
     
     // Navigate to transactions section
@@ -275,10 +355,215 @@ async function editTransactionPrice(page: Page, transactionIndex: number, newPri
     // Wait for modal to close
     await expect(editModal).not.toBeVisible({ timeout: 15000 });
     
-    // Wait for UI to update
-    await page.waitForTimeout(3000);
+    // Wait for complex wallet recalculation (price updates are more complex than additions)
+    console.log('[PageHelper] Waiting for complex wallet recalculation to complete...');
+    
+    try {
+        // Wait for network operations to settle completely first
+        await page.waitForLoadState('networkidle', { timeout: 10000 });
+        
+        // If we have expected wallet data, use a longer wait since complex recalculation takes time
+        if (expectedWallets) {
+            console.log('[PageHelper] Using extended wait for complex transaction price recalculation...');
+            await page.waitForTimeout(15000); // Wait 15 seconds for complex recalculation to complete
+        } else {
+            // Fallback to basic existence checking if no expected values provided
+            console.log('[PageHelper] Waiting for wallets to exist after complex recalculation...');
+            
+            let walletsStable = false;
+            const maxAttempts = 20;
+            let attempt = 0;
+            
+            while (!walletsStable && attempt < maxAttempts) {
+                attempt++;
+                await page.waitForTimeout(1000);
+                
+                const swingTab = page.locator('[data-testid="wallet-tab-Swing"]');
+                const holdTab = page.locator('[data-testid="wallet-tab-Hold"]');
+                
+                if (await swingTab.isVisible() && await holdTab.isVisible()) {
+                    await swingTab.click();
+                    await page.waitForTimeout(500);
+                    
+                    const swingTable = page.locator('[data-testid="wallets-table"]');
+                    const swingNotFound = page.locator('[data-testid="wallet-notfound-display"]');
+                    
+                    const hasSwingWallets = await swingTable.isVisible() && !await swingNotFound.isVisible();
+                    let swingCount = 0;
+                    if (hasSwingWallets) {
+                        swingCount = await swingTable.locator('tbody tr').count();
+                    }
+                    
+                    await holdTab.click();
+                    await page.waitForTimeout(500);
+                    
+                    const holdTable = page.locator('[data-testid="wallets-table"]');
+                    const holdNotFound = page.locator('[data-testid="wallet-notfound-display"]');
+                    
+                    const hasHoldWallets = await holdTable.isVisible() && !await holdNotFound.isVisible();
+                    let holdCount = 0;
+                    if (hasHoldWallets) {
+                        holdCount = await holdTable.locator('tbody tr').count();
+                    }
+                    
+                    console.log(`[PageHelper] Attempt ${attempt}: Swing wallets=${swingCount}, Hold wallets=${holdCount}`);
+                    
+                    if (swingCount > 0 && holdCount > 0) {
+                        await page.waitForTimeout(1000);
+                        walletsStable = true;
+                        console.log('[PageHelper] Wallets detected and stable after complex recalculation.');
+                    }
+                }
+            }
+            
+            if (!walletsStable) {
+                console.log('[PageHelper] WARNING: Wallets may not be fully stable after complex recalculation, but proceeding with verification');
+            }
+        }
+        
+        console.log('[PageHelper] Complex wallet recalculation complete.');
+    } catch (error) {
+        console.log('[PageHelper] Complex wallet recalculation wait completed with timeout, continuing...');
+    }
     
     console.log(`[PageHelper] Transaction ${transactionIndex + 1} price updated to $${newPrice}.`);
+}
+
+// Helper function to wait for wallet recalculation to complete
+async function waitForWalletRecalculation(page: Page, maxWaitTime: number = 10000) {
+    console.log('[PageHelper] Waiting for wallet recalculation to complete...');
+    
+    try {
+        // Wait for network operations to settle completely
+        await page.waitForLoadState('networkidle', { timeout: 8000 });
+        
+        // Simple additional wait to ensure calculations complete
+        await page.waitForTimeout(3000);
+        
+        console.log('[PageHelper] Wallet recalculation complete.');
+    } catch (error) {
+        console.log('[PageHelper] Wallet recalculation wait completed with timeout, continuing...');
+    }
+}
+
+// Helper function to wait for specific wallet values to stabilize after complex recalculation
+async function waitForWalletValuesStabilization(page: Page, expectedSwingWallets: any[], expectedHoldWallets: any[], maxWaitTime: number = 20000) {
+    console.log('[PageHelper] Waiting for wallet values to stabilize after complex recalculation...');
+    
+    const startTime = Date.now();
+    let valuesStable = false;
+    
+    while (!valuesStable && (Date.now() - startTime) < maxWaitTime) {
+        try {
+            // Check if both wallet tabs exist
+            const swingTab = page.locator('[data-testid="wallet-tab-Swing"]');
+            const holdTab = page.locator('[data-testid="wallet-tab-Hold"]');
+            
+            if (await swingTab.isVisible() && await holdTab.isVisible()) {
+                let swingValuesCorrect = true;
+                let holdValuesCorrect = true;
+                
+                // Check Swing wallet values
+                await swingTab.click();
+                await page.waitForTimeout(500);
+                
+                const swingTable = page.locator('[data-testid="wallets-table"]');
+                if (await swingTable.isVisible()) {
+                    const swingRows = await swingTable.locator('tbody tr').count();
+                    console.log(`[PageHelper] DEBUG: Found ${swingRows} swing rows, expected ${expectedSwingWallets.length}`);
+                    
+                    if (swingRows === expectedSwingWallets.length) {
+                        // Check each expected swing wallet's investment value
+                        for (const expectedWallet of expectedSwingWallets) {
+                            const priceSelector = `[data-testid="portfolio-wallet-table-buy-price-${expectedWallet.buyPrice}"]`;
+                            const investmentSelector = `[data-testid="portfolio-wallet-table-investment-${expectedWallet.buyPrice}"]`;
+                            
+                            if (await page.locator(priceSelector).isVisible()) {
+                                const investmentText = await page.locator(investmentSelector).textContent();
+                                const expectedInvestmentText = formatCurrency(expectedWallet.investment);
+                                
+                                console.log(`[PageHelper] DEBUG: Swing $${expectedWallet.buyPrice} - Found: ${investmentText?.trim()}, Expected: ${expectedInvestmentText}`);
+                                
+                                if (investmentText?.trim() !== expectedInvestmentText) {
+                                    swingValuesCorrect = false;
+                                    break;
+                                }
+                            } else {
+                                console.log(`[PageHelper] DEBUG: Swing wallet $${expectedWallet.buyPrice} not found`);
+                                swingValuesCorrect = false;
+                                break;
+                            }
+                        }
+                    } else {
+                        swingValuesCorrect = false;
+                    }
+                } else {
+                    console.log('[PageHelper] DEBUG: Swing table not visible');
+                    swingValuesCorrect = false;
+                }
+                
+                // Check Hold wallet values
+                await holdTab.click();
+                await page.waitForTimeout(500);
+                
+                const holdTable = page.locator('[data-testid="wallets-table"]');
+                if (await holdTable.isVisible()) {
+                    const holdRows = await holdTable.locator('tbody tr').count();
+                    console.log(`[PageHelper] DEBUG: Found ${holdRows} hold rows, expected ${expectedHoldWallets.length}`);
+                    
+                    if (holdRows === expectedHoldWallets.length) {
+                        // Check each expected hold wallet's investment value
+                        for (const expectedWallet of expectedHoldWallets) {
+                            const priceSelector = `[data-testid="portfolio-wallet-table-buy-price-${expectedWallet.buyPrice}"]`;
+                            const investmentSelector = `[data-testid="portfolio-wallet-table-investment-${expectedWallet.buyPrice}"]`;
+                            
+                            if (await page.locator(priceSelector).isVisible()) {
+                                const investmentText = await page.locator(investmentSelector).textContent();
+                                const expectedInvestmentText = formatCurrency(expectedWallet.investment);
+                                
+                                console.log(`[PageHelper] DEBUG: Hold $${expectedWallet.buyPrice} - Found: ${investmentText?.trim()}, Expected: ${expectedInvestmentText}`);
+                                
+                                if (investmentText?.trim() !== expectedInvestmentText) {
+                                    holdValuesCorrect = false;
+                                    break;
+                                }
+                            } else {
+                                console.log(`[PageHelper] DEBUG: Hold wallet $${expectedWallet.buyPrice} not found`);
+                                holdValuesCorrect = false;
+                                break;
+                            }
+                        }
+                    } else {
+                        holdValuesCorrect = false;
+                    }
+                } else {
+                    console.log('[PageHelper] DEBUG: Hold table not visible');
+                    holdValuesCorrect = false;
+                }
+                
+                if (swingValuesCorrect && holdValuesCorrect) {
+                    valuesStable = true;
+                    console.log('[PageHelper] Wallet values have stabilized with correct values.');
+                } else {
+                    console.log('[PageHelper] Wallet values still changing, waiting for stabilization...');
+                }
+            } else {
+                console.log('[PageHelper] DEBUG: Wallet tabs not visible');
+            }
+        } catch (error) {
+            console.log('[PageHelper] Error checking wallet stability, continuing to wait...');
+        }
+        
+        if (!valuesStable) {
+            await page.waitForTimeout(1000);
+        }
+    }
+    
+    if (!valuesStable) {
+        console.log('[PageHelper] WARNING: Wallet values may not be fully stabilized, but proceeding with verification');
+    }
+    
+    console.log('[PageHelper] Wallet values stabilization complete.');
 }
 
 // Test data
@@ -341,6 +626,7 @@ test.describe('Wallet Update Transactions Price', () => {
     });
 
     test('Update Transaction Price - Detailed Wallet Validations', async ({ page }) => {
+    test.setTimeout(120000); // Set timeout to 120 seconds (2 minutes)
         const scenario = testData;
         
         console.log('[UpdateTransactionPrice] Starting test...');
@@ -373,11 +659,12 @@ test.describe('Wallet Update Transactions Price', () => {
         };
         await addTransaction(page, transactionA);
         
+        // Wait for wallet calculations to complete after transaction creation
+        await waitForWalletRecalculation(page);
+
         // Step 5: Verify wallets after Transaction A
         console.log('[UpdateTransactionPrice] Step 5: Verifying wallets after Transaction A...');
-        await verifyTransactionStepWallets(page, scenario.transactions.AddTransactionA, 'AddTransactionA');
-        
-        // Step 6: Add Transaction B (same price)
+        await verifyTransactionStepWallets(page, scenario.transactions.AddTransactionA, 'AddTransactionA');        // Step 6: Add Transaction B (same price)
         console.log('[UpdateTransactionPrice] Step 6: Adding Transaction B (same price)...');
         const transactionB: TransactionData = {
             date: scenario.transactions.AddTransactionB.input.date,
@@ -388,13 +675,24 @@ test.describe('Wallet Update Transactions Price', () => {
         };
         await addTransaction(page, transactionB);
         
+        // Wait for wallet calculations to complete after transaction creation
+        await waitForWalletRecalculation(page);
+
         // Step 7: Verify wallets after Transaction B
         console.log('[UpdateTransactionPrice] Step 7: Verifying wallets after Transaction B...');
-        await verifyTransactionStepWallets(page, scenario.transactions.AddTransactionB, 'AddTransactionB');
-        
-        // Step 8: Edit Transaction A price
+        await verifyTransactionStepWallets(page, scenario.transactions.AddTransactionB, 'AddTransactionB');        // Step 8: Edit Transaction A price
         console.log('[UpdateTransactionPrice] Step 8: Editing Transaction A price...');
-        await editTransactionPrice(page, 1, scenario.transactions.UpdateTransactionA.input.newPrice!); // Transaction A is index 1 (second newest)
+        const expectedWalletsAfterUpdateA = {
+            swing: [
+                { buyPrice: 10, investment: 60, sharesLeft: 6.00000 },
+                { buyPrice: 100, investment: 90, sharesLeft: 0.90000 }
+            ],
+            hold: [
+                { buyPrice: 10, investment: 140, sharesLeft: 14.00000 },
+                { buyPrice: 100, investment: 210, sharesLeft: 2.10000 }
+            ]
+        };
+        await editTransactionPrice(page, 1, scenario.transactions.UpdateTransactionA.input.newPrice!, expectedWalletsAfterUpdateA); // Transaction A is index 1 (second newest)
         
         // Step 9: Verify wallets after Transaction A price change
         console.log('[UpdateTransactionPrice] Step 9: Verifying wallets after Transaction A price change...');

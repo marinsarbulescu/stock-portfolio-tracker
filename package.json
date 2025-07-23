@@ -14,7 +14,13 @@
     "e2e:headless": "npx playwright test",
     "e2e:wallets": "npx playwright test --project=wallet-tests --headed",
     "e2e:transactions": "npx playwright test --project=transaction-tests --headed",
-    "e2e:all": "npx playwright test --project=all-e2e --headed"
+    "e2e:all": "npx playwright test --project=all-e2e --headed",
+    "e2e:config": "node e2e/scripts/test-runner.js",
+    "e2e:run": "node e2e/scripts/test-runner.js run",
+    "e2e:smoke": "node e2e/scripts/test-runner.js run smoke",
+    "e2e:full": "node e2e/scripts/test-runner.js run full",
+    "e2e:list": "node e2e/scripts/test-runner.js list",
+    "e2e:summary": "node e2e/scripts/test-runner.js summary"
   },
   "dependencies": {
     "@aws-amplify/adapter-nextjs": "^1.6.0",

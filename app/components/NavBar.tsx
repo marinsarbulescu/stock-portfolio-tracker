@@ -70,6 +70,10 @@ export default function NavBar({ accessStatus }: NavBarProps) {
             {/* Right Group: Always Visible Items */}
             <div style={linkGroupStyles}>
                 <Link href="/account" style={linkStyles}>Account</Link>
+                {/* Development-only test manager link */}
+                {process.env.NODE_ENV === 'development' && (
+                    <Link href="/test-manager" style={{...linkStyles, color: '#ffa500'}}>Test Manager</Link>
+                )}
                 {isApproved && (
                   <button
                       onClick={fetchLatestPricesForAllStocks}

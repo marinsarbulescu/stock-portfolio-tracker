@@ -1,0 +1,135 @@
+{
+  "testSuites": {
+    "portfolio": {
+      "enabled": true,
+      "description": "Portfolio management tests",
+      "tests": [
+        {
+          "name": "portfolio-create-and-edit-stock",
+          "enabled": true,
+          "file": "e2e/portfolio/portfolio-create-and-edit-stock.spec.ts",
+          "description": "Test creating and editing portfolio stocks",
+          "tags": [
+            "portfolio",
+            "crud",
+            "stocks"
+          ],
+          "priority": "high",
+          "estimatedDuration": "2-3 minutes"
+        }
+      ]
+    },
+    "wallets": {
+      "enabled": true,
+      "description": "Wallet and transaction management tests",
+      "tests": [
+        {
+          "name": "wallet-add-transaction",
+          "enabled": true,
+          "file": "e2e/wallets/wallet-add-transaction.spec.ts",
+          "description": "Test adding transactions to wallet",
+          "tags": [
+            "wallet",
+            "transaction",
+            "crud"
+          ],
+          "priority": "high",
+          "estimatedDuration": "2-3 minutes"
+        },
+        {
+          "name": "wallet-delete-transaction",
+          "enabled": true,
+          "file": "e2e/wallets/wallet-delete-transaction.spec.ts",
+          "description": "Test deleting transactions from wallet",
+          "tags": [
+            "wallet",
+            "transaction",
+            "crud"
+          ],
+          "priority": "medium",
+          "estimatedDuration": "1-2 minutes"
+        },
+        {
+          "name": "wallet-update-transactions-price",
+          "enabled": true,
+          "file": "e2e/wallets/wallet-update-transactions-price.spec.ts",
+          "description": "Test updating transaction prices",
+          "tags": [
+            "wallet",
+            "transaction",
+            "price-update"
+          ],
+          "priority": "medium",
+          "estimatedDuration": "2-3 minutes"
+        },
+        {
+          "name": "wallet-same-price-transactions",
+          "enabled": true,
+          "file": "e2e/wallets/wallet-same-price-transactions.spec.ts",
+          "description": "Test handling transactions with same price",
+          "tags": [
+            "wallet",
+            "transaction",
+            "edge-case"
+          ],
+          "priority": "low",
+          "estimatedDuration": "1-2 minutes"
+        }
+      ]
+    },
+    "signals": {
+      "enabled": true,
+      "description": "Signal and price fetching tests",
+      "tests": [
+        {
+          "name": "signals-price-fetch",
+          "enabled": true,
+          "file": "e2e/signals/signals-price-fetch.spec.ts",
+          "description": "Test price fetching and signal generation",
+          "tags": [
+            "signals",
+            "price",
+            "api"
+          ],
+          "priority": "high",
+          "estimatedDuration": "1-2 minutes"
+        }
+      ]
+    }
+  },
+  "globalSettings": {
+    "runOnlyEnabledSuites": true,
+    "runOnlyEnabledTests": true,
+    "parallelExecution": false,
+    "headless": false,
+    "retries": 0,
+    "timeout": 60000,
+    "browser": "chromium"
+  },
+  "presets": {
+    "smoke": {
+      "description": "Quick smoke test suite",
+      "enabledTests": [
+        "portfolio-create-and-edit-stock",
+        "wallet-add-transaction",
+        "signals-price-fetch"
+      ]
+    },
+    "full": {
+      "description": "Complete test suite",
+      "enabledTests": "all"
+    },
+    "wallet-focused": {
+      "description": "Wallet-related tests only",
+      "enabledSuites": [
+        "wallets"
+      ]
+    },
+    "critical": {
+      "description": "High priority tests only",
+      "filter": {
+        "priority": "high"
+      }
+    }
+  }
+}
