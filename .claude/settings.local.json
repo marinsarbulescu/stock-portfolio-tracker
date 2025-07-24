@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(for i in {1..5})",
+      "Bash(do echo \"=== Test Run $i ===\")",
+      "Bash(npx playwright test:*)",
+      "Bash(break)",
+      "Bash(done)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(curl:*)",
+      "Bash(node:*)",
+      "Bash(rm:*)"
+    ],
+    "deny": []
+  }
+}

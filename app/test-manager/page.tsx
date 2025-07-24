@@ -27,6 +27,7 @@ interface TestSuiteConfig {
     runOnlyEnabledTests: boolean;
     parallelExecution: boolean;
     headless: boolean;
+    workers: number;
     retries: number;
     timeout: number;
     browser: string;
@@ -51,13 +52,53 @@ export default function TestManager() {
         throw new Error('Failed to load test configuration');
       }
       const data = await response.json();
-      setConfig(data);
+      
+      // Calculate optimal worker count based on total tests
+      const totalTests = calculateTotalTests(data.testSuites);
+      const optimalWorkers = Math.min(totalTests, 8); // Cap at 8 workers
+      
+      // Update the config with optimal settings
+      const updatedConfig = {
+        ...data,
+        globalSettings: {
+          ...data.globalSettings,
+          headless: true, // Default to headless
+          workers: optimalWorkers // Set workers to match test count
+        }
+      };
+      
+      setConfig(updatedConfig);
+      
+      // Save the updated config back to the server
+      await updateTestConfig(updatedConfig);
     } catch (err) {
       setError('Failed to load test configuration. Make sure the server is running.');
       console.error('Error loading test config:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateTotalTests = (testSuites: Record<string, TestSuite>) => {
+    let totalTests = 0;
+    for (const suite of Object.values(testSuites)) {
+      totalTests += suite.tests.length;
+    }
+    return totalTests;
+  };
+
+  const getEnabledTestCount = (testSuites: Record<string, TestSuite>) => {
+    let enabledTests = 0;
+    for (const suite of Object.values(testSuites)) {
+      if (suite.enabled) {
+        for (const test of suite.tests) {
+          if (test.enabled) {
+            enabledTests++;
+          }
+        }
+      }
+    }
+    return enabledTests;
   };
 
   const updateTestConfig = async (newConfig: TestSuiteConfig) => {
@@ -95,6 +136,10 @@ export default function TestManager() {
       }
     };
     
+    // Auto-adjust workers based on enabled tests
+    const enabledTestCount = getEnabledTestCount(newConfig.testSuites);
+    newConfig.globalSettings.workers = Math.min(Math.max(enabledTestCount, 1), 8);
+    
     updateTestConfig(newConfig);
   };
 
@@ -117,6 +162,24 @@ export default function TestManager() {
       }
     };
     
+    // Auto-adjust workers based on enabled tests
+    const enabledTestCount = getEnabledTestCount(newConfig.testSuites);
+    newConfig.globalSettings.workers = Math.min(Math.max(enabledTestCount, 1), 8);
+    
+    updateTestConfig(newConfig);
+  };
+
+  const updateGlobalSetting = (key: keyof typeof config.globalSettings, value: any) => {
+    if (!config) return;
+    
+    const newConfig = {
+      ...config,
+      globalSettings: {
+        ...config.globalSettings,
+        [key]: value
+      }
+    };
+    
     updateTestConfig(newConfig);
   };
 
@@ -135,12 +198,28 @@ export default function TestManager() {
     }
 
     let command = 'npx playwright test';
+    
+    // Add headed/headless flag
     if (!config.globalSettings.headless) {
       command += ' --headed';
     }
-    if (!config.globalSettings.parallelExecution) {
-      command += ' --workers=1';
+    
+    // Add workers setting
+    if (config.globalSettings.workers && config.globalSettings.workers > 0) {
+      command += ` --workers=${config.globalSettings.workers}`;
     }
+    
+    // Add browser setting
+    if (config.globalSettings.browser && config.globalSettings.browser !== 'chromium') {
+      command += ` --project=${config.globalSettings.browser}`;
+    }
+    
+    // Add retries setting
+    if (config.globalSettings.retries && config.globalSettings.retries > 0) {
+      command += ` --retries=${config.globalSettings.retries}`;
+    }
+    
+    // Add file list
     if (enabledFiles.length > 0) {
       command += ' ' + enabledFiles.join(' ');
     }
@@ -171,9 +250,16 @@ export default function TestManager() {
     return { totalTests, enabledTests, totalSuites, enabledSuites };
   };
 
-  const runTests = () => {
+  const runTests = async () => {
     const command = generateCommand();
-    alert(`Would run command: ${command}\n\nTo actually run tests, execute this command in your terminal.`);
+    
+    try {
+      await navigator.clipboard.writeText(command);
+      alert(`✅ Command copied to clipboard!\n\n${command}\n\nPaste this command in your terminal to run the tests.`);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+      alert(`Command:\n${command}\n\nCopy this command manually and run it in your terminal.`);
+    }
   };
 
   if (loading) {
@@ -225,6 +311,77 @@ export default function TestManager() {
         <div className="stat-card warning">
           <h3>Test Suites</h3>
           <div>{stats.enabledSuites} / {stats.totalSuites}</div>
+        </div>
+      </div>
+
+      <div className="global-settings">
+        <h3>⚙️ Global Settings</h3>
+        <div className="settings-grid">
+          <div className="setting-group">
+            <label>
+              <span>Headless Mode</span>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={config.globalSettings.headless}
+                  onChange={(e) => updateGlobalSetting('headless', e.target.checked)}
+                />
+                <span className="slider"></span>
+              </label>
+            </label>
+          </div>
+          
+          <div className="setting-group">
+            <label>
+              <span>Workers ({config.globalSettings.workers}) {config ? `(Auto: ${Math.min(Math.max(getEnabledTestCount(config.testSuites), 1), 8)})` : ''}</span>
+              <div className="workers-control">
+                <input
+                  type="range"
+                  min="1"
+                  max="8"
+                  value={config.globalSettings.workers}
+                  onChange={(e) => updateGlobalSetting('workers', parseInt(e.target.value))}
+                  className="workers-slider"
+                />
+                <button
+                  onClick={() => updateGlobalSetting('workers', Math.min(Math.max(getEnabledTestCount(config.testSuites), 1), 8))}
+                  className="auto-workers-btn"
+                  title="Reset to auto-calculated value"
+                >
+                  Auto
+                </button>
+              </div>
+            </label>
+          </div>
+          
+          <div className="setting-group">
+            <label>
+              <span>Browser</span>
+              <select
+                value={config.globalSettings.browser}
+                onChange={(e) => updateGlobalSetting('browser', e.target.value)}
+                className="browser-select"
+              >
+                <option value="chromium">Chromium</option>
+                <option value="firefox">Firefox</option>
+                <option value="webkit">WebKit</option>
+              </select>
+            </label>
+          </div>
+          
+          <div className="setting-group">
+            <label>
+              <span>Retries ({config.globalSettings.retries})</span>
+              <input
+                type="range"
+                min="0"
+                max="3"
+                value={config.globalSettings.retries}
+                onChange={(e) => updateGlobalSetting('retries', parseInt(e.target.value))}
+                className="retries-slider"
+              />
+            </label>
+          </div>
         </div>
       </div>
 
@@ -291,7 +448,7 @@ export default function TestManager() {
           {generateCommand()}
         </div>
         <button className="run-btn" onClick={runTests}>
-          Generate Command
+          Copy Command to Clipboard
         </button>
       </div>
     </div>

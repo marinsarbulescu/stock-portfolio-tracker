@@ -37,6 +37,212 @@ import {
 } from '@/app/config/constants';
 import WalletsSellTransactionModal from './components/WalletsSellTransactionModal';
 
+// Helper types for wallet price change operations
+interface WalletPriceChangeParams {
+    client: any;
+    stockId: string;
+    transactionId: string;
+    originalPrice: number;
+    updatedPrice: number;
+    originalSwingShares: number;
+    originalHoldShares: number;
+    originalInvSwing: number;
+    originalInvHold: number;
+    newSwingShares: number;
+    newHoldShares: number;
+    updatedInvSwing: number;
+    updatedInvHold: number;
+    stockInfo: any;
+    originalSwingWallet: any;
+    originalHoldWallet: any;
+}
+
+interface WalletOperationResult {
+    success: boolean;
+    operation: string;
+    walletType: string;
+    price: number;
+    sharesDelta: number;
+    investmentDelta: number;
+    error?: string;
+}
+
+// Isolated wallet operation functions
+async function removeSharesFromWallet(
+    client: any,
+    stockId: string,
+    price: number,
+    walletType: 'Swing' | 'Hold',
+    shares: number,
+    investment: number,
+    stockInfo: any,
+    existingWallet: any,
+    transactionId: string
+): Promise<WalletOperationResult> {
+    console.error(`[WalletOp] REMOVE from ${walletType} wallet at $${price}: shares=${shares}, investment=${investment}, txnId=${transactionId}`);
+    
+    try {
+        await adjustWalletContribution(client, stockId, price, walletType, -shares, -investment, stockInfo, existingWallet);
+        
+        console.error(`[WalletOp] ✅ REMOVE successful: ${walletType} at $${price}`);
+        return {
+            success: true,
+            operation: 'remove',
+            walletType,
+            price,
+            sharesDelta: -shares,
+            investmentDelta: -investment
+        };
+    } catch (error) {
+        console.error(`[WalletOp] ❌ REMOVE failed: ${walletType} at $${price}:`, error);
+        return {
+            success: false,
+            operation: 'remove',
+            walletType,
+            price,
+            sharesDelta: -shares,
+            investmentDelta: -investment,
+            error: error instanceof Error ? error.message : String(error)
+        };
+    }
+}
+
+async function addSharesToWallet(
+    client: any,
+    stockId: string,
+    price: number,
+    walletType: 'Swing' | 'Hold',
+    shares: number,
+    investment: number,
+    stockInfo: any,
+    transactionId: string
+): Promise<WalletOperationResult> {
+    console.error(`[WalletOp] ADD to ${walletType} wallet at $${price}: shares=${shares}, investment=${investment}, txnId=${transactionId}`);
+    
+    try {
+        await adjustWalletContribution(client, stockId, price, walletType, shares, investment, stockInfo, null);
+        
+        console.error(`[WalletOp] ✅ ADD successful: ${walletType} at $${price}`);
+        return {
+            success: true,
+            operation: 'add',
+            walletType,
+            price,
+            sharesDelta: shares,
+            investmentDelta: investment
+        };
+    } catch (error) {
+        console.error(`[WalletOp] ❌ ADD failed: ${walletType} at $${price}:`, error);
+        return {
+            success: false,
+            operation: 'add',
+            walletType,
+            price,
+            sharesDelta: shares,
+            investmentDelta: investment,
+            error: error instanceof Error ? error.message : String(error)
+        };
+    }
+}
+
+async function executeWalletPriceChange(params: WalletPriceChangeParams): Promise<void> {
+    // Use console.error to ensure visibility in test output
+    console.error(`[WalletPriceChange] ====== STARTING PRICE CHANGE ======`);
+    console.error(`[WalletPriceChange] Transaction ID: ${params.transactionId}`);
+    console.error(`[WalletPriceChange] Price Change: $${params.originalPrice} → $${params.updatedPrice}`);
+    console.error(`[WalletPriceChange] ORIGINAL VALUES:`);
+    console.error(`[WalletPriceChange]   - Swing: ${params.originalSwingShares} shares @ $${params.originalInvSwing} investment`);
+    console.error(`[WalletPriceChange]   - Hold: ${params.originalHoldShares} shares @ $${params.originalInvHold} investment`);
+    console.error(`[WalletPriceChange] NEW VALUES:`);
+    console.error(`[WalletPriceChange]   - Swing: ${params.newSwingShares} shares @ $${params.updatedInvSwing} investment`);
+    console.error(`[WalletPriceChange]   - Hold: ${params.newHoldShares} shares @ $${params.updatedInvHold} investment`);
+    
+    // Validate parameters
+    if (params.originalInvSwing + params.originalInvHold !== params.updatedInvSwing + params.updatedInvHold) {
+        console.error(`[WalletPriceChange] ❌ VALIDATION ERROR: Investment totals don't match!`);
+        console.error(`[WalletPriceChange]   Original total: ${params.originalInvSwing + params.originalInvHold}`);
+        console.error(`[WalletPriceChange]   Updated total: ${params.updatedInvSwing + params.updatedInvHold}`);
+    }
+    
+    const results: WalletOperationResult[] = [];
+    
+    // Phase 1: Remove shares from original price wallets
+    if (params.originalSwingShares > SHARE_EPSILON) {
+        const result = await removeSharesFromWallet(
+            params.client,
+            params.stockId,
+            params.originalPrice,
+            'Swing',
+            params.originalSwingShares,
+            params.originalInvSwing,
+            params.stockInfo,
+            params.originalSwingWallet,
+            params.transactionId
+        );
+        results.push(result);
+        if (!result.success) {
+            throw new Error(`Failed to remove shares from Swing wallet: ${result.error}`);
+        }
+    }
+    
+    if (params.originalHoldShares > SHARE_EPSILON) {
+        const result = await removeSharesFromWallet(
+            params.client,
+            params.stockId,
+            params.originalPrice,
+            'Hold',
+            params.originalHoldShares,
+            params.originalInvHold,
+            params.stockInfo,
+            params.originalHoldWallet,
+            params.transactionId
+        );
+        results.push(result);
+        if (!result.success) {
+            throw new Error(`Failed to remove shares from Hold wallet: ${result.error}`);
+        }
+    }
+    
+    // Phase 2: Add shares to new price wallets
+    if (params.newSwingShares > SHARE_EPSILON) {
+        const result = await addSharesToWallet(
+            params.client,
+            params.stockId,
+            params.updatedPrice,
+            'Swing',
+            params.newSwingShares,
+            params.updatedInvSwing,
+            params.stockInfo,
+            params.transactionId
+        );
+        results.push(result);
+        if (!result.success) {
+            throw new Error(`Failed to add shares to new Swing wallet: ${result.error}`);
+        }
+    }
+    
+    if (params.newHoldShares > SHARE_EPSILON) {
+        const result = await addSharesToWallet(
+            params.client,
+            params.stockId,
+            params.updatedPrice,
+            'Hold',
+            params.newHoldShares,
+            params.updatedInvHold,
+            params.stockInfo,
+            params.transactionId
+        );
+        results.push(result);
+        if (!result.success) {
+            throw new Error(`Failed to add shares to new Hold wallet: ${result.error}`);
+        }
+    }
+    
+    console.error(`[WalletPriceChange] ✅ All operations completed successfully for transaction ${params.transactionId}`);
+    console.error(`[WalletPriceChange] Summary:`, results.map(r => `${r.operation} ${r.walletType}@$${r.price}: ${r.sharesDelta}shares, ${r.investmentDelta}investment`));
+    console.error(`[WalletPriceChange] ====== PRICE CHANGE COMPLETE ======`);
+}
+
 type StockWalletDataType = Schema['StockWallet']['type'];
 type PortfolioStockDataType = Schema["PortfolioStock"]["type"];
 type PortfolioStockUpdateInput = Partial<PortfolioStockDataType> & { id: string };
@@ -450,8 +656,63 @@ export default function StockWalletPage() {
         
     // --- ADD Edit/Delete Handlers ---
     const handleEditTxnClick = (transaction: TransactionDataType) => {
-        //console.log('[StockWalletPage] - Opening Edit modal for transaction:', transaction);
-        setTxnToEdit(transaction);
+        console.error(`[MODAL] handleEditTxnClick called with transaction:`, {
+            id: transaction.id,
+            price: transaction.price,
+            investment: transaction.investment,
+            swingShares: transaction.swingShares,
+            holdShares: transaction.holdShares,
+            date: transaction.date
+        });
+        
+        // CRITICAL FIX: Always get the most current transaction data by ID lookup
+        // This prevents stale object references from sortedTransactions useMemo
+        const currentTransaction = transactions.find(t => t.id === transaction.id);
+        
+        if (!currentTransaction) {
+            console.error(`[MODAL] ❌ CRITICAL ERROR: Transaction ID ${transaction.id} not found in current transactions array!`);
+            alert("Error: Transaction not found. Please refresh and try again.");
+            return;
+        }
+        
+        console.error(`[MODAL] Found current transaction data:`, {
+            id: currentTransaction.id,
+            investment: currentTransaction.investment,
+            swingShares: currentTransaction.swingShares,
+            holdShares: currentTransaction.holdShares
+        });
+        
+        // Check if the passed transaction matches the current one (for debugging)
+        if (currentTransaction.investment !== transaction.investment || 
+            currentTransaction.swingShares !== transaction.swingShares ||
+            currentTransaction.holdShares !== transaction.holdShares) {
+            console.error(`[MODAL] ⚠️ STALE REFERENCE DETECTED: Using current transaction data instead of passed reference`);
+            console.error(`[MODAL] Passed (stale):`, { investment: transaction.investment, swingShares: transaction.swingShares, holdShares: transaction.holdShares });
+            console.error(`[MODAL] Current (fresh):`, { investment: currentTransaction.investment, swingShares: currentTransaction.swingShares, holdShares: currentTransaction.holdShares });
+        } else {
+            console.error(`[MODAL] ✅ Transaction reference is current and valid`);
+        }
+        
+        // Use the CURRENT transaction data, not the potentially stale reference
+        const txnCopy: TransactionDataType = {
+            ...currentTransaction,
+            // Ensure all numeric fields are properly copied
+            price: currentTransaction.price,
+            investment: currentTransaction.investment,
+            swingShares: currentTransaction.swingShares,
+            holdShares: currentTransaction.holdShares,
+            quantity: currentTransaction.quantity
+        };
+        
+        console.error(`[MODAL] Setting txnToEdit with CURRENT transaction data:`, {
+            id: txnCopy.id,
+            price: txnCopy.price,
+            investment: txnCopy.investment,
+            swingShares: txnCopy.swingShares,
+            holdShares: txnCopy.holdShares
+        });
+        
+        setTxnToEdit(txnCopy);
         setIsEditModalOpen(true); // Open the EDIT modal
     };
 
@@ -463,17 +724,59 @@ export default function StockWalletPage() {
 
     // This is called by TransactionForm's onUpdate prop.
     // It also calls the wallet update logic if txn price or invesmtent changes.
-    const handleUpdateTransaction = async (updatedTxnDataFromForm: TransactionDataType & { id: string }) => {        
+    const handleUpdateTransaction = async (updatedTxnDataFromForm: TransactionDataType & { id: string }) => {
+        console.error(`[SUBMIT] handleUpdateTransaction called`);
+        console.error(`[SUBMIT] Original txnToEdit:`, {
+            id: txnToEdit?.id,
+            price: txnToEdit?.price,
+            investment: txnToEdit?.investment,
+            swingShares: txnToEdit?.swingShares,
+            holdShares: txnToEdit?.holdShares
+        });
+        console.error(`[SUBMIT] Form data received:`, {
+            id: updatedTxnDataFromForm.id,
+            price: updatedTxnDataFromForm.price,
+            investment: updatedTxnDataFromForm.investment,
+            swingShares: updatedTxnDataFromForm.swingShares,
+            holdShares: updatedTxnDataFromForm.holdShares
+        });
+        
         if (!txnToEdit) {
             alert("Original transaction data not available. Cannot process update.");
             console.error("[StockWalletPage] - txnToEdit is null in handleUpdateTransaction");
             return;
         }
+        
+        // Create a local snapshot of txnToEdit to prevent any potential React state mutations
+        const originalTxnSnapshot = {
+            id: txnToEdit.id,
+            price: txnToEdit.price,
+            investment: txnToEdit.investment,
+            swingShares: txnToEdit.swingShares,
+            holdShares: txnToEdit.holdShares,
+            action: txnToEdit.action,
+            date: txnToEdit.date
+        };
+        
+        console.error(`[SUBMIT] Created local snapshot:`, originalTxnSnapshot);
+        
+        // Critical validation: Ensure the transaction IDs match
+        if (originalTxnSnapshot.id !== updatedTxnDataFromForm.id) {
+            console.error(`[SUBMIT] CRITICAL ERROR: Transaction ID mismatch!`);
+            console.error(`[SUBMIT] Expected (from form): ${updatedTxnDataFromForm.id}`);
+            console.error(`[SUBMIT] Actual (from txnToEdit): ${originalTxnSnapshot.id}`);
+            alert("Critical error: Transaction data mismatch detected. The edit modal may have incorrect data. Please close and try again.");
+            return;
+        }
+        
+        console.error(`[SUBMIT] ✅ Transaction ID validation passed: ${originalTxnSnapshot.id}`);
 
         if (!ownerId) {
             alert("[StockWalletPage] - Owner ID not yet available. Please try again shortly.");
             return;
-        }        const stockInfoForService: StockInfoForWalletService = { // Ensure this type matches what walletService expects
+        }        
+        
+        const stockInfoForService: StockInfoForWalletService = { // Ensure this type matches what walletService expects
             owner: ownerId, // Use the concatenated string
             plr: stockPlr,
             pdp: stockPdp,
@@ -483,14 +786,14 @@ export default function StockWalletPage() {
         // console.log('[StockWalletPage] - Attempting to update transaction via Edit modal:', updatedTxnDataFromForm);
         // console.log('[StockWalletPage] - Original transaction data:', txnToEdit);
         
-        const isBuyTransaction = txnToEdit.action === 'Buy';
+        const isBuyTransaction = originalTxnSnapshot.action === 'Buy';
         let proceedWithTransactionRecordUpdate = true; // Flag to control if the Transaction model update should proceed
 
         try {
             if (isBuyTransaction) {
                 // console.log("[StockWalletPage] - Processing update for a BUY transaction.");
 
-                const originalPrice = txnToEdit.price;
+                const originalPrice = originalTxnSnapshot.price;
                 const updatedPrice = updatedTxnDataFromForm.price;
 
                 // Ensure prices are numbers before comparison
@@ -501,7 +804,7 @@ export default function StockWalletPage() {
                 const priceChanged = Math.abs(originalPrice - updatedPrice) > CURRENCY_EPSILON;
 
                 if (priceChanged) {
-                    const localOriginalPrice = txnToEdit.price; // Capture it at the start of this block
+                    const localOriginalPrice = originalTxnSnapshot.price; // Capture it at the start of this block
                     // console.log(`[StockWalletPage] Starting price change. Original Txn Price: ${localOriginalPrice}, Stock ID: ${stockId}, Owner for query: ${stockInfoForService.owner}`);
 
                     if (typeof localOriginalPrice !== 'number' || isNaN(localOriginalPrice)) {
@@ -580,10 +883,10 @@ export default function StockWalletPage() {
                     }
                     // --- End Sales Constraint Check ---
 
-                    // Original transaction's contribution (ensure these fields exist on txnToEdit)
-                    const originalTotalInvestment = txnToEdit.investment ?? 0;
-                    const originalSwingShares = txnToEdit.swingShares ?? 0;
-                    const originalHoldShares = txnToEdit.holdShares ?? 0;
+                    // Original transaction's contribution (ensure these fields exist on originalTxnSnapshot)
+                    const originalTotalInvestment = originalTxnSnapshot.investment ?? 0;
+                    const originalSwingShares = originalTxnSnapshot.swingShares ?? 0;
+                    const originalHoldShares = originalTxnSnapshot.holdShares ?? 0;
                     const originalTotalShares = originalSwingShares + originalHoldShares;
 
                     // Updated transaction's contribution (ensure these fields exist on updatedTxnDataFromForm)
@@ -592,36 +895,63 @@ export default function StockWalletPage() {
                     const updatedHoldShares = updatedTxnDataFromForm.holdShares ?? 0;
                     const updatedTotalShares = updatedSwingShares + updatedHoldShares;
 
-                    // Calculate proportional investment for original and updated contributions
-                    // Handle division by zero if originalTotalShares or updatedTotalShares is 0
+                    // Calculate proportional investment for original contribution (to subtract from original price)
+                    // Handle division by zero if originalTotalShares is 0
                     const originalInvSwing = originalTotalShares > SHARE_EPSILON ? originalTotalInvestment * (originalSwingShares / originalTotalShares) : 0;
                     const originalInvHold = originalTotalShares > SHARE_EPSILON ? originalTotalInvestment * (originalHoldShares / originalTotalShares) : 0;
 
-                    const updatedInvSwing = updatedTotalShares > SHARE_EPSILON ? updatedTotalInvestment * (updatedSwingShares / updatedTotalShares) : 0;
-                    const updatedInvHold = updatedTotalShares > SHARE_EPSILON ? updatedTotalInvestment * (updatedHoldShares / updatedTotalShares) : 0;
+                    // For price-only changes, use the SAME proportional investment amounts for the add operations
+                    // This ensures the same dollar amounts move from old price to new price wallets
+                    const updatedInvSwing = originalInvSwing;
+                    const updatedInvHold = originalInvHold;
 
-                    // Step A: Subtract original contribution from wallets at originalPrice
-                    // console.log(`[StockWalletPage] - Subtracting from old price (${originalPrice}) wallets: SwingShares=${-originalSwingShares}, HoldShares=${-originalHoldShares}`);
-                    if (originalSwingShares > SHARE_EPSILON) {
-                        // console.log(`[StockWalletPage] Calling adjustWalletContribution (SUBTRACT) for SWING. Original Price: ${localOriginalPrice}. PreFetchedWallet ID: ${fetchedSwingId}`);
-                        await adjustWalletContribution(client, stockId, originalPrice, 'Swing', -originalSwingShares, -originalInvSwing, stockInfoForService, originalSwingWallet);
-                    }
-                    if (originalHoldShares > SHARE_EPSILON) {
-                        // console.log(`[StockWalletPage] Calling adjustWalletContribution (SUBTRACT) for HOLD. Original Price: ${localOriginalPrice}. PreFetchedWallet ID: ${fetchedHoldId}`);
-                        await adjustWalletContribution(client, stockId, originalPrice, 'Hold', -originalHoldShares, -originalInvHold, stockInfoForService, originalHoldWallet);
-                    }
+                    // Calculate new shares based on original investment amounts and new price
+                    // This preserves the original investment amounts while adjusting shares for the new price
+                    const newSwingShares = updatedPrice > 0 ? updatedInvSwing / updatedPrice : 0;
+                    const newHoldShares = updatedPrice > 0 ? updatedInvHold / updatedPrice : 0;
 
-                    // Step B: Add new (updated) contribution to wallets at updatedPrice
-                    // For this step, we don't pass preFetchedWallet because it might be a new wallet or different existing one
-                    // console.log(`[StockWalletPage] - Adding to new price (${updatedPrice}) wallets: SwingShares=${updatedSwingShares}, HoldShares=${updatedHoldShares}`);
-                    if (updatedSwingShares > SHARE_EPSILON) {
-                        await adjustWalletContribution(client, stockId, updatedPrice, 'Swing', updatedSwingShares, updatedInvSwing, stockInfoForService, null);
-                    }
-                    if (updatedHoldShares > SHARE_EPSILON) {
-                        await adjustWalletContribution(client, stockId, updatedPrice, 'Hold', updatedHoldShares, updatedInvHold, stockInfoForService, null);
-                    }
+                    // Log the calculated values before calling the wallet operations
+                    console.error(`[DEBUG] ====== BEFORE WALLET OPERATIONS ======`);
+                    console.error(`[DEBUG] Transaction being edited: ${originalTxnSnapshot.id}`);
+                    console.error(`[DEBUG] Transaction investment: ${originalTxnSnapshot.investment}`);
+                    console.error(`[DEBUG] Transaction swing shares: ${originalTxnSnapshot.swingShares}`);
+                    console.error(`[DEBUG] Transaction hold shares: ${originalTxnSnapshot.holdShares}`);
+                    console.error(`[DEBUG] Calculated originalInvSwing: ${originalInvSwing}`);
+                    console.error(`[DEBUG] Calculated originalInvHold: ${originalInvHold}`);
+                    console.error(`[DEBUG] Calculated updatedInvSwing: ${updatedInvSwing}`);
+                    console.error(`[DEBUG] Calculated updatedInvHold: ${updatedInvHold}`);
+                    
+                    // Additional snapshot validation before wallet operations
+                    console.error(`[DEBUG] Verifying snapshot consistency before wallet operations:`);
+                    console.error(`[DEBUG] Current txnToEdit state (should match snapshot):`, {
+                        id: txnToEdit?.id,
+                        price: txnToEdit?.price,
+                        investment: txnToEdit?.investment,
+                        swingShares: txnToEdit?.swingShares,
+                        holdShares: txnToEdit?.holdShares
+                    });
+                    console.error(`[DEBUG] Snapshot values being used:`, originalTxnSnapshot);
+                    
+                    // Use new isolated wallet operations
+                    await executeWalletPriceChange({
+                        client,
+                        stockId,
+                        transactionId: originalTxnSnapshot.id,
+                        originalPrice,
+                        updatedPrice,
+                        originalSwingShares,
+                        originalHoldShares,
+                        originalInvSwing,
+                        originalInvHold,
+                        newSwingShares,
+                        newHoldShares,
+                        updatedInvSwing,
+                        updatedInvHold,
+                        stockInfo: stockInfoForService,
+                        originalSwingWallet,
+                        originalHoldWallet
+                    });
 
-                    // console.log("[StockWalletPage] - Wallet contributions reallocated due to price change.");
                 } else {
                     // Price did NOT change.
                     // We will handle Investment/Quantity changes in the next step.
@@ -644,8 +974,13 @@ export default function StockWalletPage() {
             // Close modal and refresh data
             setIsEditModalOpen(false);
             setTxnToEdit(null);
-            fetchTransactions();
-            fetchWallets();
+            
+            // Wait for data refresh to complete before the function returns
+            // This ensures the UI is updated before any external verification logic runs
+            await Promise.all([
+                fetchTransactions(),
+                fetchWallets()
+            ]);
         
         } catch (err: any) {
             // console.error('[StockWalletPage] - Error in handleUpdateTransaction:', err);

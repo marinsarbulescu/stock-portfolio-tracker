@@ -234,19 +234,17 @@ export async function adjustWalletContribution(
             };
             
             console.log(`[WalletService] Payload for UPDATE ${type} wallet ${walletToUpdate.id}:`, JSON.stringify(updatePayload)); // Log the payload
-            const updateResult = await client.models.StockWallet.update(updatePayload); // Capture result
-            console.log(`[WalletService] UPDATE Result for ${type} wallet ${walletToUpdate.id}:`, { data: updateResult.data, errors: updateResult.errors }); // Log result
             
-            const { errors: updateErrors } = await client.models.StockWallet.update(updatePayload);
+            const { data: updateData, errors: updateErrors } = await client.models.StockWallet.update(updatePayload);
             if (updateErrors) {
                  console.error(`[WalletService] Error updating ${type} wallet ${walletToUpdate.id}:`, updateErrors);
                  throw new Error(`Failed to update ${type} wallet at price $${buyPrice.toFixed(CURRENCY_PRECISION)}.`);
             }
+            console.log(`[WalletService] UPDATE successful for ${type} wallet ${walletToUpdate.id}`);
         }
 
     } else if (sharesDelta > SHARE_EPSILON) {
         // --- Wallet Does NOT Exist & Adding Shares: Create ---
-        console.log(`[WalletService] Did NOT find existing wallet. Proceeding with CREATE.`); // Log path taken
         console.log(`[WalletService] Creating new ${type} wallet at price ${buyPrice}`);
 
         // *** Calculate TP for new wallet ***

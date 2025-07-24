@@ -101,10 +101,11 @@
     "runOnlyEnabledSuites": true,
     "runOnlyEnabledTests": true,
     "parallelExecution": false,
-    "headless": false,
+    "headless": true,
     "retries": 0,
     "timeout": 60000,
-    "browser": "chromium"
+    "browser": "chromium",
+    "workers": 6
   },
   "presets": {
     "smoke": {
