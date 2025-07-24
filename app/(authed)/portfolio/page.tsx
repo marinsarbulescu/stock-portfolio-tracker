@@ -7,15 +7,8 @@ import type { Schema } from '@/amplify/data/resource';
 import { usePrices } from '@/app/contexts/PriceContext';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
-import { formatCurrency } from '@/app/utils/financialCalculations';
-
 import {
-  SHARE_PRECISION,
-  CURRENCY_PRECISION,
-  PERCENT_PRECISION,
   SHARE_EPSILON,
-  CURRENCY_EPSILON,
-  PERCENT_EPSILON,
   FETCH_LIMIT_STOCKS_STANDARD
 } from '@/app/config/constants';
 
@@ -32,10 +25,6 @@ import type {
   PortfolioStockUpdateInput,
   SortableStockKey,
   StockSortConfig,
-  RegionDistribution,
-  StockTypeDistribution,
-  RegionStats,
-  InvestmentBreakdown,
   PortfolioColumnVisibilityState,
 } from './types';
 
@@ -70,7 +59,7 @@ function PortfolioContent() {
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false); // For collapsible overview
 
   // Inside your component function - this will now work because we're in a client component under the provider
-  const { latestPrices, pricesLoading, pricesError } = usePrices();
+  const { latestPrices, pricesLoading } = usePrices();
 
   // State to manage showing/hiding archived stocks
   const [showArchived, setShowArchived] = useState(false);
@@ -156,19 +145,19 @@ function PortfolioContent() {
   const sortedStocks = useMemo(() => {
     // Use either active or archived stocks based on current display mode
     const stocksToSort = showArchived ? archivedStocks : activeStocks;
-    let sortableItems = [...stocksToSort];
+    const sortableItems = [...stocksToSort];
 
     if (stockSortConfig !== null) {
       sortableItems.sort((a, b) => {
-        const handleNulls = (val: any) => {
+        const handleNulls = (val: unknown) => {
           if (val === null || val === undefined) {
             return stockSortConfig.direction === 'ascending' ? Infinity : -Infinity;
           }
           return val;
         };
 
-        let valA: any;
-        let valB: any;
+        let valA: unknown;
+        let valB: unknown;
 
         // Get values based on sort key
         switch (stockSortConfig.key) {
@@ -288,9 +277,11 @@ function PortfolioContent() {
       // Also fetch wallets for investment calculation
       fetchWallets();
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error fetching portfolio:", err);
-      const errorMessage = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || "An unexpected error occurred fetching portfolio.");
+      const errorMessage = Array.isArray((err as { errors?: Array<{ message: string }> })?.errors) 
+        ? (err as { errors: Array<{ message: string }> }).errors[0].message 
+        : ((err as Error)?.message || "An unexpected error occurred fetching portfolio.");
       setError(errorMessage);
       setPortfolioStocksData([]); // Clear data on error
     } finally {
@@ -301,16 +292,18 @@ function PortfolioContent() {
   // Keep your useEffect to call fetchPortfolio
   useEffect(() => { fetchPortfolio(); }, [fetchPortfolio]);
 
-  // Delete Handler (uses ID directly)
-  const handleDeleteStock = async (idToDelete: string) => {
-    if (!window.confirm('Are you sure?')) return;
-    setError(null);
-    try {
-      await client.models.PortfolioStock.delete({ id: idToDelete });
-      console.log('Stock deleted!');
-      fetchPortfolio(); // Refresh list
-    } catch (err: any) { /* ... error handling ... */ }
-  };
+  // Delete Handler (uses ID directly) - Currently unused but kept for future use
+  // const handleDeleteStock = async (idToDelete: string) => {
+  //   if (!window.confirm('Are you sure?')) return;
+  //   setError(null);
+  //   try {
+  //     await client.models.PortfolioStock.delete({ id: idToDelete });
+  //     console.log('Stock deleted!');
+  //     fetchPortfolio(); // Refresh list
+  //   } catch {
+  //     /* ... error handling ... */
+  //   }
+  // };
 
   // Modal Handlers
   const openAddModal = () => {
@@ -354,9 +347,11 @@ function PortfolioContent() {
       fetchPortfolio(); // Refresh the list
       handleCancelEdit(); // Close edit modal
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error updating stock:', err);
-      const message = Array.isArray(err) ? err[0].message : err.message;
+      const message = Array.isArray(err) 
+        ? (err as Array<{ message: string }>)[0].message 
+        : (err as Error).message;
       setError(message || 'Failed to update stock.');
     }
   };
@@ -390,9 +385,9 @@ function PortfolioContent() {
             // Refresh the portfolio list to potentially update UI indication if needed
             fetchPortfolio();
         }
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error('Unexpected error updating stock hidden status:', err);
-        setError(err.message || 'An error occurred during update.');
+        setError((err as Error).message || 'An error occurred during update.');
     }  };
 
   // Archive Handler
@@ -431,9 +426,9 @@ function PortfolioContent() {
         console.log(`Stock ${action}d successfully:`, updatedStock);
         fetchPortfolio(); // Refresh the list
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(`Unexpected error ${action}ing stock:`, err);
-      setError(err.message || `An error occurred during ${action}.`);
+      setError((err as Error).message || `An error occurred during ${action}.`);
     }
   };
 
@@ -459,30 +454,30 @@ function PortfolioContent() {
     return distribution;
   }, [portfolioStocksData]);
   
-  // Calculate detailed breakdown by region and stock type
-  const detailedDistribution = useMemo(() => {
-    // Create a structure to hold counts for each region and stock type
-    const distribution: Record<string, Record<string, number>> = {
-      US: { Stock: 0, ETF: 0, Crypto: 0 },
-      Intl: { Stock: 0, ETF: 0, Crypto: 0 },
-      APAC: { Stock: 0, ETF: 0, Crypto: 0 },
-      EU: { Stock: 0, ETF: 0, Crypto: 0 }
-    };
+  // Calculate detailed breakdown by region and stock type - Currently unused but kept for future use
+  // const detailedDistribution = useMemo(() => {
+  //   // Create a structure to hold counts for each region and stock type
+  //   const distribution: Record<string, Record<string, number>> = {
+  //     US: { Stock: 0, ETF: 0, Crypto: 0 },
+  //     Intl: { Stock: 0, ETF: 0, Crypto: 0 },
+  //     APAC: { Stock: 0, ETF: 0, Crypto: 0 },
+  //     EU: { Stock: 0, ETF: 0, Crypto: 0 }
+  //   };
 
-    // Count stocks by region and type
-    portfolioStocksData.forEach(stock => {
-      if (stock.region && stock.stockType) {
-        const region = stock.region as keyof typeof distribution;
-        const stockType = stock.stockType as keyof typeof distribution.US;
+  //   // Count stocks by region and type
+  //   portfolioStocksData.forEach(stock => {
+  //     if (stock.region && stock.stockType) {
+  //       const region = stock.region as keyof typeof distribution;
+  //       const stockType = stock.stockType as keyof typeof distribution.US;
         
-        if (distribution[region] && distribution[region][stockType] !== undefined) {
-          distribution[region][stockType]++;
-        }
-      }
-    });
+  //       if (distribution[region] && distribution[region][stockType] !== undefined) {
+  //         distribution[region][stockType]++;
+  //       }
+  //     }
+  //   });
 
-    return distribution;
-  }, [portfolioStocksData]);
+  //   return distribution;
+  // }, [portfolioStocksData]);
 
   // Calculate percentages
   const percentages = useMemo(() => {
@@ -495,20 +490,20 @@ function PortfolioContent() {
     };
   }, [regionDistribution]);
   
-  // Get region colors for the stacked bar chart
-  const regionColors = {
-    US: 'rgba(54, 162, 235, 0.7)',    // Blue
-    Intl: 'rgba(255, 159, 64, 0.7)',  // Orange
-    EU: 'rgba(75, 192, 192, 0.7)',    // Green
-    APAC: 'rgba(255, 99, 132, 0.7)'   // Red
-  };
+  // Get region colors for the stacked bar chart - Currently unused but kept for future use
+  // const regionColors = {
+  //   US: 'rgba(54, 162, 235, 0.7)',    // Blue
+  //   Intl: 'rgba(255, 159, 64, 0.7)',  // Orange
+  //   EU: 'rgba(75, 192, 192, 0.7)',    // Green
+  //   APAC: 'rgba(255, 99, 132, 0.7)'   // Red
+  // };
 
-  // Get colors for stock types within each bar
-  const stockTypeColors = {
-    Stock: 'rgba(54, 162, 235, 0.9)',  // Darker blue
-    ETF: 'rgba(255, 205, 86, 0.9)',    // Yellow
-    Crypto: 'rgba(153, 102, 255, 0.9)' // Purple
-  };
+  // Get colors for stock types within each bar - Currently unused but kept for future use  
+  // const stockTypeColors = {
+  //   Stock: 'rgba(54, 162, 235, 0.9)',  // Darker blue
+  //   ETF: 'rgba(255, 205, 86, 0.9)',    // Yellow
+  //   Crypto: 'rgba(153, 102, 255, 0.9)' // Purple
+  // };
 
   // Calculate stock type distribution
   const stockTypeDistribution = useMemo(() => {

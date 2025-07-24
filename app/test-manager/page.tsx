@@ -1,7 +1,7 @@
 // app/test-manager/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import './test-manager.css';
 
 interface TestConfig {
@@ -20,6 +20,11 @@ interface TestSuite {
   tests: TestConfig[];
 }
 
+interface Preset {
+  description: string;
+  [key: string]: unknown;
+}
+
 interface TestSuiteConfig {
   testSuites: Record<string, TestSuite>;
   globalSettings: {
@@ -32,7 +37,7 @@ interface TestSuiteConfig {
     timeout: number;
     browser: string;
   };
-  presets: Record<string, any>;
+  presets: Record<string, Preset>;
 }
 
 export default function TestManager() {
@@ -41,11 +46,7 @@ export default function TestManager() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadTestConfig();
-  }, []);
-
-  const loadTestConfig = async () => {
+  const loadTestConfig = useCallback(async () => {
     try {
       const response = await fetch('/api/test-config');
       if (!response.ok) {
@@ -77,7 +78,11 @@ export default function TestManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadTestConfig();
+  }, [loadTestConfig]);
 
   const calculateTotalTests = (testSuites: Record<string, TestSuite>) => {
     let totalTests = 0;
@@ -169,7 +174,7 @@ export default function TestManager() {
     updateTestConfig(newConfig);
   };
 
-  const updateGlobalSetting = (key: keyof typeof config.globalSettings, value: any) => {
+  const updateGlobalSetting = (key: keyof TestSuiteConfig['globalSettings'], value: unknown) => {
     if (!config) return;
     
     const newConfig = {
@@ -187,7 +192,7 @@ export default function TestManager() {
     if (!config) return 'npm run e2e:run';
     
     const enabledFiles: string[] = [];
-    for (const [suiteName, suite] of Object.entries(config.testSuites)) {
+    for (const [, suite] of Object.entries(config.testSuites)) {
       if (suite.enabled) {
         for (const test of suite.tests) {
           if (test.enabled) {
@@ -235,7 +240,7 @@ export default function TestManager() {
     let totalSuites = 0;
     let enabledSuites = 0;
 
-    for (const [suiteName, suite] of Object.entries(config.testSuites)) {
+    for (const [, suite] of Object.entries(config.testSuites)) {
       totalSuites++;
       if (suite.enabled) enabledSuites++;
       
