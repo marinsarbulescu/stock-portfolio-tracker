@@ -1695,7 +1695,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
         setSellDate(getTodayDateString());
         setSellQuantity(wallet.remainingShares ? String(wallet.remainingShares) : ''); // Pre-fill with remaining shares
         // Use the precise TP value from the database (4 decimal places) instead of empty string
-        setSellPrice(wallet.tpValue ? String(wallet.tpValue) : '');
+        setSellPrice('');
         setSellError(null);
         setIsSelling(false);
         setSellSignal('TP');
