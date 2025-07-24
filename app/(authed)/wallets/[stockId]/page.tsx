@@ -222,7 +222,7 @@ export default function StockWalletPage() {
 
     const sortedTransactions = useMemo(() => {
         // Add calculated 'proceeds' if sorting by it is needed
-        let itemsWithProceeds = transactions.map(txn => ({
+        const itemsWithProceeds = transactions.map(txn => ({
             ...txn,
             // Calculate proceeds only for sell transactions, default to null otherwise
             proceeds: (txn.action === 'Sell' && typeof txn.price === 'number' && typeof txn.quantity === 'number')
@@ -230,13 +230,13 @@ export default function StockWalletPage() {
                 : null
         }));
     
-        let sortableItems = [...itemsWithProceeds]; // Use the array with proceeds
+        const sortableItems = [...itemsWithProceeds]; // Use the array with proceeds
     
         if (txnSortConfig !== null) {
             sortableItems.sort((a, b) => {
                  // Helper to handle nulls based on the CURRENT sort direction
                  // Places nulls/undefined last consistently
-                const handleNulls = (val: any) => {
+                const handleNulls = (val: unknown) => {
                     if (val === null || val === undefined) {
                         return txnSortConfig.direction === 'ascending' ? Infinity : -Infinity;
                     }
@@ -360,9 +360,10 @@ export default function StockWalletPage() {
 
                 setWallets(fetchedData as StockWalletDataType[]);
     
-            } catch (err: any) {
+            } catch (err: unknown) {
                 //console.error("[fetchWallets] Error fetching stock wallets:", err);
-                const message = Array.isArray(err?.errors) ? err.errors[0].message : err.message;
+                const errorObj = err as {errors?: Array<{message: string}>};
+                const message = Array.isArray(errorObj.errors) ? errorObj.errors[0].message : (err as Error).message;
                 setError(message || "Failed to fetch wallet data.");
                 setWallets([]);
             } finally {
@@ -428,9 +429,10 @@ export default function StockWalletPage() {
             //console.log(`[StockWalletPage] - Finished fetching transactions for Wallet Page. Total: ${accumulatedTxns.length}`);
             setTransactions(accumulatedTxns);
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('[StockWalletPage] - Error fetching all transactions:', err);
-            const errMsg = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || 'Failed to load transactions.');
+            const errorObj = err as {errors?: Array<{message: string}>};
+            const errMsg = Array.isArray(errorObj.errors) ? errorObj.errors[0].message : ((err as Error).message || 'Failed to load transactions.');
             setTxnError(errMsg);
             setTransactions([]);
         } finally {
@@ -633,7 +635,7 @@ export default function StockWalletPage() {
             // --- Update the Transaction Record itself (if allowed) ---
             if (proceedWithTransactionRecordUpdate) {
                 // console.log("[StockWalletPage] - Updating transaction record in database:", updatedTxnDataFromForm);
-                const { data: updatedTxn, errors } = await client.models.Transaction.update(updatedTxnDataFromForm as any); // Use 'as any' carefully
+                const { data: updatedTxn, errors } = await client.models.Transaction.update(updatedTxnDataFromForm as Parameters<typeof client.models.Transaction.update>[0]); // Use type assertion carefully
 
                 if (errors) throw errors;
                 // console.log('[StockWalletPage] - Transaction record updated successfully:', updatedTxn);
@@ -647,9 +649,10 @@ export default function StockWalletPage() {
             fetchTransactions();
             fetchWallets();
         
-        } catch (err: any) {
+        } catch (err: unknown) {
             // console.error('[StockWalletPage] - Error in handleUpdateTransaction:', err);
-            const errorMessage = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || "Failed to update transaction and/or wallets.");
+            const errorObj = err as {errors?: Array<{message: string}>};
+            const errorMessage = Array.isArray(errorObj.errors) ? errorObj.errors[0].message : ((err as Error).message || "Failed to update transaction and/or wallets.");
             alert(`Update Failed: ${errorMessage}`);
             // Potentially keep modal open on error:
             setIsEditModalOpen(true);
@@ -703,16 +706,17 @@ const handleDeleteWallet = useCallback(async (walletToDelete: StockWalletDataTyp
         // Refresh the wallets list
         fetchWallets();
 
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error(`Error deleting wallet ${walletId}:`, err);
-        const errorMessage = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || 'Failed to delete wallet.');
+        const errorObj = err as {errors?: Array<{message: string}>};
+        const errorMessage = Array.isArray(errorObj.errors) ? errorObj.errors[0].message : ((err as Error).message || 'Failed to delete wallet.');
         // Set error feedback using setFeedback if implemented
          setError(`Delete Failed: ${errorMessage}`); // Use main error state for now
         // setFeedback({ type: 'error', message: `Delete Failed: ${errorMessage}` });
     } finally {
         setIsLoading(false);
     }
-}, [stockId, fetchWallets]); // Add dependencies (stockId needed indirectly? fetchWallets needed)
+}, [fetchWallets]); // Remove unnecessary stockId dependency
 // Note: If using setFeedback, add it to dependencies
 
 const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
@@ -802,10 +806,10 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
 
                 walletUpdateSuccess = true; // Mark wallet update as successful
 
-            } catch (walletErr: any) {
+            } catch (walletErr: unknown) {
                  //console.error("[StockWalletPage] - Error updating wallet during transaction delete:", walletErr);
                  // Capture the error but allow transaction delete attempt to proceed
-                 walletUpdateError = `Wallet update failed: ${Array.isArray(walletErr) ? walletErr[0].message : walletErr.message}`;
+                 walletUpdateError = `Wallet update failed: ${Array.isArray(walletErr) ? (walletErr as Array<{message: string}>)[0].message : (walletErr as Error).message}`;
             }
         }
         
@@ -887,9 +891,9 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                         //console.log(`[StockWalletPage] - [Delete Buy - ${type}] Wallet update successful.`);
                         return true; // Success
 
-                    } catch (err: any) {
-                        console.error(`[StockWalletPage] - [Delete Buy - ${type}] Helper FAILED:`, err?.errors || err);
-                        finalMessage += ` | Error updating ${type} wallet: ${err.message}.`;
+                    } catch (err: unknown) {
+                        console.error(`[StockWalletPage] - [Delete Buy - ${type}] Helper FAILED:`, (err as {errors?: unknown[]}).errors || err);
+                        finalMessage += ` | Error updating ${type} wallet: ${(err as Error).message}.`;
                         return false; // Indicate critical failure
                     }
                 }; // --- End updateWalletOnBuyDelete helper ---
@@ -929,10 +933,10 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
              setTxnError(null);
         }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
         // Catch errors from Transaction.delete or errors propagated from Wallet update/fetch
         console.error('[StockWalletPage] - Error during delete process:', err);
-        const errorMessage = Array.isArray(err) ? err[0].message : (err.message || 'Failed to delete transaction.');
+        const errorMessage = Array.isArray(err) ? (err as Array<{message: string}>)[0].message : ((err as Error).message || 'Failed to delete transaction.');
         // If wallet update succeeded but delete failed, we have inconsistent state! Log clearly.
         if (walletUpdateSuccess) {
              //console.error("[StockWalletPage] - CRITICAL: Wallet was updated, but Transaction delete failed! Manual reconciliation needed.");
@@ -1165,19 +1169,19 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
             totalStockCostBasis: parseFloat(totalStockCostBasis.toFixed(CURRENCY_PRECISION))  // Round cost basis
         };
 
-    }, [transactions, wallets, CURRENCY_PRECISION, PERCENT_PRECISION]); // <<< Now depends on BOTH transactions and wallets
+    }, [transactions, wallets]); // Remove constant dependencies that don't cause re-renders
     // --- End UPDATED P/L Calc Memo ---
 
 
     // --- START - Client-Side Sorting Logic for Wallets ---
 const sortedWallets = useMemo(() => {
     //console.log("[Memo] Sorting wallets...");
-    let sortableItems = [...wallets]; // Start with the raw wallets fetched
+    const sortableItems = [...wallets]; // Start with the raw wallets fetched
 
     if (walletSortConfig !== null) { // Use the new state variable
         sortableItems.sort((a, b) => {
              // Helper for nulls/undefined - places them last consistently
-            const handleNulls = (val: any) => {
+            const handleNulls = (val: unknown) => {
                 if (val === null || val === undefined) {
                     // Use walletSortConfig here
                     return walletSortConfig.direction === 'ascending' ? Infinity : -Infinity;
@@ -1854,10 +1858,10 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
             fetchWallets();
             fetchTransactions(); // Refresh relevant data
     
-        } catch (err: any) {
+        } catch (err: unknown) {
             // --- Error Handling ---
             //console.error("[StockWalletPage] - Error recording sell transaction:", err);
-            const errorMessage = Array.isArray(err) ? err[0].message : (err.message || "An unknown error occurred.");
+            const errorMessage = Array.isArray(err) ? (err as Array<{message: string}>)[0].message : ((err as Error).message || "An unknown error occurred.");
             setSellError(`Failed to record sale: ${errorMessage}`);
     
         } finally {
@@ -1920,11 +1924,11 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 archivedAt: null,
                 createdAt: '',
                 updatedAt: '',
-                transactions: null as any, // Not needed for edit
-                stockWallets: null as any, // Not needed for edit
+                transactions: null as unknown, // Not needed for edit
+                stockWallets: null as unknown, // Not needed for edit
             };
             
-            setStockToEditData(stockData);
+            setStockToEditData(stockData as PortfolioStockDataType);
             setIsEditStockModalOpen(true);
         }
     };
@@ -1961,9 +1965,9 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 }
                 handleCancelEditStock();
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Unexpected error updating stock:', err);
-            setError(err.message || 'An error occurred during update.');
+            setError((err as Error).message || 'An error occurred during update.');
         }
     };
     // --- END Edit Stock Modal Handlers ---
@@ -2094,7 +2098,9 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                         <TransactionForm
                             isEditMode={true}
                             initialData={txnToEdit}
-                            onUpdate={handleUpdateTransaction}
+                            onUpdate={async (updatedData: unknown) => {
+                                await handleUpdateTransaction(updatedData as TransactionDataType & { id: string });
+                            }}
                             onCancel={handleCancelEditTxn}
                             portfolioStockId={stockId}
                             portfolioStockSymbol={stockSymbol}

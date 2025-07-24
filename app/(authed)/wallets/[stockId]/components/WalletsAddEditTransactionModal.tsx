@@ -25,7 +25,7 @@ interface TransactionFormProps {
   onCancel?: () => void;
   isEditMode?: boolean;
   initialData?: Partial<TransactionItem['type']> | null;
-  onUpdate?: (updatedData: any) => Promise<void>;
+  onUpdate?: (updatedData: unknown) => Promise<void>;
 }
 
 // Define Buy Type options
@@ -254,9 +254,9 @@ export default function TransactionForm({
                 //console.log("Could not calculate LBD/TP (PDP/PLR invalid or price missing)"); 
             }
 
-        } catch (fetchErr: any) {
+        } catch (fetchErr: unknown) {
             console.error("Error fetching stock data", fetchErr);
-            setError(`Could not fetch stock details. ${fetchErr.message}`);
+            setError(`Could not fetch stock details. ${(fetchErr as Error).message}`);
             setIsLoading(false); return;
         }
 
@@ -396,7 +396,7 @@ export default function TransactionForm({
             };
             //console.log("Submitting Update Payload:", updatePayload);
             
-            // @ts-ignore Simulate result for consistency if needed downstream
+            // @ts-expect-error Simulate result for consistency if needed downstream
             savedTransaction = { ...initialData, ...updatePayload };
 
             // ================================================================
@@ -561,8 +561,8 @@ export default function TransactionForm({
                     //console.log(`[Edit Wallet Helper - ${type}] Wallet update successful.`);
                     return true; // Indicate success
 
-                } catch (err: any) { // Catch errors from list, update, or calculations
-                    console.error(`[Edit Wallet Helper - ${type}] FAILED:`, err?.errors || err);
+                } catch (err: unknown) { // Catch errors from list, update, or calculations
+                    console.error(`[Edit Wallet Helper - ${type}] FAILED:`, (err as {errors?: unknown[]}).errors || err);
                     setWarning(prev => prev ? `${prev} | Failed to update ${type} wallet.` : `Failed to update ${type} wallet.`);
                     return false; // Indicate critical failure for this wallet update attempt
                 }
@@ -624,7 +624,7 @@ export default function TransactionForm({
                           
                           console.log(`[Sell Edit] Wallet ${walletId} P/L updated: ${newRealizedPl}`);
                           
-                      } catch (walletError: any) {
+                      } catch (walletError: unknown) {
                           console.error("[Sell Edit] Failed to update wallet P/L:", walletError);
                           setWarning("Transaction updated, but wallet P/L update failed. Please check wallet manually.");
                       }
@@ -651,8 +651,8 @@ export default function TransactionForm({
                 ...finalPayload
             };
             //console.log("Submitting Create Payload:", createPayload);
-            // Use 'as any' temporarily if strict type checking causes issues with optional fields
-            const { errors, data: newTransaction } = await client.models.Transaction.create(createPayload as any);
+            // Use type assertion temporarily if strict type checking causes issues with optional fields
+            const { errors, data: newTransaction } = await client.models.Transaction.create(createPayload as Parameters<typeof client.models.Transaction.create>[0]);
             if (errors) throw errors;
 
             if (!newTransaction) {
@@ -788,13 +788,13 @@ export default function TransactionForm({
                               tpPercent: /* calculate or fetch */ null, // Recalculate if needed
                               realizedPlPercent: 0,
                           };
-                          const { errors: createErrors } = await client.models.StockWallet.create(createPayload as any);
+                          const { errors: createErrors } = await client.models.StockWallet.create(createPayload as Parameters<typeof client.models.StockWallet.create>[0]);
                           if (createErrors) throw createErrors;
                           //console.log(`[Wallet Logic - ${type}] Create SUCCESS`);
                      }
-                 } catch (walletError: any) {
-                     console.error(`[Wallet Logic - ${type}] FAILED:`, walletError?.errors || walletError);
-                     throw new Error(`Transaction saved, but failed to create/update ${type} wallet: ${walletError.message}`);
+                 } catch (walletError: unknown) {
+                     console.error(`[Wallet Logic - ${type}] FAILED:`, (walletError as {errors?: unknown[]}).errors || walletError);
+                     throw new Error(`Transaction saved, but failed to create/update ${type} wallet: ${(walletError as Error).message}`);
                  }
              }; // End createOrUpdateWallet function
 
@@ -838,10 +838,11 @@ export default function TransactionForm({
         //console.log("[TransactionForm Edit] Finished wallet updates (if any). Calling onTransactionAdded callback...");
         onTransactionAdded?.();
 
-    } catch (err: any) {
+    } catch (err: unknown) {
         //console.error('Error saving transaction:', err);
         // Attempt to parse Amplify errors which might be an array
-        const message = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || "An unknown error occurred.");
+        const errorObj = err as {errors?: Array<{message: string}>};
+        const message = Array.isArray(errorObj.errors) ? errorObj.errors[0].message : ((err as Error).message || "An unknown error occurred.");
         setError(message);
         setSuccess(null); // Clear success message on error
     } finally {
@@ -959,7 +960,7 @@ export default function TransactionForm({
                     data-testid="txn-form-signal"
                     id="signal" 
                     value={signal ?? ''} 
-                    onChange={(e) => setSignal(e.target.value as any)} 
+                    onChange={(e) => setSignal(e.target.value as Schema['Transaction']['type']['signal'] | undefined)} 
                     required={true} 
                     disabled={isLoading} 
                     style={{ width: '100%', padding: '8px' }} >

@@ -12,6 +12,7 @@ export interface PortfolioStockDataType {
   name?: string | null | undefined;
   budget?: number | null | undefined;
   isHidden?: boolean | null | undefined;
+  archived?: boolean | null | undefined;
   region?: string | null | undefined;
   htp?: number | null | undefined; // HTP percentage for Hold TP signal
   stockCommission?: number | null | undefined; // Commission percentage

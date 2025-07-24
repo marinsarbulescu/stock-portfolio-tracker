@@ -60,7 +60,7 @@ export default function GoalsPage() {
           setExistingGoalsData(currentGoals as GoalsDataType);
           populateForm(currentGoals as GoalsDataType);
       } else { /* ... handle no goals found ... */ }
-    } catch (err: any) { /* ... error handling ... */ }
+    } catch (err: unknown) { /* ... error handling ... */ }
     finally { setIsLoading(false); }
   }, []);
 
@@ -122,9 +122,9 @@ export default function GoalsPage() {
         populateForm(savedGoals as GoalsDataType);
       }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error saving goals:", err);
-      const errorMessage = Array.isArray(err) ? err[0].message : (err.message || "An unexpected error occurred.");
+      const errorMessage = Array.isArray(err) ? (err as Array<{message: string}>)[0].message : ((err as Error).message || "An unexpected error occurred.");
       setError(errorMessage);
     } finally {
       setIsSaving(false);
@@ -152,7 +152,7 @@ export default function GoalsPage() {
           <input id="usBudgetPercent" type="number" step="0.01" value={usBudgetPercent} onChange={e => setUsBudgetPercent(e.target.value)} disabled={isSaving} style={{ width: '100%' }} />
         </div>
          <div>
-          <label htmlFor="intBudgetPercent">Annual Int'l Budget (%):</label>
+          <label htmlFor="intBudgetPercent">Annual Int&apos;l Budget (%):</label>
           <input id="intBudgetPercent" type="number" step="0.01" value={intBudgetPercent} onChange={e => setIntBudgetPercent(e.target.value)} disabled={isSaving} style={{ width: '100%' }} />
         </div>
          <div>
@@ -164,11 +164,11 @@ export default function GoalsPage() {
           <input id="usEtfsTarget" type="number" step="1" value={usEtfsTarget} onChange={e => setUsEtfsTarget(e.target.value)} disabled={isSaving} style={{ width: '100%' }} />
         </div>
         <div>
-          <label htmlFor="intStocksTarget">Target # Int'l Stocks:</label>
+          <label htmlFor="intStocksTarget">Target # Int&apos;l Stocks:</label>
           <input id="intStocksTarget" type="number" step="1" value={intStocksTarget} onChange={e => setIntStocksTarget(e.target.value)} disabled={isSaving} style={{ width: '100%' }} />
         </div>
          <div>
-          <label htmlFor="intEtfsTarget">Target # Int'l ETFs:</label>
+          <label htmlFor="intEtfsTarget">Target # Int&apos;l ETFs:</label>
           <input id="intEtfsTarget" type="number" step="1" value={intEtfsTarget} onChange={e => setIntEtfsTarget(e.target.value)} disabled={isSaving} style={{ width: '100%' }} />
         </div>
 

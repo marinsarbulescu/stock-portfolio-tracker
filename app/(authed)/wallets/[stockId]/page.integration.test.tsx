@@ -31,7 +31,7 @@ jest.mock('@/app/contexts/PriceContext', () => ({
 
 // ---> Import the MOCKS from the actual module path <---
 // Jest automatically uses __mocks__/aws-amplify/data.ts
-// @ts-ignore
+// @ts-expect-error - Importing test mocks from jest mock setup
 import { __testMocks as amplifyDataMocks } from 'aws-amplify/data';
 // Destructure the mock functions we exported in __testMocks
 const { mockTransactionList, mockStockWalletList, mockPortfolioStockGet } = amplifyDataMocks;
@@ -48,7 +48,9 @@ describe('StockWalletPage - Integration Tests', () => {
         mockStockWalletList?.mockClear();
         mockPortfolioStockGet?.mockClear();
         // Apply default return values for mocks if needed for the suite
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('next/navigation').useParams.mockReturnValue({ stockId: 'test-stock-id-123' });
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         (require('@/app/contexts/PriceContext').usePrices as jest.Mock).mockReturnValue({
             latestPrices: { TEST: { currentPrice: 150 } },
             pricesLoading: false, pricesError: null, fetchPrices: jest.fn(), lastPriceFetchTimestamp: Date.now(),

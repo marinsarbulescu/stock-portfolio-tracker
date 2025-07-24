@@ -116,9 +116,9 @@ export default function EditStockModal({
     try {
       console.log('Updating stock input:', updatePayload);
       await onUpdate(updatePayload); // Call parent's update handler
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error updating stock:", err);
-      const errorMessage = Array.isArray(err) ? err[0].message : (err.message || "An unexpected error occurred.");
+      const errorMessage = Array.isArray(err) ? (err as Array<{message: string}>)[0].message : ((err as Error).message || "An unexpected error occurred.");
       setError(errorMessage);
     } finally {
       setIsLoading(false);

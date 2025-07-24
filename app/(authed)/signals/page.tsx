@@ -8,7 +8,7 @@ import { usePrices } from '@/app/contexts/PriceContext'; // Import context hook
 import { fetchAuthSession } from 'aws-amplify/auth';
 import SignalsOverview from './components/SignalsOverview';
 import SignalsTable from './components/SignalsTable';
-import { useAuthStatus } from '@/app/contexts/AuthStatusContext'; // Import useAuthStatus
+// import { useAuthStatus } from '@/app/contexts/AuthStatusContext'; // Import useAuthStatus - Unused
 import type { 
   PortfolioStockDataType, 
   StockWalletDataType, 
@@ -20,7 +20,7 @@ import type {
 } from './types';
 
 import {
-    SHARE_PRECISION,
+    // SHARE_PRECISION, // Unused
     CURRENCY_PRECISION,
     PERCENT_PRECISION,
     SHARE_EPSILON,
@@ -67,13 +67,13 @@ export default function HomePage() {
     
     const [portfolioStocks, setPortfolioStocks] = useState<PortfolioStockDataType[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    // const [error, setError] = useState<string | null>(null); // Unused
 
     const [allWallets, setAllWallets] = useState<StockWalletDataType[]>([]);
 
     const [allTransactions, setAllTransactions] = useState<Schema['Transaction'][]>([]);
 
-    const { latestPrices, pricesLoading, pricesError, lastPriceFetchTimestamp, fetchLatestPricesForAllStocks, progressMessage } = usePrices(); // Added progressMessage
+    const { latestPrices, pricesLoading, pricesError, lastPriceFetchTimestamp, progressMessage } = usePrices(); // Removed unused fetchLatestPricesForAllStocks
     //const { user, accessStatus: authHookAccessStatus } = useAuthStatus(); // Renamed destructured accessStatus to avoid conflict
 
     const formatTimestamp = (date: Date | null): string => {
@@ -87,7 +87,7 @@ export default function HomePage() {
                 hour12: true,     // Use AM/PM
                 timeZoneName: 'short' // Attempts to get PDT/PST etc. based on *user's* browser timezone
             }).format(date);
-        } catch (e) {
+        } catch {
             // console.error("[app/(authed)/page.tsx] - Error formatting date:", e);
             return date.toLocaleDateString(); // Fallback
         }
@@ -112,7 +112,7 @@ export default function HomePage() {
                 } else {
                   setPageAccessLevel('denied'); // Use renamed setter
                 }
-              } catch (error) {
+              } catch {
                 // console.error("[app/(authed)/page.tsx] - Error checking user group (or user not authenticated):", error);
                 setPageAccessLevel('denied'); // Use renamed setter
               }
@@ -164,7 +164,7 @@ export default function HomePage() {
                 if (errors) throw errors; // Throw GraphQL errors
 
                 if (fetchedTxns) {
-                    accumulatedTxns = [...accumulatedTxns, ...(fetchedTxns as any)];
+                    accumulatedTxns = [...accumulatedTxns, ...(fetchedTxns as Schema['Transaction'][])];
                 }
                 currentToken = returnedToken;
 
@@ -172,16 +172,18 @@ export default function HomePage() {
 
             return accumulatedTxns;
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             // console.error('[app/(authed)/page.tsx] - Error during paginated transaction fetch:', err);
-            const errMsg = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || 'Failed to load all transactions.');
+            const errMsg = Array.isArray((err as { errors?: Array<{ message: string }> })?.errors) 
+                ? (err as { errors: Array<{ message: string }> }).errors[0].message 
+                : ((err as Error)?.message || 'Failed to load all transactions.');
             throw new Error(errMsg); // Re-throw to be caught by fetchPageData
         }
     }, []); // Empty dependency array - stable function definition
 
     const fetchPageData = useCallback(async () => {
         setIsLoading(true); // Use combined loading state
-        setError(null);     // Use combined error state
+        // setError(null);     // Use combined error state - Unused
         setPortfolioStocks([]);
         setAllTransactions([]);
         setAllWallets([]);
@@ -217,29 +219,34 @@ export default function HomePage() {
                 })
             ]);
 
-            if (stockResult && Array.isArray((stockResult as any).errors) && (stockResult as any).errors.length > 0) {
-                 throw (stockResult as any).errors;
+            if (stockResult && Array.isArray((stockResult as { errors?: Array<{ message: string }> }).errors) && (stockResult as { errors: Array<{ message: string }> }).errors.length > 0) {
+                 throw (stockResult as { errors: Array<{ message: string }> }).errors;
             }
             
-            const visibleStocks = (stockResult.data as any[]).filter(stock => !stock.isHidden && !stock.archived);
+            const visibleStocks = (stockResult.data as PortfolioStockDataType[]).filter(stock => !stock.isHidden && !stock.archived);
             setPortfolioStocks(visibleStocks);
             
             const visibleStockIds = new Set(visibleStocks.map(stock => stock.id));
             
-            const visibleTransactions = (allTxnsData as any[]).filter(
-                txn => visibleStockIds.has(txn.portfolioStockId)
+            const visibleTransactions = allTxnsData.filter(
+                (txn: unknown) => {
+                    const transaction = txn as { portfolioStockId: string };
+                    return visibleStockIds.has(transaction.portfolioStockId);
+                }
             );
             setAllTransactions(visibleTransactions);
             
-            const visibleWallets = (walletResult.data as any[]).filter(
+            const visibleWallets = (walletResult.data as StockWalletDataType[]).filter(
                 wallet => visibleStockIds.has(wallet.portfolioStockId)
             );
             setAllWallets(visibleWallets);
 
-        } catch (err: any) {
+        } catch {
             // console.error("[app/(authed)/page.tsx] - Error fetching page data:", err);
-            const errorMessage = Array.isArray(err?.errors) ? err.errors[0].message : (err.message || "Failed to load page data.");
-            setError(errorMessage); // Set combined error state
+            // const errorMessage = Array.isArray((err as { errors?: Array<{ message: string }> })?.errors) 
+            //     ? (err as { errors: Array<{ message: string }> }).errors[0].message 
+            //     : ((err as Error)?.message || "Failed to load page data.");
+            // setError(errorMessage); // Set combined error state - Unused
             setPortfolioStocks([]);
             setAllTransactions([]);
             setAllWallets([]);
@@ -252,19 +259,19 @@ export default function HomePage() {
         fetchPageData();
     }, [fetchPageData]); // Renamed fetch function
 
-    interface ProcessedStockTxnData {
-        lastBuy?: { date: string; price: number | null }; // Store only needed info
-        lastSell?: { date: string };
-        buyCount: number;
-        ltpiaPrice?: number | null;
-        ltpiaTp?: number | null;
-        ltpiaPlayShares?: number | null;
-        currentPlayShares: number;
-        currentHoldShares: number;
-        totalCurrentShares: number;
-        incompleteBuyCount: number;
-    }
-    type ProcessedTxnMap = Record<string, ProcessedStockTxnData>; // Keyed by stock ID
+    // interface ProcessedStockTxnData { // Unused interface
+    //     lastBuy?: { date: string; price: number | null }; // Store only needed info
+    //     lastSell?: { date: string };
+    //     buyCount: number;
+    //     ltpiaPrice?: number | null;
+    //     ltpiaTp?: number | null;
+    //     ltpiaPlayShares?: number | null;
+    //     currentPlayShares: number;
+    //     currentHoldShares: number;
+    //     totalCurrentShares: number;
+    //     incompleteBuyCount: number;
+    // }
+    // type ProcessedTxnMap = Record<string, ProcessedStockTxnData>; // Keyed by stock ID - Unused
 
     interface ProcessedStockData {
         lastBuy: { date: string; price: number | null } | undefined; // Changed from lastSwingBuy
@@ -367,7 +374,7 @@ export default function HomePage() {
           if (diffTime < 0) return 0;
           const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
           return diffDays;
-        } catch (e) {
+        } catch {
           // console.error("[app/(authed)/page.tsx] - Error parsing date for diff calculation:", dateString, e);
           return null;
         }
@@ -564,7 +571,7 @@ export default function HomePage() {
                 htpValues: htpValues,
             };
         });
-    }, [portfolioStocks, latestPrices, processedData]);
+    }, [portfolioStocks, latestPrices, processedData, checkHtpSignalForStock, getHtpValuesForStock]);
 
     const portfolioBudgetStats = useMemo(() => {
         const totalBudget = portfolioStocks.reduce((sum, stock) => sum + (stock.budget ?? 0), 0);
@@ -588,9 +595,10 @@ export default function HomePage() {
     }, [portfolioStocks, allWallets]);
 
     const portfolioTransactionCounts = useMemo(() => {
-        const buys = allTransactions.filter(t => (t as any).action === 'Buy').length;
-        const swingSells = allTransactions.filter(t => (t as any).action === 'Sell' && (t as any).txnType === 'Swing').length;
-        const holdSells = allTransactions.filter(t => (t as any).action === 'Sell' && (t as any).txnType === 'Hold').length;
+        const typedTxns = allTransactions.map(t => t as unknown as Schema['Transaction']['type']);
+        const buys = typedTxns.filter(t => t.action === 'Buy').length;
+        const swingSells = typedTxns.filter(t => t.action === 'Sell' && t.txnType === 'Swing').length;
+        const holdSells = typedTxns.filter(t => t.action === 'Sell' && t.txnType === 'Hold').length;
         const totalSells = swingSells + holdSells;
         return { buys, swingSells, holdSells, totalSells };
     }, [allTransactions]);
@@ -606,16 +614,17 @@ export default function HomePage() {
         let totalSwingPlDollars = 0, totalSwingCostBasis = 0;
         let totalHoldPlDollars = 0, totalHoldCostBasis = 0;
     
-        allTransactions.forEach(txn => {
-            if ((txn as any).action === 'Sell' && (txn as any).completedTxnId && typeof (txn as any).quantity === 'number' && typeof (txn as any).price === 'number') {
-                const walletBuyPrice = walletBuyPriceMap.get((txn as any).completedTxnId);
+        const typedTxnsForPL = allTransactions.map(t => t as unknown as Schema['Transaction']['type']);
+        typedTxnsForPL.forEach(txn => {
+            if (txn.action === 'Sell' && txn.completedTxnId && typeof txn.quantity === 'number' && typeof txn.price === 'number') {
+                const walletBuyPrice = walletBuyPriceMap.get(txn.completedTxnId || '');
                 if (typeof walletBuyPrice === 'number') {
-                    const costBasisForTxn = walletBuyPrice * (txn as any).quantity;
-                    const profitForTxn = ((txn as any).price - walletBuyPrice) * (txn as any).quantity;
-                    if ((txn as any).txnType === 'Swing') {
+                    const costBasisForTxn = walletBuyPrice * (txn.quantity || 0);
+                    const profitForTxn = ((txn.price || 0) - walletBuyPrice) * (txn.quantity || 0);
+                    if (txn.txnType === 'Swing') {
                         totalSwingPlDollars += profitForTxn;
                         totalSwingCostBasis += costBasisForTxn;
-                    } else if ((txn as any).txnType === 'Hold') {
+                    } else if (txn.txnType === 'Hold') {
                         totalHoldPlDollars += profitForTxn;
                         totalHoldCostBasis += costBasisForTxn;
                     }
@@ -763,88 +772,6 @@ export default function HomePage() {
         };
     }, [portfolioRealizedPL, portfolioUnrealizedPL]);
 
-    const portfolioYtdPL = useMemo(() => {
-        // console.log('[app/(authed)/page.tsx] - [YTD Calc Start] Input Lengths:', {
-        //     allWallets: allWallets.length,
-        //     portfolioStocks: portfolioStocks.length,
-        //     latestPrices: Object.keys(latestPrices).length,
-        //     allTransactions: allTransactions.length
-        // });
-        const walletBuyPriceMap = new Map<string, number>();
-        allWallets.forEach(w => { if (w.id && typeof w.buyPrice === 'number') walletBuyPriceMap.set(w.id, w.buyPrice); });
-
-        const currentYear = new Date().getFullYear();
-        const startOfYear = `${currentYear}-01-01`;
-
-        let ytdRealizedSwingPL = 0, ytdRealizedHoldPL = 0;
-        let currentUnrealizedSwingPL = 0, currentSwingCostBasis = 0;
-        let currentUnrealizedHoldPL = 0, currentHoldCostBasis = 0;
-        let partialDataUsed = false;
-
-        allTransactions.forEach(txn => {
-            if ((txn as any).action === 'Sell' && (txn as any).date && (txn as any).date >= startOfYear && (txn as any).completedTxnId && typeof (txn as any).quantity === 'number' && typeof (txn as any).price === 'number') {
-                const walletBuyPrice = walletBuyPriceMap.get((txn as any).completedTxnId);
-                if (typeof walletBuyPrice === 'number') {
-                    const profitForTxn = ((txn as any).price - walletBuyPrice) * (txn as any).quantity;
-                    if ((txn as any).txnType === 'Swing') ytdRealizedSwingPL += profitForTxn;
-                    else if ((txn as any).txnType === 'Hold') ytdRealizedHoldPL += profitForTxn;
-                }
-            }
-        });
-
-        // console.log('[app/(authed)/page.tsx] - [YTD Calc] After Realized Calc:', { ytdRealizedSwingPL, ytdRealizedHoldPL });
-
-        // console.log('[app/(authed)/page.tsx] - [YTD Calc] Starting Unrealized Calc Loop...');
-
-        allWallets.forEach((wallet, index) => {
-            const stockForWallet = portfolioStocks.find(s => s.id === wallet.portfolioStockId);
-            const stockSymbol = stockForWallet?.symbol ?? null;
-            // console.log(`[app/(authed)/page.tsx] - [YTD Calc Loop ${index}] WalletID=${wallet.id} StockID=${wallet.portfolioStockId} -> Symbol=${stockSymbol}`);
-
-            const currentPrice = latestPrices[stockSymbol ?? '']?.currentPrice ?? null;
-            // console.log(`[app/(authed)/page.tsx] - [YTD Calc Loop ${index}] Price lookup for ${stockSymbol}:`, currentPrice);
-            
-            if (currentPrice === null && (wallet.remainingShares ?? 0) > SHARE_EPSILON) {
-                partialDataUsed = true;
-                // console.warn(`[app/(authed)/page.tsx] - [YTD Calc Loop ${index}] Setting priceAvailable=false. Missing price for symbol: ${stockSymbol} (Wallet ID: ${wallet.id})`);
-                return;
-            }
-
-            if ((wallet.remainingShares ?? 0) > SHARE_EPSILON && typeof wallet.buyPrice === 'number' && typeof currentPrice === 'number') {
-                const unrealizedForWallet = (currentPrice - wallet.buyPrice) * wallet.remainingShares!;
-                const costBasisForWallet = wallet.buyPrice * wallet.remainingShares!;
-                if (wallet.walletType === 'Swing') {
-                    currentUnrealizedSwingPL += unrealizedForWallet;
-                    currentSwingCostBasis += costBasisForWallet;
-                } else if (wallet.walletType === 'Hold') {
-                    currentUnrealizedHoldPL += unrealizedForWallet;
-                    currentHoldCostBasis += costBasisForWallet;
-                }
-            }
-        });
-        
-        // console.log('[app/(authed)/page.tsx] - [YTD Calc] After Unrealized Loop:', { currentUnrealizedSwingPL, currentSwingCostBasis, currentUnrealizedHoldPL, currentHoldCostBasis });
-
-        const totalSwingYtdPL_dollars = ytdRealizedSwingPL + currentUnrealizedSwingPL;
-        const totalHoldYtdPL_dollars = ytdRealizedHoldPL + currentUnrealizedHoldPL;
-
-        const totalSwingYtdPL_percent = (currentSwingCostBasis > SHARE_EPSILON) ? (totalSwingYtdPL_dollars / currentSwingCostBasis) * 100 : (totalSwingYtdPL_dollars === 0 ? 0 : null);
-        const totalHoldYtdPL_percent = (currentHoldCostBasis > SHARE_EPSILON) ? (totalHoldYtdPL_dollars / currentHoldCostBasis) * 100 : (totalHoldYtdPL_dollars === 0 ? 0 : null);
-
-        // console.log('[app/(authed)/page.tsx] - [YTD Calc Success] Calculation complete. Returning:', {
-        //     totalSwingYtdPL_dollars, totalSwingYtdPL_percent, totalHoldYtdPL_dollars, totalHoldYtdPL_percent
-        // });
-        
-        return {
-            totalSwingYtdPL_dollars: parseFloat(totalSwingYtdPL_dollars.toFixed(CURRENCY_PRECISION)),
-            totalSwingYtdPL_percent: typeof totalSwingYtdPL_percent === 'number' ? parseFloat(totalSwingYtdPL_percent.toFixed(PERCENT_PRECISION)) : null,
-            totalHoldYtdPL_dollars: parseFloat(totalHoldYtdPL_dollars.toFixed(CURRENCY_PRECISION)),
-            totalHoldYtdPL_percent: typeof totalHoldYtdPL_percent === 'number' ? parseFloat(totalHoldYtdPL_percent.toFixed(PERCENT_PRECISION)) : null,
-            partialDataUsed: partialDataUsed,
-        };
-
-    }, [allTransactions, allWallets, portfolioStocks, latestPrices]);
-
     const visibleColumnCount = useMemo(() => {
         let count = 1;
         count += (Object.values(reportColumnVisibility) as boolean[]).filter(Boolean).length;
@@ -854,14 +781,14 @@ export default function HomePage() {
     const [sortConfig, setSortConfig] = useState<SortConfig<ReportColumnKey> | null>(null);
 
     const sortedTableData = useMemo(() => {
-        let sortableItems = [...reportData];
+        const sortableItems = [...reportData];
     
-        const handleNullAsc = (val: number | null | undefined): number => {
-            return (val === null || val === undefined) ? Infinity : val;
-        };
+        // const handleNullAsc = (val: number | null | undefined): number => { // Unused
+        //     return (val === null || val === undefined) ? Infinity : val;
+        // };
     
         if (sortConfig !== null) {
-            const handleNullCurrent = (val: any) => {
+            const handleNullCurrent = (val: unknown) => {
                if (val === null || val === undefined) {
                   return sortConfig.direction === 'ascending' ? Infinity : -Infinity;
                }
@@ -1034,4 +961,4 @@ export default function HomePage() {
     );
 }
 
-type Nullable<T> = T | null | undefined;
+// type Nullable<T> = T | null | undefined; // Unused type

@@ -36,10 +36,10 @@ export function useOwnerId(): UseOwnerIdReturn {
                         // setError(new Error("User sub not found in session."));
                     }
                 }
-            } catch (e: any) {
+            } catch (e: unknown) {
                 if (isMounted) {
                     console.error("useOwnerId: Error fetching auth session:", e);
-                    setError(e);
+                    setError(e as Error);
                     setOwnerId(null);
                 }
             } finally {

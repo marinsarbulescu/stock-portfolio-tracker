@@ -76,9 +76,9 @@ export default function StockDataDownloadPage() {
       setLastDownload(`${symbol.toUpperCase()} - ${stockData.historicalCloses.length} data points`);
       setSymbol(''); // Clear the input
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching stock data:', err);
-      setError(err.message || 'Failed to fetch stock data');
+      setError((err as Error).message || 'Failed to fetch stock data');
     } finally {
       setIsLoading(false);
     }

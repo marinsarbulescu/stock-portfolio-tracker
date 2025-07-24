@@ -67,7 +67,9 @@ async function verifyWalletDetails(
     // Navigate to the appropriate wallet tab
     const tabButton = page.locator(`[data-testid="wallet-tab-${walletType}"]`);
     await tabButton.click();
-    await page.waitForTimeout(1000);
+    
+    // Wait for page to settle after tab click
+    await page.waitForLoadState('networkidle');
 
     // Get the wallet table
     const walletTable = page.locator('[data-testid="wallets-table"]');
@@ -125,7 +127,9 @@ async function verifyWalletCounts(
     // Navigate to the appropriate wallet tab
     const tabButton = page.locator(`[data-testid="wallet-tab-${walletType}"]`);
     await tabButton.click();
-    await page.waitForTimeout(1000);
+    
+    // Wait for page to settle after tab click
+    await page.waitForLoadState('networkidle');
 
     if (expectedCount === 0) {
         // Expect no wallets message
@@ -248,7 +252,7 @@ test.describe('Wallet Add Transaction', () => {
         // Navigate to Portfolio page and then to Wallets page
         console.log('[AddTransaction] Step 1: Navigating to Portfolio page...');
         await page.goto('/portfolio');
-        await page.waitForTimeout(2000);
+        await page.waitForLoadState('networkidle');
         
         console.log('[AddTransaction] Step 2: Navigating to stock\'s Wallets page...');
         await navigateToStockWalletPage(page, stockId, scenario.stock.symbol);

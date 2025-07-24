@@ -109,9 +109,9 @@ export default function AddStockModal({
 
       console.log('Stock added successfully!');
       onStockAdded(); // Notify parent
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error saving stock:", err);
-      const errorMessage = Array.isArray(err) ? err[0].message : (err.message || "An unexpected error occurred.");
+      const errorMessage = Array.isArray(err) ? (err as Array<{message: string}>)[0].message : ((err as Error).message || "An unexpected error occurred.");
       setError(errorMessage);
     } finally {
       setIsLoading(false);

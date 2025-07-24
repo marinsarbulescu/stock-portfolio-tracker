@@ -17,12 +17,13 @@ export type StockTrendValue = PortfolioStockDataType['stockTrend'];
 
 // ===== PRICE-RELATED TYPES =====
 export interface PriceData {
+  symbol: string;
   currentPrice: number | null;
-  [key: string]: any;
+  historicalCloses: Array<{ date: string; close: number; }>;
 }
 
 export type LatestPrices = Record<string, PriceData | null>;
-export type PriceMap = Record<string, { currentPrice: number | null; [key: string]: any } | null>;
+export type PriceMap = Record<string, PriceData | null>;
 
 // ===== COLUMN VISIBILITY TYPES =====
 export interface PortfolioColumnVisibilityState {

@@ -101,7 +101,7 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
     setPricesLoading(true);
     setPricesError(null);
     setProgressMessage(null); // Reset progress message at the start
-    let allFetchedPricesMap: PriceMap = {};
+    const allFetchedPricesMap: PriceMap = {};
     let overallError: string | null = null;
 
     try {
@@ -179,9 +179,9 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
               });
             }
             // console.log(`[PriceContext.tsx] - Successfully processed batch ${currentBatchNumber}`);
-          } catch (batchErr: any) {
+          } catch (batchErr: unknown) {
             // console.error(`[PriceContext.tsx] - Unexpected error processing batch ${batchSymbols.join(',')}:`, batchErr);
-            const unexpectedBatchErrMsg = batchErr.message || "Unexpected error during batch price fetch";
+            const unexpectedBatchErrMsg = (batchErr as Error).message || "Unexpected error during batch price fetch";
             if (!overallError) overallError = unexpectedBatchErrMsg;
             batchSymbols.forEach(s => {
                 if (!(s in allFetchedPricesMap)) allFetchedPricesMap[s] = null;
@@ -196,13 +196,13 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
         }
         // console.log('[PriceContext.tsx] - All batches processed. Prices updated in context:', allFetchedPricesMap);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // console.error("[PriceContext.tsx] - Error in fetchLatestPricesForAllStocks (Outer catch):", err);
       let outerErrMsg = "An unexpected error occurred";
-      if (Array.isArray(err) && err.length > 0 && err[0].message) {
-        outerErrMsg = err[0].message;
-      } else if (err.message) {
-        outerErrMsg = err.message;
+      if (Array.isArray(err) && err.length > 0 && (err as Array<{message: string}>)[0].message) {
+        outerErrMsg = (err as Array<{message: string}>)[0].message;
+      } else if ((err as Error).message) {
+        outerErrMsg = (err as Error).message;
       }
       setPricesError(outerErrMsg);
       setLatestPrices({});
