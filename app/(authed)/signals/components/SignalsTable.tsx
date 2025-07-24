@@ -176,7 +176,6 @@ export default function SignalsTable({
                                         </button>
                                     </td>
                                     <td style={{ padding: '5px' }}>
-                                        <StockTrendIndicator stockTrend={item.stockTrend} />&nbsp;
                                         <Link
                                             href={`/wallets/${item.id}`}
                                             style={{
@@ -252,6 +251,20 @@ export default function SignalsTable({
                                     <tr style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
                                         <td colSpan={visibleColumnCount + 1} style={{ padding: '10px', borderTop: '1px solid #333' }}>
                                             <div style={{ fontSize: '0.9em', color: '#ccc' }}>
+                                                {/* Stock Trend Indicator */}
+                                                {item.stockTrend && item.stockTrend !== 'Sideways' && (
+                                                    <p style={{ margin: '5px 0' }}>
+                                                        <strong>Trend:</strong>{' '}
+                                                        <span style={{ 
+                                                            display: 'inline-flex', 
+                                                            alignItems: 'center', 
+                                                            gap: '6px' 
+                                                        }}>
+                                                            {item.stockTrend}
+                                                            <StockTrendIndicator stockTrend={item.stockTrend} />
+                                                        </span>
+                                                    </p>
+                                                )}
                                                 {/* Show HTP values if HTP signal is active */}
                                                 {item.hasHtpSignal && item.htpValues.length > 0 && (
                                                     <p>
