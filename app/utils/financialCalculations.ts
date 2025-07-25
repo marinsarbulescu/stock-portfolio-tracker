@@ -4,7 +4,7 @@ import { CURRENCY_PRECISION, PERCENT_PRECISION } from '@/app/config/constants'; 
 // Define simplified types for mock data used in tests (can also be shared or defined in test file)
 interface MockTransaction {
     id: string;
-    action: 'Buy' | 'Sell' | 'Div';
+    action: 'Buy' | 'Sell' | 'Div' | 'SLP';
     txnType?: 'Swing' | 'Hold' | 'Split' | string | null;
     completedTxnId?: string | null;
     quantity?: number | null;

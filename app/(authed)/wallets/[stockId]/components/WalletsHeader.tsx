@@ -6,11 +6,11 @@ export interface WalletsHeaderProps {
   symbol?: string | null;
   price?: number | null;
   pricesLoading: boolean;
-  onAddBuy: () => void;
+  onAddTransaction: () => void; // Changed from onAddBuy to be more generic
   onEditStock: () => void;
 }
 
-export default function WalletsHeader({ name, symbol, price, pricesLoading, onAddBuy, onEditStock }: WalletsHeaderProps) {
+export default function WalletsHeader({ name, symbol, price, pricesLoading, onAddTransaction, onEditStock }: WalletsHeaderProps) {
   const displayPrice =
     typeof price === 'number'
       ? formatCurrency(price)
@@ -42,8 +42,8 @@ export default function WalletsHeader({ name, symbol, price, pricesLoading, onAd
         </p>
         <p style={{ fontSize: '1.2em' }}>{displayPrice}</p>
       </div>
-      <button data-testid="add-buy-transaction-button" onClick={onAddBuy} style={{ padding: '8px 15px' }}>
-        Add Buy Transaction
+      <button data-testid="add-transaction-button" onClick={onAddTransaction} style={{ padding: '8px 15px' }}>
+        Add Transaction
       </button>
     </div>
   );

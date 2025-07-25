@@ -75,6 +75,7 @@ export default function StockWalletPage() {
      price: true,
      lbd: true,
      investment: true,
+     amount: true,
      quantity: false,
      proceeds: true,
      txnProfit: false,
@@ -93,6 +94,7 @@ export default function StockWalletPage() {
         price: 'Price',
         lbd: 'LBD',
         investment: 'Inv',
+        amount: 'Amount',
         quantity: 'Qty',
         proceeds: 'Sell $',
         txnProfit: 'P/L',
@@ -294,7 +296,7 @@ export default function StockWalletPage() {
     const [stockCommission, setStockCommission] = useState<number | null | undefined>(undefined);
     const [stockHtp, setStockHtp] = useState<number | null | undefined>(undefined); // HTP percentage
 
-    const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
+    const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
 
     const [isOverviewExpanded, setIsOverviewExpanded] = useState(false); // Collapsed by default
 
@@ -383,6 +385,7 @@ export default function StockWalletPage() {
         const selectionSetNeeded = [
             'id', 'date', 'action', 'signal', 'price',
             'investment',
+            'amount',         // ADDED - needed for Dividend and SLP transactions
             'quantity',       // Total quantity
             'lbd',
             'completedTxnId', // Links Sell back to StockWallet ID
@@ -1881,24 +1884,24 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
      };
     // --- End Cancel Handler ---
 
-    // --- ADD HANDLERS for Buy Modal ---
-    const handleOpenBuyModal = () => {
-        setIsBuyModalOpen(true);
+    // --- ADD HANDLERS for Transaction Modal ---
+    const handleOpenTransactionModal = () => {
+        setIsTransactionModalOpen(true);
     };
 
-    const handleCloseBuyModal = () => {
-        setIsBuyModalOpen(false);
+    const handleCloseTransactionModal = () => {
+        setIsTransactionModalOpen(false);
         // Optionally reset any related state if needed
     };
 
-    // This function will be called by TransactionForm after a successful Buy
-    const handleBuyAdded = () => {
-        //console.log("[StockWalletPage] - handleBuyAdded callback triggered!");
-        setIsBuyModalOpen(false); // Close the modal
+    // This function will be called by TransactionForm after a successful transaction
+    const handleTransactionAdded = () => {
+        //console.log("[StockWalletPage] - handleTransactionAdded callback triggered!");
+        setIsTransactionModalOpen(false); // Close the modal
         //await new Promise(resolve => setTimeout(resolve, 750));
         fetchWallets();
         fetchTransactions();
-        // You might also need to refresh other data if the Buy impacts other calculations on the page
+        // You might also need to refresh other data if transactions impact other calculations on the page
     };
     // --- END HANDLERS ---
 
@@ -1993,7 +1996,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 symbol={stockSymbol}
                 price={currentStockPriceForOverview}
                 pricesLoading={pricesLoading}
-                onAddBuy={handleOpenBuyModal}
+                onAddTransaction={handleOpenTransactionModal}
                 onEditStock={handleEditStock}
             />
             <WalletsOverview
@@ -2069,20 +2072,19 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
             {/* --- END: Sell modal --- */}
 
             {/* --- START: Buy modal --- */}
-            {isBuyModalOpen && (
+            {isTransactionModalOpen && (
                 <div style={modalOverlayStyle}> {/* Reuse styles */}
                     <div style={{ ...modalContentStyle, minWidth: '400px' }}> {/* Slightly wider? */}
-                        <h3>Add Buy Transaction</h3>
+                        <h3>Add Transaction</h3>
                         <p style={{ marginTop: '-5px', marginBottom: '20px' }}>Stock: <strong>{stockSymbol?.toUpperCase()}</strong></p>
 
-                        {/* Render the TransactionForm configured for Buy */}
+                        {/* Render the TransactionForm configured for any action */}
                         <TransactionForm
                             portfolioStockId={stockId} // Pass current stock ID
                             portfolioStockSymbol={stockSymbol} // Pass current symbol
-                            forceAction="Buy" // Lock the action to Buy
-                            onTransactionAdded={handleBuyAdded} // Refresh list on success
+                            onTransactionAdded={handleTransactionAdded} // Refresh list on success
                             showCancelButton={true} // Show the cancel button
-                            onCancel={handleCloseBuyModal} // Handle cancellation
+                            onCancel={handleCloseTransactionModal} // Handle cancellation
                             // Do not pass edit mode props (isEditMode, initialData, onUpdate)
                         />
                     </div>

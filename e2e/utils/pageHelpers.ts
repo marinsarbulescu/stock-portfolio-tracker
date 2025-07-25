@@ -89,7 +89,7 @@ export async function navigateToStockWalletPage(page: Page, stockId: string, sto
 export async function addBuyTransaction(page: Page, stockId: string, buyData: BuyTransactionParams) {
     console.log(`[PageHelper] Attempting to add BUY transaction for stock ID ${stockId}:`, buyData);
 
-    const addNewTransactionButtonLocator = page.locator('[data-testid="add-buy-transaction-button"]');
+    const addNewTransactionButtonLocator = page.locator('[data-testid="add-transaction-button"]');
     await expect(addNewTransactionButtonLocator).toBeVisible({ timeout: 10000 });
     await addNewTransactionButtonLocator.click();
     console.log('[PageHelper] Clicked "Add New Transaction" button.');
@@ -786,7 +786,7 @@ export async function addTransaction(page: Page, transactionData: TransactionDat
     console.log(`[PageHelper] Adding ${transactionData.type} transaction:`, transactionData);
     
     // Open Add Transaction modal
-    const addTransactionButton = page.locator('[data-testid="add-buy-transaction-button"]');
+    const addTransactionButton = page.locator('[data-testid="add-transaction-button"]');
     await expect(addTransactionButton).toBeVisible({ timeout: 10000 });
     await addTransactionButton.click();
     

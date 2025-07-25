@@ -97,6 +97,11 @@ export default function WalletsTransactionsTable({
                 {columnLabels.investment} {sortConfig?.key === 'investment' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
               </th>
             }
+            {columnVisibility.amount && 
+              <th data-testid={`wallets-transaction-table-amount-header`} style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('amount')}>
+                {columnLabels.amount} {sortConfig?.key === 'amount' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+            }
             {columnVisibility.quantity && 
               <th data-testid={`wallets-transaction-table-quantity-header`} style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('quantity')}>
                 {columnLabels.quantity} {sortConfig?.key === 'quantity' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
@@ -155,7 +160,7 @@ export default function WalletsTransactionsTable({
                 }
                 {columnVisibility.price && 
                   <td style={{ padding: '5px' }} data-testid="wallets-transaction-table-price-display">
-                    {formatCurrency(txn.price??0)}
+                    {(txn.action === 'Div' || txn.action === 'SLP') ? '-' : formatCurrency(txn.price??0)}
                   </td>
                 }
                 {columnVisibility.lbd && 
@@ -165,7 +170,12 @@ export default function WalletsTransactionsTable({
                 }
                 {columnVisibility.investment && 
                   <td style={{ padding: '5px' }} data-testid="wallets-transaction-table-investment-display">
-                    {txn.action!=='Sell'?formatCurrency(txn.investment??0):'-'}
+                    {txn.action === 'Buy' ? formatCurrency(txn.investment ?? 0) : '-'}
+                  </td>
+                }
+                {columnVisibility.amount && 
+                  <td style={{ padding: '5px' }} data-testid="wallets-transaction-table-amount-display">
+                    {(txn.action === 'Div' || txn.action === 'SLP') ? formatCurrency(txn.amount ?? 0) : '-'}
                   </td>
                 }
                 {columnVisibility.quantity && 

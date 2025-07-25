@@ -8,7 +8,7 @@ const stockTypeEnum = a.enum(['Stock', 'ETF', 'Crypto']); // Changed order to ma
 const regionEnum = a.enum(['APAC', 'EU', 'Intl', 'US']); // Intl = International, EU = Europe, APAC = Asia-Pacific
 const stockTrendEnum = a.enum(['Down', 'Up', 'Sideways']); // Stock trend direction
 
-const txnActionEnum = a.enum(['Buy', 'Sell', 'Div']); // Div = Dividend
+const txnActionEnum = a.enum(['Buy', 'Sell', 'Div', 'SLP']); // Div = Dividend, SLP = Stock Lending Payment
 const txnSignalEnum = a.enum(['_5DD', 'Cust', 'Initial', 'EOM', 'LBD', 'TPH', 'TPP', 'TP', 'Div']);
 
 const walletTypeEnum = a.enum(['Swing', 'Hold']);
@@ -59,6 +59,7 @@ const schema = a.schema({
       price: a.float(),                     // Price
       investment: a.float(),                // Investment amount
       quantity: a.float(),       // Shares bought or sold
+      amount: a.float(),         // Amount for Dividend/SLP transactions
       swingShares: a.float(),       // <<< RENAMED from playShares
       holdShares: a.float(),        // Existing field is fine
       txnType: a.string(),          // <<< ADDED: "Swing", "Hold", "Split", or null

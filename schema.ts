@@ -266,6 +266,13 @@ export const schema: Schema = {
                     "isRequired": false,
                     "attributes": []
                 },
+                "amount": {
+                    "name": "amount",
+                    "isArray": false,
+                    "type": "Float",
+                    "isRequired": false,
+                    "attributes": []
+                },
                 "swingShares": {
                     "name": "swingShares",
                     "isArray": false,
@@ -753,7 +760,8 @@ export const schema: Schema = {
             "values": [
                 "Buy",
                 "Sell",
-                "Div"
+                "Div",
+                "SLP"
             ]
         },
         "TxnSignal": {
@@ -829,5 +837,5 @@ export const schema: Schema = {
         }
     },
     "codegenVersion": "3.4.4",
-    "version": "17152d155ac8cdc9aefe16750ab40163"
+    "version": "58394f83c48d79aef0d5a5725b80aaa9"
 };

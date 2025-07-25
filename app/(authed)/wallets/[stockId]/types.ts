@@ -118,6 +118,7 @@ export interface TransactionTableColumnVisibilityState {
   price: boolean;
   lbd: boolean;
   investment: boolean;
+  amount: boolean;
   quantity: boolean;
   proceeds: boolean;
   txnProfit: boolean;
@@ -133,6 +134,7 @@ export type SortableTxnKey =
   | 'price'
   | 'lbd'
   | 'investment'
+  | 'amount'
   | 'quantity'
   | 'proceeds'
   | 'txnProfit'

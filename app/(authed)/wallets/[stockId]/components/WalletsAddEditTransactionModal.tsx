@@ -51,6 +51,7 @@ const defaultFormState = {
   signal: undefined as Schema['Transaction']['type']['signal'] | undefined,
   price: '',
   investment: '',
+  amount: '', // For Dividend and SLP transactions
   sharesInput: '', // Used for Sell quantity display in Edit mode
   completedTxnId: '', // Used for Sell linking/profit calc
   buyType: 'Split' as BuyTypeValue, // Default Buy Type
@@ -84,6 +85,7 @@ export default function TransactionForm({
   const [signal, setSignal] = useState<Schema['Transaction']['type']['signal'] | undefined>(defaultFormState.signal);
   const [price, setPrice] = useState(defaultFormState.price);
   const [investment, setInvestment] = useState(defaultFormState.investment);
+  const [amount, setAmount] = useState(defaultFormState.amount);
   const [sharesInput, setSharesInput] = useState(defaultFormState.sharesInput);
   const [completedTxnId, setCompletedTxnId] = useState(defaultFormState.completedTxnId);
   const [buyType, setBuyType] = useState<BuyTypeValue>(defaultFormState.buyType);
@@ -110,6 +112,7 @@ export default function TransactionForm({
       setSignal(initialData.signal ?? defaultFormState.signal);
       setPrice(initialData.price?.toString() ?? defaultFormState.price);
       setInvestment(initialData.investment?.toString() ?? defaultFormState.investment);
+      setAmount(initialData.amount?.toString() ?? defaultFormState.amount);
       setSharesInput(initialData.quantity?.toString() ?? defaultFormState.sharesInput);
       setCompletedTxnId(initialData.completedTxnId ?? defaultFormState.completedTxnId);
       setBuyType((initialData.txnType as BuyTypeValue) ?? defaultFormState.buyType);
@@ -120,6 +123,7 @@ export default function TransactionForm({
       setSignal(defaultFormState.signal);
       setPrice(defaultFormState.price);
       setInvestment(defaultFormState.investment);
+      setAmount(defaultFormState.amount);
       setSharesInput(defaultFormState.sharesInput);
       setCompletedTxnId(defaultFormState.completedTxnId);
       setBuyType(defaultFormState.buyType);
@@ -139,6 +143,7 @@ export default function TransactionForm({
     // --- Validation ---
     if (!date || (!isEditMode && !portfolioStockId) || !action) { setError('Date, Action required.'); setIsLoading(false); return; }
     if ((action === 'Buy' || action === 'Div') && !investment) { setError('Investment/Amount required for Buy/Dividend.'); setIsLoading(false); return; }
+    if ((action === 'SLP') && !amount) { setError('Amount required for Stock Lending Payment.'); setIsLoading(false); return; }
     if ((action === 'Buy' || action === 'Sell') && !price) { setError('Price required for Buy/Sell.'); setIsLoading(false); return; }
     if (action === 'Buy' && !buyType) { setError('Please select a Buy Type.'); setIsLoading(false); return; }
     // --- End Validation ---
@@ -147,6 +152,7 @@ export default function TransactionForm({
     // --- Parse Inputs ---
     const priceValue = price ? parseFloat(price) : undefined;
     const investmentValue = investment ? parseFloat(investment) : undefined;
+    const amountValue = amount ? parseFloat(amount) : undefined;
 
     // --- Initialize derived fields ---
     let quantity_raw: number | undefined | null = null; // Raw total quantity
@@ -365,11 +371,14 @@ export default function TransactionForm({
     const finalPayload: Partial<Omit<TransactionDataType, 'id' | 'portfolioStock' | 'createdAt' | 'updatedAt' | 'owner'>> = {
         date: date,
         action: action as Schema['Transaction']['type']['action'],
-        signal: signal || undefined,
+        signal: (action === 'Div' || (action as string) === 'SLP') ? undefined : (signal || undefined), // No signal for Dividend and SLP transactions
         price: priceValue,
-        investment: (action === 'Buy' || action === 'Div') && typeof investmentValue === 'number' // <<< Add 'typeof' check
+        investment: (action === 'Buy') && typeof investmentValue === 'number' // Only Buy uses investment field
          ? parseFloat(investmentValue.toFixed(CURRENCY_PRECISION))
-         : null, // Keep null if not Buy/Div or if investmentValue isn't a number
+         : null, // Keep null if not Buy or if investmentValue isn't a number
+        amount: (action === 'Div' || action === 'SLP') && typeof (action === 'Div' ? investmentValue : amountValue) === 'number'
+         ? parseFloat(((action === 'Div' ? investmentValue : amountValue) as number).toFixed(CURRENCY_PRECISION))
+         : null, // Store Div amounts from investment field, SLP amounts from amount field
         quantity: action === 'Sell' ? quantity : quantity_final, // Use 'quantity' for Sell edits, 'quantity_final' for Buy/Div
         swingShares: (action === 'Buy') ? calculatedSwingShares_final : null, // Use FINAL rounded swing shares
         holdShares: (action === 'Buy') ? calculatedHoldShares_final : null, // Use FINAL rounded hold shares
@@ -895,7 +904,14 @@ export default function TransactionForm({
                         data-testid="txn-form-action" // Keep this for when dropdown is shown
                         id="action" 
                         value={action} 
-                        onChange={(e) => setAction(e.target.value as Schema['Transaction']['type']['action'])} 
+                        onChange={(e) => {
+                            const newAction = e.target.value as Schema['Transaction']['type']['action'];
+                            setAction(newAction);
+                            // Clear signal when switching to Dividend or SLP (since they don't use signals)
+                            if (newAction === 'Div' || newAction === 'SLP') {
+                                setSignal(undefined);
+                            }
+                        }} 
                         required 
                         // Original disabled logic: isLoading || !!forceAction || isEditMode
                         // Since this block only runs if !forceAction, we simplify:
@@ -905,6 +921,7 @@ export default function TransactionForm({
                         <option value="Buy">Buy</option>
                         <option value="Sell">Sell</option>
                         <option value="Div">Dividend</option>
+                        <option value="SLP">Stock Lending Payment</option>
                     </select>
                 </div>
         )}
@@ -952,8 +969,8 @@ export default function TransactionForm({
              </div>
         )}
 
-        {/* Signal Field */}
-        {(action === 'Buy' || action === 'Sell' || action === 'Div') && (
+        {/* Signal Field - exclude Dividends and SLP as they don't need signals */}
+        {(action === 'Buy' || action === 'Sell') && (
             <div>
                 <label htmlFor="signal" style={{display:'block', marginBottom:'3px'}}>Signal:</label>
                 <select 
@@ -967,7 +984,6 @@ export default function TransactionForm({
                         <option value="">-- Select Signal --</option>
                         {action === 'Buy' && <> <option value="_5DD">_5DD</option> <option value="Cust">Cust</option> <option value="Initial">Initial</option> <option value="EOM">EOM</option> <option value="LBD">LBD</option> </>}
                         {action === 'Sell' && <> <option value="Cust">Cust</option> <option value="TPH">TPH</option> <option value="TPP">TPP</option><option value="TP">TP</option> </>}
-                        {action === 'Div' && <> <option value="Div">Div</option> </>}
                 </select>
             </div>
         )}
@@ -1003,6 +1019,24 @@ export default function TransactionForm({
                     onChange={(e) => setInvestment(e.target.value)} 
                     required 
                     placeholder="e.g., 1000.00" 
+                    disabled={isLoading} 
+                    style={{width: '100%', padding: '8px'}}/>
+            </div>
+        )}
+
+        {/* Amount Input for SLP transactions */}
+        {action === 'SLP' && (
+            <div>
+                <label htmlFor="amount" style={{display:'block', marginBottom:'3px'}}>Amount:</label>
+                <input 
+                    data-testid="txn-form-amount"
+                    id="amount" 
+                    type="number" 
+                    step="any" 
+                    value={amount} 
+                    onChange={(e) => setAmount(e.target.value)} 
+                    required 
+                    placeholder="e.g., 50.00" 
                     disabled={isLoading} 
                     style={{width: '100%', padding: '8px'}}/>
             </div>
