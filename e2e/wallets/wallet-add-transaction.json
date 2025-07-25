@@ -23,6 +23,33 @@
         "investment": 200
       },
       "output": {
+        "overview": {
+          "settings": {
+            "budget": 600,
+            "invested": 200,
+            "pdp": "5%",
+            "shr": "70% Swing",
+            "plr": "2",
+            "htp": "0%"
+          },
+          "txnsAndShares": {
+            "buys": 1,
+            "totalSells": 0,
+            "swingSells": 0,
+            "holdSells": 0,
+            "swingShares": "1.40000",
+            "holdShares": "0.60000",
+            "totalShares": "2.00000"
+          },
+          "realizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00", 
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%"
+          }
+        },
         "wallets": {
           "swing": {
             "wallet100": {
@@ -51,6 +78,33 @@
         "investment": 400
       },
       "output": {
+        "overview": {
+          "settings": {
+            "budget": 600,
+            "invested": 600,
+            "pdp": "5%",
+            "shr": "70% Swing",
+            "plr": "2",
+            "htp": "0%"
+          },
+          "txnsAndShares": {
+            "buys": 2,
+            "totalSells": 0,
+            "swingSells": 0,
+            "holdSells": 0,
+            "swingShares": "3.00000",
+            "holdShares": "0.60000",
+            "totalShares": "3.60000"
+          },
+          "realizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00", 
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%"
+          }
+        },
         "wallets": {
           "swing": {
             "wallet100": {
@@ -84,6 +138,33 @@
         "investment": 350
       },
       "output": {
+        "overview": {
+          "settings": {
+            "budget": 600,
+            "invested": 950,
+            "pdp": "5%",
+            "shr": "70% Swing",
+            "plr": "2",
+            "htp": "0%"
+          },
+          "txnsAndShares": {
+            "buys": 3,
+            "totalSells": 0,
+            "swingSells": 0,
+            "holdSells": 0,
+            "swingShares": "3.00000",
+            "holdShares": "0.98889",
+            "totalShares": "3.98889"
+          },
+          "realizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00", 
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%"
+          }
+        },
         "wallets": {
           "swing": {
             "wallet100": {
@@ -122,6 +203,33 @@
         "investment": 100
       },
       "output": {
+        "overview": {
+          "settings": {
+            "budget": 600,
+            "invested": 1050,
+            "pdp": "5%",
+            "shr": "70% Swing",
+            "plr": "2",
+            "htp": "0%"
+          },
+          "txnsAndShares": {
+            "buys": 4,
+            "totalSells": 0,
+            "swingSells": 0,
+            "holdSells": 0,
+            "swingShares": "3.13990",
+            "holdShares": "1.04885",
+            "totalShares": "4.18875"
+          },
+          "realizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00", 
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%"
+          }
+        },
         "wallets": {
           "swing": {
             "wallet100": {

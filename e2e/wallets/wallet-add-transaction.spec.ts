@@ -16,7 +16,7 @@ import {
     deleteTransactionsForStockByStockId,
     type PortfolioStockCreateData
 } from '../utils/dataHelpers';
-import { loadAddTransactionTestData, AddTransactionTestConfig, WalletExpectation, TransactionStep } from '../utils/jsonHelper';
+import { loadAddTransactionTestData, AddTransactionTestConfig, WalletExpectation, TransactionStep, OverviewExpectation } from '../utils/jsonHelper';
 import { E2E_TEST_USERNAME, E2E_TEST_USER_OWNER_ID } from '../utils/testCredentials';
 import { SHARE_PRECISION, CURRENCY_PRECISION } from '../../app/config/constants';
 
@@ -41,6 +41,93 @@ function formatCurrency(amount: number): string {
 
 function formatShares(shares: number): string {
     return shares.toFixed(SHARE_PRECISION);
+}
+
+// Enhanced overview verification function
+async function verifyOverview(
+    page: Page,
+    expectedOverview: OverviewExpectation,
+    stepName: string
+): Promise<void> {
+    console.log(`[OverviewHelper] Verifying overview for ${stepName}...`);
+    
+    // Ensure overview section is expanded
+    const overviewHeader = page.locator('p').filter({ hasText: 'Overview' });
+    await expect(overviewHeader).toBeVisible();
+    
+    // Check if overview is collapsed and expand it if needed
+    const overviewExpanded = await page.locator('[data-testid="overview-settings-budget"]').isVisible().catch(() => false);
+    if (!overviewExpanded) {
+        await overviewHeader.click();
+        await page.waitForLoadState('networkidle');
+    }
+    
+    // Verify Settings section
+    console.log(`[OverviewHelper] Verifying Settings section...`);
+    await expect(page.locator('[data-testid="overview-settings-budget"]')).toHaveText(formatCurrency(expectedOverview.settings.budget));
+    await expect(page.locator('[data-testid="overview-settings-invested"]')).toHaveText(formatCurrency(expectedOverview.settings.invested));
+    await expect(page.locator('[data-testid="overview-settings-pdp"]')).toHaveText(expectedOverview.settings.pdp);
+    await expect(page.locator('[data-testid="overview-settings-shr"]')).toHaveText(expectedOverview.settings.shr);
+    await expect(page.locator('[data-testid="overview-settings-plr"]')).toHaveText(expectedOverview.settings.plr);
+    await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(expectedOverview.settings.htp);
+    console.log(`[OverviewHelper] ✅ Settings section verified`);
+    
+    // Verify Transactions & Shares section  
+    console.log(`[OverviewHelper] Verifying Transactions & Shares section...`);
+    await expect(page.locator('[data-testid="overview-txns-buys"]')).toHaveText(expectedOverview.txnsAndShares.buys.toString());
+    await expect(page.locator('[data-testid="overview-txns-total-sells"]')).toHaveText(expectedOverview.txnsAndShares.totalSells.toString());
+    await expect(page.locator('[data-testid="overview-txns-swing-sells"]')).toHaveText(expectedOverview.txnsAndShares.swingSells.toString());
+    await expect(page.locator('[data-testid="overview-txns-hold-sells"]')).toHaveText(expectedOverview.txnsAndShares.holdSells.toString());
+    await expect(page.locator('[data-testid="overview-shares-swing"]')).toHaveText(expectedOverview.txnsAndShares.swingShares);
+    await expect(page.locator('[data-testid="overview-shares-hold"]')).toHaveText(expectedOverview.txnsAndShares.holdShares);
+    await expect(page.locator('[data-testid="overview-shares-total"]')).toHaveText(expectedOverview.txnsAndShares.totalShares);
+    console.log(`[OverviewHelper] ✅ Transactions & Shares section verified`);
+    
+    // Verify Realized P/L section
+    console.log(`[OverviewHelper] Verifying Realized P/L section...`);
+    await expect(page.locator('[data-testid="overview-realized-swing-pl-dollars"]')).toHaveText(expectedOverview.realizedPL.swingDollars);
+    await expect(page.locator('[data-testid="overview-realized-swing-pl-percent"]')).toHaveText(expectedOverview.realizedPL.swingPercent);
+    await expect(page.locator('[data-testid="overview-realized-hold-pl-dollars"]')).toHaveText(expectedOverview.realizedPL.holdDollars);
+    await expect(page.locator('[data-testid="overview-realized-hold-pl-percent"]')).toHaveText(expectedOverview.realizedPL.holdPercent);
+    await expect(page.locator('[data-testid="overview-realized-stock-pl-dollars"]')).toHaveText(expectedOverview.realizedPL.stockDollars);
+    await expect(page.locator('[data-testid="overview-realized-stock-pl-percent"]')).toHaveText(expectedOverview.realizedPL.stockPercent);
+    console.log(`[OverviewHelper] ✅ Realized P/L section verified`);
+    
+    console.log(`[OverviewHelper] ✅ All overview verifications passed for ${stepName}`);
+}
+
+// Initial settings verification function (after stock creation)
+async function verifyInitialSettings(
+    page: Page,
+    stockConfig: any
+): Promise<void> {
+    console.log(`[OverviewHelper] Verifying initial settings after stock creation...`);
+    
+    // Ensure overview section is expanded
+    const overviewHeader = page.locator('p').filter({ hasText: 'Overview' });
+    await expect(overviewHeader).toBeVisible();
+    
+    // Check if overview is collapsed and expand it if needed
+    const overviewExpanded = await page.locator('[data-testid="overview-settings-budget"]').isVisible().catch(() => false);
+    if (!overviewExpanded) {
+        await overviewHeader.click();
+        await page.waitForLoadState('networkidle');
+    }
+    
+    // Verify initial settings match stock configuration
+    await expect(page.locator('[data-testid="overview-settings-budget"]')).toHaveText(formatCurrency(stockConfig.budget));
+    await expect(page.locator('[data-testid="overview-settings-invested"]')).toHaveText(formatCurrency(0)); // Should be $0.00 initially
+    await expect(page.locator('[data-testid="overview-settings-pdp"]')).toHaveText(`${stockConfig.pdp}%`);
+    await expect(page.locator('[data-testid="overview-settings-shr"]')).toHaveText(`${stockConfig.swingHoldRatio}% Swing`);
+    await expect(page.locator('[data-testid="overview-settings-plr"]')).toHaveText(stockConfig.plr.toString());
+    await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(`${stockConfig.htp || 0}%`);
+    
+    // Verify initial transaction counts are zero
+    await expect(page.locator('[data-testid="overview-txns-buys"]')).toHaveText('0');
+    await expect(page.locator('[data-testid="overview-txns-total-sells"]')).toHaveText('0');
+    await expect(page.locator('[data-testid="overview-shares-total"]')).toHaveText('0.00000');
+    
+    console.log(`[OverviewHelper] ✅ Initial settings verification completed`);
 }
 
 // Enhanced wallet verification function
@@ -266,6 +353,10 @@ test.describe('Wallet Add Transaction', () => {
         // Check Hold wallet count initially
         await verifyWalletCounts(page, 'Hold', 0, 'initially');
         
+        // Verify initial settings in Overview section
+        console.log('[AddTransaction] Step 3.5: Verifying initial settings in Overview section...');
+        await verifyInitialSettings(page, scenario.stock);
+        
         // Process each transaction in order
         let stepCounter = 4;
         for (const [transactionName, transactionStep] of Object.entries(scenario.transactions)) {
@@ -285,6 +376,13 @@ test.describe('Wallet Add Transaction', () => {
             
             // Verify wallet state after this transaction
             await verifyTransactionStepWallets(page, transactionStep, transactionName);
+            
+            // Verify overview state after this transaction (if overview data exists)
+            if (transactionStep.output.overview) {
+                stepCounter++;
+                console.log(`[AddTransaction] Step ${stepCounter}: Verifying overview after Transaction ${transactionName}...`);
+                await verifyOverview(page, transactionStep.output.overview, transactionName);
+            }
             
             stepCounter++;
         }

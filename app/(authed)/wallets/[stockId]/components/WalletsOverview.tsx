@@ -66,25 +66,25 @@ export default function WalletsOverview({
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                   <div>
                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Budget</p>
-                    <p>{formatCurrency(stockBudget ?? 0)}</p>
+                    <p data-testid="overview-settings-budget">{formatCurrency(stockBudget ?? 0)}</p>
                   </div>
                   <div>
                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Invested</p>
-                    <p>{formatCurrency(totalTiedUpInvestment)}</p>
+                    <p data-testid="overview-settings-invested">{formatCurrency(totalTiedUpInvestment)}</p>
                   </div>
                 </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                     <div>
                       <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>PDP</p>
-                      <p>{stockPdp != null ? `${stockPdp}%` : 'Not set'}</p>
+                      <p data-testid="overview-settings-pdp">{stockPdp != null ? `${stockPdp}%` : 'Not set'}</p>
                       <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>SHR</p>
-                      <p>{stockShr != null ? `${stockShr}% Swing` : 'Not set'}</p>
+                      <p data-testid="overview-settings-shr">{stockShr != null ? `${stockShr}% Swing` : 'Not set'}</p>
                     </div>
                     <div>
                       <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>PLR</p>
-                      <p>{stockPlr != null ? stockPlr : 'Not set'}</p>
+                      <p data-testid="overview-settings-plr">{stockPlr != null ? stockPlr : 'Not set'}</p>
                       <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>HTP</p>
-                      <p>{stockHtp != null ? `${stockHtp}%` : 'Not set'}</p>
+                      <p data-testid="overview-settings-htp">{stockHtp != null ? `${stockHtp}%` : 'Not set'}</p>
                     </div>
                 </div>
               </div>
@@ -94,23 +94,23 @@ export default function WalletsOverview({
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                   <div>
                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Buys</p>
-                    <p>{transactionCounts.buys}</p>
+                    <p data-testid="overview-txns-buys">{transactionCounts.buys}</p>
                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing Sells</p>
-                    <p>{transactionCounts.swingSells}</p>
+                    <p data-testid="overview-txns-swing-sells">{transactionCounts.swingSells}</p>
                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing shs</p>
-                    <p>{formatShares(currentShares.swing, SHARE_PRECISION)}</p>
+                    <p data-testid="overview-shares-swing">{formatShares(currentShares.swing, SHARE_PRECISION)}</p>
                   </div>
                   <div>
                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Sells</p>
-                    <p>{transactionCounts.totalSells}</p>
+                    <p data-testid="overview-txns-total-sells">{transactionCounts.totalSells}</p>
                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold Sells</p>
-                    <p>{transactionCounts.holdSells}</p>
+                    <p data-testid="overview-txns-hold-sells">{transactionCounts.holdSells}</p>
                     <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold shs</p>
-                    <p>{formatShares(currentShares.hold, SHARE_PRECISION)}</p>
+                    <p data-testid="overview-shares-hold">{formatShares(currentShares.hold, SHARE_PRECISION)}</p>
                   </div>
                 </div>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Total shs</p>
-                <p>{formatShares(currentShares.total, SHARE_PRECISION)}</p>
+                <p data-testid="overview-shares-total">{formatShares(currentShares.total, SHARE_PRECISION)}</p>
               </div>
 
               <div>

@@ -9,6 +9,34 @@ export interface WalletExpectation {
     deleted?: boolean;
 }
 
+export interface OverviewExpectation {
+    settings: {
+        budget: number;
+        invested: number;
+        pdp: string;
+        shr: string;
+        plr: string;
+        htp: string;
+    };
+    txnsAndShares: {
+        buys: number;
+        totalSells: number;
+        swingSells: number;
+        holdSells: number;
+        swingShares: string;
+        holdShares: string;
+        totalShares: string;
+    };
+    realizedPL: {
+        swingDollars: string;
+        swingPercent: string;
+        holdDollars: string;
+        holdPercent: string;
+        stockDollars: string;
+        stockPercent: string;
+    };
+}
+
 export interface TransactionStep {
     input: {
         date: string;
@@ -20,6 +48,7 @@ export interface TransactionStep {
         action?: 'Buy' | 'Sell';
     };
     output: {
+        overview?: OverviewExpectation;
         wallets: {
             swing: Record<string, WalletExpectation>;
             hold: Record<string, WalletExpectation>;
