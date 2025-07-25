@@ -26,7 +26,8 @@ import {
     loadSamePriceTransactionTestData, 
     SamePriceTransactionTestConfig,
     TransactionStep,
-    WalletExpectation
+    WalletExpectation,
+    OverviewExpectation
 } from '../utils/jsonHelper';
 
 // Configure Amplify
@@ -221,6 +222,82 @@ async function verifyTransactionStepWallets(page: any, step: TransactionStep) {
     console.log('[PageHelper] Transaction step wallet state verified successfully.');
 }
 
+// Enhanced overview verification function
+async function verifyOverview(
+    page: any,
+    expectedOverview: OverviewExpectation,
+    stepName: string
+): Promise<void> {
+    console.log(`[OverviewHelper] Verifying overview for ${stepName}...`);
+    
+    // Ensure overview section is expanded
+    const overviewHeader = page.locator('p').filter({ hasText: 'Overview' });
+    await expect(overviewHeader).toBeVisible();
+    
+    // Check if overview is collapsed and expand it if needed
+    const overviewExpanded = await page.locator('[data-testid="overview-settings-budget"]').isVisible().catch(() => false);
+    if (!overviewExpanded) {
+        await overviewHeader.click();
+        await page.waitForLoadState('networkidle');
+    }
+    
+    // Verify Settings section
+    console.log(`[OverviewHelper] Verifying Settings section...`);
+    await expect(page.locator('[data-testid="overview-settings-budget"]')).toContainText(`${expectedOverview.settings.budget.toFixed(0)}`);
+    await expect(page.locator('[data-testid="overview-settings-invested"]')).toContainText(`${expectedOverview.settings.invested.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`);
+    await expect(page.locator('[data-testid="overview-settings-pdp"]')).toContainText(`${expectedOverview.settings.pdp}%`);
+    await expect(page.locator('[data-testid="overview-settings-shr"]')).toContainText(`${expectedOverview.settings.shr}%`);
+    await expect(page.locator('[data-testid="overview-settings-plr"]')).toContainText(`${expectedOverview.settings.plr}`);
+    await expect(page.locator('[data-testid="overview-settings-htp"]')).toContainText(`${expectedOverview.settings.htp}`);
+    console.log(`[OverviewHelper] ✅ Settings section verified`);
+    
+    // Verify Transactions & Shares section
+    console.log(`[OverviewHelper] Verifying Transactions & Shares section...`);
+    await expect(page.locator('[data-testid="overview-txns-buys"]')).toContainText(`${expectedOverview.txnsAndShares.buys}`);
+    await expect(page.locator('[data-testid="overview-txns-total-sells"]')).toContainText(`${expectedOverview.txnsAndShares.totalSells}`);
+    await expect(page.locator('[data-testid="overview-txns-swing-sells"]')).toContainText(`${expectedOverview.txnsAndShares.swingSells}`);
+    await expect(page.locator('[data-testid="overview-txns-hold-sells"]')).toContainText(`${expectedOverview.txnsAndShares.holdSells}`);
+    await expect(page.locator('[data-testid="overview-shares-swing"]')).toContainText(`${expectedOverview.txnsAndShares.swingShares}`);
+    await expect(page.locator('[data-testid="overview-shares-hold"]')).toContainText(`${expectedOverview.txnsAndShares.holdShares}`);
+    await expect(page.locator('[data-testid="overview-shares-total"]')).toContainText(`${expectedOverview.txnsAndShares.totalShares}`);
+    console.log(`[OverviewHelper] ✅ Transactions & Shares section verified`);
+    
+    // Verify Realized P/L section
+    console.log(`[OverviewHelper] Verifying Realized P/L section...`);
+    await expect(page.locator('[data-testid="overview-realized-swing-pl-dollars"]')).toContainText(`${expectedOverview.realizedPL.swingDollars}`);
+    await expect(page.locator('[data-testid="overview-realized-hold-pl-dollars"]')).toContainText(`${expectedOverview.realizedPL.holdDollars}`);
+    await expect(page.locator('[data-testid="overview-realized-stock-pl-dollars"]')).toContainText(`${expectedOverview.realizedPL.stockDollars}`);
+    console.log(`[OverviewHelper] ✅ Realized P/L section verified`);
+    
+    console.log(`[OverviewHelper] ✅ All overview verifications passed for ${stepName}`);
+}
+
+// Helper function to verify initial settings after stock creation
+async function verifyInitialSettings(page: any, stockConfig: any): Promise<void> {
+    console.log('[OverviewHelper] Verifying initial settings after stock creation...');
+    
+    // Ensure overview section is expanded
+    const overviewHeader = page.locator('p').filter({ hasText: 'Overview' });
+    await expect(overviewHeader).toBeVisible();
+    
+    // Check if overview is collapsed and expand it if needed
+    const overviewExpanded = await page.locator('[data-testid="overview-settings-budget"]').isVisible().catch(() => false);
+    if (!overviewExpanded) {
+        await overviewHeader.click();
+        await page.waitForLoadState('networkidle');
+    }
+    
+    // Verify initial settings match stock configuration
+    await expect(page.locator('[data-testid="overview-settings-budget"]')).toContainText(`$${stockConfig.budget.toFixed(2)}`);
+    await expect(page.locator('[data-testid="overview-settings-invested"]')).toContainText('$0.00');
+    await expect(page.locator('[data-testid="overview-settings-pdp"]')).toContainText(`${stockConfig.pdp}%`);
+    await expect(page.locator('[data-testid="overview-settings-shr"]')).toContainText(`${stockConfig.swingHoldRatio}%`);
+    await expect(page.locator('[data-testid="overview-settings-plr"]')).toContainText(`${stockConfig.plr}`);
+    await expect(page.locator('[data-testid="overview-settings-htp"]')).toContainText(`${stockConfig.htp}`);
+    
+    console.log('[OverviewHelper] ✅ Initial settings verification completed');
+}
+
 // Test Suite
 test.describe('Wallet Same Price Transactions (JSON-driven)', () => {
     let testPortfolioStockId: string | null = null;
@@ -321,6 +398,10 @@ test.describe('Wallet Same Price Transactions (JSON-driven)', () => {
         await verifyNoTransactionsExist(page);
         await verifyNoWalletsExist(page);
 
+        // Step 3.5: Verify initial settings in Overview section
+        console.log(`[${testConfig.scenario}] Step 3.5: Verifying initial settings in Overview section...`);
+        await verifyInitialSettings(page, testConfig.stock);
+
         // Execute all transactions sequentially
         const transactionKeys = Object.keys(testConfig.transactions);
         let transactionCount = 0;
@@ -346,6 +427,12 @@ test.describe('Wallet Same Price Transactions (JSON-driven)', () => {
             
             // Verify wallet states
             await verifyTransactionStepWallets(page, transaction);
+            
+            // Verify overview after transaction
+            if (transaction.output.overview) {
+                console.log(`[${testConfig.scenario}] Step ${5 + i * 2}.5: Verifying overview after ${transactionKey}...`);
+                await verifyOverview(page, transaction.output.overview, transactionKey);
+            }
 
             // For transactions after the first, verify wallet counts haven't increased (same price consolidation)
             if (i > 0) {

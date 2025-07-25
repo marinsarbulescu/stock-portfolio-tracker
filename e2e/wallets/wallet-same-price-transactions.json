@@ -37,6 +37,33 @@
               "sharesLeft": 1.4
             }
           }
+        },
+        "overview": {
+          "settings": {
+            "budget": 600,
+            "invested": 200,
+            "pdp": "5",
+            "shr": "30",
+            "plr": "2",
+            "htp": "12"
+          },
+          "txnsAndShares": {
+            "buys": 1,
+            "totalSells": 0,
+            "swingSells": 0,
+            "holdSells": 0,
+            "swingShares": "0.60000",
+            "holdShares": "1.40000",
+            "totalShares": "2.00000"
+          },
+          "realizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0.00%",
+            "holdDollars": "$0.00",
+            "holdPercent": "0.00%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0.00%"
+          }
         }
       }
     },
@@ -63,6 +90,33 @@
               "investment": 140,
               "sharesLeft": 1.4
             }
+          }
+        },
+        "overview": {
+          "settings": {
+            "budget": 600,
+            "invested": 500,
+            "pdp": "5",
+            "shr": "30",
+            "plr": "2",
+            "htp": "12"
+          },
+          "txnsAndShares": {
+            "buys": 2,
+            "totalSells": 0,
+            "swingSells": 0,
+            "holdSells": 0,
+            "swingShares": "3.60000",
+            "holdShares": "1.40000",
+            "totalShares": "5.00000"
+          },
+          "realizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0.00%",
+            "holdDollars": "$0.00",
+            "holdPercent": "0.00%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0.00%"
           }
         }
       }
@@ -91,6 +145,33 @@
               "sharesLeft": 5.4
             }
           }
+        },
+        "overview": {
+          "settings": {
+            "budget": 600,
+            "invested": 900,
+            "pdp": "5",
+            "shr": "30",
+            "plr": "2",
+            "htp": "12"
+          },
+          "txnsAndShares": {
+            "buys": 3,
+            "totalSells": 0,
+            "swingSells": 0,
+            "holdSells": 0,
+            "swingShares": "3.60000",
+            "holdShares": "5.40000",
+            "totalShares": "9.00000"
+          },
+          "realizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0.00%",
+            "holdDollars": "$0.00",
+            "holdPercent": "0.00%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0.00%"
+          }
         }
       }
     },
@@ -117,6 +198,33 @@
               "investment": 890,
               "sharesLeft": 8.9
             }
+          }
+        },
+        "overview": {
+          "settings": {
+            "budget": 600,
+            "invested": 1400,
+            "pdp": "5",
+            "shr": "30",
+            "plr": "2",
+            "htp": "12"
+          },
+          "txnsAndShares": {
+            "buys": 4,
+            "totalSells": 0,
+            "swingSells": 0,
+            "holdSells": 0,
+            "swingShares": "5.10000",
+            "holdShares": "8.90000",
+            "totalShares": "14.00000"
+          },
+          "realizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0.00%",
+            "holdDollars": "$0.00",
+            "holdPercent": "0.00%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0.00%"
           }
         }
       }
