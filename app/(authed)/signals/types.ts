@@ -99,6 +99,9 @@ export interface PortfolioRealizedPL {
   avgHoldPlPercent: number | null;
   totalStockPlDollars: number;
   avgStockPlPercent: number | null;
+  totalDividendAmount: number;
+  totalSlpAmount: number;
+  totalIncomeFromDivAndSlp: number;
 }
 
 // Portfolio unrealized P/L statistics
@@ -120,6 +123,7 @@ export interface PortfolioTotalPL {
   totalHoldPercent: number | null;
   totalStockDollars: number;
   totalStockPercent: number | null;
+  totalIncomeFromDivAndSlp: number;
   partialDataUsed: boolean;
 }
 

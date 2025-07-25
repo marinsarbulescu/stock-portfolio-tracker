@@ -141,6 +141,7 @@ export default function HomePage() {
             'txnType',
             'signal',
             'lbd',
+            'amount',
         ] as const;
 
         try {
@@ -638,6 +639,20 @@ export default function HomePage() {
         const totalStockCostBasis = totalSwingCostBasis + totalHoldCostBasis;
         const avgStockPlPercent = (totalStockCostBasis !== 0) ? (totalStockPlDollars / totalStockCostBasis) * 100 : (totalStockPlDollars === 0 ? 0 : null);
 
+        // Calculate Div&SLP amounts
+        let totalDividendAmount = 0;
+        let totalSlpAmount = 0;
+        
+        typedTxnsForPL.forEach(txn => {
+            if (txn.action === 'Div' && typeof txn.amount === 'number') {
+                totalDividendAmount += txn.amount;
+            } else if (txn.action === 'SLP' && typeof txn.amount === 'number') {
+                totalSlpAmount += txn.amount;
+            }
+        });
+        
+        const totalIncomeFromDivAndSlp = totalDividendAmount + totalSlpAmount;
+
         return {
             totalSwingPlDollars: parseFloat(totalSwingPlDollars.toFixed(CURRENCY_PRECISION)),
             avgSwingPlPercent: typeof avgSwingPlPercent === 'number' ? parseFloat(avgSwingPlPercent.toFixed(PERCENT_PRECISION)) : null,
@@ -645,6 +660,9 @@ export default function HomePage() {
             avgHoldPlPercent: typeof avgHoldPlPercent === 'number' ? parseFloat(avgHoldPlPercent.toFixed(PERCENT_PRECISION)) : null,
             totalStockPlDollars: parseFloat(totalStockPlDollars.toFixed(CURRENCY_PRECISION)),
             avgStockPlPercent: typeof avgStockPlPercent === 'number' ? parseFloat(avgStockPlPercent.toFixed(PERCENT_PRECISION)) : null,
+            totalDividendAmount: parseFloat(totalDividendAmount.toFixed(CURRENCY_PRECISION)),
+            totalSlpAmount: parseFloat(totalSlpAmount.toFixed(CURRENCY_PRECISION)),
+            totalIncomeFromDivAndSlp: parseFloat(totalIncomeFromDivAndSlp.toFixed(CURRENCY_PRECISION)),
             totalSwingCostBasis: totalSwingCostBasis,
             totalHoldCostBasis: totalHoldCostBasis,
             totalStockCostBasis: totalStockCostBasis,
@@ -768,6 +786,7 @@ export default function HomePage() {
         totalHoldPercent: roundedHoldPercent,
         totalStockDollars: roundedStockDollars,
         totalStockPercent: roundedStockPercent,
+        totalIncomeFromDivAndSlp: portfolioRealizedPL.totalIncomeFromDivAndSlp,
         partialDataUsed: portfolioUnrealizedPL.partialDataUsed,
         };
     }, [portfolioRealizedPL, portfolioUnrealizedPL]);

@@ -122,6 +122,11 @@ export default function SignalsOverview({
                                 ({portfolioRealizedPL.avgHoldPlPercent !== null ? `${portfolioRealizedPL.avgHoldPlPercent.toFixed(PERCENT_PRECISION)}%` : 'N/A'})
                             </p>
 
+                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Div&SLP</p>
+                            <p>
+                                {formatCurrencyWithProperNegative(portfolioRealizedPL.totalIncomeFromDivAndSlp??0)}
+                            </p>
+
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                             <p>
                                 {formatCurrencyWithProperNegative(portfolioRealizedPL.totalStockPlDollars??0)}
@@ -194,6 +199,11 @@ export default function SignalsOverview({
                                 {formatCurrencyWithProperNegative(portfolioTotalPL.totalHoldDollars??0)}
                                 &nbsp;
                                 ({formatPercent(portfolioTotalPL.totalHoldPercent)})
+                            </p>
+
+                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Div&SLP</p>
+                            <p>
+                                {formatCurrencyWithProperNegative(portfolioTotalPL.totalIncomeFromDivAndSlp??0)}
                             </p>
 
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
