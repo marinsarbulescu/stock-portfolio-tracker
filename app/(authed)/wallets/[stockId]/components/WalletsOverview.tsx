@@ -129,6 +129,10 @@ export default function WalletsOverview({
                   <span data-testid="overview-realized-hold-pl-percent">{`${plStats.avgHoldPlPercent ?? 0}%`}</span>
                   )
                 </p>
+                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Div&SLP</p>
+                <p>
+                  <span data-testid="overview-realized-divslp-pl-dollars">{formatCurrency(plStats.totalIncomeFromDivAndSlp ?? 0)}</span>
+                </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                 <p>
                   <span data-testid="overview-realized-stock-pl-dollars">{formatCurrency(plStats.totalStockPlDollars ?? 0)}</span>
@@ -168,6 +172,10 @@ export default function WalletsOverview({
                 <p>
                   {totalPlStats.totalHoldPlDollars === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(totalPlStats.totalHoldPlDollars ?? 0)}
                   &nbsp;({totalPlStats.totalHoldPercent ?? 0}%)
+                </p>
+                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Div&SLP</p>
+                <p>
+                  <span data-testid="overview-total-divslp-pl-dollars">{formatCurrency(plStats.totalIncomeFromDivAndSlp ?? 0)}</span>
                 </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                 <p>

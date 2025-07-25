@@ -25,6 +25,9 @@ export interface PLStats {
   totalSwingCostBasis?: number | null;
   totalHoldCostBasis?: number | null;
   totalStockCostBasis?: number | null;
+  totalDividendAmount?: number | null;
+  totalSlpAmount?: number | null;
+  totalIncomeFromDivAndSlp?: number | null;
 }
 
 export interface UnrealizedPLStats {

@@ -75,7 +75,7 @@ export default function StockWalletPage() {
      price: true,
      lbd: true,
      investment: true,
-     amount: true,
+     amount: false,
      quantity: false,
      proceeds: true,
      txnProfit: false,
@@ -1126,7 +1126,21 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
             }
         });
 
-        // 5. Calculate percentages (logic remains similar)
+        // 5. Calculate Dividend and SLP income
+        let totalDividendAmount = 0;
+        let totalSlpAmount = 0;
+        
+        transactions.forEach(txn => {
+            if (txn.action === 'Div' && typeof txn.amount === 'number') {
+                totalDividendAmount += txn.amount;
+            } else if (txn.action === 'SLP' && typeof txn.amount === 'number') {
+                totalSlpAmount += txn.amount;
+            }
+        });
+
+        const totalIncomeFromDivAndSlp = totalDividendAmount + totalSlpAmount;
+
+        // 6. Calculate percentages (updated to include Div/SLP amounts)
         const avgSwingPlPercent = (totalSwingCostBasis !== 0)
         ? (calculatedTotalSwingPlDollars / totalSwingCostBasis) * 100 // Use calculatedTotalSwingPlDollars
         : (calculatedTotalSwingPlDollars === 0 ? 0 : null);
@@ -1135,13 +1149,18 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
             ? (totalHoldPlDollars / totalHoldCostBasis) * 100
             : (totalHoldPlDollars === 0 ? 0 : null);
 
-        const totalStockPlDollars = calculatedTotalSwingPlDollars + totalHoldPlDollars; // Use calculatedTotalSwingPlDollars
+        // Include Dividend and SLP amounts in total stock P/L
+        const totalStockPlDollars = calculatedTotalSwingPlDollars + totalHoldPlDollars + totalIncomeFromDivAndSlp;
         const totalStockCostBasis = totalSwingCostBasis + totalHoldCostBasis;
-        const avgStockPlPercent = (totalStockCostBasis !== 0)
-            ? (totalStockPlDollars / totalStockCostBasis) * 100
+        
+        // For Stock P/L percentage, use total investment (all buy transactions) as denominator
+        // This includes cost basis of both sold AND held shares
+        const totalInvestmentFromBuys = wallets.reduce((sum, wallet) => sum + (wallet.totalInvestment ?? 0), 0);
+        const avgStockPlPercent = (totalInvestmentFromBuys > 0)
+            ? (totalStockPlDollars / totalInvestmentFromBuys) * 100
             : (totalStockPlDollars === 0 ? 0 : null);
 
-        // 6. Round final values
+        // 7. Round final values
         const roundedTotalSwingPl = parseFloat(calculatedTotalSwingPlDollars.toFixed(CURRENCY_PRECISION)); // Use calculatedTotalSwingPlDollars
         const roundedTotalHoldPl = parseFloat(totalHoldPlDollars.toFixed(CURRENCY_PRECISION));
         const roundedTotalStockPl = parseFloat(totalStockPlDollars.toFixed(CURRENCY_PRECISION));
@@ -1169,7 +1188,10 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
             avgStockPlPercent: finalAvgStockPlPercent,
             totalSwingCostBasis: parseFloat(totalSwingCostBasis.toFixed(CURRENCY_PRECISION)), // Round cost basis
             totalHoldCostBasis: parseFloat(totalHoldCostBasis.toFixed(CURRENCY_PRECISION)),   // Round cost basis
-            totalStockCostBasis: parseFloat(totalStockCostBasis.toFixed(CURRENCY_PRECISION))  // Round cost basis
+            totalStockCostBasis: parseFloat(totalStockCostBasis.toFixed(CURRENCY_PRECISION)), // Round cost basis
+            totalDividendAmount: parseFloat(totalDividendAmount.toFixed(CURRENCY_PRECISION)),
+            totalSlpAmount: parseFloat(totalSlpAmount.toFixed(CURRENCY_PRECISION)),
+            totalIncomeFromDivAndSlp: parseFloat(totalIncomeFromDivAndSlp.toFixed(CURRENCY_PRECISION))
         };
 
     }, [transactions, wallets]); // Remove constant dependencies that don't cause re-renders
