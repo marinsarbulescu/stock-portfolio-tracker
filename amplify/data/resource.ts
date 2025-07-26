@@ -33,6 +33,7 @@ const schema = a.schema({
       pdp: a.float(),   // Price Drop Percent
       plr: a.float(),   // Profit Loss Ratio
       budget: a.float(), // Annual budget, optional number
+      testPrice: a.float(), // Test/override price for experimental purposes, optional
       isHidden: a.boolean().default(false), // Hide the stock from the reporting table
       archived: a.boolean().default(false), // Soft delete flag for archived stocks
       archivedAt: a.datetime(), // Timestamp when the stock was archived

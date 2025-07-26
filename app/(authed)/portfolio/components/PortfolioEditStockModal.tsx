@@ -31,6 +31,7 @@ export default function EditStockModal({
   const [pdp, setPdp] = useState('');
   const [plr, setPlr] = useState('');
   const [budget, setBudget] = useState('');
+  const [testPrice, setTestPrice] = useState('');
   const [swingHoldRatio, setSwingHoldRatio] = useState('');
   const [stockCommission, setStockCommission] = useState('');
   const [htp, setHtp] = useState('0'); // Default to 0
@@ -51,6 +52,7 @@ export default function EditStockModal({
       setPdp(stockToEditData.pdp?.toString() ?? '');
       setPlr(stockToEditData.plr?.toString() ?? '');
       setBudget(stockToEditData.budget?.toString() ?? '');
+      setTestPrice(stockToEditData.testPrice?.toString() ?? '');
       setSwingHoldRatio(stockToEditData.swingHoldRatio?.toString() ?? '');
       setStockCommission(stockToEditData.stockCommission?.toString() ?? '');
       setHtp(stockToEditData.htp?.toString() ?? '0'); // Default to 0 if not set
@@ -86,6 +88,14 @@ export default function EditStockModal({
       return;
     }
 
+    // Validate testPrice (must be positive if provided)
+    const testPriceValue = testPrice ? parseFloat(testPrice) : null;
+    if (testPriceValue !== null && (isNaN(testPriceValue) || testPriceValue <= 0)) {
+      setError('Test Price must be a positive number.');
+      setIsLoading(false);
+      return;
+    }
+
     if (!stockToEditData?.id) {
       setError('Cannot update: Missing stock ID.');
       setIsLoading(false);
@@ -102,6 +112,7 @@ export default function EditStockModal({
       pdp: pdp ? parseFloat(pdp) : null,
       plr: plr ? parseFloat(plr) : null,
       budget: budget ? parseFloat(budget) : null,
+      testPrice: testPriceValue,
       swingHoldRatio: shrValue,
       stockCommission: stockCommission ? parseFloat(stockCommission) : null,
       htp: htpValue, // Always include HTP value
@@ -285,6 +296,24 @@ export default function EditStockModal({
               disabled={isLoading}
               style={{width: '100%', padding: '8px'}}
             />
+          </div>
+
+          <div>
+            <label htmlFor="testPrice" style={{display: 'block', marginBottom: '3px'}}>Test Price (Optional):</label>
+            <input 
+              id="testPrice" 
+              type="number" 
+              step="any" 
+              min="0.01"
+              value={testPrice} 
+              onChange={(e) => setTestPrice(e.target.value)}
+              placeholder="e.g., 150.25 - overrides live price fetching" 
+              disabled={isLoading}
+              style={{width: '100%', padding: '8px'}}
+            />
+            <small style={{color: '#aaa', fontSize: '0.8em'}}>
+              If set, this price will be used instead of live market data
+            </small>
           </div>
 
           <div>

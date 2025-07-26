@@ -5,6 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
 import { usePrices } from '@/app/contexts/PriceContext'; // Import context hook
+import { mergeTestPricesWithRealPrices } from '@/app/utils/priceUtils'; // Import test price utility
 import { fetchAuthSession } from 'aws-amplify/auth';
 import SignalsOverview from './components/SignalsOverview';
 import SignalsTable from './components/SignalsTable';
@@ -18,6 +19,7 @@ import type {
   PageAccessLevel,
   SortConfig
 } from './types';
+import type { PortfolioStockDataType as PortfolioPageStockDataType } from '../portfolio/types';
 
 import {
     // SHARE_PRECISION, // Unused
@@ -75,6 +77,36 @@ export default function HomePage() {
 
     const { latestPrices, pricesLoading, pricesError, lastPriceFetchTimestamp, progressMessage } = usePrices(); // Removed unused fetchLatestPricesForAllStocks
     //const { user, accessStatus: authHookAccessStatus } = useAuthStatus(); // Renamed destructured accessStatus to avoid conflict
+
+    // Create merged prices that include test price overrides for Signals page
+    const mergedPrices = useMemo(() => {
+        // Convert portfolioStocks to the format expected by mergeTestPricesWithRealPrices
+        const stocksWithTestPrices = portfolioStocks.map(stock => ({
+            symbol: stock.symbol,
+            testPrice: stock.testPrice, // Now properly typed
+            // Add other required fields with default values
+            id: stock.id,
+            name: stock.name || '',
+            stockType: 'Stock' as const,
+            region: 'US' as const,
+            owner: '',
+            isHidden: null,
+            archived: null,
+            archivedAt: null,
+            createdAt: '',
+            updatedAt: '',
+            transactions: null as unknown,
+            stockWallets: null as unknown,
+            budget: null,
+            pdp: null,
+            plr: null,
+            swingHoldRatio: null,
+            stockCommission: null,
+            htp: null,
+            stockTrend: null,
+        }));
+        return mergeTestPricesWithRealPrices(latestPrices, stocksWithTestPrices as PortfolioPageStockDataType[]);
+    }, [latestPrices, portfolioStocks]);
 
     const formatTimestamp = (date: Date | null): string => {
         if (!date) return "N/A";
@@ -192,7 +224,7 @@ export default function HomePage() {
         try {
             const [stockResult, allTxnsData, walletResult] = await Promise.all([
                 client.models.PortfolioStock.list({
-                    selectionSet: ['id', 'symbol', 'pdp', 'name', 'budget', 'isHidden', 'archived', 'region', 'htp', 'stockCommission', 'stockTrend'], // Added htp, stockCommission, and stockTrend fields
+                    selectionSet: ['id', 'symbol', 'pdp', 'name', 'budget', 'testPrice', 'isHidden', 'archived', 'region', 'htp', 'stockCommission', 'stockTrend'], // Added testPrice, htp, stockCommission, and stockTrend fields
                     filter: {
                         and: [
                             { isHidden: { ne: true } }, // not hidden
@@ -490,8 +522,9 @@ export default function HomePage() {
             const stockId: string = stock.id;
             const symbol: string = stock.symbol;
             const pdp: number | null | undefined = stock.pdp;
-            const priceData = latestPrices[symbol];
+            const priceData = mergedPrices[symbol]; // Use merged prices instead of latestPrices
             const currentPrice = priceData?.currentPrice ?? null;
+            const isTestPrice = priceData?.isTestPrice || false; // Get actual test price status
 
             const procData = processedData[stockId] ?? {
                 lastBuy: undefined, lastSell: undefined, swingBuyCount: 0, // Changed from lastSwingBuy
@@ -556,6 +589,7 @@ export default function HomePage() {
                 symbol: symbol,
                 stockTrend: stock.stockTrend,
                 currentPrice: currentPrice,
+                isTestPrice: isTestPrice,
                 fiveDayDip: fiveDayDipPercent,
                 lbd: lbdPercent,
                 percentToBe: percentToBe,
@@ -572,7 +606,7 @@ export default function HomePage() {
                 htpValues: htpValues,
             };
         });
-    }, [portfolioStocks, latestPrices, processedData, checkHtpSignalForStock, getHtpValuesForStock]);
+    }, [portfolioStocks, mergedPrices, processedData, checkHtpSignalForStock, getHtpValuesForStock]);
 
     const portfolioBudgetStats = useMemo(() => {
         const totalBudget = portfolioStocks.reduce((sum, stock) => sum + (stock.budget ?? 0), 0);

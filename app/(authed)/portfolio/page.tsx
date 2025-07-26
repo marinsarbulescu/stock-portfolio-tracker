@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
 import { usePrices } from '@/app/contexts/PriceContext';
+import { mergeTestPricesWithRealPrices } from '@/app/utils/priceUtils';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import {
@@ -61,6 +62,11 @@ function PortfolioContent() {
   // Inside your component function - this will now work because we're in a client component under the provider
   const { latestPrices, pricesLoading } = usePrices();
 
+  // Create merged prices that include test price overrides
+  const mergedPrices = useMemo(() => {
+    return mergeTestPricesWithRealPrices(latestPrices, portfolioStocksData);
+  }, [latestPrices, portfolioStocksData]);
+
   // State to manage showing/hiding archived stocks
   const [showArchived, setShowArchived] = useState(false);
 
@@ -86,25 +92,25 @@ function PortfolioContent() {
 
   // Create separate filtered arrays for active and archived stocks
   const activeStocks = useMemo(() => {
-    console.log("Calculating activeStocks. Input length:", portfolioStocksData.length);
+    // console.log("Calculating activeStocks. Input length:", portfolioStocksData.length);
     const filtered = portfolioStocksData.filter(stock => !stock.archived);
-    console.log("ActiveStocks count:", filtered.length);
+    // console.log("ActiveStocks count:", filtered.length);
     return filtered;
   }, [portfolioStocksData]);
 
   const archivedStocks = useMemo(() => {
-    console.log("Calculating archivedStocks. Input length:", portfolioStocksData.length);
+    // console.log("Calculating archivedStocks. Input length:", portfolioStocksData.length);
     const filtered = portfolioStocksData.filter(stock => stock.archived);
-    console.log("ArchivedStocks count:", filtered.length);
+    // console.log("ArchivedStocks count:", filtered.length);
     return filtered;
   }, [portfolioStocksData]);
 
   // Create a visibleStocks array that includes ALL stocks (including hidden) for overview calculations
   // Hidden stocks should now show up in reports per new requirements
   const visibleStocks = useMemo(() => {
-    console.log("Recalculating visibleStocks. Input length:", activeStocks.length);
+    // console.log("Recalculating visibleStocks. Input length:", activeStocks.length);
     const filtered = activeStocks; // No longer filtering out hidden stocks for overview calculations
-    console.log("VisibleStocks count:", filtered.length);
+    // console.log("VisibleStocks count:", filtered.length);
     return filtered;
   }, [activeStocks]); // Depends on activeStocks instead of portfolioStocksData
 
@@ -182,8 +188,8 @@ function PortfolioContent() {
             valB = b.stockTrend?.toLowerCase() ?? '';
             break;
           case 'currentPrice':
-            valA = latestPrices[a.symbol ?? '']?.currentPrice ?? null;
-            valB = latestPrices[b.symbol ?? '']?.currentPrice ?? null;
+            valA = mergedPrices[a.symbol ?? '']?.currentPrice ?? null;
+            valB = mergedPrices[b.symbol ?? '']?.currentPrice ?? null;
             break;
           case 'pdp':
             valA = a.pdp;
@@ -236,7 +242,7 @@ function PortfolioContent() {
     }
 
     return sortableItems;
-  }, [activeStocks, archivedStocks, showArchived, stockSortConfig, latestPrices, stockInvestments]);
+  }, [activeStocks, archivedStocks, showArchived, stockSortConfig, mergedPrices, stockInvestments]);
 
   // Fetch Portfolio Function
   const fetchPortfolio = useCallback(async () => {
@@ -245,7 +251,8 @@ function PortfolioContent() {
 
     try {
       // --- Fetch Portfolio Stocks ONCE ---
-      console.log("Fetching portfolio stocks...");      const { data, errors } = await client.models.PortfolioStock.list({
+      // console.log("Fetching portfolio stocks...");
+      const { data, errors } = await client.models.PortfolioStock.list({
         selectionSet: [
           'id',
           'symbol',
@@ -254,6 +261,7 @@ function PortfolioContent() {
           'stockType',
           'stockTrend',
           'budget',
+          'testPrice',
           'pdp',
           'plr',
           'isHidden',
@@ -270,9 +278,9 @@ function PortfolioContent() {
           throw errors; // Throw error to be caught below
       }
 
-      // Set state with the fetched data (which includes isHidden)
+      // Set state with the fetched data (which includes testPrice)
       setPortfolioStocksData(data as PortfolioStockDataType[]);
-      console.log('Fetched portfolio count:', data.length);
+      // console.log('Fetched portfolio count:', data.length);
 
       // Also fetch wallets for investment calculation
       fetchWallets();
@@ -537,7 +545,7 @@ function PortfolioContent() {
   // Calculate US region investment statistics
   // --- Corrected US Region Stats Calculation ---
   const usRegionStats = useMemo(() => {
-    console.log("[Memo] Calculating usRegionStats");
+    // console.log("[Memo] Calculating usRegionStats");
     // Use visibleStocks to exclude hidden ones
     const usStocks = visibleStocks.filter(stock => stock.region === 'US');
 
@@ -597,7 +605,7 @@ function PortfolioContent() {
     const stockTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((stockTotalInvestment / totalInvestment) * 100) : 0;
     const etfTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((etfTotalInvestment / totalInvestment) * 100) : 0;
 
-    console.log("[Memo] usRegionStats Result:", { counts: {stockCount, etfCount, totalCount }, /* ... other stats */ });
+    // console.log("[Memo] usRegionStats Result:", { counts: {stockCount, etfCount, totalCount }, /* ... other stats */ });
 
     return {
       counts: { stock: stockCount, etf: etfCount, total: totalCount },
@@ -623,7 +631,7 @@ function PortfolioContent() {
 
   // Calculate EU region investment statistics
   const euRegionStats = useMemo(() => {
-    console.log("[Memo] Calculating euRegionStats");
+    // console.log("[Memo] Calculating euRegionStats");
     // Use visibleStocks to exclude hidden ones
     const euStocks = visibleStocks.filter(stock => stock.region === 'EU');
 
@@ -683,7 +691,7 @@ function PortfolioContent() {
     const stockTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((stockTotalInvestment / totalInvestment) * 100) : 0;
     const etfTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((etfTotalInvestment / totalInvestment) * 100) : 0;
 
-    console.log("[Memo] euRegionStats Result:", { counts: {stockCount, etfCount, totalCount }, /* ... other stats */ });
+    // console.log("[Memo] euRegionStats Result:", { counts: {stockCount, etfCount, totalCount }, /* ... other stats */ });
 
     return {
       counts: { stock: stockCount, etf: etfCount, total: totalCount },
@@ -707,7 +715,7 @@ function PortfolioContent() {
   }, [visibleStocks]);
 
   const intlRegionStats = useMemo(() => {
-    console.log("[Memo] Calculating intlRegionStats");
+    // console.log("[Memo] Calculating intlRegionStats");
     const intlStocks = visibleStocks.filter(stock => stock.region === 'Intl');
 
     let stockCount = 0;
@@ -769,7 +777,7 @@ function PortfolioContent() {
     const etfTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((etfTotalInvestment / totalInvestment) * 100) : 0;
     const cryptoTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((cryptoTotalInvestment / totalInvestment) * 100) : 0; // <-- ADDED
 
-    console.log("[Memo] intlRegionStats Result:", { counts: {stockCount, etfCount, totalCount }, /* ... other stats */ });
+    // console.log("[Memo] intlRegionStats Result:", { counts: {stockCount, etfCount, totalCount }, /* ... other stats */ });
 
     return {
       counts: { stock: stockCount, etf: etfCount, crypto: cryptoCount, total: totalCount }, // <-- ADDED
@@ -797,7 +805,7 @@ function PortfolioContent() {
 
   // Calculate APAC region investment statistics
   const apacRegionStats = useMemo(() => {
-    console.log("[Memo] Calculating apacRegionStats");
+    // console.log("[Memo] Calculating apacRegionStats");
     // Use visibleStocks to exclude hidden ones
     const apacStocks = visibleStocks.filter(stock => stock.region === 'APAC');
 
@@ -857,7 +865,7 @@ function PortfolioContent() {
     const stockTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((stockTotalInvestment / totalInvestment) * 100) : 0;
     const etfTotalPct = totalInvestment > SHARE_EPSILON ? Math.round((etfTotalInvestment / totalInvestment) * 100) : 0;
 
-    console.log("[Memo] apacRegionStats Result:", { counts: {stockCount, etfCount, totalCount }, /* ... other stats */ });
+    // console.log("[Memo] apacRegionStats Result:", { counts: {stockCount, etfCount, totalCount }, /* ... other stats */ });
 
     return {
       counts: { stock: stockCount, etf: etfCount, total: totalCount },
@@ -952,7 +960,7 @@ function PortfolioContent() {
         sortedStocks={sortedStocks}
         stockSortConfig={stockSortConfig}
         stockInvestments={stockInvestments}
-        latestPrices={latestPrices}
+        latestPrices={mergedPrices}
         pricesLoading={pricesLoading}
         showArchived={showArchived}
         archivedCount={archivedStocks.length}

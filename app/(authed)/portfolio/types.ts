@@ -20,6 +20,7 @@ export interface PriceData {
   symbol: string;
   currentPrice: number | null;
   historicalCloses: Array<{ date: string; close: number; }>;
+  isTestPrice?: boolean; // Flag to indicate if currentPrice is from testPrice override
 }
 
 export type LatestPrices = Record<string, PriceData | null>;

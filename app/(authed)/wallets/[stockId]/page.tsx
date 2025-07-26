@@ -20,6 +20,7 @@ import type { TransactionTableColumnVisibilityState, SortableTxnKey, SortConfig 
 
 // --- IMPORT THE CORRECT formatCurrency ---
 import { calculateSingleSalePL, calculateSingleSalePLWithCommission, calculateTotalRealizedSwingPL, formatCurrency } from '@/app/utils/financialCalculations';
+import { mergeTestPricesWithRealPrices } from '@/app/utils/priceUtils';
 
 // Needed for the handleUpdateTransaction to update the wallet
 import { adjustWalletContribution } from '@/app/services/walletService';
@@ -187,6 +188,9 @@ export default function StockWalletPage() {
     // --- State for Stock Symbol (for Title) ---
     const [stockSymbol, setStockSymbol] = useState<string | undefined>(undefined);
     const [name, setStockName] = useState<string | undefined>(undefined);
+    
+    // --- ADD: State for current stock data to get test price ---
+    const [currentStockData, setCurrentStockData] = useState<PortfolioStockDataType | null>(null);
 
     const [stockBudget, setStockBudget] = useState<number | null | undefined>(undefined); // undefined: not loaded, null: no budget set, number: budget value
 
@@ -372,6 +376,36 @@ export default function StockWalletPage() {
                 setIsLoading(false);
             }
     }, [stockId]); // <<< ADD stockId dependency
+
+    // --- ADD Function to Fetch Current Stock Data (including test price) ---
+    const fetchCurrentStock = useCallback(async () => {
+        if (!stockId) return;
+        
+        try {
+            const { data: stockData, errors } = await client.models.PortfolioStock.get({
+                id: stockId
+            });
+
+            if (errors) {
+                console.error('Error fetching stock data:', errors);
+                return;
+            }
+
+            if (stockData) {
+                setCurrentStockData(stockData as PortfolioStockDataType);
+                setStockSymbol(stockData.symbol || 'Unknown');
+                setStockName(stockData.name || 'Unknown');
+                setStockBudget(stockData.budget);
+                setStockPdp(stockData.pdp);
+                setStockPlr(stockData.plr);
+                setStockShr(stockData.swingHoldRatio);
+                setStockCommission(stockData.stockCommission);
+                setStockHtp(stockData.htp);
+            }
+        } catch (err: unknown) {
+            console.error('Error fetching current stock:', err);
+        }
+    }, [stockId]);
 
     // --- ADD Function to Fetch Transactions ---
     const fetchTransactions = useCallback(async () => {
@@ -1943,6 +1977,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 plr: stockPlr,
                 stockCommission: stockCommission,
                 htp: stockHtp,
+                testPrice: currentStockData?.testPrice ?? null, // Include test price from current stock data
                 owner: ownerId ?? '',
                 isHidden: null,
                 archived: null,
@@ -1997,6 +2032,37 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
     };
     // --- END Edit Stock Modal Handlers ---
     
+    // --- ADD: Initial data loading useEffect ---
+    useEffect(() => {
+        if (stockId) {
+            fetchCurrentStock();
+            fetchWallets();
+            fetchTransactions();
+        }
+    }, [stockId, fetchCurrentStock, fetchWallets, fetchTransactions]);
+    
+    // Merge test prices with real prices for display - MOVED BEFORE EARLY RETURNS
+    const mergedPrices = useMemo(() => {
+        // For wallets page, merge test price from current stock data if available
+        if (currentStockData && currentStockData.symbol && currentStockData.testPrice) {
+            return mergeTestPricesWithRealPrices(latestPrices, [currentStockData]);
+        }
+        // Otherwise, convert the real prices to the merged format with isTestPrice: false
+        const mergedRealPrices: Record<string, { symbol: string; currentPrice: number | null; historicalCloses: { date: string; close: number; }[]; isTestPrice?: boolean; } | null> = {};
+        Object.keys(latestPrices).forEach(symbol => {
+            const price = latestPrices[symbol];
+            if (price) {
+                mergedRealPrices[symbol] = {
+                    ...price,
+                    isTestPrice: false
+                };
+            } else {
+                mergedRealPrices[symbol] = null;
+            }
+        });
+        return mergedRealPrices;
+    }, [latestPrices, currentStockData]);
+    
     // --- Render Logic ---
     // Show loading indicator until stock symbol AND wallets are potentially loaded
      if (isLoading || stockSymbol === undefined) return <p>Loading wallet data...</p>;
@@ -2009,7 +2075,8 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
 
      //console.log("[StockWalletPage] - Component rendering. Wallets state length:", wallets.length, "Wallets state content:", wallets);
      
-    const currentStockPriceForOverview = latestPrices[stockSymbol ?? '']?.currentPrice;
+    const currentStockPriceForOverview = mergedPrices[stockSymbol ?? '']?.currentPrice;
+    const currentStockIsTestPrice = mergedPrices[stockSymbol ?? '']?.isTestPrice || false;
 
     return (
         <div>
@@ -2017,6 +2084,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 name={name ?? ''}
                 symbol={stockSymbol}
                 price={currentStockPriceForOverview}
+                isTestPrice={currentStockIsTestPrice}
                 pricesLoading={pricesLoading}
                 onAddTransaction={handleOpenTransactionModal}
                 onEditStock={handleEditStock}
@@ -2047,7 +2115,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               error={error}
-              latestPrices={latestPrices}
+              latestPrices={mergedPrices}
               stockSymbol={stockSymbol}
               onSell={handleOpenSellModal}
               onDelete={handleDeleteWallet}

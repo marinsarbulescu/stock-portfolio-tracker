@@ -119,6 +119,7 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
       // Filter out archived stocks AND hidden stocks from price fetching
       const activeStocksData = stocksData?.filter(stock => !stock.archived && !stock.isHidden) ?? [];
       const allSymbolsFromBackend = activeStocksData.map(stock => stock.symbol).filter(Boolean) as string[];
+      
       // console.log(`[PriceContext.tsx] - Found ${allSymbolsFromBackend.length} active, non-hidden symbols from backend:`, allSymbolsFromBackend);
 
       // --- Filter out excluded symbols on the client-side ---

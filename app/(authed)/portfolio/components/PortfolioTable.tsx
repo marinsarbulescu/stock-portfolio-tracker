@@ -241,7 +241,10 @@ export default function PortfolioTable({
               {columnVisibility.currentPrice && (
                 <td
                   data-testid={`portfolio-page-table-price-${stock.symbol?.toUpperCase()}`}
-                  style={cellStyle}>
+                  style={{
+                    ...cellStyle, 
+                    color: latestPrices[stock.symbol]?.isTestPrice ? '#9f7aea' : cellStyle.color
+                  }}>
                   {pricesLoading ? '...' : (latestPrices[stock.symbol]?.currentPrice !== null && typeof latestPrices[stock.symbol]?.currentPrice === 'number' ? formatCurrency(latestPrices[stock.symbol]!.currentPrice!) : 'N/A')}
                 </td>
               )}

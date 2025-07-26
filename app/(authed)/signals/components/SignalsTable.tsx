@@ -215,7 +215,7 @@ export default function SignalsTable({
                                     <td style={{ padding: '5px' }}>{item.sinceSell != null ? `${item.sinceSell} d` : '-'}</td>
                                 )}
                                 {reportColumnVisibility.currentPrice && (
-                                    <td style={{ padding: '5px' }}>
+                                    <td style={{ padding: '5px', textAlign: 'left', color: item.isTestPrice ? '#9f4f96' : 'inherit' }}>
                                         {typeof item.currentPrice === 'number' ? formatCurrency(item.currentPrice??0) : '-'}
                                     </td>
                                 )}

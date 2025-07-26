@@ -11,6 +11,7 @@ export interface PortfolioStockDataType {
   pdp: number | null | undefined;
   name?: string | null | undefined;
   budget?: number | null | undefined;
+  testPrice?: number | null | undefined; // Add testPrice field that's already being fetched
   isHidden?: boolean | null | undefined;
   archived?: boolean | null | undefined;
   region?: string | null | undefined;
@@ -39,6 +40,7 @@ export interface ReportDataItem {
   symbol: string;
   stockTrend?: string | null; // Stock trend: "Down", "Up", "Sideways"
   currentPrice: number | null;
+  isTestPrice?: boolean; // Flag to indicate if currentPrice is from testPrice override
   fiveDayDip: number | null;
   lbd: number | null;
   sinceBuy: number | null;
