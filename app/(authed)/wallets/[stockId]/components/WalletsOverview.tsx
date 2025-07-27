@@ -129,10 +129,6 @@ export default function WalletsOverview({
                   <span data-testid="overview-realized-hold-pl-percent">{`${realizedPlStats.realizedHoldPercent ?? 0}%`}</span>
                   )
                 </p>
-                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Div&SLP</p>
-                <p>
-                  <span data-testid="overview-realized-divslp-pl-dollars">{formatCurrency(realizedPlStats.totalIncomeFromDivAndSlp ?? 0)}</span>
-                </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                 <p>
                   <span data-testid="overview-realized-stock-pl-dollars">{formatCurrency(realizedPlStats.realizedStockPL ?? 0)}</span>
@@ -173,9 +169,9 @@ export default function WalletsOverview({
                   {combinedPlStats.combinedHoldPL === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(combinedPlStats.combinedHoldPL ?? 0)}
                   &nbsp;({combinedPlStats.combinedHoldPercent ?? 0}%)
                 </p>
-                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Div&SLP</p>
+                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Income</p>
                 <p>
-                  <span data-testid="overview-total-divslp-pl-dollars">{formatCurrency(realizedPlStats.totalIncomeFromDivAndSlp ?? 0)}</span>
+                  <span data-testid="overview-total-income-pl-dollars">{formatCurrency(realizedPlStats.totalIncomeFromDivAndSlp ?? 0)}</span>
                 </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                 <p>

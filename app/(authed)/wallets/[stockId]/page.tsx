@@ -1160,21 +1160,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
             }
         });
 
-        // 5. Calculate Dividend and SLP income
-        let totalDividendAmount = 0;
-        let totalSlpAmount = 0;
-        
-        transactions.forEach(txn => {
-            if (txn.action === 'Div' && typeof txn.amount === 'number') {
-                totalDividendAmount += txn.amount;
-            } else if (txn.action === 'SLP' && typeof txn.amount === 'number') {
-                totalSlpAmount += txn.amount;
-            }
-        });
-
-        const totalIncomeFromDivAndSlp = totalDividendAmount + totalSlpAmount;
-
-        // 6. Calculate percentages (updated to include Div/SLP amounts)
+        // 5. Calculate percentages (TRADING ONLY - no dividend/SLP income)
         const realizedSwingPercent = (totalSwingCostBasis !== 0)
         ? (calculatedTotalSwingPlDollars / totalSwingCostBasis) * 100 // Use calculatedTotalSwingPlDollars
         : (calculatedTotalSwingPlDollars === 0 ? 0 : null);
@@ -1183,8 +1169,8 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
             ? (totalHoldPlDollars / totalHoldCostBasis) * 100
             : (totalHoldPlDollars === 0 ? 0 : null);
 
-        // Include Dividend and SLP amounts in total stock P/L
-        const realizedStockPL = calculatedTotalSwingPlDollars + totalHoldPlDollars + totalIncomeFromDivAndSlp;
+        // Realized P/L from TRADING ONLY (no dividend/SLP income)
+        const realizedStockPL = calculatedTotalSwingPlDollars + totalHoldPlDollars;
         const totalStockCostBasis = totalSwingCostBasis + totalHoldCostBasis;
         
         // For Stock P/L percentage, use cost basis of only SOLD shares as denominator
@@ -1194,7 +1180,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
             ? (realizedStockPL / totalStockCostBasis) * 100
             : (realizedStockPL === 0 ? 0 : null);
 
-        // 7. Round final values
+        // 6. Round final values (TRADING ONLY)
         const roundedRealizedSwingPL = parseFloat(calculatedTotalSwingPlDollars.toFixed(CURRENCY_PRECISION)); // Use calculatedTotalSwingPlDollars
         const roundedRealizedHoldPL = parseFloat(totalHoldPlDollars.toFixed(CURRENCY_PRECISION));
         const roundedRealizedStockPL = parseFloat(realizedStockPL.toFixed(CURRENCY_PRECISION));
@@ -1208,6 +1194,20 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
         const finalRealizedStockPercent = typeof realizedStockPercent === 'number'
             ? parseFloat(realizedStockPercent.toFixed(PERCENT_PRECISION))
             : null;
+
+        // Calculate Dividend and SLP income for separate tracking
+        let totalDividendAmount = 0;
+        let totalSlpAmount = 0;
+        
+        transactions.forEach(txn => {
+            if (txn.action === 'Div' && typeof txn.amount === 'number') {
+                totalDividendAmount += txn.amount;
+            } else if (txn.action === 'SLP' && typeof txn.amount === 'number') {
+                totalSlpAmount += txn.amount;
+            }
+        });
+
+        const totalIncomeFromDivAndSlp = totalDividendAmount + totalSlpAmount;
 
         if (warnings > 0) {
             console.warn(`[StockWalletPage] - [realizedPlStats] Calculation finished with ${warnings} warnings (missing data). Results might be incomplete.`);
@@ -1540,10 +1540,12 @@ const combinedPlStats = useMemo(() => {
         };
       }
   
-      // --- Calculate Combined Dollar Amounts ---
+      // --- Calculate Combined Dollar Amounts (Including Income) ---
       const combinedSwingPL = (realizedPlStats.realizedSwingPL ?? 0) + (unrealizedPlStats.unrealizedSwingPL ?? 0);
       const combinedHoldPL = (realizedPlStats.realizedHoldPL ?? 0) + (unrealizedPlStats.unrealizedHoldPL ?? 0);
-      const combinedStockPL = (realizedPlStats.realizedStockPL ?? 0) + (unrealizedPlStats.unrealizedStockPL ?? 0);
+      
+      // Include dividend and SLP income in the combined stock total
+      const combinedStockPL = (realizedPlStats.realizedStockPL ?? 0) + (unrealizedPlStats.unrealizedStockPL ?? 0) + (realizedPlStats.totalIncomeFromDivAndSlp ?? 0);
   
       // --- Calculate Combined Cost Bases ---
       // Basis = Basis of Sold Shares (from realizedPlStats) + Basis of Held Shares (from unrealizedPlStats)
