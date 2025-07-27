@@ -1187,11 +1187,11 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
         const totalStockPlDollars = calculatedTotalSwingPlDollars + totalHoldPlDollars + totalIncomeFromDivAndSlp;
         const totalStockCostBasis = totalSwingCostBasis + totalHoldCostBasis;
         
-        // For Stock P/L percentage, use total investment (all buy transactions) as denominator
-        // This includes cost basis of both sold AND held shares
-        const totalInvestmentFromBuys = wallets.reduce((sum, wallet) => sum + (wallet.totalInvestment ?? 0), 0);
-        const avgStockPlPercent = (totalInvestmentFromBuys > 0)
-            ? (totalStockPlDollars / totalInvestmentFromBuys) * 100
+        // For Stock P/L percentage, use cost basis of only SOLD shares as denominator
+        // This ensures consistency with Swing and Hold individual percentage calculations
+        // and follows standard market logic for realized P/L percentages
+        const avgStockPlPercent = (totalStockCostBasis > 0)
+            ? (totalStockPlDollars / totalStockCostBasis) * 100
             : (totalStockPlDollars === 0 ? 0 : null);
 
         // 7. Round final values
@@ -1317,6 +1317,28 @@ const sortedWallets = useMemo(() => {
     }, [sortedWallets]); // Dependency array remains the same
     // --- END Filtering Logic ---
 
+    // Merge test prices with real prices for display
+    const mergedPrices = useMemo(() => {
+        // For wallets page, merge test price from current stock data if available
+        if (currentStockData && currentStockData.symbol && currentStockData.testPrice) {
+            return mergeTestPricesWithRealPrices(latestPrices, [currentStockData]);
+        }
+        // Otherwise, convert the real prices to the merged format with isTestPrice: false
+        const mergedRealPrices: Record<string, { symbol: string; currentPrice: number | null; historicalCloses: { date: string; close: number; }[]; isTestPrice?: boolean; } | null> = {};
+        Object.keys(latestPrices).forEach(symbol => {
+            const price = latestPrices[symbol];
+            if (price) {
+                mergedRealPrices[symbol] = {
+                    ...price,
+                    isTestPrice: false
+                };
+            } else {
+                mergedRealPrices[symbol] = null;
+            }
+        });
+        return mergedRealPrices;
+    }, [latestPrices, currentStockData]);
+
     
 // --- UPDATED Memo for Total SWING YTD P/L ($ and %) ---
 const totalSwingYtdPL = useMemo(() => {
@@ -1340,7 +1362,7 @@ const totalSwingYtdPL = useMemo(() => {
 
     const currentYear = new Date().getFullYear();
     const startOfYear = `${currentYear}-01-01`;
-    const currentPrice = latestPrices[stockSymbol]?.currentPrice ?? null;
+    const currentPrice = mergedPrices[stockSymbol]?.currentPrice ?? null;
 
     let ytdRealizedSwingPL = 0;
     let currentUnrealizedSwingPL = 0;
@@ -1417,7 +1439,7 @@ const totalSwingYtdPL = useMemo(() => {
     };
 
 // Correct dependencies for this specific calculation
-}, [transactions, wallets, latestPrices, stockSymbol]); // Removed walletBuyPriceMap as it's internal now
+}, [transactions, wallets, mergedPrices, stockSymbol]); // Updated to use mergedPrices
 // --- End Total Swing YTD P/L Calc Memo ---
 
 
@@ -1433,7 +1455,7 @@ const unrealizedPlStats = useMemo(() => {
         };
     }
 
-    const currentPrice = latestPrices[stockSymbol]?.currentPrice ?? null;
+    const currentPrice = mergedPrices[stockSymbol]?.currentPrice ?? null;
 
     // If current price isn't available, we cannot calculate unrealized P/L
     if (currentPrice === null) {
@@ -1502,7 +1524,7 @@ const unrealizedPlStats = useMemo(() => {
         unrealizedTotalCostBasis: totalCostBasis // Return calculated basis
     };
 
-  }, [wallets, latestPrices, stockSymbol]); // Dependencies
+  }, [wallets, mergedPrices, stockSymbol]); // Updated to use mergedPrices
   // --- END: Memo for All-Time UNREALIZED P/L Calculation ---
 
 // --- START: Memo for All-Time TOTAL P/L (Realized + Unrealized) ---
@@ -1615,7 +1637,7 @@ const totalHoldYtdPL = useMemo(() => {
 
     const currentYear = new Date().getFullYear();
     const startOfYear = `${currentYear}-01-01`;
-    const currentPrice = latestPrices[stockSymbol]?.currentPrice ?? null;
+    const currentPrice = mergedPrices[stockSymbol]?.currentPrice ?? null;
 
     let ytdRealizedHoldPL = 0;
     let currentUnrealizedHoldPL = 0;
@@ -1691,7 +1713,7 @@ const totalHoldYtdPL = useMemo(() => {
         percent: roundedPercent
     };
 
-}, [transactions, wallets, latestPrices, stockSymbol]); // Removed walletBuyPriceMap as it's internal now
+}, [transactions, wallets, mergedPrices, stockSymbol]); // Updated to use mergedPrices
 // --- End Total Hold YTD P/L Calc Memo ---
 
 // Helper to truncate long IDs for display
@@ -2041,27 +2063,6 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
         }
     }, [stockId, fetchCurrentStock, fetchWallets, fetchTransactions]);
     
-    // Merge test prices with real prices for display - MOVED BEFORE EARLY RETURNS
-    const mergedPrices = useMemo(() => {
-        // For wallets page, merge test price from current stock data if available
-        if (currentStockData && currentStockData.symbol && currentStockData.testPrice) {
-            return mergeTestPricesWithRealPrices(latestPrices, [currentStockData]);
-        }
-        // Otherwise, convert the real prices to the merged format with isTestPrice: false
-        const mergedRealPrices: Record<string, { symbol: string; currentPrice: number | null; historicalCloses: { date: string; close: number; }[]; isTestPrice?: boolean; } | null> = {};
-        Object.keys(latestPrices).forEach(symbol => {
-            const price = latestPrices[symbol];
-            if (price) {
-                mergedRealPrices[symbol] = {
-                    ...price,
-                    isTestPrice: false
-                };
-            } else {
-                mergedRealPrices[symbol] = null;
-            }
-        });
-        return mergedRealPrices;
-    }, [latestPrices, currentStockData]);
     
     // --- Render Logic ---
     // Show loading indicator until stock symbol AND wallets are potentially loaded

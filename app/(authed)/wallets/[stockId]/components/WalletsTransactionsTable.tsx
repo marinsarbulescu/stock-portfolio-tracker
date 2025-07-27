@@ -180,7 +180,7 @@ export default function WalletsTransactionsTable({
                 }
                 {columnVisibility.quantity && 
                   <td style={{ padding: '5px' }} data-testid="wallets-transaction-table-quantity-display">
-                    {formatShares(txn.quantity ?? 0, SHARE_PRECISION)}
+                    {txn.action === 'SLP' ? '-' : formatShares(txn.quantity ?? 0, SHARE_PRECISION)}
                   </td>
                 }
                 {columnVisibility.proceeds && 
