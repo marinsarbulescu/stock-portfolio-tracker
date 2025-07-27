@@ -1,7 +1,7 @@
 import React from 'react';
 import { formatCurrency, formatShares } from '@/app/utils/financialCalculations';
 import { SHARE_PRECISION } from '@/app/config/constants';
-import type { PLStats, UnrealizedPLStats, TotalPLStats, TransactionCounts, CurrentShares } from '../types';
+import type { RealizedPLStats, UnrealizedPLStats, CombinedPLStats, TransactionCounts, CurrentShares } from '../types';
 
 export interface WalletsOverviewProps {
   isExpanded: boolean;
@@ -14,9 +14,9 @@ export interface WalletsOverviewProps {
   totalTiedUpInvestment: number;
   transactionCounts: TransactionCounts;
   currentShares: CurrentShares;
-  plStats: PLStats;
+  realizedPlStats: RealizedPLStats;
   unrealizedPlStats: UnrealizedPLStats;
-  totalPlStats: TotalPLStats;
+  combinedPlStats: CombinedPLStats;
   pricesLoading: boolean;
 }
 
@@ -31,9 +31,9 @@ export default function WalletsOverview({
   totalTiedUpInvestment,
   transactionCounts,
   currentShares,
-  plStats,
+  realizedPlStats,
   unrealizedPlStats,
-  totalPlStats,
+  combinedPlStats,
   pricesLoading,
 }: WalletsOverviewProps) {
   return (
@@ -117,27 +117,27 @@ export default function WalletsOverview({
                 <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Realized P/L</p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
                 <p>
-                  <span data-testid="overview-realized-swing-pl-dollars">{formatCurrency(plStats.totalSwingPlDollars ?? 0)}</span>
+                  <span data-testid="overview-realized-swing-pl-dollars">{formatCurrency(realizedPlStats.realizedSwingPL ?? 0)}</span>
                   &nbsp;(
-                  <span data-testid="overview-realized-swing-pl-percent">{`${plStats.avgSwingPlPercent ?? 0}%`}</span>
+                  <span data-testid="overview-realized-swing-pl-percent">{`${realizedPlStats.realizedSwingPercent ?? 0}%`}</span>
                   )
                 </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
                 <p>
-                  <span data-testid="overview-realized-hold-pl-dollars">{formatCurrency(plStats.totalHoldPlDollars ?? 0)}</span>
+                  <span data-testid="overview-realized-hold-pl-dollars">{formatCurrency(realizedPlStats.realizedHoldPL ?? 0)}</span>
                   &nbsp;(
-                  <span data-testid="overview-realized-hold-pl-percent">{`${plStats.avgHoldPlPercent ?? 0}%`}</span>
+                  <span data-testid="overview-realized-hold-pl-percent">{`${realizedPlStats.realizedHoldPercent ?? 0}%`}</span>
                   )
                 </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Div&SLP</p>
                 <p>
-                  <span data-testid="overview-realized-divslp-pl-dollars">{formatCurrency(plStats.totalIncomeFromDivAndSlp ?? 0)}</span>
+                  <span data-testid="overview-realized-divslp-pl-dollars">{formatCurrency(realizedPlStats.totalIncomeFromDivAndSlp ?? 0)}</span>
                 </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                 <p>
-                  <span data-testid="overview-realized-stock-pl-dollars">{formatCurrency(plStats.totalStockPlDollars ?? 0)}</span>
+                  <span data-testid="overview-realized-stock-pl-dollars">{formatCurrency(realizedPlStats.realizedStockPL ?? 0)}</span>
                   &nbsp;(
-                  <span data-testid="overview-realized-stock-pl-percent">{`${plStats.avgStockPlPercent ?? 0}%`}</span>
+                  <span data-testid="overview-realized-stock-pl-percent">{`${realizedPlStats.realizedStockPercent ?? 0}%`}</span>
                   )
                 </p>
               </div>
@@ -146,41 +146,41 @@ export default function WalletsOverview({
                 <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Unrealized P/L</p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
                 <p>
-                  {unrealizedPlStats.unrealizedSwingDollars === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(unrealizedPlStats.unrealizedSwingDollars ?? 0)}
+                  {unrealizedPlStats.unrealizedSwingPL === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(unrealizedPlStats.unrealizedSwingPL ?? 0)}
                   &nbsp;({unrealizedPlStats.unrealizedSwingPercent ?? 0}%)
                 </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
                 <p>
-                  {unrealizedPlStats.unrealizedHoldDollars === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(unrealizedPlStats.unrealizedHoldDollars ?? 0)}
+                  {unrealizedPlStats.unrealizedHoldPL === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(unrealizedPlStats.unrealizedHoldPL ?? 0)}
                   &nbsp;({unrealizedPlStats.unrealizedHoldPercent ?? 0}%)
                 </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                 <p>
-                  {unrealizedPlStats.unrealizedTotalDollars === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(unrealizedPlStats.unrealizedTotalDollars ?? 0)}
-                  &nbsp;({unrealizedPlStats.unrealizedTotalPercent ?? 0}%)
+                  {unrealizedPlStats.unrealizedStockPL === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(unrealizedPlStats.unrealizedStockPL ?? 0)}
+                  &nbsp;({unrealizedPlStats.unrealizedStockPercent ?? 0}%)
                 </p>
               </div>
 
               <div>
-                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Total P/L</p>
+                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Combined P/L</p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Swing</p>
                 <p>
-                  {totalPlStats.totalSwingPlDollars === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(totalPlStats.totalSwingPlDollars ?? 0)}
-                  &nbsp;({totalPlStats.totalSwingPercent ?? 0}%)
+                  {combinedPlStats.combinedSwingPL === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(combinedPlStats.combinedSwingPL ?? 0)}
+                  &nbsp;({combinedPlStats.combinedSwingPercent ?? 0}%)
                 </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Hold</p>
                 <p>
-                  {totalPlStats.totalHoldPlDollars === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(totalPlStats.totalHoldPlDollars ?? 0)}
-                  &nbsp;({totalPlStats.totalHoldPercent ?? 0}%)
+                  {combinedPlStats.combinedHoldPL === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(combinedPlStats.combinedHoldPL ?? 0)}
+                  &nbsp;({combinedPlStats.combinedHoldPercent ?? 0}%)
                 </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Div&SLP</p>
                 <p>
-                  <span data-testid="overview-total-divslp-pl-dollars">{formatCurrency(plStats.totalIncomeFromDivAndSlp ?? 0)}</span>
+                  <span data-testid="overview-total-divslp-pl-dollars">{formatCurrency(realizedPlStats.totalIncomeFromDivAndSlp ?? 0)}</span>
                 </p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Stock</p>
                 <p>
-                  {totalPlStats.totalStockPlDollars === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(totalPlStats.totalStockPlDollars ?? 0)}
-                  &nbsp;({totalPlStats.totalStockPercent ?? 0}%)
+                  {combinedPlStats.combinedStockPL === null ? (pricesLoading ? 'Loading Price...' : 'N/A') : formatCurrency(combinedPlStats.combinedStockPL ?? 0)}
+                  &nbsp;({combinedPlStats.combinedStockPercent ?? 0}%)
                 </p>
               </div>
             </div>

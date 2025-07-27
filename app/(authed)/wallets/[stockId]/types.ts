@@ -15,13 +15,13 @@ export interface CurrentShares {
   total: number;
 }
 
-export interface PLStats {
-  totalSwingPlDollars?: number | null;
-  avgSwingPlPercent?: number | null;
-  totalHoldPlDollars?: number | null;
-  avgHoldPlPercent?: number | null;
-  totalStockPlDollars?: number | null;
-  avgStockPlPercent?: number | null;
+export interface RealizedPLStats {
+  realizedSwingPL?: number | null;
+  realizedSwingPercent?: number | null;
+  realizedHoldPL?: number | null;
+  realizedHoldPercent?: number | null;
+  realizedStockPL?: number | null;
+  realizedStockPercent?: number | null;
   totalSwingCostBasis?: number | null;
   totalHoldCostBasis?: number | null;
   totalStockCostBasis?: number | null;
@@ -31,24 +31,24 @@ export interface PLStats {
 }
 
 export interface UnrealizedPLStats {
-  unrealizedSwingDollars?: number | null;
+  unrealizedSwingPL?: number | null;
   unrealizedSwingPercent?: number | null;
   unrealizedSwingCostBasis?: number | null;
-  unrealizedHoldDollars?: number | null;
+  unrealizedHoldPL?: number | null;
   unrealizedHoldPercent?: number | null;
   unrealizedHoldCostBasis?: number | null;
-  unrealizedTotalDollars?: number | null;
-  unrealizedTotalPercent?: number | null;
-  unrealizedTotalCostBasis?: number | null;
+  unrealizedStockPL?: number | null;
+  unrealizedStockPercent?: number | null;
+  unrealizedStockCostBasis?: number | null;
 }
 
-export interface TotalPLStats {
-  totalSwingPlDollars?: number | null;
-  totalSwingPercent?: number | null;
-  totalHoldPlDollars?: number | null;
-  totalHoldPercent?: number | null;
-  totalStockPlDollars?: number | null;
-  totalStockPercent?: number | null;
+export interface CombinedPLStats {
+  combinedSwingPL?: number | null;
+  combinedSwingPercent?: number | null;
+  combinedHoldPL?: number | null;
+  combinedHoldPercent?: number | null;
+  combinedStockPL?: number | null;
+  combinedStockPercent?: number | null;
   // Legacy fields for compatibility (these are for realized P/L percentages, not total)
   avgSwingPlPercent?: number | null;
   avgHoldPlPercent?: number | null;

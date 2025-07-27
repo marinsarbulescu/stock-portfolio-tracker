@@ -1096,14 +1096,14 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
         };
     }, [wallets]); // Depends on the wallets state
 
-    // --- UPDATED P/L Calculation Memo (Method 2: Total P/L / Total Cost Basis) ---
-    const plStats = useMemo(() => {
+    // --- Realized P/L Calculation Memo (Standard Market Terminology) ---
+    const realizedPlStats = useMemo(() => {
         // Need both transactions and wallets for this calculation
         if (!transactions || !wallets) {
             return {
-                totalSwingPlDollars: 0, avgSwingPlPercent: null,
-                totalHoldPlDollars: 0, avgHoldPlPercent: null,
-                totalStockPlDollars: 0, avgStockPlPercent: null,
+                realizedSwingPL: 0, realizedSwingPercent: null,
+                realizedHoldPL: 0, realizedHoldPercent: null,
+                realizedStockPL: 0, realizedStockPercent: null,
                 totalSwingCostBasis: 0, totalHoldCostBasis: 0, totalStockCostBasis: 0,
             };
         }
@@ -1175,51 +1175,51 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
         const totalIncomeFromDivAndSlp = totalDividendAmount + totalSlpAmount;
 
         // 6. Calculate percentages (updated to include Div/SLP amounts)
-        const avgSwingPlPercent = (totalSwingCostBasis !== 0)
+        const realizedSwingPercent = (totalSwingCostBasis !== 0)
         ? (calculatedTotalSwingPlDollars / totalSwingCostBasis) * 100 // Use calculatedTotalSwingPlDollars
         : (calculatedTotalSwingPlDollars === 0 ? 0 : null);
 
-        const avgHoldPlPercent = (totalHoldCostBasis !== 0)
+        const realizedHoldPercent = (totalHoldCostBasis !== 0)
             ? (totalHoldPlDollars / totalHoldCostBasis) * 100
             : (totalHoldPlDollars === 0 ? 0 : null);
 
         // Include Dividend and SLP amounts in total stock P/L
-        const totalStockPlDollars = calculatedTotalSwingPlDollars + totalHoldPlDollars + totalIncomeFromDivAndSlp;
+        const realizedStockPL = calculatedTotalSwingPlDollars + totalHoldPlDollars + totalIncomeFromDivAndSlp;
         const totalStockCostBasis = totalSwingCostBasis + totalHoldCostBasis;
         
         // For Stock P/L percentage, use cost basis of only SOLD shares as denominator
         // This ensures consistency with Swing and Hold individual percentage calculations
         // and follows standard market logic for realized P/L percentages
-        const avgStockPlPercent = (totalStockCostBasis > 0)
-            ? (totalStockPlDollars / totalStockCostBasis) * 100
-            : (totalStockPlDollars === 0 ? 0 : null);
+        const realizedStockPercent = (totalStockCostBasis > 0)
+            ? (realizedStockPL / totalStockCostBasis) * 100
+            : (realizedStockPL === 0 ? 0 : null);
 
         // 7. Round final values
-        const roundedTotalSwingPl = parseFloat(calculatedTotalSwingPlDollars.toFixed(CURRENCY_PRECISION)); // Use calculatedTotalSwingPlDollars
-        const roundedTotalHoldPl = parseFloat(totalHoldPlDollars.toFixed(CURRENCY_PRECISION));
-        const roundedTotalStockPl = parseFloat(totalStockPlDollars.toFixed(CURRENCY_PRECISION));
+        const roundedRealizedSwingPL = parseFloat(calculatedTotalSwingPlDollars.toFixed(CURRENCY_PRECISION)); // Use calculatedTotalSwingPlDollars
+        const roundedRealizedHoldPL = parseFloat(totalHoldPlDollars.toFixed(CURRENCY_PRECISION));
+        const roundedRealizedStockPL = parseFloat(realizedStockPL.toFixed(CURRENCY_PRECISION));
 
-        const finalAvgSwingPlPercent = typeof avgSwingPlPercent === 'number'
-            ? parseFloat(avgSwingPlPercent.toFixed(PERCENT_PRECISION))
+        const finalRealizedSwingPercent = typeof realizedSwingPercent === 'number'
+            ? parseFloat(realizedSwingPercent.toFixed(PERCENT_PRECISION))
             : null;
-        const finalAvgHoldPlPercent = typeof avgHoldPlPercent === 'number'
-            ? parseFloat(avgHoldPlPercent.toFixed(PERCENT_PRECISION))
+        const finalRealizedHoldPercent = typeof realizedHoldPercent === 'number'
+            ? parseFloat(realizedHoldPercent.toFixed(PERCENT_PRECISION))
             : null;
-        const finalAvgStockPlPercent = typeof avgStockPlPercent === 'number'
-            ? parseFloat(avgStockPlPercent.toFixed(PERCENT_PRECISION))
+        const finalRealizedStockPercent = typeof realizedStockPercent === 'number'
+            ? parseFloat(realizedStockPercent.toFixed(PERCENT_PRECISION))
             : null;
 
         if (warnings > 0) {
-            console.warn(`[StockWalletPage] - [plStats] Calculation finished with ${warnings} warnings (missing data). Results might be incomplete.`);
+            console.warn(`[StockWalletPage] - [realizedPlStats] Calculation finished with ${warnings} warnings (missing data). Results might be incomplete.`);
         }
 
         return {
-            totalSwingPlDollars: roundedTotalSwingPl, // Use the value from the utility function
-            avgSwingPlPercent: finalAvgSwingPlPercent,
-            totalHoldPlDollars: roundedTotalHoldPl,
-            avgHoldPlPercent: finalAvgHoldPlPercent,
-            totalStockPlDollars: roundedTotalStockPl,
-            avgStockPlPercent: finalAvgStockPlPercent,
+            realizedSwingPL: roundedRealizedSwingPL, // Use the value from the utility function
+            realizedSwingPercent: finalRealizedSwingPercent,
+            realizedHoldPL: roundedRealizedHoldPL,
+            realizedHoldPercent: finalRealizedHoldPercent,
+            realizedStockPL: roundedRealizedStockPL,
+            realizedStockPercent: finalRealizedStockPercent,
             totalSwingCostBasis: parseFloat(totalSwingCostBasis.toFixed(CURRENCY_PRECISION)), // Round cost basis
             totalHoldCostBasis: parseFloat(totalHoldCostBasis.toFixed(CURRENCY_PRECISION)),   // Round cost basis
             totalStockCostBasis: parseFloat(totalStockCostBasis.toFixed(CURRENCY_PRECISION)), // Round cost basis
@@ -1229,7 +1229,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
         };
 
     }, [transactions, wallets]); // Remove constant dependencies that don't cause re-renders
-    // --- End UPDATED P/L Calc Memo ---
+    // --- End Realized P/L Calc Memo ---
 
 
     // --- START - Client-Side Sorting Logic for Wallets ---
@@ -1449,9 +1449,9 @@ const unrealizedPlStats = useMemo(() => {
     // Depends on wallets and the latest price for this stock
     if (!wallets || !stockSymbol) {
         return {
-            unrealizedSwingDollars: null, unrealizedSwingPercent: null, unrealizedSwingCostBasis: 0, // Added Basis
-            unrealizedHoldDollars: null, unrealizedHoldPercent: null, unrealizedHoldCostBasis: 0, // Added Basis
-            unrealizedTotalDollars: null, unrealizedTotalPercent: null, unrealizedTotalCostBasis: 0 // Added Basis
+            unrealizedSwingPL: null, unrealizedSwingPercent: null, unrealizedSwingCostBasis: 0, // Added Basis
+            unrealizedHoldPL: null, unrealizedHoldPercent: null, unrealizedHoldCostBasis: 0, // Added Basis
+            unrealizedStockPL: null, unrealizedStockPercent: null, unrealizedStockCostBasis: 0 // Added Basis
         };
     }
 
@@ -1461,9 +1461,9 @@ const unrealizedPlStats = useMemo(() => {
     if (currentPrice === null) {
         //console.warn("[StockWalletPage] - [Unrealized P/L] Cannot calculate: Current price unavailable for", stockSymbol);
         return {
-            unrealizedSwingDollars: null, unrealizedSwingPercent: null, unrealizedSwingCostBasis: 0, // Added Basis
-            unrealizedHoldDollars: null, unrealizedHoldPercent: null, unrealizedHoldCostBasis: 0, // Added Basis
-            unrealizedTotalDollars: null, unrealizedTotalPercent: null, unrealizedTotalCostBasis: 0 // Added Basis
+            unrealizedSwingPL: null, unrealizedSwingPercent: null, unrealizedSwingCostBasis: 0, // Added Basis
+            unrealizedHoldPL: null, unrealizedHoldPercent: null, unrealizedHoldCostBasis: 0, // Added Basis
+            unrealizedStockPL: null, unrealizedStockPercent: null, unrealizedStockCostBasis: 0 // Added Basis
         };
     }
 
@@ -1513,81 +1513,81 @@ const unrealizedPlStats = useMemo(() => {
 
     // Return results
     return {
-        unrealizedSwingDollars: roundedSwingDollars,
+        unrealizedSwingPL: roundedSwingDollars,
         unrealizedSwingPercent: roundedSwingPercent,
         unrealizedSwingCostBasis: totalSwingCostBasis, // Return calculated basis
-        unrealizedHoldDollars: roundedHoldDollars,
+        unrealizedHoldPL: roundedHoldDollars,
         unrealizedHoldPercent: roundedHoldPercent,
         unrealizedHoldCostBasis: totalHoldCostBasis, // Return calculated basis
-        unrealizedTotalDollars: roundedTotalDollars,
-        unrealizedTotalPercent: roundedTotalPercent,
-        unrealizedTotalCostBasis: totalCostBasis // Return calculated basis
+        unrealizedStockPL: roundedTotalDollars,
+        unrealizedStockPercent: roundedTotalPercent,
+        unrealizedStockCostBasis: totalCostBasis // Return calculated basis
     };
 
   }, [wallets, mergedPrices, stockSymbol]); // Updated to use mergedPrices
   // --- END: Memo for All-Time UNREALIZED P/L Calculation ---
 
-// --- START: Memo for All-Time TOTAL P/L (Realized + Unrealized) ---
-const totalPlStats = useMemo(() => {
+// --- START: Memo for All-Time COMBINED P/L (Realized + Unrealized) ---
+const combinedPlStats = useMemo(() => {
     // Check if unrealized calculation was possible (depends on current price)
-    const unrealizedAvailable = unrealizedPlStats.unrealizedTotalDollars !== null;
+    const unrealizedAvailable = unrealizedPlStats.unrealizedStockPL !== null;
 
     if (!unrealizedAvailable) {
         return {
-          totalSwingDollars: null, totalSwingPercent: null,
-          totalHoldDollars: null, totalHoldPercent: null,
-          totalStockDollars: null, totalStockPercent: null,
+          combinedSwingPL: null, combinedSwingPercent: null,
+          combinedHoldPL: null, combinedHoldPercent: null,
+          combinedStockPL: null, combinedStockPercent: null,
         };
       }
   
-      // --- Calculate Total Dollar Amounts ---
-      const totalSwingDollars = (plStats.totalSwingPlDollars ?? 0) + (unrealizedPlStats.unrealizedSwingDollars ?? 0);
-      const totalHoldDollars = (plStats.totalHoldPlDollars ?? 0) + (unrealizedPlStats.unrealizedHoldDollars ?? 0);
-      const totalStockDollars = (plStats.totalStockPlDollars ?? 0) + (unrealizedPlStats.unrealizedTotalDollars ?? 0);
+      // --- Calculate Combined Dollar Amounts ---
+      const combinedSwingPL = (realizedPlStats.realizedSwingPL ?? 0) + (unrealizedPlStats.unrealizedSwingPL ?? 0);
+      const combinedHoldPL = (realizedPlStats.realizedHoldPL ?? 0) + (unrealizedPlStats.unrealizedHoldPL ?? 0);
+      const combinedStockPL = (realizedPlStats.realizedStockPL ?? 0) + (unrealizedPlStats.unrealizedStockPL ?? 0);
   
       // --- Calculate Combined Cost Bases ---
-      // Basis = Basis of Sold Shares (from plStats) + Basis of Held Shares (from unrealizedPlStats)
-      const combinedSwingBasis = (plStats.totalSwingCostBasis ?? 0) + (unrealizedPlStats.unrealizedSwingCostBasis ?? 0);
-      const combinedHoldBasis = (plStats.totalHoldCostBasis ?? 0) + (unrealizedPlStats.unrealizedHoldCostBasis ?? 0);
-      const combinedStockBasis = (plStats.totalStockCostBasis ?? 0) + (unrealizedPlStats.unrealizedTotalCostBasis ?? 0);
+      // Basis = Basis of Sold Shares (from realizedPlStats) + Basis of Held Shares (from unrealizedPlStats)
+      const combinedSwingBasis = (realizedPlStats.totalSwingCostBasis ?? 0) + (unrealizedPlStats.unrealizedSwingCostBasis ?? 0);
+      const combinedHoldBasis = (realizedPlStats.totalHoldCostBasis ?? 0) + (unrealizedPlStats.unrealizedHoldCostBasis ?? 0);
+      const combinedStockBasis = (realizedPlStats.totalStockCostBasis ?? 0) + (unrealizedPlStats.unrealizedStockCostBasis ?? 0);
   
   
-      // --- Calculate Total Percentages ---
-      const totalSwingPercentCalc = (combinedSwingBasis > SHARE_EPSILON)
-          ? (totalSwingDollars / combinedSwingBasis) * 100
-          : (Math.abs(totalSwingDollars) < 0.001 ? 0 : null);
+      // --- Calculate Combined Percentages ---
+      const combinedSwingPercentCalc = (combinedSwingBasis > SHARE_EPSILON)
+          ? (combinedSwingPL / combinedSwingBasis) * 100
+          : (Math.abs(combinedSwingPL) < 0.001 ? 0 : null);
   
-      const totalHoldPercentCalc = (combinedHoldBasis > SHARE_EPSILON)
-          ? (totalHoldDollars / combinedHoldBasis) * 100
-          : (Math.abs(totalHoldDollars) < 0.001 ?  0 : null);
+      const combinedHoldPercentCalc = (combinedHoldBasis > SHARE_EPSILON)
+          ? (combinedHoldPL / combinedHoldBasis) * 100
+          : (Math.abs(combinedHoldPL) < 0.001 ?  0 : null);
   
-      const totalStockPercentCalc = (combinedStockBasis > SHARE_EPSILON)
-          ? (totalStockDollars / combinedStockBasis) * 100
-          : (Math.abs(totalStockDollars) < 0.001 ? 0 : null);
+      const combinedStockPercentCalc = (combinedStockBasis > SHARE_EPSILON)
+          ? (combinedStockPL / combinedStockBasis) * 100
+          : (Math.abs(combinedStockPL) < 0.001 ? 0 : null);
   
       // --- Rounding ---
-      const roundedSwingDollars = parseFloat(totalSwingDollars.toFixed(CURRENCY_PRECISION));
-      const roundedHoldDollars = parseFloat(totalHoldDollars.toFixed(CURRENCY_PRECISION));
-      const roundedStockDollars = parseFloat(totalStockDollars.toFixed(CURRENCY_PRECISION));
+      const roundedCombinedSwingPL = parseFloat(combinedSwingPL.toFixed(CURRENCY_PRECISION));
+      const roundedCombinedHoldPL = parseFloat(combinedHoldPL.toFixed(CURRENCY_PRECISION));
+      const roundedCombinedStockPL = parseFloat(combinedStockPL.toFixed(CURRENCY_PRECISION));
   
-      const roundedSwingPercent = typeof totalSwingPercentCalc === 'number' ? parseFloat(totalSwingPercentCalc.toFixed(PERCENT_PRECISION)) : null;
-      const roundedHoldPercent = typeof totalHoldPercentCalc === 'number' ? parseFloat(totalHoldPercentCalc.toFixed(PERCENT_PRECISION)) : null;
-      const roundedStockPercent = typeof totalStockPercentCalc === 'number' ? parseFloat(totalStockPercentCalc.toFixed(PERCENT_PRECISION)) : null;
+      const roundedCombinedSwingPercent = typeof combinedSwingPercentCalc === 'number' ? parseFloat(combinedSwingPercentCalc.toFixed(PERCENT_PRECISION)) : null;
+      const roundedCombinedHoldPercent = typeof combinedHoldPercentCalc === 'number' ? parseFloat(combinedHoldPercentCalc.toFixed(PERCENT_PRECISION)) : null;
+      const roundedCombinedStockPercent = typeof combinedStockPercentCalc === 'number' ? parseFloat(combinedStockPercentCalc.toFixed(PERCENT_PRECISION)) : null;
   
-      //console.log(`[StockWalletPage] - [Total P/L] Final values - SwingPL: ${roundedSwingDollars} (${roundedSwingPercent}%), HoldPL: ${roundedHoldDollars} (${roundedHoldPercent}%), StockPL: ${roundedStockDollars} (${roundedStockPercent}%)`);
+      //console.log(`[StockWalletPage] - [Combined P/L] Final values - SwingPL: ${roundedCombinedSwingPL} (${roundedCombinedSwingPercent}%), HoldPL: ${roundedCombinedHoldPL} (${roundedCombinedHoldPercent}%), StockPL: ${roundedCombinedStockPL} (${roundedCombinedStockPercent}%)`);
   
       // --- Return results including percentages ---
       return {
-        totalSwingPlDollars: roundedSwingDollars,
-        totalSwingPercent: roundedSwingPercent,
-        totalHoldPlDollars: roundedHoldDollars,
-        totalHoldPercent: roundedHoldPercent,
-        totalStockPlDollars: roundedStockDollars,
-        totalStockPercent: roundedStockPercent,
+        combinedSwingPL: roundedCombinedSwingPL,
+        combinedSwingPercent: roundedCombinedSwingPercent,
+        combinedHoldPL: roundedCombinedHoldPL,
+        combinedHoldPercent: roundedCombinedHoldPercent,
+        combinedStockPL: roundedCombinedStockPL,
+        combinedStockPercent: roundedCombinedStockPercent,
       };
   // Depend on the results of the other two memos
-}, [plStats, unrealizedPlStats]);
-// --- END: Memo for All-Time TOTAL P/L ---
+}, [realizedPlStats, unrealizedPlStats]);
+// --- END: Memo for All-Time COMBINED P/L ---
 
 
 const totalTiedUpInvestment = useMemo(() => {
@@ -2101,9 +2101,9 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 totalTiedUpInvestment={totalTiedUpInvestment}
                 transactionCounts={transactionCounts}
                 currentShares={currentShares}
-                plStats={plStats}
+                realizedPlStats={realizedPlStats}
                 unrealizedPlStats={unrealizedPlStats}
-                totalPlStats={totalPlStats}
+                combinedPlStats={combinedPlStats}
                 pricesLoading={pricesLoading}            />
             {/* --- START: Wallets section --- */}
             <WalletsTabs
