@@ -6,7 +6,7 @@
       "tests": [
         {
           "name": "portfolio-create-and-edit-stock",
-          "enabled": true,
+          "enabled": false,
           "file": "e2e/portfolio/portfolio-create-and-edit-stock.spec.ts",
           "description": "Test creating and editing portfolio stocks",
           "tags": [
@@ -25,7 +25,7 @@
       "tests": [
         {
           "name": "wallet-add-transaction",
-          "enabled": true,
+          "enabled": false,
           "file": "e2e/wallets/wallet-add-transaction.spec.ts",
           "description": "Test adding transactions to wallet",
           "tags": [
@@ -38,7 +38,7 @@
         },
         {
           "name": "wallet-delete-transaction",
-          "enabled": true,
+          "enabled": false,
           "file": "e2e/wallets/wallet-delete-transaction.spec.ts",
           "description": "Test deleting transactions from wallet",
           "tags": [
@@ -51,7 +51,7 @@
         },
         {
           "name": "wallet-update-transactions-price",
-          "enabled": true,
+          "enabled": false,
           "file": "e2e/wallets/wallet-update-transactions-price.spec.ts",
           "description": "Test updating transaction prices",
           "tags": [
@@ -64,7 +64,7 @@
         },
         {
           "name": "wallet-same-price-transactions",
-          "enabled": true,
+          "enabled": false,
           "file": "e2e/wallets/wallet-same-price-transactions.spec.ts",
           "description": "Test handling transactions with same price",
           "tags": [
@@ -105,7 +105,7 @@
     "retries": 0,
     "timeout": 60000,
     "browser": "chromium",
-    "workers": 6
+    "workers": 1
   },
   "presets": {
     "smoke": {

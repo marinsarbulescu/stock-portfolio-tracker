@@ -31,7 +31,7 @@ export type TransactionCreateData = Omit<Schema['Transaction']['type'], 'id' | '
 export async function createPortfolioStock(stockData: PortfolioStockCreateData): Promise<Schema['PortfolioStock']['type']> {
     const localClient = getAmplifyClient();
     console.log('[dataHelpers.ts] - Creating PortfolioStock:', stockData.symbol);
-    const { data, errors } = await client.models.PortfolioStock.create(stockData); // Keep this destructuring
+    const { data, errors } = await localClient.models.PortfolioStock.create(stockData); // Keep this destructuring
 
     if (errors || !data) { // Check if data exists
         console.error('[dataHelpers.ts] - Error creating PortfolioStock:', errors);
@@ -49,7 +49,7 @@ export async function createPortfolioStock(stockData: PortfolioStockCreateData):
 export async function deletePortfolioStock(stockId: string): Promise<void> {
     const localClient = getAmplifyClient();
     console.log('[dataHelpers.ts] - Deleting PortfolioStock:', stockId);
-    const { errors } = await client.models.PortfolioStock.delete({ id: stockId });
+    const { errors } = await localClient.models.PortfolioStock.delete({ id: stockId });
     if (errors) {
         console.error('[dataHelpers.ts] - Error deleting PortfolioStock:', errors);
         // Don't throw if it's just "not found" during cleanup, but log it.
@@ -78,7 +78,7 @@ export async function createTransaction(transactionData: TransactionCreateData):
     // and create input accepts it directly. Let's assume it's like this for now.
 
      // Destructure data and errors
-     const { data, errors } = await client.models.Transaction.create(payload as any);
+     const { data, errors } = await localClient.models.Transaction.create(payload as any);
 
      // Check for errors OR if data is missing
      if (errors || !data) {
@@ -103,7 +103,7 @@ export async function getPortfolioStockBySymbol(symbol: string): Promise<Schema[
     // directly in the same way as a GraphQL API. You might need to list all and filter client-side,
     // or ensure your schema/API supports filtering by symbol.
     // This is a simplified example.
-    const { data: stocks, errors } = await client.models.PortfolioStock.list({
+    const { data: stocks, errors } = await localClient.models.PortfolioStock.list({
         // filter: { symbol: { eq: symbol } } // This filter might not work depending on your DataStore/GraphQL setup
     });
     if (errors) {
@@ -117,7 +117,7 @@ export async function getPortfolioStockBySymbol(symbol: string): Promise<Schema[
 export async function deleteTransactionsForStockByStockId(portfolioStockId: string): Promise<void> {
     const localClient = getAmplifyClient();
     console.log('[dataHelpers.ts] - Deleting all transactions for stock ID:', portfolioStockId);
-    const { data: transactions, errors: listErrors } = await client.models.Transaction.list({
+    const { data: transactions, errors: listErrors } = await localClient.models.Transaction.list({
         // filter: { portfolioStockTransactionsId: { eq: portfolioStockId } } // Adjust filter to your schema
          filter: { portfolioStockId: { eq: portfolioStockId } } // Assuming direct portfolioStockId field
     });
@@ -129,7 +129,7 @@ export async function deleteTransactionsForStockByStockId(portfolioStockId: stri
 
     for (const transaction of transactions) {
         console.log('[dataHelpers.ts] - Deleting transaction:', transaction.id);
-        const { errors: deleteErrors } = await client.models.Transaction.delete({ id: transaction.id });
+        const { errors: deleteErrors } = await localClient.models.Transaction.delete({ id: transaction.id });
         if (deleteErrors) {
             console.warn(`[dataHelpers.ts] - Failed to delete transaction ${transaction.id}:`, deleteErrors);
         }
@@ -141,7 +141,7 @@ export async function updatePortfolioStock(stockId: string, updateData: Partial<
     const localClient = getAmplifyClient();
     console.log('[dataHelpers.ts] - Updating PortfolioStock:', stockId, updateData);
     
-    const { data, errors } = await client.models.PortfolioStock.update({
+    const { data, errors } = await localClient.models.PortfolioStock.update({
         id: stockId,
         ...updateData
     });
@@ -157,11 +157,12 @@ export async function updatePortfolioStock(stockId: string, updateData: Partial<
 }
 
 export async function deleteStockWalletsForStockByStockId(portfolioStockId: string): Promise<void> {
+    const localClient = getAmplifyClient();
     console.log(`[dataHelpers.ts] - Attempting to delete all StockWallets for stock ID: ${portfolioStockId}`);
     try {
         // 1. List all StockWallets for the given portfolioStockId
         // We only need the 'id' of each wallet to delete it.
-        const { data: wallets, errors: listErrors } = await client.models.StockWallet.list({
+        const { data: wallets, errors: listErrors } = await localClient.models.StockWallet.list({
             filter: { portfolioStockId: { eq: portfolioStockId } },
             selectionSet: ['id'], // Only fetch IDs
             // Set a limit high enough for test scenarios; default is 100.
@@ -187,7 +188,7 @@ export async function deleteStockWalletsForStockByStockId(portfolioStockId: stri
         const deletePromises = wallets.map(async (wallet) => {
             if (wallet.id) {
                 console.log(`[dataHelpers.ts] - Deleting StockWallet: ${wallet.id}`);
-                const { errors: deleteErrors } = await client.models.StockWallet.delete({ id: wallet.id });
+                const { errors: deleteErrors } = await localClient.models.StockWallet.delete({ id: wallet.id });
                 if (deleteErrors) {
                     console.error(`[dataHelpers.ts] - Error deleting StockWallet ${wallet.id}:`, deleteErrors);
                     // Optionally, collect errors instead of throwing immediately to attempt all deletions
