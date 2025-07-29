@@ -163,7 +163,7 @@ async function verifyStockHasPrice(page: any, stockSymbol: string) {
             break; // Successfully found a valid price format
         }
         console.log(`[PageHelper] Attempt ${attempts + 1}: Price format not yet valid (${priceCellText.trim()}), retrying...`);
-        await page.waitForTimeout(2000); // Wait 2 seconds before retry
+        await page.waitForTimeout(1000); // Wait 1 second before retry
         attempts++;
     }
     
@@ -184,8 +184,9 @@ async function createStockViaUI(page: any, stockData: PortfolioStockCreateData) 
     await expect(addButton).toBeVisible({ timeout: 10000 });
     await addButton.click();
     
-    // Wait for modal to be visible
-    await page.waitForTimeout(1000);
+    // Wait for symbol field to be visible (indicating modal is ready)
+    const symbolField = page.locator('#symbol');
+    await expect(symbolField).toBeVisible({ timeout: 10000 });
     
     // Fill the form using ID selectors
     await page.locator('#symbol').fill(stockData.symbol);
@@ -205,8 +206,9 @@ async function createStockViaUI(page: any, stockData: PortfolioStockCreateData) 
     await expect(submitButton).toBeVisible();
     await submitButton.click();
     
-    // Wait for modal to close
-    await page.waitForTimeout(2000);
+    // Wait for modal to close (indicating stock was created successfully)
+    const modal = page.locator('[role="dialog"]').first();
+    await expect(modal).not.toBeVisible({ timeout: 10000 });
     console.log(`[PageHelper] ✅ Stock ${stockData.symbol} created successfully.`);
 }
 

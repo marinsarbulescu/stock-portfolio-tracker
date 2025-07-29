@@ -122,8 +122,9 @@ async function createStockViaUI(page: any, stockData: PortfolioCreateEditTestCon
     await expect(addStockButton).toBeVisible({ timeout: 10000 });
     await addStockButton.click();
     
-    // Wait for modal to be visible
-    await page.waitForTimeout(1000);
+    // Wait for symbol field to be visible (indicating modal is ready)
+    const symbolField = page.locator('#symbol');
+    await expect(symbolField).toBeVisible({ timeout: 10000 });
     
     // Fill form fields
     await page.locator('#symbol').fill(stockData.symbol);
@@ -144,8 +145,8 @@ async function createStockViaUI(page: any, stockData: PortfolioCreateEditTestCon
     const submitButton = page.locator('button[type="submit"]:has-text("Add Stock")');
     await submitButton.click();
     
-    // Wait for modal to close
-    await page.waitForTimeout(2000);
+    // Wait for modal to close by checking symbol field is no longer visible
+    await expect(symbolField).not.toBeVisible({ timeout: 15000 });
     
     console.log('[PageHelper] Stock created via UI.');
 }
@@ -222,8 +223,8 @@ async function openEditModalAndVerifyValues(page: any, stockData: PortfolioCreat
     await expect(editButton).toBeVisible({ timeout: 10000 });
     await editButton.click();
     
-    // Wait for modal to be visible
-    await page.waitForTimeout(1000);
+    // Wait for form fields to be visible (indicating modal is ready)
+    await expect(page.locator('#symbol')).toBeVisible({ timeout: 10000 });
     
     // Verify prefilled values
     await expect(page.locator('#symbol')).toHaveValue(stockData.symbol.toUpperCase());
@@ -264,8 +265,8 @@ async function editStockValues(page: any, editData: PortfolioCreateEditTestConfi
     const submitButton = page.locator('button[type="submit"]:has-text("Update")');
     await submitButton.click();
     
-    // Wait for modal to close
-    await page.waitForTimeout(2000);
+    // Wait for modal to close by checking form fields are no longer visible
+    await expect(page.locator('#symbol')).not.toBeVisible({ timeout: 15000 });
     
     console.log('[PageHelper] Stock values updated.');
 }

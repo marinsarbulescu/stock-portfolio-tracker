@@ -137,6 +137,25 @@ export async function deleteTransactionsForStockByStockId(portfolioStockId: stri
     console.log('[dataHelpers.ts] - Finished deleting transactions for stock ID:', portfolioStockId);
 }
 
+export async function updatePortfolioStock(stockId: string, updateData: Partial<Omit<Schema['PortfolioStock']['type'], 'id' | 'createdAt' | 'updatedAt'>>): Promise<Schema['PortfolioStock']['type']> {
+    const localClient = getAmplifyClient();
+    console.log('[dataHelpers.ts] - Updating PortfolioStock:', stockId, updateData);
+    
+    const { data, errors } = await client.models.PortfolioStock.update({
+        id: stockId,
+        ...updateData
+    });
+
+    if (errors || !data) {
+        console.error('[dataHelpers.ts] - Error updating PortfolioStock:', errors);
+        throw new Error(`Failed to update PortfolioStock: ${errors?.[0]?.message || 'No data returned from update operation'}`);
+    }
+
+    const updatedStock: Schema['PortfolioStock']['type'] = data;
+    console.log('[dataHelpers.ts] - PortfolioStock updated:', updatedStock.id, updatedStock.symbol);
+    return updatedStock;
+}
+
 export async function deleteStockWalletsForStockByStockId(portfolioStockId: string): Promise<void> {
     console.log(`[dataHelpers.ts] - Attempting to delete all StockWallets for stock ID: ${portfolioStockId}`);
     try {

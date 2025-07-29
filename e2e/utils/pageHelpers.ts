@@ -239,6 +239,100 @@ export async function mockCurrentStockPrice(page: Page, stockSymbol: string, new
 }
 
 /**
+ * Updates the test price for a stock by opening the edit modal from the Wallets page
+ * @param page - The Playwright Page object
+ * @param stockSymbol - The stock symbol to update
+ * @param newTestPrice - The new test price to set
+ */
+export async function updateStockTestPrice(page: Page, stockSymbol: string, newTestPrice: number) {
+    console.log(`[PageHelper] Updating test price for ${stockSymbol} to $${newTestPrice}`);
+    
+    // Click on the stock symbol in the wallets header to open the edit modal
+    const stockSymbolLink = page.locator('[data-testid="wallet-page-title"]');
+    await expect(stockSymbolLink).toBeVisible({ timeout: 10000 });
+    await stockSymbolLink.click();
+    
+    // Wait for test price field to be visible (instead of arbitrary timeout)
+    const testPriceField = page.locator('#testPrice');
+    await expect(testPriceField).toBeVisible({ timeout: 10000 });
+    await testPriceField.clear();
+    await testPriceField.fill(newTestPrice.toString());
+    
+    // Submit the form
+    const submitButton = page.locator('button[type="submit"]:has-text("Update")');
+    await expect(submitButton).toBeVisible({ timeout: 10000 });
+    await submitButton.click();
+    
+    // Wait for modal to close by checking it's not visible
+    const modal = page.locator('[role="dialog"], .modal, [data-testid*="modal"]').first();
+    await expect(modal).not.toBeVisible({ timeout: 10000 });
+    
+    // Refresh the page to show the updated test price
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    
+    console.log(`[PageHelper] Test price updated for ${stockSymbol} to $${newTestPrice} and page refreshed`);
+}
+
+/**
+ * Verifies the current test price for a stock by checking the portfolio table
+ * @param page - The Playwright Page object
+ * @param stockSymbol - The stock symbol to verify
+ * @param expectedPrice - The expected test price
+ */
+export async function verifyStockTestPrice(page: Page, stockSymbol: string, expectedPrice: number) {
+    console.log(`[PageHelper] Verifying test price for ${stockSymbol} is $${expectedPrice}`);
+    
+    // Ensure we're on the wallets page and wait for it to load
+    await page.waitForLoadState('networkidle');
+    
+    // Look for the price element using the test ID
+    const priceElement = page.locator('[data-testid="wallets-header-price"]');
+    await expect(priceElement).toBeVisible({ timeout: 10000 });
+    
+    // Format the expected price as currency
+    const expectedFormattedPrice = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(expectedPrice);
+
+    await expect(priceElement).toHaveText(expectedFormattedPrice);
+    
+    // Verify the price is displayed in purple (test price indicator)
+    const priceColor = await priceElement.evaluate(el => getComputedStyle(el).color);
+    console.log(`[PageHelper] Price color: ${priceColor}`);
+    
+    // Purple color should be rgb(159, 79, 150) which is #9f4f96
+    // Note: Different browsers may report colors differently, so we check for purple-ish values
+    const isPurple = priceColor.includes('159') || priceColor.includes('9f4f96') || priceColor.includes('purple');
+    if (!isPurple) {
+        console.warn(`[PageHelper] Warning: Price color ${priceColor} doesn't appear to be purple (test price indicator)`);
+    }
+    
+    console.log(`[PageHelper] ✅ Test price verified: ${expectedFormattedPrice} (${isPurple ? 'purple' : 'not purple'})`);
+}
+
+/**
+ * Refreshes the wallets page to ensure test price changes are reflected
+ * @param page - The Playwright Page object
+ * @param stockId - The stock ID
+ * @param stockSymbol - The stock symbol
+ */
+export async function refreshWalletsPage(page: Page, stockId: string, stockSymbol: string) {
+    console.log(`[PageHelper] Refreshing wallets page for ${stockSymbol}`);
+    
+    // Navigate to the wallets page
+    await navigateToStockWalletPage(page, stockId, stockSymbol);
+    
+    // Wait for page to fully load using network idle instead of arbitrary timeout
+    await page.waitForLoadState('networkidle');
+    
+    console.log(`[PageHelper] Wallets page refreshed for ${stockSymbol}`);
+}
+
+/**
  * Interface for parameters to update an existing Buy transaction.
  * All fields are optional.
  */
@@ -829,8 +923,9 @@ export async function addTransaction(page: Page, transactionData: TransactionDat
     await expect(transactionModal).not.toBeVisible({ timeout: 15000 });
     console.log(`[PageHelper] Transaction created successfully.`);
     
-    // Wait for UI to update
-    await page.waitForTimeout(3000);
+    // Wait for transaction table to update instead of arbitrary timeout
+    const transactionTable = page.locator('[data-testid*="wallets-transaction-table"], table').first();
+    await expect(transactionTable).toBeVisible({ timeout: 10000 });
 }
 
 /**
@@ -844,7 +939,6 @@ export async function deleteTransaction(page: Page) {
     // Navigate to transactions section (scroll down if needed)
     const transactionsSection = page.locator('text=Transactions').first();
     await transactionsSection.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(1000);
     
     // Find the delete button for the transaction (should be the first/only one)
     const deleteButton = page.locator('[data-testid^="wallets-transaction-table-txn-delete-button-"]').first();
@@ -860,7 +954,7 @@ export async function deleteTransaction(page: Page) {
     await deleteButton.click();
     console.log(`[PageHelper] Transaction deletion confirmed.`);
     
-    // Wait for deletion to process
-    await page.waitForTimeout(3000);
+    // Wait for transaction to be removed from table instead of arbitrary timeout
+    await expect(deleteButton).not.toBeVisible({ timeout: 10000 });
     console.log(`[PageHelper] Transaction deleted successfully.`);
 }

@@ -35,17 +35,35 @@ export interface OverviewExpectation {
         stockDollars: string;
         stockPercent: string;
     };
+    unrealizedPL: {
+        swingDollars: string;
+        swingPercent: string;
+        holdDollars: string;
+        holdPercent: string;
+        stockDollars: string;
+        stockPercent: string;
+    };
+    combinedPL: {
+        swingDollars: string;
+        swingPercent: string;
+        holdDollars: string;
+        holdPercent: string;
+        stockDollars: string;
+        stockPercent: string;
+        incomeDollars: string;
+    };
 }
 
 export interface TransactionStep {
     input: {
         date: string;
-        type: 'Split' | 'Swing' | 'Hold';
-        signal: string;
+        type?: 'Split' | 'Swing' | 'Hold';
+        signal?: string;
         price?: number;
         investment?: number;
+        amount?: number;
         newPrice?: number;
-        action?: 'Buy' | 'Sell';
+        action?: 'Buy' | 'Sell' | 'SLP' | 'Div';
     };
     output: {
         overview?: OverviewExpectation;

@@ -269,8 +269,8 @@ let transactionBId: string | null = null;
 
 // Helper function to capture transaction ID from browser console during creation
 async function captureTransactionId(page: Page, transactionLabel: 'A' | 'B'): Promise<void> {
-    // Wait a moment for any console messages to appear
-    await page.waitForTimeout(2000);
+    // Brief wait for console messages to be processed
+    await page.waitForTimeout(500);
     
     console.log(`[PageHelper] Transaction ${transactionLabel} creation completed, ID should be captured from browser console`);
 }
@@ -282,7 +282,6 @@ async function editTransactionById(page: Page, transactionId: string, newPrice: 
     // Navigate to transactions section
     const transactionsSection = page.locator('text=Transactions').first();
     await transactionsSection.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(1000);
     
     // Find the edit button with the specific transaction ID
     const editButton = page.locator(`[data-testid="wallets-transaction-table-txn-edit-button-${transactionId}"]`);
@@ -325,9 +324,8 @@ async function editTransactionByInvestmentInspection(page: Page, targetInvestmen
     // Navigate to transactions section
     const transactionsSection = page.locator('text=Transactions').first();
     await transactionsSection.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(2000); // Wait for table to stabilize
     
-    // Get all transaction rows
+    // Wait for transaction table to be visible and stable
     const transactionRows = page.locator('[data-testid="wallets-transaction-table-transaction-row"]');
     await expect(transactionRows.first()).toBeVisible({ timeout: 10000 });
     
@@ -412,7 +410,12 @@ async function editTransactionByInvestmentInspection(page: Page, targetInvestmen
                 console.log(`[PageHelper] Warning: Could not close modal cleanly: ${error}`);
                 // Try pressing Escape as fallback
                 await page.keyboard.press('Escape');
-                await page.waitForTimeout(1000);
+                
+                // Wait for modal to close
+                const modal = page.locator('[role="dialog"]').first();
+                await expect(modal).not.toBeVisible({ timeout: 5000 }).catch(() => {
+                    console.log('[PageHelper] Modal may still be open after Escape, continuing...');
+                });
             }
         }
     }
@@ -430,10 +433,10 @@ async function editTransactionPrice(page: Page, transactionIndex: number, newPri
     // Navigate to transactions section
     const transactionsSection = page.locator('text=Transactions').first();
     await transactionsSection.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(1000);
     
     // DEBUG: Log all visible transactions before editing
     const transactionRows = page.locator('[data-testid="wallets-transaction-table-transaction-row"]');
+    await expect(transactionRows.first()).toBeVisible({ timeout: 10000 });
     const rowCount = await transactionRows.count();
     console.log(`[PageHelper] DEBUG: Found ${rowCount} transactions:`);
     

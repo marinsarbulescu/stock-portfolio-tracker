@@ -76,9 +76,8 @@ async function verifyWalletDetails(page: any, walletType: 'swing' | 'hold', wall
     const tab = page.locator(tabSelector);
     await expect(tab).toBeVisible({ timeout: 5000 });
     await tab.click();
-    await page.waitForTimeout(1000);
     
-    // Use the correct selector pattern from the working add transaction test
+    // Wait for tab content to load
     const walletTable = page.locator('[data-testid="wallets-table"]');
     await expect(walletTable).toBeVisible({ timeout: 10000 });
     
@@ -128,7 +127,6 @@ async function verifyWalletCounts(page: any, walletType: 'swing' | 'hold', expec
     const tab = page.locator(tabSelector);
     await expect(tab).toBeVisible({ timeout: 5000 });
     await tab.click();
-    await page.waitForTimeout(1000);
     
     if (expectedCount === 0) {
         const notFoundSelector = '[data-testid="wallet-notfound-display"]';
@@ -139,6 +137,7 @@ async function verifyWalletCounts(page: any, walletType: 'swing' | 'hold', expec
     } else {
         // Use the correct selector pattern from the working add transaction test
         const walletTable = page.locator('[data-testid="wallets-table"]');
+        await expect(walletTable).toBeVisible({ timeout: 10000 });
         await expect(walletTable).toBeVisible({ timeout: 10000 });
         
         const tableRows = walletTable.locator('tbody tr');
@@ -419,8 +418,16 @@ test.describe('Wallet Page - Delete Transactions and Verify Wallets (JSON-driven
             await expect(titleElement).toBeVisible({ timeout: 15000 });
             await expect(titleElement).toContainText(testConfig.stock.symbol.toUpperCase(), { timeout: 5000 });
             
-            // Additional wait for wallets to be loaded
-            await page.waitForTimeout(3000);
+            // Wait for wallets table to be loaded or no-wallets message to appear
+            const walletsTable = page.locator('[data-testid="wallets-table"]');
+            const noWalletsMessage = page.locator('[data-testid="wallet-notfound-display"]');
+            await Promise.race([
+                expect(walletsTable).toBeVisible({ timeout: 10000 }),
+                expect(noWalletsMessage).toBeVisible({ timeout: 10000 })
+            ]).catch(() => {
+                // If neither appears within timeout, continue - the specific wallet verification will catch any issues
+                console.log('[PageHelper] Wallet content still loading, continuing with verification...');
+            });
             
             await verifyTransactionStepWallets(page, addStep, `${transactionType}TransactionAdd`);
             

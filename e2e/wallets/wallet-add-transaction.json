@@ -48,6 +48,92 @@
             "holdPercent": "0%",
             "stockDollars": "$0.00",
             "stockPercent": "0%"
+          },
+          "unrealizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00",
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%"
+          },
+          "combinedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00",
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%",
+            "incomeDollars": "$0.00"
+          }
+        },
+        "wallets": {
+          "swing": {
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 140,
+              "sharesLeft": 1.4
+            }
+          },
+          "hold": {
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 60,
+              "sharesLeft": 0.6
+            }
+          }
+        }
+      }
+    },
+    "SlpIncome": {
+      "input": {
+        "date": "2025-05-15T12:00:00",
+        "action": "SLP",
+        "amount": 20
+      },
+      "output": {
+        "overview": {
+          "settings": {
+            "budget": 600,
+            "invested": 200,
+            "pdp": "5%",
+            "shr": "70% Swing",
+            "plr": "2",
+            "htp": "0%"
+          },
+          "txnsAndShares": {
+            "buys": 1,
+            "totalSells": 0,
+            "swingSells": 0,
+            "holdSells": 0,
+            "swingShares": "1.40000",
+            "holdShares": "0.60000",
+            "totalShares": "2.00000"
+          },
+          "realizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00", 
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%"
+          },
+          "unrealizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00",
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%"
+          },
+          "combinedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00",
+            "holdPercent": "0%",
+            "stockDollars": "$20.00",
+            "stockPercent": "10%",
+            "incomeDollars": "$20.00"
           }
         },
         "wallets": {
@@ -103,6 +189,23 @@
             "holdPercent": "0%",
             "stockDollars": "$0.00",
             "stockPercent": "0%"
+          },
+          "unrealizedPL": {
+            "swingDollars": "$360.00",
+            "swingPercent": "66.67%",
+            "holdDollars": "$120.00",
+            "holdPercent": "200%",
+            "stockDollars": "$480.00",
+            "stockPercent": "80%"
+          },
+          "combinedPL": {
+            "swingDollars": "$360.00",
+            "swingPercent": "66.67%",
+            "holdDollars": "$120.00",
+            "holdPercent": "200%",
+            "stockDollars": "$500.00",
+            "stockPercent": "83.33%",
+            "incomeDollars": "$20.00"
           }
         },
         "wallets": {
@@ -163,6 +266,102 @@
             "holdPercent": "0%",
             "stockDollars": "$0.00",
             "stockPercent": "0%"
+          },
+          "unrealizedPL": {
+            "swingDollars": "$2,190.00",
+            "swingPercent": "405.56%",
+            "holdDollars": "$489.89",
+            "holdPercent": "119.48%",
+            "stockDollars": "$2,679.89",
+            "stockPercent": "282.09%"
+          },
+          "combinedPL": {
+            "swingDollars": "$2,190.00",
+            "swingPercent": "405.56%",
+            "holdDollars": "$489.89",
+            "holdPercent": "119.49%",
+            "stockDollars": "$2,699.89",
+            "stockPercent": "284.2%",
+            "incomeDollars": "$20.00"
+          }
+        },
+        "wallets": {
+          "swing": {
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 140,
+              "sharesLeft": 1.4
+            },
+            "wallet250": {
+              "buyPrice": 250,
+              "investment": 400,
+              "sharesLeft": 1.6
+            }
+          },
+          "hold": {
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 60,
+              "sharesLeft": 0.6
+            },
+            "wallet900": {
+              "buyPrice": 900,
+              "investment": 350,
+              "sharesLeft": 0.38889
+            }
+          }
+        }
+      }
+    },
+    "DividendIncome": {
+      "input": {
+        "date": "2025-05-17T12:00:00",
+        "action": "Div",
+        "investment": 10
+      },
+      "output": {
+        "overview": {
+          "settings": {
+            "budget": 600,
+            "invested": 950,
+            "pdp": "5%",
+            "shr": "70% Swing",
+            "plr": "2",
+            "htp": "0%"
+          },
+          "txnsAndShares": {
+            "buys": 3,
+            "totalSells": 0,
+            "swingSells": 0,
+            "holdSells": 0,
+            "swingShares": "3.00000",
+            "holdShares": "0.98889",
+            "totalShares": "3.98889"
+          },
+          "realizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00", 
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%"
+          },
+          "unrealizedPL": {
+            "swingDollars": "$2,190.00",
+            "swingPercent": "405.56%",
+            "holdDollars": "$489.89",
+            "holdPercent": "119.48%",
+            "stockDollars": "$2,679.89",
+            "stockPercent": "282.09%"
+          },
+          "combinedPL": {
+            "swingDollars": "$2,190.00",
+            "swingPercent": "405.56%",
+            "holdDollars": "$489.89",
+            "holdPercent": "119.49%",
+            "stockDollars": "$2,709.89",
+            "stockPercent": "285.25%",
+            "incomeDollars": "$30.00"
           }
         },
         "wallets": {
@@ -228,6 +427,23 @@
             "holdPercent": "0%",
             "stockDollars": "$0.00",
             "stockPercent": "0%"
+          },
+          "unrealizedPL": {
+            "swingDollars": "$991.35",
+            "swingPercent": "162.52%",
+            "holdDollars": "$94.91",
+            "holdPercent": "21.57%",
+            "stockDollars": "$1,086.26",
+            "stockPercent": "103.45%"
+          },
+          "combinedPL": {
+            "swingDollars": "$991.35",
+            "swingPercent": "162.52%",
+            "holdDollars": "$94.91",
+            "holdPercent": "21.57%",
+            "stockDollars": "$1,116.26",
+            "stockPercent": "106.31%",
+            "incomeDollars": "$30.00"
           }
         },
         "wallets": {

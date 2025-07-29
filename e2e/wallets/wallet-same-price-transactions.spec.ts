@@ -89,7 +89,6 @@ async function verifyNoWalletsExist(page: any) {
     const swingTab = page.locator('[data-testid="wallet-tab-Swing"]');
     await expect(swingTab).toBeVisible({ timeout: 5000 });
     await swingTab.click();
-    await page.waitForTimeout(1000);
     
     const swingNotFound = page.locator('[data-testid="wallet-notfound-display"]');
     await expect(swingNotFound).toBeVisible();
@@ -99,7 +98,6 @@ async function verifyNoWalletsExist(page: any) {
     const holdTab = page.locator('[data-testid="wallet-tab-Hold"]');
     await expect(holdTab).toBeVisible({ timeout: 5000 });
     await holdTab.click();
-    await page.waitForTimeout(1000);
     
     const holdNotFound = page.locator('[data-testid="wallet-notfound-display"]');
     await expect(holdNotFound).toBeVisible();
@@ -129,9 +127,19 @@ async function countWalletRows(page: any, walletType: 'Swing' | 'Hold'): Promise
     const tab = page.locator(`[data-testid="wallet-tab-${walletType}"]`);
     await expect(tab).toBeVisible({ timeout: 5000 });
     await tab.click();
-    await page.waitForTimeout(1000);
     
     const notFoundMessage = page.locator('[data-testid="wallet-notfound-display"]');
+    const walletsTable = page.locator('[data-testid="wallets-table"]');
+    
+    // Wait for either the not-found message or the wallets table to appear
+    await Promise.race([
+        expect(notFoundMessage).toBeVisible({ timeout: 5000 }),
+        expect(walletsTable).toBeVisible({ timeout: 5000 })
+    ]).catch(() => {
+        // If neither appears, continue with the check
+        console.log(`[PageHelper] Neither wallet table nor not-found message appeared for ${walletType}`);
+    });
+    
     const isNotFoundVisible = await notFoundMessage.isVisible();
     
     if (isNotFoundVisible) {
@@ -139,7 +147,6 @@ async function countWalletRows(page: any, walletType: 'Swing' | 'Hold'): Promise
         return 0;
     }
     
-    const walletsTable = page.locator('[data-testid="wallets-table"]');
     const isTableVisible = await walletsTable.isVisible();
     
     if (!isTableVisible) {
@@ -161,7 +168,17 @@ async function verifyWalletDetails(page: any, walletType: 'Swing' | 'Hold', expe
     const tab = page.locator(`[data-testid="wallet-tab-${walletType}"]`);
     await expect(tab).toBeVisible({ timeout: 5000 });
     await tab.click();
-    await page.waitForTimeout(1000);
+    
+    // Wait for either the wallet table or no-wallet message to load
+    const walletsTable = page.locator('[data-testid="wallets-table"]');
+    const notFoundMessage = page.locator('[data-testid="wallet-notfound-display"]');
+    
+    await Promise.race([
+        expect(walletsTable).toBeVisible({ timeout: 5000 }),
+        expect(notFoundMessage).toBeVisible({ timeout: 5000 })
+    ]).catch(() => {
+        console.log(`[PageHelper] Neither wallet table nor not-found message appeared for ${walletType} verification`);
+    });
     
     const walletKeys = Object.keys(expectedWallets);
     
@@ -173,7 +190,6 @@ async function verifyWalletDetails(page: any, walletType: 'Swing' | 'Hold', expe
         return;
     }
     
-    const walletsTable = page.locator('[data-testid="wallets-table"]');
     await expect(walletsTable).toBeVisible({ timeout: 5000 });
     
     for (let i = 0; i < walletKeys.length; i++) {

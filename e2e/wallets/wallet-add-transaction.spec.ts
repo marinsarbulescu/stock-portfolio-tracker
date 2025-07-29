@@ -7,7 +7,10 @@ import {
     clearBrowserState, 
     loginUser, 
     navigateToStockWalletPage,
-    addTransaction
+    addTransaction,
+    updateStockTestPrice,
+    verifyStockTestPrice,
+    refreshWalletsPage
 } from '../utils/pageHelpers';
 import { 
     createPortfolioStock, 
@@ -41,6 +44,52 @@ function formatCurrency(amount: number): string {
 
 function formatShares(shares: number): string {
     return shares.toFixed(SHARE_PRECISION);
+}
+
+/**
+ * Adds an SLP or Dividend transaction via the UI modal.
+ * @param page - The Playwright Page object.
+ * @param transactionData - The transaction data containing action and amount.
+ */
+async function addIncomeTransaction(page: Page, transactionData: { action: 'SLP' | 'Div', amount: number, date?: string }) {
+    console.log(`[PageHelper] Adding ${transactionData.action} income transaction:`, transactionData);
+    
+    // Open Add Transaction modal
+    const addTransactionButton = page.locator('[data-testid="add-transaction-button"]');
+    await expect(addTransactionButton).toBeVisible({ timeout: 10000 });
+    await addTransactionButton.click();
+    
+    const transactionModal = page.locator('[data-testid="add-buy-transaction-form-modal"]');
+    await expect(transactionModal).toBeVisible({ timeout: 10000 });
+    console.log(`[PageHelper] Add Transaction modal opened.`);
+    
+    // Fill transaction form
+    const date = transactionData.date ? transactionData.date.split('T')[0] : new Date().toISOString().split('T')[0]; // Extract date part only
+    await page.locator('[data-testid="txn-form-date"]').fill(date);
+    
+    // Select action (SLP or Div)
+    await page.locator('[data-testid="txn-form-action"]').selectOption(transactionData.action);
+    
+    // Fill amount field (for SLP) or investment field (for Div)
+    if (transactionData.action === 'SLP') {
+        await page.locator('[data-testid="txn-form-amount"]').fill(transactionData.amount.toString());
+    } else { // Div
+        await page.locator('[data-testid="txn-form-investment"]').fill(transactionData.amount.toString());
+    }
+    
+    console.log(`[PageHelper] Form filled: Date=${date}, Action=${transactionData.action}, Amount=${transactionData.amount}`);
+    
+    // Submit the form
+    const submitButton = page.locator('[data-testid="txn-form-submit-button"]');
+    await submitButton.click();
+    
+    // Wait for modal to close
+    await expect(transactionModal).not.toBeVisible({ timeout: 15000 });
+    console.log(`[PageHelper] ${transactionData.action} transaction created successfully.`);
+    
+    // Wait for transaction table to update instead of arbitrary timeout
+    const transactionTable = page.locator('[data-testid*="wallets-transaction-table"], table').first();
+    await expect(transactionTable).toBeVisible({ timeout: 10000 });
 }
 
 // Enhanced overview verification function
@@ -92,6 +141,27 @@ async function verifyOverview(
     await expect(page.locator('[data-testid="overview-realized-stock-pl-dollars"]')).toHaveText(expectedOverview.realizedPL.stockDollars);
     await expect(page.locator('[data-testid="overview-realized-stock-pl-percent"]')).toHaveText(expectedOverview.realizedPL.stockPercent);
     console.log(`[OverviewHelper] ✅ Realized P/L section verified`);
+    
+    // Verify Unrealized P/L section
+    console.log(`[OverviewHelper] Verifying Unrealized P/L section...`);
+    await expect(page.locator('[data-testid="overview-unrealized-swing-pl-dollars"]')).toHaveText(expectedOverview.unrealizedPL.swingDollars);
+    await expect(page.locator('[data-testid="overview-unrealized-swing-pl-percent"]')).toHaveText(expectedOverview.unrealizedPL.swingPercent);
+    await expect(page.locator('[data-testid="overview-unrealized-hold-pl-dollars"]')).toHaveText(expectedOverview.unrealizedPL.holdDollars);
+    await expect(page.locator('[data-testid="overview-unrealized-hold-pl-percent"]')).toHaveText(expectedOverview.unrealizedPL.holdPercent);
+    await expect(page.locator('[data-testid="overview-unrealized-stock-pl-dollars"]')).toHaveText(expectedOverview.unrealizedPL.stockDollars);
+    await expect(page.locator('[data-testid="overview-unrealized-stock-pl-percent"]')).toHaveText(expectedOverview.unrealizedPL.stockPercent);
+    console.log(`[OverviewHelper] ✅ Unrealized P/L section verified`);
+
+    // Verify Combined P/L section
+    console.log(`[OverviewHelper] Verifying Combined P/L section...`);
+    await expect(page.locator('[data-testid="overview-combined-swing-pl-dollars"]')).toHaveText(expectedOverview.combinedPL.swingDollars);
+    await expect(page.locator('[data-testid="overview-combined-swing-pl-percent"]')).toHaveText(expectedOverview.combinedPL.swingPercent);
+    await expect(page.locator('[data-testid="overview-combined-hold-pl-dollars"]')).toHaveText(expectedOverview.combinedPL.holdDollars);
+    await expect(page.locator('[data-testid="overview-combined-hold-pl-percent"]')).toHaveText(expectedOverview.combinedPL.holdPercent);
+    await expect(page.locator('[data-testid="overview-combined-stock-pl-dollars"]')).toHaveText(expectedOverview.combinedPL.stockDollars);
+    await expect(page.locator('[data-testid="overview-combined-stock-pl-percent"]')).toHaveText(expectedOverview.combinedPL.stockPercent);
+    await expect(page.locator('[data-testid="overview-combined-income-pl-dollars"]')).toHaveText(expectedOverview.combinedPL.incomeDollars);
+    console.log(`[OverviewHelper] ✅ Combined P/L section verified`);
     
     console.log(`[OverviewHelper] ✅ All overview verifications passed for ${stepName}`);
 }
@@ -344,8 +414,14 @@ test.describe('Wallet Add Transaction', () => {
         console.log('[AddTransaction] Step 2: Navigating to stock\'s Wallets page...');
         await navigateToStockWalletPage(page, stockId, scenario.stock.symbol);
         
+        // Step 3: Set initial test price to $100 and verify initial state
+        console.log('[AddTransaction] Step 3: Setting initial test price to $100...');
+        await updateStockTestPrice(page, scenario.stock.symbol, 100);
+        await verifyStockTestPrice(page, scenario.stock.symbol, 100);
+        console.log('[AddTransaction] ✅ Initial test price set to $100');
+        
         // Verify no transactions or wallets exist initially
-        console.log('[AddTransaction] Step 3: Verifying no transactions or wallets exist...');
+        console.log('[AddTransaction] Step 4: Verifying no transactions or wallets exist...');
         
         // Check Swing wallet count initially
         await verifyWalletCounts(page, 'Swing', 0, 'initially');
@@ -354,39 +430,119 @@ test.describe('Wallet Add Transaction', () => {
         await verifyWalletCounts(page, 'Hold', 0, 'initially');
         
         // Verify initial settings in Overview section
-        console.log('[AddTransaction] Step 3.5: Verifying initial settings in Overview section...');
+        console.log('[AddTransaction] Step 5: Verifying initial settings in Overview section...');
         await verifyInitialSettings(page, scenario.stock);
         
-        // Process each transaction in order
-        let stepCounter = 4;
-        for (const [transactionName, transactionStep] of Object.entries(scenario.transactions)) {
-            console.log(`[AddTransaction] Step ${stepCounter}: Adding Transaction ${transactionName}...`);
-            
-            // Add the transaction
-            await addTransaction(page, {
-                date: transactionStep.input.date,
-                type: transactionStep.input.type,
-                signal: transactionStep.input.signal,
-                price: transactionStep.input.price!,
-                investment: transactionStep.input.investment!
-            });
-            
-            stepCounter++;
-            console.log(`[AddTransaction] Step ${stepCounter}: Verifying wallets after Transaction ${transactionName}...`);
-            
-            // Verify wallet state after this transaction
-            await verifyTransactionStepWallets(page, transactionStep, transactionName);
-            
-            // Verify overview state after this transaction (if overview data exists)
-            if (transactionStep.output.overview) {
-                stepCounter++;
-                console.log(`[AddTransaction] Step ${stepCounter}: Verifying overview after Transaction ${transactionName}...`);
-                await verifyOverview(page, transactionStep.output.overview, transactionName);
-            }
-            
-            stepCounter++;
-        }
+        // Step 6: Execute SplitBuyInitial transaction at $100
+        console.log('[AddTransaction] Step 6: Adding SplitBuyInitial transaction...');
+        const splitBuyStep = scenario.transactions.SplitBuyInitial;
+        await addTransaction(page, {
+            date: splitBuyStep.input.date,
+            type: splitBuyStep.input.type!,
+            signal: splitBuyStep.input.signal!,
+            price: splitBuyStep.input.price!,
+            investment: splitBuyStep.input.investment!
+        });
         
-        console.log('[AddTransaction] Test completed successfully!');
+        console.log('[AddTransaction] Step 7: Verifying wallets after SplitBuyInitial...');
+        await verifyTransactionStepWallets(page, splitBuyStep, 'SplitBuyInitial');
+        
+        console.log('[AddTransaction] Step 8: Verifying overview after SplitBuyInitial...');
+        await verifyOverview(page, splitBuyStep.output.overview!, 'SplitBuyInitial');
+        
+        // Step 9: Add SLP Income transaction (still at $100)
+        console.log('[AddTransaction] Step 9: Adding SLP Income transaction...');
+        const slpStep = scenario.transactions.SlpIncome;
+        await addIncomeTransaction(page, {
+            action: 'SLP',
+            amount: slpStep.input.amount!,
+            date: slpStep.input.date
+        });
+        
+        console.log('[AddTransaction] Step 10: Verifying overview after SLP Income...');
+        await verifyOverview(page, slpStep.output.overview!, 'SlpIncome');
+        
+        // Step 11: Update test price to $300 for next transaction
+        console.log('[AddTransaction] Step 11: Updating test price to $300...');
+        await updateStockTestPrice(page, scenario.stock.symbol, 300);
+        await verifyStockTestPrice(page, scenario.stock.symbol, 300);
+        console.log('[AddTransaction] ✅ Test price updated to $300');
+        
+        // Step 12: Execute SwingBuyCust transaction at $300
+        console.log('[AddTransaction] Step 12: Adding SwingBuyCust transaction...');
+        const swingBuyStep = scenario.transactions.SwingBuyCust;
+        await addTransaction(page, {
+            date: swingBuyStep.input.date,
+            type: swingBuyStep.input.type!,
+            signal: swingBuyStep.input.signal!,
+            price: swingBuyStep.input.price!,
+            investment: swingBuyStep.input.investment!
+        });
+        
+        console.log('[AddTransaction] Step 13: Verifying wallets after SwingBuyCust...');
+        await verifyTransactionStepWallets(page, swingBuyStep, 'SwingBuyCust');
+        
+        console.log('[AddTransaction] Step 14: Verifying overview after SwingBuyCust...');
+        await verifyOverview(page, swingBuyStep.output.overview!, 'SwingBuyCust');
+        
+        // Step 15: Update test price to $910 for next transaction
+        console.log('[AddTransaction] Step 15: Updating test price to $910...');
+        await updateStockTestPrice(page, scenario.stock.symbol, 910);
+        await verifyStockTestPrice(page, scenario.stock.symbol, 910);
+        console.log('[AddTransaction] ✅ Test price updated to $910');
+        
+        // Step 16: Execute HoldBuyEOM transaction at $910
+        console.log('[AddTransaction] Step 16: Adding HoldBuyEOM transaction...');
+        const holdBuyStep = scenario.transactions.HoldBuyEOM;
+        await addTransaction(page, {
+            date: holdBuyStep.input.date,
+            type: holdBuyStep.input.type!,
+            signal: holdBuyStep.input.signal!,
+            price: holdBuyStep.input.price!,
+            investment: holdBuyStep.input.investment!
+        });
+        
+        console.log('[AddTransaction] Step 17: Verifying wallets after HoldBuyEOM...');
+        await verifyTransactionStepWallets(page, holdBuyStep, 'HoldBuyEOM');
+        
+        console.log('[AddTransaction] Step 18: Verifying overview after HoldBuyEOM...');
+        await verifyOverview(page, holdBuyStep.output.overview!, 'HoldBuyEOM');
+        
+        // Step 19: Add Dividend Income transaction (still at $910)
+        console.log('[AddTransaction] Step 19: Adding Dividend Income transaction...');
+        const dividendStep = scenario.transactions.DividendIncome;
+        await addIncomeTransaction(page, {
+            action: 'Div',
+            amount: dividendStep.input.investment!, // Dividend uses investment field
+            date: dividendStep.input.date
+        });
+        
+        console.log('[AddTransaction] Step 20: Verifying overview after Dividend Income...');
+        await verifyOverview(page, dividendStep.output.overview!, 'DividendIncome');
+        
+        // Step 21: Update test price to $510 for final transaction
+        console.log('[AddTransaction] Step 21: Updating test price to $510...');
+        await updateStockTestPrice(page, scenario.stock.symbol, 510);
+        await verifyStockTestPrice(page, scenario.stock.symbol, 510);
+        console.log('[AddTransaction] ✅ Test price updated to $510');
+        
+        // Step 22: Execute AnotherSplitBuy transaction at $510
+        console.log('[AddTransaction] Step 22: Adding AnotherSplitBuy transaction...');
+        const anotherSplitStep = scenario.transactions.AnotherSplitBuy;
+        await addTransaction(page, {
+            date: anotherSplitStep.input.date,
+            type: anotherSplitStep.input.type!,
+            signal: anotherSplitStep.input.signal!,
+            price: anotherSplitStep.input.price!,
+            investment: anotherSplitStep.input.investment!
+        });
+        
+        console.log('[AddTransaction] Step 23: Verifying wallets after AnotherSplitBuy...');
+        await verifyTransactionStepWallets(page, anotherSplitStep, 'AnotherSplitBuy');
+        
+        console.log('[AddTransaction] Step 24: Verifying final overview after AnotherSplitBuy...');
+        await verifyOverview(page, anotherSplitStep.output.overview!, 'AnotherSplitBuy');
+        
+        console.log('[AddTransaction] ✅ Test completed successfully with comprehensive P/L verification!');
     });
 });

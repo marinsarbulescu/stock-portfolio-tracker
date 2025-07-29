@@ -52,7 +52,8 @@ export default function WalletsHeader({
         <p style={{ 
           fontSize: '1.2em',
           color: isTestPrice ? '#9f4f96' : 'inherit'
-        }}>
+        }}
+        data-testid="wallets-header-price">
           {displayPrice}
         </p>
       </div>
