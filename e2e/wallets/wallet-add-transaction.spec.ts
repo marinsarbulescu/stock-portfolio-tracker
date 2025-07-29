@@ -414,11 +414,12 @@ test.describe('Wallet Add Transaction', () => {
         console.log('[AddTransaction] Step 2: Navigating to stock\'s Wallets page...');
         await navigateToStockWalletPage(page, stockId, scenario.stock.symbol);
         
-        // Step 3: Set initial test price to $100 and verify initial state
-        console.log('[AddTransaction] Step 3: Setting initial test price to $100...');
-        await updateStockTestPrice(page, scenario.stock.symbol, 100);
-        await verifyStockTestPrice(page, scenario.stock.symbol, 100);
-        console.log('[AddTransaction] ✅ Initial test price set to $100');
+        // Step 3: Set initial test price and verify initial state
+        const initialPrice = scenario.testPriceUpdates.initialPrice;
+        console.log(`[AddTransaction] ${initialPrice.step}: ${initialPrice.description}`);
+        await updateStockTestPrice(page, scenario.stock.symbol, initialPrice.price);
+        await verifyStockTestPrice(page, scenario.stock.symbol, initialPrice.price);
+        console.log(`[AddTransaction] ✅ Initial test price set to $${initialPrice.price}`);
         
         // Verify no transactions or wallets exist initially
         console.log('[AddTransaction] Step 4: Verifying no transactions or wallets exist...');
@@ -462,11 +463,12 @@ test.describe('Wallet Add Transaction', () => {
         console.log('[AddTransaction] Step 10: Verifying overview after SLP Income...');
         await verifyOverview(page, slpStep.output.overview!, 'SlpIncome');
         
-        // Step 11: Update test price to $300 for next transaction
-        console.log('[AddTransaction] Step 11: Updating test price to $300...');
-        await updateStockTestPrice(page, scenario.stock.symbol, 300);
-        await verifyStockTestPrice(page, scenario.stock.symbol, 300);
-        console.log('[AddTransaction] ✅ Test price updated to $300');
+        // Step 11: Update test price for next transaction
+        const afterSlpPrice = scenario.testPriceUpdates.afterSlpIncome;
+        console.log(`[AddTransaction] ${afterSlpPrice.step}: ${afterSlpPrice.description}`);
+        await updateStockTestPrice(page, scenario.stock.symbol, afterSlpPrice.price);
+        await verifyStockTestPrice(page, scenario.stock.symbol, afterSlpPrice.price);
+        console.log(`[AddTransaction] ✅ Test price updated to $${afterSlpPrice.price}`);
         
         // Step 12: Execute SwingBuyCust transaction at $300
         console.log('[AddTransaction] Step 12: Adding SwingBuyCust transaction...');
@@ -485,11 +487,12 @@ test.describe('Wallet Add Transaction', () => {
         console.log('[AddTransaction] Step 14: Verifying overview after SwingBuyCust...');
         await verifyOverview(page, swingBuyStep.output.overview!, 'SwingBuyCust');
         
-        // Step 15: Update test price to $910 for next transaction
-        console.log('[AddTransaction] Step 15: Updating test price to $910...');
-        await updateStockTestPrice(page, scenario.stock.symbol, 910);
-        await verifyStockTestPrice(page, scenario.stock.symbol, 910);
-        console.log('[AddTransaction] ✅ Test price updated to $910');
+        // Step 15: Update test price for next transaction
+        const afterSwingPrice = scenario.testPriceUpdates.afterSwingBuy;
+        console.log(`[AddTransaction] ${afterSwingPrice.step}: ${afterSwingPrice.description}`);
+        await updateStockTestPrice(page, scenario.stock.symbol, afterSwingPrice.price);
+        await verifyStockTestPrice(page, scenario.stock.symbol, afterSwingPrice.price);
+        console.log(`[AddTransaction] ✅ Test price updated to $${afterSwingPrice.price}`);
         
         // Step 16: Execute HoldBuyEOM transaction at $910
         console.log('[AddTransaction] Step 16: Adding HoldBuyEOM transaction...');
@@ -520,11 +523,12 @@ test.describe('Wallet Add Transaction', () => {
         console.log('[AddTransaction] Step 20: Verifying overview after Dividend Income...');
         await verifyOverview(page, dividendStep.output.overview!, 'DividendIncome');
         
-        // Step 21: Update test price to $510 for final transaction
-        console.log('[AddTransaction] Step 21: Updating test price to $510...');
-        await updateStockTestPrice(page, scenario.stock.symbol, 510);
-        await verifyStockTestPrice(page, scenario.stock.symbol, 510);
-        console.log('[AddTransaction] ✅ Test price updated to $510');
+        // Step 21: Update test price for final transaction
+        const afterDividendPrice = scenario.testPriceUpdates.afterDividend;
+        console.log(`[AddTransaction] ${afterDividendPrice.step}: ${afterDividendPrice.description}`);
+        await updateStockTestPrice(page, scenario.stock.symbol, afterDividendPrice.price);
+        await verifyStockTestPrice(page, scenario.stock.symbol, afterDividendPrice.price);
+        console.log(`[AddTransaction] ✅ Test price updated to $${afterDividendPrice.price}`);
         
         // Step 22: Execute AnotherSplitBuy transaction at $510
         console.log('[AddTransaction] Step 22: Adding AnotherSplitBuy transaction...');

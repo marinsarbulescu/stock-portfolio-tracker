@@ -54,6 +54,13 @@ export interface OverviewExpectation {
     };
 }
 
+export interface TestPriceUpdate {
+    step: string;
+    description: string;
+    price: number;
+    timing: string;
+}
+
 export interface TransactionStep {
     input: {
         date: string;
@@ -100,6 +107,7 @@ export interface TestConfig {
 
 export interface AddTransactionTestConfig {
     scenario: string;
+    testPriceUpdates: Record<string, TestPriceUpdate>;
     stock: StockConfig;
     transactions: Record<string, TransactionStep>;
 }
