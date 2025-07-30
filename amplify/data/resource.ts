@@ -8,7 +8,7 @@ const stockTypeEnum = a.enum(['Stock', 'ETF', 'Crypto']); // Changed order to ma
 const regionEnum = a.enum(['APAC', 'EU', 'Intl', 'US']); // Intl = International, EU = Europe, APAC = Asia-Pacific
 const stockTrendEnum = a.enum(['Down', 'Up', 'Sideways']); // Stock trend direction
 
-const txnActionEnum = a.enum(['Buy', 'Sell', 'Div', 'SLP']); // Div = Dividend, SLP = Stock Lending Payment
+const txnActionEnum = a.enum(['Buy', 'Sell', 'Div', 'SLP', 'StockSplit']); // Div = Dividend, SLP = Stock Lending Payment, StockSplit = Corporate Stock Split
 const txnSignalEnum = a.enum(['_5DD', 'Cust', 'Initial', 'EOM', 'LBD', 'TPH', 'TPP', 'TP', 'Div']);
 
 const walletTypeEnum = a.enum(['Swing', 'Hold']);
@@ -40,6 +40,7 @@ const schema = a.schema({
       swingHoldRatio: a.float(),
       stockCommission: a.float(), // Commission for stock trades, optional
       htp: a.float().default(0), // Hold Take Profit percentage, required, default 0
+      splitAdjustmentFactor: a.float().default(1.0), // Cumulative split adjustment factor
       transactions: a.hasMany('Transaction', 'portfolioStockId'),
       stockWallets: a.hasMany('StockWallet', 'portfolioStockId'),
       // Add owner field if not implicitly added by .authorization
@@ -61,6 +62,9 @@ const schema = a.schema({
       investment: a.float(),                // Investment amount
       quantity: a.float(),       // Shares bought or sold
       amount: a.float(),         // Amount for Dividend/SLP transactions
+      splitRatio: a.float(),     // For StockSplit: ratio like 6.0 for 6:1 split
+      preSplitPrice: a.float(),  // Price before the split (for reference)
+      postSplitPrice: a.float(), // Price after the split (for reference)
       swingShares: a.float(),       // <<< RENAMED from playShares
       holdShares: a.float(),        // Existing field is fine
       txnType: a.string(),          // <<< ADDED: "Swing", "Hold", "Split", or null
