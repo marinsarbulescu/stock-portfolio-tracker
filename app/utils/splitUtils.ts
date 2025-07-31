@@ -13,6 +13,7 @@ export interface SplitDetectionTransaction {
   date?: string | null;
   quantity?: number | null;
   price?: number | null;
+  splitRatio?: number | null;
 }
 
 export interface SplitAdjustedTransaction {
@@ -33,7 +34,7 @@ export function extractStockSplits(transactions: SplitDetectionTransaction[]): S
     .filter(txn => txn.action === 'StockSplit')
     .map(txn => ({
       date: txn.date || '',
-      splitRatio: txn.quantity || 1, // Split ratio stored in quantity field
+      splitRatio: txn.splitRatio || 1, // Split ratio stored in splitRatio field
       preSplitPrice: txn.price || undefined // Pre-split price stored in price field
     }))
     .sort((a, b) => a.date.localeCompare(b.date)); // Sort chronologically

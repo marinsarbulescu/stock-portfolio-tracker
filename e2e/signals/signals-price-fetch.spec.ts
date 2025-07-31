@@ -21,6 +21,7 @@ import {
 } from '../utils/dataHelpers';
 import { E2E_TEST_USER_OWNER_ID, E2E_TEST_USERNAME } from '../utils/testCredentials';
 import { clearBrowserState, loginUser } from '../utils/pageHelpers';
+import { cleanupTestStocks } from '../utils/cleanupHelper';
 
 // Configure Amplify
 try {
@@ -80,8 +81,20 @@ async function togglePriceColumnVisible(page: any) {
 async function verifyStockHasNoPrice(page: any, stockSymbol: string) {
     console.log(`[PageHelper] Verifying ${stockSymbol} has no price value...`);
     
-    // Find the row for this stock symbol
-    const stockRow = page.locator(`tr:has(td:has-text("${stockSymbol}"))`);
+    // Find all rows for this stock symbol and use the first one
+    const stockRows = page.locator(`tr:has(td:has-text("${stockSymbol}"))`);
+    const rowCount = await stockRows.count();
+    
+    if (rowCount === 0) {
+        throw new Error(`No rows found for stock symbol: ${stockSymbol}`);
+    }
+    
+    if (rowCount > 1) {
+        console.warn(`[PageHelper] Warning: Found ${rowCount} rows for ${stockSymbol}, using the first one`);
+    }
+    
+    // Use the first row
+    const stockRow = stockRows.first();
     await expect(stockRow).toBeVisible({ timeout: 10000 });
     
     // Find the price cell in this row (assuming Price is one of the columns)
@@ -141,8 +154,20 @@ async function fetchPricesAndWait(page: any) {
 async function verifyStockHasPrice(page: any, stockSymbol: string) {
     console.log(`[PageHelper] Verifying ${stockSymbol} now has a price value...`);
     
-    // Find the row for this stock symbol
-    const stockRow = page.locator(`tr:has(td:has-text("${stockSymbol}"))`);
+    // Find all rows for this stock symbol and use the first one
+    const stockRows = page.locator(`tr:has(td:has-text("${stockSymbol}"))`);
+    const rowCount = await stockRows.count();
+    
+    if (rowCount === 0) {
+        throw new Error(`No rows found for stock symbol: ${stockSymbol}`);
+    }
+    
+    if (rowCount > 1) {
+        console.warn(`[PageHelper] Warning: Found ${rowCount} rows for ${stockSymbol}, using the first one`);
+    }
+    
+    // Use the first row
+    const stockRow = stockRows.first();
     await expect(stockRow).toBeVisible({ timeout: 15000 });
     
     // Find the price cell in this row
@@ -217,6 +242,10 @@ test.describe('Signals Price Fetch', () => {
 
     test.beforeEach(async ({ page }) => {
         console.log('[BEFORE EACH] Starting fresh session setup...');
+        
+        // Clean up any leftover test stocks first
+        await cleanupTestStocks(['AAPL', 'BTC-USD']);
+        
         await clearBrowserState(page);
         console.log('[BEFORE EACH] Browser state cleared.');
         
@@ -251,11 +280,32 @@ test.describe('Signals Price Fetch', () => {
             console.log(`[SignalsPriceFetch] Step 1.${testData.stocks.indexOf(stockData) + 1}: Creating stock ${stockData.symbol}...`);
             await createStockViaUI(page, stockData);
             
-            // Get the created stock ID for cleanup
-            const createdStock = await getPortfolioStockBySymbol(stockData.symbol);
+            // Get the created stock ID for cleanup with retry logic
+            let createdStock = null;
+            let attempts = 0;
+            const maxAttempts = 3;
+            
+            while (!createdStock && attempts < maxAttempts) {
+                attempts++;
+                try {
+                    createdStock = await getPortfolioStockBySymbol(stockData.symbol);
+                    if (!createdStock && attempts < maxAttempts) {
+                        console.log(`[SignalsPriceFetch] Attempt ${attempts}: Stock ${stockData.symbol} not found, retrying...`);
+                        await page.waitForTimeout(1000); // Wait 1 second before retry
+                    }
+                } catch (error) {
+                    console.warn(`[SignalsPriceFetch] Error getting stock ${stockData.symbol} on attempt ${attempts}:`, error);
+                    if (attempts < maxAttempts) {
+                        await page.waitForTimeout(1000);
+                    }
+                }
+            }
+            
             if (createdStock) {
                 createdStockIds.push(createdStock.id);
                 console.log(`[SignalsPriceFetch] Stock ${stockData.symbol} created with ID: ${createdStock.id}`);
+            } else {
+                console.error(`[SignalsPriceFetch] Failed to get ID for created stock: ${stockData.symbol}`);
             }
         }
         

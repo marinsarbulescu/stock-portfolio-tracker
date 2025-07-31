@@ -1,0 +1,348 @@
+{
+  "scenario": "AddSplitTransaction",
+  "testPriceUpdates": {
+    "initialPrice": {
+      "step": "Step 2",
+      "description": "Set initial test price for base calculations",
+      "price": 200,
+      "timing": "Before any transactions"
+    },
+    "postSplitPrice": {
+      "step": "Step 6", 
+      "description": "Update test price to $100 to simulate 2:1 split effect",
+      "price": 100,
+      "timing": "After 2:1 stock split transaction"
+    }
+  },
+  "stock": {
+    "symbol": "E2ESPLIT",
+    "name": "E2E Split Test Corp",
+    "stockType": "Stock",
+    "region": "US",
+    "pdp": 5,
+    "plr": 2,
+    "budget": 1000,
+    "swingHoldRatio": 60,
+    "stockCommission": 0,
+    "htp": 0
+  },
+  "transactions": {
+    "InitialBuy": {
+      "testPriceContext": {
+        "priceAtTransaction": 200,
+        "expectedUnrealizedPL": "No P&L since test price = buy price ($200)"
+      },
+      "input": {
+        "date": "2025-07-01",
+        "action": "Buy",
+        "type": "Split",
+        "signal": "Initial",
+        "price": 200,
+        "investment": 400
+      },
+      "output": {
+        "overview": {
+          "settings": {
+            "budget": 1000,
+            "invested": 400,
+            "pdp": "5%",
+            "shr": "60% Swing", 
+            "plr": "2",
+            "htp": "0%"
+          },
+          "txnsAndShares": {
+            "buys": 1,
+            "totalSells": 0,
+            "swingSells": 0,
+            "holdSells": 0,
+            "swingShares": "1.20000",
+            "holdShares": "0.80000",
+            "totalShares": "2.00000"
+          },
+          "realizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00",
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%"
+          },
+          "unrealizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00",
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%"
+          },
+          "combinedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00",
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%"
+          }
+        },
+        "wallets": {
+          "swing": {
+            "wallet200": {
+              "buyPrice": 200,
+              "investment": 240,
+              "sharesLeft": 1.2
+            }
+          },
+          "hold": {
+            "wallet200": {
+              "buyPrice": 200,
+              "investment": 160,
+              "sharesLeft": 0.8
+            }
+          }
+        },
+        "transactionTable": {
+          "transactions": [
+            {
+              "action": "Buy",
+              "type": "Split",
+              "signal": "Initial",
+              "price": "$200.00",
+              "lbd": "-",
+              "inv": "$400.00",
+              "sellDollars": "-",
+              "qty": "2.00000"
+            }
+          ]
+        }
+      }
+    },
+    "StockSplit": {
+      "testPriceContext": {
+        "priceAtTransaction": 200,
+        "expectedUnrealizedPL": "Stock split transaction doesn't change P&L immediately"
+      },
+      "input": {
+        "date": "2025-07-02",
+        "action": "StockSplit",
+        "splitRatio": 2
+      },
+      "output": {
+        "overview": {
+          "settings": {
+            "budget": 1000,
+            "invested": 400,
+            "pdp": "5%",
+            "shr": "60% Swing",
+            "plr": "2", 
+            "htp": "0%"
+          },
+          "txnsAndShares": {
+            "buys": 1,
+            "totalSells": 0,
+            "swingSells": 0,
+            "holdSells": 0,
+            "swingShares": "1.20000",
+            "holdShares": "0.80000",
+            "totalShares": "2.00000"
+          },
+          "realizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00",
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%"
+          },
+          "unrealizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00",
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%"
+          },
+          "combinedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00",
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%"
+          }
+        },
+        "wallets": {
+          "swing": {
+            "wallet200": {
+              "buyPrice": 200,
+              "investment": 240,
+              "sharesLeft": 1.2,
+              "splitAdjustedBuyPrice": 100,
+              "splitAdjustedShares": 2.4
+            }
+          },
+          "hold": {
+            "wallet200": {
+              "buyPrice": 200,
+              "investment": 160,
+              "sharesLeft": 0.8,
+              "splitAdjustedBuyPrice": 100,
+              "splitAdjustedShares": 1.6
+            }
+          }
+        },
+        "transactionTable": {
+          "transactions": [
+            {
+              "action": "Buy",
+              "type": "Split",
+              "signal": "Initial",
+              "price": "$200.00",
+              "lbd": "-",
+              "inv": "$400.00",
+              "sellDollars": "-",
+              "qty": "2.00000",
+              "note": "Pre-split transaction showing original values"
+            },
+            {
+              "action": "StockSplit",
+              "type": "-",
+              "signal": "-",
+              "price": "$0.00",
+              "lbd": "-",
+              "inv": "-",
+              "sellDollars": "-",
+              "qty": "-",
+              "splitRatio": "2"
+            }
+          ]
+        }
+      }
+    },
+    "PostSplitBuy": {
+      "testPriceContext": {
+        "priceAtTransaction": 100,
+        "expectedUnrealizedPL": "New transaction at $100 should have no unrealized P&L, existing wallets show split-adjusted P&L"
+      },
+      "input": {
+        "date": "2025-07-03",
+        "action": "Buy",
+        "type": "Split",
+        "signal": "LBD",
+        "price": 100,
+        "investment": 300
+      },
+      "output": {
+        "overview": {
+          "settings": {
+            "budget": 1000,
+            "invested": 700,
+            "pdp": "5%",
+            "shr": "60% Swing",
+            "plr": "2",
+            "htp": "0%"
+          },
+          "txnsAndShares": {
+            "buys": 2,
+            "totalSells": 0,
+            "swingSells": 0,
+            "holdSells": 0,
+            "swingShares": "3.00000",
+            "holdShares": "2.00000",
+            "totalShares": "5.00000"
+          },
+          "realizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00",
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%"
+          },
+          "unrealizedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00",
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%"
+          },
+          "combinedPL": {
+            "swingDollars": "$0.00",
+            "swingPercent": "0%",
+            "holdDollars": "$0.00",
+            "holdPercent": "0%",
+            "stockDollars": "$0.00",
+            "stockPercent": "0%"
+          }
+        },
+        "wallets": {
+          "swing": {
+            "wallet200": {
+              "buyPrice": 200,
+              "investment": 240,
+              "sharesLeft": 1.2,
+              "splitAdjustedBuyPrice": 100,
+              "splitAdjustedShares": 2.4
+            },
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 180,
+              "sharesLeft": 1.8
+            }
+          },
+          "hold": {
+            "wallet200": {
+              "buyPrice": 200,
+              "investment": 160,
+              "sharesLeft": 0.8,
+              "splitAdjustedBuyPrice": 100,
+              "splitAdjustedShares": 1.6
+            },
+            "wallet100": {
+              "buyPrice": 100,
+              "investment": 120,
+              "sharesLeft": 1.2
+            }
+          }
+        },
+        "transactionTable": {
+          "transactions": [
+            {
+              "action": "Buy",
+              "type": "Split",
+              "signal": "Initial",
+              "price": "$200.00",
+              "lbd": "-",
+              "inv": "$400.00",
+              "sellDollars": "-",
+              "qty": "2.00000",
+              "note": "Pre-split transaction showing original values"
+            },
+            {
+              "action": "StockSplit",
+              "type": "-",
+              "signal": "-", 
+              "price": "$0.00",
+              "lbd": "-",
+              "inv": "-",
+              "sellDollars": "-",
+              "qty": "-",
+              "splitRatio": "2"
+            },
+            {
+              "action": "Buy",
+              "type": "Split",
+              "signal": "LBD",
+              "price": "$100.00",
+              "lbd": "-",
+              "inv": "$300.00",
+              "sellDollars": "-",
+              "qty": "3.00000",
+              "note": "Post-split transaction"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
