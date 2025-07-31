@@ -884,7 +884,7 @@ export async function addTransaction(page: Page, transactionData: TransactionDat
     await expect(addTransactionButton).toBeVisible({ timeout: 10000 });
     await addTransactionButton.click();
     
-    const transactionModal = page.locator('[data-testid="add-buy-transaction-form-modal"]');
+    const transactionModal = page.locator('[data-testid="transaction-form-modal"]');
     await expect(transactionModal).toBeVisible({ timeout: 10000 });
     console.log(`[PageHelper] Add Transaction modal opened.`);
     

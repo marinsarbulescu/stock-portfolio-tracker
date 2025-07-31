@@ -909,7 +909,7 @@ export default function TransactionForm({
   // --- JSX Rendering ---
   // Includes all fields and buttons now
   return (
-    <form data-testid="add-buy-transaction-form-modal" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxWidth: '450px', margin: 'auto' }}>
+    <form data-testid="transaction-form-modal" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxWidth: '450px', margin: 'auto' }}>
         {/* Use passed symbol for title, fallback if needed */}
         <h2>{isEditMode ? `Edit Transaction` : `Add Transaction${portfolioStockSymbol ? ` for ${portfolioStockSymbol.toUpperCase()}` : ''}`}</h2>
         {/* Display messages */}

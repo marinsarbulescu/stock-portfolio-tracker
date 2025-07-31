@@ -294,7 +294,7 @@ async function editTransactionById(page: Page, transactionId: string, newPrice: 
     await editButton.click();
     
     // Wait for the edit modal to open
-    const editModal = page.locator('[data-testid="add-buy-transaction-form-modal"]');
+    const editModal = page.locator('[data-testid="transaction-form-modal"]');
     await expect(editModal).toBeVisible({ timeout: 10000 });
     
     // Clear and update the price field
@@ -351,7 +351,7 @@ async function editTransactionByInvestmentInspection(page: Page, targetInvestmen
         await editButton.click();
         
         // Wait for the edit modal to open
-        const editModal = page.locator('[data-testid="add-buy-transaction-form-modal"]');
+        const editModal = page.locator('[data-testid="transaction-form-modal"]');
         await expect(editModal).toBeVisible({ timeout: 10000 });
         
         // Read the investment value from the form
@@ -471,7 +471,7 @@ async function editTransactionPrice(page: Page, transactionIndex: number, newPri
     await editButton.click();
     
     // Wait for the edit modal to open
-    const editModal = page.locator('[data-testid="add-buy-transaction-form-modal"]');
+    const editModal = page.locator('[data-testid="transaction-form-modal"]');
     await expect(editModal).toBeVisible({ timeout: 10000 });
     
     // Clear and update the price field
