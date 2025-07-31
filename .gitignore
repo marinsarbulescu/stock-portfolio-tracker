@@ -62,3 +62,6 @@ dist/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# E2E test configuration (user-specific)
+e2e/test-suite-config.json
