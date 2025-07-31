@@ -105,6 +105,7 @@ export default function TransactionForm({
   // --- Effect to populate form for editing or set defaults ---
   useEffect(() => {
     //console.log("[TransactionForm useEffect] Running effect, clearing messages. Mode:", isEditMode, "Initial Data:", initialData);
+    console.log('[DEBUG StockSplit] useEffect triggered:', { isEditMode, initialDataId: initialData?.id, initialDataAction: initialData?.action, initialDataSplitRatio: initialData?.splitRatio });
     setError(null);
     setSuccess(null);
     setWarning(null);
@@ -119,6 +120,9 @@ export default function TransactionForm({
       setSharesInput(initialData.quantity?.toString() ?? defaultFormState.sharesInput);
       setCompletedTxnId(initialData.completedTxnId ?? defaultFormState.completedTxnId);
       setBuyType((initialData.txnType as BuyTypeValue) ?? defaultFormState.buyType);
+      const splitRatioValue = initialData.splitRatio?.toString() ?? '2';
+      console.log('[DEBUG StockSplit] Setting split ratio from initialData:', { from: initialData.splitRatio, to: splitRatioValue });
+      setSplitRatio(splitRatioValue); // Initialize split ratio from data
     } else {
       // Reset form for Add mode
       setDate(getTodayDateString());
@@ -134,6 +138,14 @@ export default function TransactionForm({
     }
   }, [isEditMode, initialData, forceAction]);
   // --- End Effect ---
+
+  // Additional useEffect to ensure split ratio updates when initialData changes
+  useEffect(() => {
+    if (isEditMode && initialData && initialData.action === 'StockSplit' && initialData.splitRatio) {
+      console.log('[DEBUG StockSplit] Additional useEffect - updating split ratio:', { from: splitRatio, to: initialData.splitRatio.toString() });
+      setSplitRatio(initialData.splitRatio.toString());
+    }
+  }, [isEditMode, initialData?.splitRatio, initialData?.action]);
 
 
   // Handle form submission
@@ -414,6 +426,10 @@ export default function TransactionForm({
                 ...finalPayload // Spread the prepared fields
             };
             //console.log("Submitting Update Payload:", updatePayload);
+            console.log('[DEBUG StockSplit] Transaction update payload being sent to database:', updatePayload);
+            if (action === 'StockSplit') {
+                console.log('[DEBUG StockSplit] StockSplit update details:', { splitRatioValue, fromForm: splitRatio, inPayload: updatePayload.splitRatio });
+            }
             
             // @ts-expect-error Simulate result for consistency if needed downstream
             savedTransaction = { ...initialData, ...updatePayload };
@@ -672,6 +688,8 @@ export default function TransactionForm({
             
             // Enhanced logging for Stock Split transactions
             if (action === 'StockSplit') {
+                console.log('[DEBUG StockSplit] Transaction update payload:', finalPayload);
+                console.log('[DEBUG StockSplit] Split ratio being saved:', { splitRatioValue, fromForm: splitRatio });
                 console.log('[StockSplit] Final payload:', finalPayload);
                 console.log('[StockSplit] Create payload:', createPayload);
                 console.log('[StockSplit] Action value:', action, 'Type:', typeof action);
@@ -1082,7 +1100,10 @@ export default function TransactionForm({
                         type="number" 
                         step="any" 
                         value={splitRatio} 
-                        onChange={(e) => setSplitRatio(e.target.value)} 
+                        onChange={(e) => {
+                            console.log('[DEBUG StockSplit] Split ratio field changed:', { from: splitRatio, to: e.target.value });
+                            setSplitRatio(e.target.value);
+                        }} 
                         required 
                         placeholder="e.g., 2 for 2:1 split" 
                         disabled={isLoading} 

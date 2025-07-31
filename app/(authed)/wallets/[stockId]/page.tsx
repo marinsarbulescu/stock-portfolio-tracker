@@ -431,6 +431,7 @@ export default function StockWalletPage() {
             'swingShares',    // ADDED (Renamed)
             'holdShares',     // Keep
             // --- END UPDATE ---
+            'splitRatio',     // ADDED - needed for StockSplit transactions
             'tp', 'txnProfit', 'txnProfitPercent', // Keep for potential edit logic display
         ] as const;
 
@@ -465,6 +466,7 @@ export default function StockWalletPage() {
             } while (currentToken !== null);
 
             //console.log(`[StockWalletPage] - Finished fetching transactions for Wallet Page. Total: ${accumulatedTxns.length}`);
+            console.log('[DEBUG StockSplit] Fetched transactions:', accumulatedTxns.map(t => ({ id: t.id, action: t.action, splitRatio: t.splitRatio })).filter(t => t.action === 'StockSplit'));
             setTransactions(accumulatedTxns);
 
         } catch (err: unknown) {
@@ -491,6 +493,7 @@ export default function StockWalletPage() {
     // --- ADD Edit/Delete Handlers ---
     const handleEditTxnClick = (transaction: TransactionDataType) => {
         //console.log('[StockWalletPage] - Opening Edit modal for transaction:', transaction);
+        console.log('[DEBUG StockSplit] Edit button clicked for transaction:', { id: transaction.id, action: transaction.action, splitRatio: transaction.splitRatio });
         setTxnToEdit(transaction);
         setIsEditModalOpen(true); // Open the EDIT modal
     };
@@ -2208,6 +2211,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                     <div style={{ ...modalContentStyle, minWidth: '400px' }}>
                         {/* Render TransactionForm configured for Edit mode */}
                         <TransactionForm
+                            key={txnToEdit.id} // Force re-mount when editing different transactions or updated data
                             isEditMode={true}
                             initialData={txnToEdit}
                             onUpdate={async (updatedData: unknown) => {
