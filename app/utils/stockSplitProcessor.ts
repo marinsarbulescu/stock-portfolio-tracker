@@ -140,7 +140,7 @@ export class StockSplitProcessor {
   /**
    * Get split history for a stock
    */
-  async getSplitHistory(portfolioStockId: string): Promise<any[]> {
+  async getSplitHistory(portfolioStockId: string): Promise<Array<Schema['Transaction']['type']>> {
     const { data: splits, errors } = await this.client.models.Transaction.list({
       filter: { 
         portfolioStockId: { eq: portfolioStockId },

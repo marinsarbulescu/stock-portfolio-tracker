@@ -73,9 +73,10 @@ export default function PortfolioStockSplitModal({
       setSplitDate(new Date().toISOString().split('T')[0]);
       setPreSplitPrice('');
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Split processing error:', err);
-      setError(`Failed to process split: ${err.message}`);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      setError(`Failed to process split: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
     }
