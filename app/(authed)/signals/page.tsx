@@ -7,6 +7,7 @@ import type { Schema } from '@/amplify/data/resource';
 import { usePrices } from '@/app/contexts/PriceContext'; // Import context hook
 import { mergeTestPricesWithRealPrices } from '@/app/utils/priceUtils'; // Import test price utility
 import { fetchAuthSession } from 'aws-amplify/auth';
+import { calculateTotalRealizedSwingPL, calculateSingleSalePL, type TransactionForCalculation, type WalletForCalculation } from '@/app/utils/financialCalculations';
 import SignalsOverview from './components/SignalsOverview';
 import SignalsTable from './components/SignalsTable';
 // import { useAuthStatus } from '@/app/contexts/AuthStatusContext'; // Import useAuthStatus - Unused
@@ -174,6 +175,7 @@ export default function HomePage() {
             'signal',
             'lbd',
             'amount',
+            'txnProfit',
         ] as const;
 
         try {
@@ -639,6 +641,7 @@ export default function HomePage() {
     }, [allTransactions]);
 
     const portfolioRealizedPL = useMemo(() => {
+        // Create wallet buy price map for fallback calculations
         const walletBuyPriceMap = new Map<string, number>();
         allWallets.forEach(w => {
             if (w.id && typeof w.buyPrice === 'number') {
@@ -646,7 +649,13 @@ export default function HomePage() {
             }
         });
     
-        let totalSwingPlDollars = 0, totalSwingCostBasis = 0;
+        // Use the same financial calculation utility as wallets page for Swing P/L
+        const calculatedTotalSwingPlDollars = calculateTotalRealizedSwingPL(
+            allTransactions as unknown as TransactionForCalculation[],
+            allWallets as unknown as WalletForCalculation[]
+        );
+        
+        let totalSwingCostBasis = 0;
         let totalHoldPlDollars = 0, totalHoldCostBasis = 0;
     
         const typedTxnsForPL = allTransactions.map(t => t as unknown as Schema['Transaction']['type']);
@@ -655,11 +664,13 @@ export default function HomePage() {
                 const walletBuyPrice = walletBuyPriceMap.get(txn.completedTxnId || '');
                 if (typeof walletBuyPrice === 'number') {
                     const costBasisForTxn = walletBuyPrice * (txn.quantity || 0);
-                    const profitForTxn = ((txn.price || 0) - walletBuyPrice) * (txn.quantity || 0);
+                    
                     if (txn.txnType === 'Swing') {
-                        totalSwingPlDollars += profitForTxn;
+                        // Only accumulate cost basis for Swing - P/L is handled by utility
                         totalSwingCostBasis += costBasisForTxn;
                     } else if (txn.txnType === 'Hold') {
+                        // Use stored txnProfit if available (commission-adjusted), otherwise calculate
+                        const profitForTxn = txn.txnProfit ?? calculateSingleSalePL(txn.price!, walletBuyPrice, txn.quantity!);
                         totalHoldPlDollars += profitForTxn;
                         totalHoldCostBasis += costBasisForTxn;
                     }
@@ -667,9 +678,10 @@ export default function HomePage() {
             }
         });
 
-        const avgSwingPlPercent = (totalSwingCostBasis !== 0) ? (totalSwingPlDollars / totalSwingCostBasis) * 100 : (totalSwingPlDollars === 0 ? 0 : null);
+        // Calculate percentages using the same logic as wallets page
+        const avgSwingPlPercent = (totalSwingCostBasis !== 0) ? (calculatedTotalSwingPlDollars / totalSwingCostBasis) * 100 : (calculatedTotalSwingPlDollars === 0 ? 0 : null);
         const avgHoldPlPercent = (totalHoldCostBasis !== 0) ? (totalHoldPlDollars / totalHoldCostBasis) * 100 : (totalHoldPlDollars === 0 ? 0 : null);
-        const totalStockPlDollars = totalSwingPlDollars + totalHoldPlDollars;
+        const totalStockPlDollars = calculatedTotalSwingPlDollars + totalHoldPlDollars;
         const totalStockCostBasis = totalSwingCostBasis + totalHoldCostBasis;
         const avgStockPlPercent = (totalStockCostBasis !== 0) ? (totalStockPlDollars / totalStockCostBasis) * 100 : (totalStockPlDollars === 0 ? 0 : null);
 
@@ -688,7 +700,7 @@ export default function HomePage() {
         const totalIncomeFromDivAndSlp = totalDividendAmount + totalSlpAmount;
 
         return {
-            totalSwingPlDollars: parseFloat(totalSwingPlDollars.toFixed(CURRENCY_PRECISION)),
+            totalSwingPlDollars: parseFloat(calculatedTotalSwingPlDollars.toFixed(CURRENCY_PRECISION)),
             avgSwingPlPercent: typeof avgSwingPlPercent === 'number' ? parseFloat(avgSwingPlPercent.toFixed(PERCENT_PRECISION)) : null,
             totalHoldPlDollars: parseFloat(totalHoldPlDollars.toFixed(CURRENCY_PRECISION)),
             avgHoldPlPercent: typeof avgHoldPlPercent === 'number' ? parseFloat(avgHoldPlPercent.toFixed(PERCENT_PRECISION)) : null,
@@ -718,7 +730,8 @@ export default function HomePage() {
         if ((wallet.remainingShares ?? 0) > SHARE_EPSILON && typeof wallet.buyPrice === 'number') {
             const stockInfo = portfolioStocks.find(s => s.id === wallet.portfolioStockId);
             const stockSymbol = stockInfo?.symbol;
-            const currentPrice = stockSymbol ? (latestPrices[stockSymbol]?.currentPrice ?? null) : null;
+            // Use merged prices instead of latestPrices to be consistent with wallets page
+            const currentPrice = stockSymbol ? (mergedPrices[stockSymbol]?.currentPrice ?? null) : null;
 
             const costBasisForWallet = wallet.buyPrice * wallet.remainingShares!;
             if (wallet.walletType === 'Swing') {
@@ -781,7 +794,7 @@ export default function HomePage() {
             partialDataUsed: partialDataUsed,
         };
 
-    }, [allWallets, portfolioStocks, latestPrices]);
+    }, [allWallets, portfolioStocks, mergedPrices]);
 
     const portfolioTotalPL = useMemo(() => {
         //console.log("[app/(authed)/page.tsx] - [Memo] Calculating portfolioTotalPL ($ and %)");

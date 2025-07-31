@@ -18,6 +18,24 @@ interface MockWallet {
     buyPrice?: number | null;
 }
 
+// Define a flexible transaction interface that can handle both Mock and Schema types
+export interface TransactionForCalculation {
+    id?: string | null;
+    action?: string | null;
+    txnType?: string | null;
+    completedTxnId?: string | null;
+    quantity?: number | null;
+    price?: number | null;
+    date?: string | null;
+    txnProfit?: number | null;
+}
+
+// Define a flexible wallet interface that can handle both Mock and Schema types  
+export interface WalletForCalculation {
+    id?: string | null;
+    buyPrice?: number | null;
+}
+
 /**
  * Calculates the profit or loss for a single sale transaction.
  * @param sellPrice - The price at which shares were sold.
@@ -85,8 +103,8 @@ export function calculateSingleSalePLWithCommission(
  * @returns The total realized P/L for swing sales, rounded to currency precision.
  */
 export function calculateTotalRealizedSwingPL(
-    transactions: MockTransaction[],
-    wallets: MockWallet[]
+    transactions: TransactionForCalculation[],
+    wallets: WalletForCalculation[]
 ): number {
     const walletBuyPriceMap = new Map<string, number>();
     wallets.forEach(w => {
