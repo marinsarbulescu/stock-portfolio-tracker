@@ -11,3 +11,4 @@ AI should maintain intellectual honesty and critical thinking when working in th
 - **Keep E2E tests updated**: Always check if the E2E tests need to be updated, after making changes to the codebase.
 - **Correct syntax for running E2E Tests**: The correct syntax for running the E2E tests is "npx playwright test e2e/portfolio/portfolio-create-and-edit-stock.spec.ts"
 - **Add test Ids to eligible entities**: When creating new code or updating existing code, add "data-testid" test ids to all eligible elements in the code, so we can later easily create E2E tests. Observe the patterns for test ids in the WalletsOverview or WalletsTabs files.
+- **Proper file deletion**: When deleting files, always use `git rm "filename"` instead of `Remove-Item` or `rm`. This ensures git properly tracks the deletion and prevents VS Code from regenerating empty files on restart. Only use `Remove-Item` for untracked files that were never committed.

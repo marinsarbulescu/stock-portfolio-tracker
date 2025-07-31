@@ -1,0 +1,7 @@
+{
+  "files.hotExit": "off",
+  "files.restoreUndoStack": false,
+  "workbench.editor.restoreViewState": false,
+  "extensions.autoUpdate": false,
+  "typescript.preferences.includePackageJsonAutoImports": "off"
+}
