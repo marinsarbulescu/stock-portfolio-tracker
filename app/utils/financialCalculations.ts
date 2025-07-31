@@ -1,5 +1,6 @@
 // app/utils/financialCalculations.ts
 import { CURRENCY_PRECISION, PERCENT_PRECISION } from '@/app/config/constants'; // Assuming you have these constants
+import { extractStockSplits, calculateSplitAdjustedPL, type StockSplitInfo, type SplitDetectionTransaction } from './splitUtils';
 
 // Define simplified types for mock data used in tests (can also be shared or defined in test file)
 interface MockTransaction {
@@ -97,12 +98,116 @@ export function calculateSingleSalePLWithCommission(
 }
 
 /**
- * Calculates the total realized P/L for all 'Swing' type sales.
+ * Calculates the total realized P/L for all 'Swing' type sales with split adjustments.
  * @param transactions - Array of transaction objects.
  * @param wallets - Array of wallet objects (to find buy prices).
  * @returns The total realized P/L for swing sales, rounded to currency precision.
  */
 export function calculateTotalRealizedSwingPL(
+    transactions: TransactionForCalculation[],
+    wallets: WalletForCalculation[]
+): number {
+    const walletBuyPriceMap = new Map<string, number>();
+    wallets.forEach(w => {
+        if (w.id && typeof w.buyPrice === 'number') {
+            walletBuyPriceMap.set(w.id, w.buyPrice);
+        }
+    });
+
+    // Extract stock splits from transactions
+    const stockSplits = extractStockSplits(transactions);
+
+    let totalSwingPlDollars = 0;
+
+    transactions.forEach(txn => {
+        if (
+            txn.action === 'Sell' &&
+            txn.txnType === 'Swing' &&
+            txn.completedTxnId &&
+            typeof txn.quantity === 'number' &&
+            typeof txn.price === 'number'
+        ) {
+            const walletBuyPrice = walletBuyPriceMap.get(txn.completedTxnId);
+
+            if (typeof walletBuyPrice === 'number') {
+                // Use stored txnProfit if available (commission-adjusted), otherwise calculate with split adjustments
+                if (txn.txnProfit !== null && txn.txnProfit !== undefined) {
+                    totalSwingPlDollars += txn.txnProfit;
+                } else {
+                    // Calculate split-adjusted P/L
+                    const sellDate = txn.date || '';
+                    const buyDate = ''; // We'd need wallet creation date for perfect accuracy
+                    
+                    const splitAdjustedPL = calculateSplitAdjustedPL(
+                        txn.price,
+                        walletBuyPrice,
+                        txn.quantity,
+                        sellDate,
+                        buyDate,
+                        stockSplits
+                    );
+                    
+                    totalSwingPlDollars += splitAdjustedPL.adjustedPL;
+                }
+            } else {
+                console.warn(`[calculateTotalRealizedSwingPL] Buy price not found for wallet ID: ${txn.completedTxnId} on Swing Sell Txn ID: ${txn.id}`);
+            }
+        }
+    });
+
+    return parseFloat(totalSwingPlDollars.toFixed(CURRENCY_PRECISION));
+}
+
+/**
+ * Split-aware version of calculateSingleSalePL
+ * @param sellPrice - The price at which shares were sold
+ * @param buyPrice - The original buy price of the shares
+ * @param quantity - The number of shares sold
+ * @param sellDate - Date of the sale transaction
+ * @param buyDate - Date of the buy transaction  
+ * @param splits - Array of stock splits to consider
+ * @returns The calculated profit/loss with split adjustments
+ */
+export function calculateSingleSalePLWithSplits(
+    sellPrice: number,
+    buyPrice: number,
+    quantity: number,
+    sellDate: string,
+    buyDate: string,
+    splits: StockSplitInfo[]
+): number {
+    // Input validation
+    if (
+        typeof sellPrice !== 'number' || isNaN(sellPrice) ||
+        typeof buyPrice !== 'number' || isNaN(buyPrice) ||
+        typeof quantity !== 'number' || isNaN(quantity)
+    ) {
+        console.warn("Invalid input to calculateSingleSalePLWithSplits. Returning 0.");
+        return 0;
+    }
+
+    if (!splits.length) {
+        // No splits - use original calculation
+        return calculateSingleSalePL(sellPrice, buyPrice, quantity);
+    }
+
+    // Use split adjustment utility
+    const splitAdjustedPL = calculateSplitAdjustedPL(
+        sellPrice,
+        buyPrice,
+        quantity,
+        sellDate,
+        buyDate,
+        splits
+    );
+
+    return splitAdjustedPL.adjustedPL;
+}
+
+/**
+ * Original calculateTotalRealizedSwingPL function (preserved for backward compatibility)
+ */
+export function calculateTotalRealizedSwingPLLegacy(
     transactions: TransactionForCalculation[],
     wallets: WalletForCalculation[]
 ): number {

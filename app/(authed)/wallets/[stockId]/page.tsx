@@ -19,7 +19,8 @@ import EditStockModal from '../../portfolio/components/PortfolioEditStockModal';
 import type { TransactionTableColumnVisibilityState, SortableTxnKey, SortConfig } from './types';
 
 // --- IMPORT THE CORRECT formatCurrency ---
-import { calculateSingleSalePL, calculateSingleSalePLWithCommission, calculateTotalRealizedSwingPL, formatCurrency } from '@/app/utils/financialCalculations';
+import { calculateSingleSalePL, calculateSingleSalePLWithCommission, calculateTotalRealizedSwingPL, calculateSingleSalePLWithSplits, formatCurrency } from '@/app/utils/financialCalculations';
+import { applySplitAdjustments, extractStockSplits } from '@/app/utils/splitUtils';
 import { mergeTestPricesWithRealPrices } from '@/app/utils/priceUtils';
 
 // Needed for the handleUpdateTransaction to update the wallet
@@ -1370,21 +1371,29 @@ const totalSwingYtdPL = useMemo(() => {
     let warnings = 0;
 
     // --- Calculate YTD Realized P/L for SWING Sells ---
+    const swingSplits = extractStockSplits(transactions);
     transactions.forEach(txn => {
         if (txn.action === 'Sell' && txn.txnType === 'Swing' &&
             txn.date && txn.date >= startOfYear && txn.completedTxnId &&
             typeof txn.quantity === 'number' && typeof txn.price === 'number') {
             const walletBuyPrice = walletBuyPriceMap.get(txn.completedTxnId);
-            if (typeof walletBuyPrice === 'number') {
-                //const profitForTxn = (txn.price - walletBuyPrice) * txn.quantity;
-                //ytdRealizedSwingPL += profitForTxn;
-                // Use stored txnProfit instead of recalculating, as it contains commission-adjusted P/L
-                const profitForThisOneSale = txn.txnProfit ?? calculateSingleSalePL(txn.price!, walletBuyPrice, txn.quantity!);
+            const buyTxn = transactions.find(t => t.id === txn.completedTxnId);
+            const buyDate = buyTxn?.date || '';
+            if (typeof walletBuyPrice === 'number' && buyDate) {
+                // Use stored txnProfit if available, otherwise calculate with splits
+                const profitForThisOneSale = txn.txnProfit ?? calculateSingleSalePLWithSplits(
+                    txn.price!,
+                    walletBuyPrice,
+                    txn.quantity!,
+                    txn.date!,
+                    buyDate,
+                    swingSplits
+                );
                 ytdRealizedSwingPL += profitForThisOneSale;
             } else {
                 // Wallet link or buy price was missing for a YTD Swing Sell
                 warnings++;
-                console.warn(`[StockWalletPage] - [Swing YTD P/L] Could not find wallet buy price for YTD Swing Sell Txn ${txn.id}`);
+                console.warn(`[StockWalletPage] - [Swing YTD P/L] Could not find wallet buy price or buy date for YTD Swing Sell Txn ${txn.id}`);
             }
         }
     });
@@ -1647,21 +1656,29 @@ const totalHoldYtdPL = useMemo(() => {
     let warnings = 0;
 
     // --- Calculate YTD Realized P/L for HOLD Sells ---
+    const holdSplits = extractStockSplits(transactions);
     transactions.forEach(txn => {
         if (txn.action === 'Sell' && txn.txnType === 'Hold' &&
             txn.date && txn.date >= startOfYear && txn.completedTxnId &&
             typeof txn.quantity === 'number' && typeof txn.price === 'number') {
             const walletBuyPrice = walletBuyPriceMap.get(txn.completedTxnId);
-            if (typeof walletBuyPrice === 'number') {
-                //const profitForTxn = (txn.price - walletBuyPrice) * txn.quantity;
-                //ytdRealizedHoldPL += profitForTxn;
-                // Use stored txnProfit instead of recalculating, as it contains commission-adjusted P/L
-                const profitForThisOneSale = txn.txnProfit ?? calculateSingleSalePL(txn.price!, walletBuyPrice, txn.quantity!);
+            const buyTxn = transactions.find(t => t.id === txn.completedTxnId);
+            const buyDate = buyTxn?.date || '';
+            if (typeof walletBuyPrice === 'number' && buyDate) {
+                // Use stored txnProfit if available, otherwise calculate with splits
+                const profitForThisOneSale = txn.txnProfit ?? calculateSingleSalePLWithSplits(
+                    txn.price!,
+                    walletBuyPrice,
+                    txn.quantity!,
+                    txn.date!,
+                    buyDate,
+                    holdSplits
+                );
                 ytdRealizedHoldPL += profitForThisOneSale;
             } else {
                 // Wallet link or buy price was missing for a YTD Hold Sell
                 warnings++;
-                console.warn(`[StockWalletPage] - [Hold YTD P/L] Could not find wallet buy price for YTD Hold Sell Txn ${txn.id}`);
+                console.warn(`[StockWalletPage] - [Hold YTD P/L] Could not find wallet buy price or buy date for YTD Hold Sell Txn ${txn.id}`);
             }
         }
     });

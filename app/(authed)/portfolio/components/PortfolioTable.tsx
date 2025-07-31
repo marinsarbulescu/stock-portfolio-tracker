@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { FaEdit, FaEye, FaEyeSlash, FaArchive, FaTrashRestore, FaCodeBranch } from 'react-icons/fa';
+import { FaEdit, FaEye, FaEyeSlash, FaArchive, FaTrashRestore } from 'react-icons/fa';
 import { formatCurrency } from '@/app/utils/financialCalculations';
 
 // Import types from the portfolio types file
@@ -36,7 +36,6 @@ export default function PortfolioTable({
   handleEditClick,
   handleToggleHidden,
   handleArchiveStock,
-  handleSplitClick,
 }: PortfolioTableProps) {
   if (isLoading) {
     return <p>Loading stocks...</p>;
@@ -291,14 +290,6 @@ export default function PortfolioTable({
                 
                 {!showArchived && (
                   <>
-                    <button 
-                      data-testid="portfolio-page-table-action-split-button"
-                      onClick={() => handleSplitClick(stock)} 
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'blue', marginRight: '5px' }}
-                      title="Process Stock Split">
-                        <FaCodeBranch />
-                    </button>
-                    
                     <button
                       data-testid="portfolio-page-table-action-hide-button"
                       onClick={() => handleToggleHidden(stock)}

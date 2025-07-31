@@ -40,7 +40,6 @@ const schema = a.schema({
       swingHoldRatio: a.float(),
       stockCommission: a.float(), // Commission for stock trades, optional
       htp: a.float().default(0), // Hold Take Profit percentage, required, default 0
-      splitAdjustmentFactor: a.float().default(1.0), // Cumulative split adjustment factor
       transactions: a.hasMany('Transaction', 'portfolioStockId'),
       stockWallets: a.hasMany('StockWallet', 'portfolioStockId'),
       // Add owner field if not implicitly added by .authorization
@@ -63,8 +62,6 @@ const schema = a.schema({
       quantity: a.float(),       // Shares bought or sold
       amount: a.float(),         // Amount for Dividend/SLP transactions
       splitRatio: a.float(),     // For StockSplit: ratio like 6.0 for 6:1 split
-      preSplitPrice: a.float(),  // Price before the split (for reference)
-      postSplitPrice: a.float(), // Price after the split (for reference)
       swingShares: a.float(),       // <<< RENAMED from playShares
       holdShares: a.float(),        // Existing field is fine
       txnType: a.string(),          // <<< ADDED: "Swing", "Hold", "Split", or null

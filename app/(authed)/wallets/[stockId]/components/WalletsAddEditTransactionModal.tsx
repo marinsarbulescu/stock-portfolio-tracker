@@ -90,6 +90,9 @@ export default function TransactionForm({
   const [completedTxnId, setCompletedTxnId] = useState(defaultFormState.completedTxnId);
   const [buyType, setBuyType] = useState<BuyTypeValue>(defaultFormState.buyType);
 
+  // --- State for Stock Split specific fields ---
+  const [splitRatio, setSplitRatio] = useState('2'); // Default 2:1 split
+
   const [warning, setWarning] = useState<string | null>(null);
 
   //console.log("[TransactionForm Render] Component rendering. Current warning state:", warning);
@@ -127,6 +130,7 @@ export default function TransactionForm({
       setSharesInput(defaultFormState.sharesInput);
       setCompletedTxnId(defaultFormState.completedTxnId);
       setBuyType(defaultFormState.buyType);
+      setSplitRatio('2'); // Reset to default 2:1 split
     }
   }, [isEditMode, initialData, forceAction]);
   // --- End Effect ---
@@ -146,6 +150,7 @@ export default function TransactionForm({
     if ((action === 'SLP') && !amount) { setError('Amount required for Stock Lending Payment.'); setIsLoading(false); return; }
     if ((action === 'Buy' || action === 'Sell') && !price) { setError('Price required for Buy/Sell.'); setIsLoading(false); return; }
     if (action === 'Buy' && !buyType) { setError('Please select a Buy Type.'); setIsLoading(false); return; }
+    if (action === 'StockSplit' && (!splitRatio || parseFloat(splitRatio) <= 0)) { setError('Split Ratio must be greater than 0.'); setIsLoading(false); return; }
     // --- End Validation ---
 
 
@@ -153,6 +158,7 @@ export default function TransactionForm({
     const priceValue = price ? parseFloat(price) : undefined;
     const investmentValue = investment ? parseFloat(investment) : undefined;
     const amountValue = amount ? parseFloat(amount) : undefined;
+    const splitRatioValue = splitRatio ? parseFloat(splitRatio) : undefined;
 
     // --- Initialize derived fields ---
     let quantity_raw: number | undefined | null = null; // Raw total quantity
@@ -371,23 +377,27 @@ export default function TransactionForm({
     const finalPayload: Partial<Omit<TransactionDataType, 'id' | 'portfolioStock' | 'createdAt' | 'updatedAt' | 'owner'>> = {
         date: date,
         action: action as Schema['Transaction']['type']['action'],
-        signal: (action === 'Div' || (action as string) === 'SLP') ? undefined : (signal || undefined), // No signal for Dividend and SLP transactions
-        price: priceValue,
+        signal: (action === 'Div' || (action as string) === 'SLP' || action === 'StockSplit') ? undefined : (signal || undefined), // No signal for Dividend, SLP, and StockSplit transactions
+        price: (action === 'StockSplit') ? undefined : priceValue, // StockSplit doesn't use price field
         investment: (action === 'Buy') && typeof investmentValue === 'number' // Only Buy uses investment field
          ? parseFloat(investmentValue.toFixed(CURRENCY_PRECISION))
          : null, // Keep null if not Buy or if investmentValue isn't a number
         amount: (action === 'Div' || action === 'SLP') && typeof (action === 'Div' ? investmentValue : amountValue) === 'number'
          ? parseFloat(((action === 'Div' ? investmentValue : amountValue) as number).toFixed(CURRENCY_PRECISION))
          : null, // Store Div amounts from investment field, SLP amounts from amount field
-        quantity: action === 'Sell' ? quantity : quantity_final, // Use 'quantity' for Sell edits, 'quantity_final' for Buy/Div
+        quantity: action === 'Sell' ? quantity : 
+                 action === 'StockSplit' ? undefined : // StockSplit uses splitRatio field instead
+                 quantity_final, // Use quantity_final for Buy/Div
+        // Stock Split specific fields
+        splitRatio: (action === 'StockSplit') ? splitRatioValue : undefined,
         swingShares: (action === 'Buy') ? calculatedSwingShares_final : null, // Use FINAL rounded swing shares
         holdShares: (action === 'Buy') ? calculatedHoldShares_final : null, // Use FINAL rounded hold shares
         txnType: (action === 'Buy') ? buyType : undefined,
-        lbd: lbd_final, // Use FINAL rounded LBD
-        tp: tp_final,   // Use FINAL rounded TP
+        lbd: (action === 'Buy') ? lbd_final : null, // Only Buy uses LBD
+        tp: (action === 'Buy') ? tp_final : null,   // Only Buy uses TP
         completedTxnId: (action === 'Sell') ? (completedTxnId || undefined) : undefined,
-        txnProfit: txnProfit, // Keep as is or round if needed
-        txnProfitPercent: calculatedTxnProfitPercent,
+        txnProfit: (action === 'Sell') ? txnProfit : null, // Only Sell uses txnProfit
+        txnProfitPercent: (action === 'Sell') ? calculatedTxnProfitPercent : null, // Only Sell uses txnProfitPercent
     };
     // --- End Payload Prep ---
 
@@ -659,7 +669,14 @@ export default function TransactionForm({
                 portfolioStockId: portfolioStockId,
                 ...finalPayload
             };
-            //console.log("Submitting Create Payload:", createPayload);
+            
+            // Enhanced logging for Stock Split transactions
+            if (action === 'StockSplit') {
+                console.log('[StockSplit] Final payload:', finalPayload);
+                console.log('[StockSplit] Create payload:', createPayload);
+                console.log('[StockSplit] Action value:', action, 'Type:', typeof action);
+            }
+            
             // Use type assertion temporarily if strict type checking causes issues with optional fields
             const { errors, data: newTransaction } = await client.models.Transaction.create(createPayload as Parameters<typeof client.models.Transaction.create>[0]);
             if (errors) throw errors;
@@ -841,6 +858,7 @@ export default function TransactionForm({
             setSharesInput(defaultFormState.sharesInput);
             setCompletedTxnId(defaultFormState.completedTxnId);
             setBuyType(defaultFormState.buyType);
+            setSplitRatio('2'); // Reset to default 2:1 split
         }
 
         // Call success callback if provided (outside create/update blocks)
@@ -848,10 +866,20 @@ export default function TransactionForm({
         onTransactionAdded?.();
 
     } catch (err: unknown) {
-        //console.error('Error saving transaction:', err);
+        // Enhanced error logging for Stock Split
+        if (action === 'StockSplit') {
+            console.error('[StockSplit] Error saving transaction:', err);
+        }
         // Attempt to parse Amplify errors which might be an array
         const errorObj = err as {errors?: Array<{message: string}>};
-        const message = Array.isArray(errorObj.errors) ? errorObj.errors[0].message : ((err as Error).message || "An unknown error occurred.");
+        let message = '';
+        if (Array.isArray(errorObj.errors) && errorObj.errors[0]?.message) {
+            message = errorObj.errors[0].message;
+        } else if ((err as Error).message) {
+            message = (err as Error).message;
+        } else {
+            message = JSON.stringify(err);
+        }
         setError(message);
         setSuccess(null); // Clear success message on error
     } finally {
@@ -922,6 +950,7 @@ export default function TransactionForm({
                         <option value="Sell">Sell</option>
                         <option value="Div">Dividend</option>
                         <option value="SLP">Stock Lending Payment</option>
+                        <option value="StockSplit">Stock Split</option>
                     </select>
                 </div>
         )}
@@ -1040,6 +1069,27 @@ export default function TransactionForm({
                     disabled={isLoading} 
                     style={{width: '100%', padding: '8px'}}/>
             </div>
+        )}
+
+        {/* Stock Split specific fields */}
+        {action === 'StockSplit' && (
+            <>
+                <div>
+                    <label htmlFor="splitRatio" style={{display:'block', marginBottom:'3px'}}>Split Ratio:</label>
+                    <input 
+                        data-testid="txn-form-split-ratio"
+                        id="splitRatio" 
+                        type="number" 
+                        step="any" 
+                        value={splitRatio} 
+                        onChange={(e) => setSplitRatio(e.target.value)} 
+                        required 
+                        placeholder="e.g., 2 for 2:1 split" 
+                        disabled={isLoading} 
+                        style={{width: '100%', padding: '8px'}}/>
+                    <small style={{color: '#888', fontSize: '0.8em'}}>Enter the split multiplier (e.g., 2 for 2:1 split, 3 for 3:1 split)</small>
+                </div>
+            </>
         )}
 
         {/* Shares Input (Only for Editing Sell action's quantity) */}
