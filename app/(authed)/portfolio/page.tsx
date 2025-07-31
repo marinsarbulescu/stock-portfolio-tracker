@@ -18,6 +18,7 @@ import PortfolioOverview from './components/PortfolioOverview';
 import PortfolioTable from './components/PortfolioTable';
 import AddStockModal from './components/PortfolioAddStockModal';
 import EditStockModal from './components/PortfolioEditStockModal';
+import StockSplitModal from './components/PortfolioStockSplitModal';
 
 // Import types from the types file
 import type {
@@ -55,8 +56,10 @@ function PortfolioContent() {
   // --- State for editing and modal ---
   const [isAddModalOpen, setIsAddModalOpen] = useState(false); // For Add Stock modal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false); // For Edit Stock modal
+  const [isSplitModalOpen, setIsSplitModalOpen] = useState(false); // For Stock Split modal
   const [editingStockId, setEditingStockId] = useState<string | null>(null);
   const [stockToEditData, setStockToEditData] = useState<PortfolioStockDataType | null>(null);
+  const [stockToSplitData, setStockToSplitData] = useState<PortfolioStockDataType | null>(null);
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false); // For collapsible overview
 
   // Inside your component function - this will now work because we're in a client component under the provider
@@ -340,6 +343,25 @@ function PortfolioContent() {
     setIsEditModalOpen(false);
     setEditingStockId(null);
     setStockToEditData(null);
+  };
+
+  // Split Click Handler (sets up split modal)
+  const handleSplitClick = (stockData: PortfolioStockDataType) => {
+    console.log('Processing split for stock:', stockData);
+    setStockToSplitData(stockData);
+    setIsSplitModalOpen(true);
+  };
+
+  // Cancel Split Handler
+  const handleCancelSplit = () => {
+    setIsSplitModalOpen(false);
+    setStockToSplitData(null);
+  };
+
+  // Split Processed Handler (refreshes data after split)
+  const handleSplitProcessed = () => {
+    console.log('Split processed, refreshing data...');
+    fetchPortfolio();
   };
   // Update Stock Handler (receives plain object from form, uses ID from state)
   const handleUpdateStock = async (updatePayload: PortfolioStockUpdateInput) => {
@@ -971,6 +993,7 @@ function PortfolioContent() {
         handleEditClick={handleEditClick}
         handleToggleHidden={handleToggleHidden}
         handleArchiveStock={handleArchiveStock}
+        handleSplitClick={handleSplitClick}
       />
 
       {/* Add Stock Modal */}
@@ -986,6 +1009,16 @@ function PortfolioContent() {
         stockToEditData={stockToEditData}
         onUpdate={handleUpdateStock}
         onCancel={handleCancelEdit}
+      />
+
+      {/* Stock Split Modal */}
+      <StockSplitModal
+        isOpen={isSplitModalOpen}
+        onClose={handleCancelSplit}
+        stockId={stockToSplitData?.id || ''}
+        stockSymbol={stockToSplitData?.symbol || ''}
+        currentPrice={stockToSplitData?.testPrice || undefined}
+        onSplitProcessed={handleSplitProcessed}
       />
     </div>
   );
