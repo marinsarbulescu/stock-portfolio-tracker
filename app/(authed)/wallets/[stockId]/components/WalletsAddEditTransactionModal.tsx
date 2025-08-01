@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { type Schema } from '@/amplify/data/resource'; // Adjust path if needed
 import { generateClient } from 'aws-amplify/data';
 import { calculateSingleSalePL, calculateSingleSalePLWithCommission } from '@/app/utils/financialCalculations';
+import { FETCH_LIMIT_WALLETS_GENEROUS } from '@/app/config/constants';
 
 const client = generateClient<Schema>();
 
@@ -881,7 +882,8 @@ export default function TransactionForm({
                             'id', 'buyPrice', 'totalSharesQty', 'remainingShares', 
                             'totalInvestment', 'sharesSold', 'realizedPl', 'sellTxnCount', 
                             'realizedPlPercent', 'walletType', 'tpValue', 'tpPercent'
-                        ]
+                        ],
+                        limit: FETCH_LIMIT_WALLETS_GENEROUS // Ensure all wallets are found for stock split
                     });
                     
                     if (fetchErrors) {

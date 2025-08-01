@@ -38,8 +38,8 @@ If you want to find the "last buy transaction" with `limit: 1`, but the last 3 r
 
 ### `FETCH_LIMIT_WALLETS_GENEROUS = 3000`
 - **Purpose**: Wallet queries that need generous limits
-- **Usage**: `signals/page.tsx` for comprehensive wallet analysis
-- **Reason**: Ensures all wallets are found for portfolio calculations
+- **Usage**: `signals/page.tsx` for comprehensive wallet analysis, `WalletsAddEditTransactionModal.tsx` for stock split wallet updates
+- **Reason**: Ensures all wallets are found for portfolio calculations and critical operations like stock splits
 
 ### `FETCH_LIMIT_WALLETS_CANDIDATES = 500`
 - **Purpose**: Wallet candidate searches
@@ -83,3 +83,4 @@ import {
 - `app/(authed)/signals/page.tsx`
 - `app/(authed)/portfolio/page.tsx`
 - `app/(authed)/wallets/[stockId]/page.tsx`
+- `app/(authed)/wallets/[stockId]/components/WalletsAddEditTransactionModal.tsx`
