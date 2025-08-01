@@ -89,6 +89,11 @@ export default function SignalsTable({
                         <th style={{ padding: '5px', width: '30px' }}>
                             {/* Empty header for expand/collapse column */}
                         </th>
+                        {reportColumnVisibility.investment && (
+                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('investment')}>
+                                Inv {sortConfig?.key === 'investment' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                            </th>
+                        )}
                         <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('symbol')}>
                             Ticker {sortConfig?.key === 'symbol' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                         </th>
@@ -175,6 +180,13 @@ export default function SignalsTable({
                                             {expandedRows.has(item.id) ? '▼' : '▶'}
                                         </button>
                                     </td>
+                                    {reportColumnVisibility.investment && (
+                                        <td
+                                            data-testid={`signals-table-investment-${item.symbol.toUpperCase()}`}
+                                            style={{ padding: '5px' }}>
+                                            {typeof item.investment === 'number' ? item.investment.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '-'}
+                                        </td>
+                                    )}
                                     <td style={{ padding: '5px' }}>
                                         <Link
                                             href={`/wallets/${item.id}`}

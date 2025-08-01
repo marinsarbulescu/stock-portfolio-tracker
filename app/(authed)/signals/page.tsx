@@ -42,6 +42,7 @@ const client = generateClient<Schema>();
 export default function HomePage() {    
     
     const [reportColumnVisibility, setReportColumnVisibility] = useState<ReportColumnVisibilityState>({
+        investment: true,
         fiveDayDip: true,
         lbd: true,
         swingWalletCount: true,
@@ -55,6 +56,7 @@ export default function HomePage() {
     });
 
     const COLUMN_LABELS: Record<keyof ReportColumnVisibilityState, string> = {
+        investment: 'Investment',
         fiveDayDip: '5DD',      
         lbd: 'LBD',
         swingWalletCount: 'Swing Wallets',         
@@ -109,6 +111,21 @@ export default function HomePage() {
         }));
         return mergeTestPricesWithRealPrices(latestPrices, stocksWithTestPrices as PortfolioPageStockDataType[]);
     }, [latestPrices, portfolioStocks]);
+
+    // Compute total invested amount per stock by summing remainingShares × buyPrice for all wallets
+    const stockInvestments = useMemo(() => {
+        const invMap: Record<string, number> = {};
+        
+        // Group wallets by stock ID and calculate investment
+        allWallets.forEach(wallet => {
+            if (wallet.portfolioStockId) {
+                const investment = (wallet.remainingShares ?? 0) * (wallet.buyPrice ?? 0);
+                invMap[wallet.portfolioStockId] = (invMap[wallet.portfolioStockId] ?? 0) + investment;
+            }
+        });
+        
+        return invMap;
+    }, [allWallets]);
 
     const formatTimestamp = (date: Date | null): string => {
         if (!date) return "N/A";
@@ -603,6 +620,7 @@ export default function HomePage() {
                 id: stockId,
                 symbol: symbol,
                 stockTrend: stock.stockTrend,
+                investment: stockInvestments[stockId] ?? null,
                 currentPrice: currentPrice,
                 isTestPrice: isTestPrice,
                 fiveDayDip: fiveDayDipPercent,
@@ -621,7 +639,7 @@ export default function HomePage() {
                 htpValues: htpValues,
             };
         });
-    }, [portfolioStocks, mergedPrices, processedData, checkHtpSignalForStock, getHtpValuesForStock]);
+    }, [portfolioStocks, mergedPrices, processedData, checkHtpSignalForStock, getHtpValuesForStock, stockInvestments]);
 
     const portfolioBudgetStats = useMemo(() => {
         const totalBudget = portfolioStocks.reduce((sum, stock) => sum + (stock.budget ?? 0), 0);
