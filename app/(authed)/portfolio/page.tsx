@@ -982,6 +982,9 @@ function PortfolioContent() {
         euRegionStats={euRegionStats}
         intlRegionStats={intlRegionStats}
         apacRegionStats={apacRegionStats}
+        stockInvestments={stockInvestments}
+        stockRiskInvestments={stockRiskInvestments}
+        visibleStocks={visibleStocks}
       />
       
       {/* Action buttons row */}

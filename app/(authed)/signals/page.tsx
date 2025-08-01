@@ -56,7 +56,7 @@ export default function HomePage() {
     });
 
     const COLUMN_LABELS: Record<keyof ReportColumnVisibilityState, string> = {
-        riskInvestment: 'rInv',
+        riskInvestment: 'r-Inv',
         fiveDayDip: '5DD',      
         lbd: 'LBD',
         swingWalletCount: 'Swing Wallets',         

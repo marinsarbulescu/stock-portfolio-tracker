@@ -75,7 +75,7 @@ export default function WalletsOverview({
                     <p data-testid="overview-settings-invested">{formatCurrency(totalTiedUpInvestment)}</p>
                   </div>
                   <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>rInv</p>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>r-Inv</p>
                     <p data-testid="overview-settings-risk-investment">{formatCurrency(riskInvestment)}</p>
                   </div>
                 </div>

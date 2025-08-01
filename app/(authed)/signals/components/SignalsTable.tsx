@@ -91,7 +91,7 @@ export default function SignalsTable({
                         </th>
                         {reportColumnVisibility.riskInvestment && (
                             <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('riskInvestment')}>
-                                rInv {sortConfig?.key === 'riskInvestment' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                r-Inv {sortConfig?.key === 'riskInvestment' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                             </th>
                         )}
                         <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('symbol')}>

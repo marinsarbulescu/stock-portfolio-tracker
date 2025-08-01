@@ -130,6 +130,9 @@ export interface PortfolioOverviewProps {
   euRegionStats: RegionStats;
   intlRegionStats: RegionStats;
   apacRegionStats: RegionStats;
+  stockInvestments: Record<string, number>;
+  stockRiskInvestments: Record<string, number>;
+  visibleStocks: PortfolioStockDataType[];
 }
 
 export interface AddStockModalProps {
@@ -159,7 +162,7 @@ export const STOCK_COLUMN_LABELS: Record<SortableStockKey, string> = {
   stockCommission: 'Comm (%)',
   budget: 'Budget',
   investment: 'tInv',
-  riskInvestment: 'rInv',
+  riskInvestment: 'r-Inv',
 };
 
 export const PORTFOLIO_COLUMN_LABELS: Record<PortfolioColumnKey, string> = {
@@ -174,7 +177,7 @@ export const PORTFOLIO_COLUMN_LABELS: Record<PortfolioColumnKey, string> = {
   stockCommission: 'Comm (%)',
   budget: 'Budget',
   investment: 'tInv',
-  riskInvestment: 'rInv',
+  riskInvestment: 'r-Inv',
 };
 
 // ===== MODAL STYLES =====

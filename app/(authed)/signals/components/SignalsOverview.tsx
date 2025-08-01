@@ -75,7 +75,7 @@ export default function SignalsOverview({
                                 })}
                             </p>
 
-                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>rInv</p>
+                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>r-Inv</p>
                             <p>
                                 ${portfolioBudgetStats.totalRiskInvestment.toLocaleString(undefined, {
                                     minimumFractionDigits: CURRENCY_PRECISION,
