@@ -1636,6 +1636,48 @@ const totalTiedUpInvestment = useMemo(() => {
 
 }, [wallets]); // Recalculate when the wallets data changes
 
+// Calculate Risk Investment (rInv) - investment in wallets where TP hasn't been met
+const riskInvestment = useMemo(() => {
+    // If no wallets or no price data, return 0
+    if (!wallets || wallets.length === 0) {
+        return 0;
+    }
+    
+    // Get current price from mergedPrices (includes test price if set)
+    const currentPrice = mergedPrices[stockSymbol ?? '']?.currentPrice;
+    
+    // If no current price available, return total investment (all at risk)
+    if (typeof currentPrice !== 'number') {
+        return totalTiedUpInvestment;
+    }
+    
+    // Calculate investment in wallets where TP has been MET
+    const investmentWithMetTP = wallets.reduce((total, wallet) => {
+        const remainingShares = wallet.remainingShares ?? 0;
+        const tp = wallet.tpValue;
+        
+        // Skip if no remaining shares
+        if (remainingShares <= SHARE_EPSILON) {
+            return total;
+        }
+        
+        // Check if TP has been MET (same logic as green coloring: tp <= currentPrice)
+        if (typeof tp === 'number' && tp <= currentPrice) {
+            // Calculate this wallet's tied-up investment
+            const totalInvestment = wallet.totalInvestment ?? 0;
+            const totalShares = wallet.totalSharesQty ?? 0;
+            const investmentPerShare = (totalShares > SHARE_EPSILON) ? (totalInvestment / totalShares) : 0;
+            const tiedUpInWallet = investmentPerShare * remainingShares;
+            
+            return total + tiedUpInWallet;
+        }
+        
+        return total;
+    }, 0);
+    
+    // Risk Investment = Total Investment - Investment with met TP
+    return totalTiedUpInvestment - investmentWithMetTP;
+}, [wallets, mergedPrices, stockSymbol, totalTiedUpInvestment]);
 
 // --- ADD Memo for Total HOLD YTD P/L Calculation ---
 const totalHoldYtdPL = useMemo(() => {
@@ -2129,6 +2171,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 stockPlr={stockPlr}
                 stockHtp={stockHtp}
                 totalTiedUpInvestment={totalTiedUpInvestment}
+                riskInvestment={riskInvestment}
                 transactionCounts={transactionCounts}
                 currentShares={currentShares}
                 realizedPlStats={realizedPlStats}

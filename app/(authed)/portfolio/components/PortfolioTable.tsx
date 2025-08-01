@@ -25,6 +25,7 @@ export default function PortfolioTable({
   sortedStocks,
   stockSortConfig,
   stockInvestments,
+  stockRiskInvestments,
   latestPrices,
   pricesLoading,
   showArchived,
@@ -176,6 +177,15 @@ export default function PortfolioTable({
               {STOCK_COLUMN_LABELS.investment} {stockSortConfig?.key === 'investment' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
             </th>
           )}
+          {columnVisibility.riskInvestment && (
+            <th
+              data-testid="portfolio-page-table-riskInvestment-header"
+              style={{ padding: '5px', cursor: 'pointer' }}
+              onClick={() => requestStockSort('riskInvestment')}
+            >
+              {STOCK_COLUMN_LABELS.riskInvestment} {stockSortConfig?.key === 'riskInvestment' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+            </th>
+          )}
           <th style={{ padding: '5px', textAlign: 'center' }}>Actions</th>
         </tr>
       </thead>
@@ -277,6 +287,11 @@ export default function PortfolioTable({
                 <td
                   data-testid={`portfolio-page-table-investment-${stock.symbol?.toUpperCase()}`}
                   style={cellStyle}>{typeof stockInvestments[stock.id] === 'number' ? stockInvestments[stock.id].toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '-'}</td>
+              )}
+              {columnVisibility.riskInvestment && (
+                <td
+                  data-testid={`portfolio-page-table-riskInvestment-${stock.symbol?.toUpperCase()}`}
+                  style={cellStyle}>{typeof stockRiskInvestments[stock.id] === 'number' ? stockRiskInvestments[stock.id].toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '-'}</td>
               )}
               {/* Actions */}
               <td style={{ padding: '5px', textAlign: 'center' }}>

@@ -12,6 +12,7 @@ export interface WalletsOverviewProps {
   stockPlr?: number | null;
   stockHtp?: number | null;
   totalTiedUpInvestment: number;
+  riskInvestment: number;
   transactionCounts: TransactionCounts;
   currentShares: CurrentShares;
   realizedPlStats: RealizedPLStats;
@@ -29,6 +30,7 @@ export default function WalletsOverview({
   stockPlr,
   stockHtp,
   totalTiedUpInvestment,
+  riskInvestment,
   transactionCounts,
   currentShares,
   realizedPlStats,
@@ -69,8 +71,12 @@ export default function WalletsOverview({
                     <p data-testid="overview-settings-budget">{formatCurrency(stockBudget ?? 0)}</p>
                   </div>
                   <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Invested</p>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>tInv</p>
                     <p data-testid="overview-settings-invested">{formatCurrency(totalTiedUpInvestment)}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>rInv</p>
+                    <p data-testid="overview-settings-risk-investment">{formatCurrency(riskInvestment)}</p>
                   </div>
                 </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>

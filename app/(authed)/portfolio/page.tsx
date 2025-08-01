@@ -83,6 +83,7 @@ function PortfolioContent() {
     stockCommission: true,
     budget: false,
     investment: true,
+    riskInvestment: true,
   });
 
   // Calculate visible column count
@@ -122,7 +123,7 @@ function PortfolioContent() {
     try {
       const { data, errors } = await client.models.StockWallet.list({
         limit: FETCH_LIMIT_STOCKS_STANDARD,
-        selectionSet: ['id', 'portfolioStockId', 'remainingShares', 'buyPrice'],
+        selectionSet: ['id', 'portfolioStockId', 'remainingShares', 'buyPrice', 'totalInvestment', 'totalSharesQty', 'tpValue'],
       });
       if (!errors && data) {
         setAllWallets(data as StockWalletDataType[]);
@@ -146,6 +147,79 @@ function PortfolioContent() {
     
     return invMap;
   }, [allWallets]);
+
+  // Compute risk investment per stock (investment in wallets where TP hasn't been met)
+  const stockRiskInvestments = useMemo(() => {
+    const riskMap: Record<string, number> = {};
+    const totalInvestmentMap: Record<string, number> = {};
+    
+    // First, calculate total investment per stock
+    allWallets.forEach(wallet => {
+      if (wallet.portfolioStockId) {
+        const stockId = wallet.portfolioStockId;
+        const remainingShares = wallet.remainingShares ?? 0;
+        
+        // Skip if no remaining shares
+        if (remainingShares <= 0.000001) { // Using SHARE_EPSILON equivalent
+          return;
+        }
+        
+        // Calculate tied-up investment for this wallet
+        const totalInvestment = wallet.totalInvestment ?? 0;
+        const totalShares = wallet.totalSharesQty ?? 0;
+        const investmentPerShare = (totalShares > 0.000001) ? (totalInvestment / totalShares) : 0;
+        const tiedUpInvestment = investmentPerShare * remainingShares;
+        
+        totalInvestmentMap[stockId] = (totalInvestmentMap[stockId] ?? 0) + tiedUpInvestment;
+      }
+    });
+    
+    // Then, calculate investment with met TP per stock
+    allWallets.forEach(wallet => {
+      if (wallet.portfolioStockId) {
+        const stockId = wallet.portfolioStockId;
+        const remainingShares = wallet.remainingShares ?? 0;
+        const tp = wallet.tpValue;
+        
+        // Skip if no remaining shares
+        if (remainingShares <= 0.000001) {
+          return;
+        }
+        
+        // Get current price from mergedPrices (includes test price)
+        const stockSymbol = activeStocks.find(s => s.id === stockId)?.symbol || 
+                           archivedStocks.find(s => s.id === stockId)?.symbol;
+        const currentPrice = mergedPrices[stockSymbol || '']?.currentPrice;
+        
+        // If no current price, all investment is at risk
+        if (typeof currentPrice !== 'number') {
+          riskMap[stockId] = totalInvestmentMap[stockId] ?? 0;
+          return;
+        }
+        
+        // If TP has been met (tp <= currentPrice), calculate investment with met TP
+        if (typeof tp === 'number' && tp <= currentPrice) {
+          const totalInvestment = wallet.totalInvestment ?? 0;
+          const totalShares = wallet.totalSharesQty ?? 0;
+          const investmentPerShare = (totalShares > 0.000001) ? (totalInvestment / totalShares) : 0;
+          const investmentWithMetTP = investmentPerShare * remainingShares;
+          
+          riskMap[stockId] = (riskMap[stockId] ?? 0) - investmentWithMetTP;
+        }
+      }
+    });
+    
+    // Final calculation: riskInvestment = totalInvestment - investmentWithMetTP
+    Object.keys(totalInvestmentMap).forEach(stockId => {
+      if (!(stockId in riskMap)) {
+        riskMap[stockId] = totalInvestmentMap[stockId];
+      } else {
+        riskMap[stockId] = totalInvestmentMap[stockId] + riskMap[stockId];
+      }
+    });
+    
+    return riskMap;
+  }, [allWallets, activeStocks, archivedStocks, mergedPrices]);
 
   // Sorted stocks for the table display
   const sortedStocks = useMemo(() => {
@@ -215,6 +289,10 @@ function PortfolioContent() {
             valA = stockInvestments[a.id] ?? null;
             valB = stockInvestments[b.id] ?? null;
             break;
+          case 'riskInvestment':
+            valA = stockRiskInvestments[a.id] ?? null;
+            valB = stockRiskInvestments[b.id] ?? null;
+            break;
           default:
             valA = '';
             valB = '';
@@ -242,7 +320,7 @@ function PortfolioContent() {
     }
 
     return sortableItems;
-  }, [activeStocks, archivedStocks, showArchived, stockSortConfig, mergedPrices, stockInvestments]);
+  }, [activeStocks, archivedStocks, showArchived, stockSortConfig, mergedPrices, stockInvestments, stockRiskInvestments]);
 
   // Fetch Portfolio Function
   const fetchPortfolio = useCallback(async () => {
@@ -961,6 +1039,7 @@ function PortfolioContent() {
         sortedStocks={sortedStocks}
         stockSortConfig={stockSortConfig}
         stockInvestments={stockInvestments}
+        stockRiskInvestments={stockRiskInvestments}
         latestPrices={mergedPrices}
         pricesLoading={pricesLoading}
         showArchived={showArchived}

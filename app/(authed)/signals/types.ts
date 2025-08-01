@@ -22,7 +22,7 @@ export interface PortfolioStockDataType {
 
 // Table column visibility state for signals table
 export interface ReportColumnVisibilityState {
-  investment: boolean;
+  riskInvestment: boolean;
   fiveDayDip: boolean;
   lbd: boolean;
   swingWalletCount: boolean;
@@ -40,7 +40,7 @@ export interface ReportDataItem {
   id: string;
   symbol: string;
   stockTrend?: string | null; // Stock trend: "Down", "Up", "Sideways"
-  investment: number | null;
+  riskInvestment: number | null;
   currentPrice: number | null;
   isTestPrice?: boolean; // Flag to indicate if currentPrice is from testPrice override
   fiveDayDip: number | null;
@@ -62,7 +62,7 @@ export interface ReportDataItem {
 // Sortable column keys for signals table
 export type ReportColumnKey = 
   | 'symbol' 
-  | 'investment'
+  | 'riskInvestment'
   | 'currentPrice' 
   | 'fiveDayDip' 
   | 'lbd' 

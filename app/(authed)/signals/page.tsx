@@ -42,7 +42,7 @@ const client = generateClient<Schema>();
 export default function HomePage() {    
     
     const [reportColumnVisibility, setReportColumnVisibility] = useState<ReportColumnVisibilityState>({
-        investment: true,
+        riskInvestment: true,
         fiveDayDip: true,
         lbd: true,
         swingWalletCount: true,
@@ -56,7 +56,7 @@ export default function HomePage() {
     });
 
     const COLUMN_LABELS: Record<keyof ReportColumnVisibilityState, string> = {
-        investment: 'Investment',
+        riskInvestment: 'rInv',
         fiveDayDip: '5DD',      
         lbd: 'LBD',
         swingWalletCount: 'Swing Wallets',         
@@ -549,6 +549,43 @@ export default function HomePage() {
         return htpValues;
     }, [portfolioStocks, allWallets]);
 
+    // Compute risk investment per stock (investment in wallets where TP hasn't been met)
+    const stockRiskInvestments = useMemo(() => {
+        const riskMap: Record<string, number> = {};
+        
+        allWallets.forEach(wallet => {
+            if (wallet.portfolioStockId) {
+                const stockId = wallet.portfolioStockId;
+                const remainingShares = wallet.remainingShares ?? 0;
+                const tp = wallet.tpValue;
+                
+                // Skip if no remaining shares
+                if (remainingShares <= SHARE_EPSILON) {
+                    return;
+                }
+                
+                // Get current price from mergedPrices (includes test price)
+                const stockSymbol = portfolioStocks.find(s => s.id === stockId)?.symbol;
+                const currentPrice = mergedPrices[stockSymbol || '']?.currentPrice;
+                
+                // If no current price or TP has been met (tp <= currentPrice), don't include in risk
+                if (typeof currentPrice !== 'number' || typeof tp !== 'number' || tp <= currentPrice) {
+                    return;
+                }
+                
+                // Calculate tied-up investment for this wallet
+                const totalInvestment = wallet.totalInvestment ?? 0;
+                const totalShares = wallet.totalSharesQty ?? 0;
+                const investmentPerShare = (totalShares > SHARE_EPSILON) ? (totalInvestment / totalShares) : 0;
+                const riskInvestment = investmentPerShare * remainingShares;
+                
+                riskMap[stockId] = (riskMap[stockId] ?? 0) + riskInvestment;
+            }
+        });
+        
+        return riskMap;
+    }, [allWallets, portfolioStocks, mergedPrices]);
+
     const reportData = useMemo((): ReportDataItem[] => {
         return portfolioStocks.map(stock => {
             const stockId: string = stock.id;
@@ -620,7 +657,7 @@ export default function HomePage() {
                 id: stockId,
                 symbol: symbol,
                 stockTrend: stock.stockTrend,
-                investment: stockInvestments[stockId] ?? null,
+                riskInvestment: stockRiskInvestments[stockId] ?? null,
                 currentPrice: currentPrice,
                 isTestPrice: isTestPrice,
                 fiveDayDip: fiveDayDipPercent,
@@ -639,7 +676,7 @@ export default function HomePage() {
                 htpValues: htpValues,
             };
         });
-    }, [portfolioStocks, mergedPrices, processedData, checkHtpSignalForStock, getHtpValuesForStock, stockInvestments]);
+    }, [portfolioStocks, mergedPrices, processedData, checkHtpSignalForStock, getHtpValuesForStock, stockRiskInvestments]);
 
     const portfolioBudgetStats = useMemo(() => {
         const totalBudget = portfolioStocks.reduce((sum, stock) => sum + (stock.budget ?? 0), 0);

@@ -39,6 +39,7 @@ export interface PortfolioColumnVisibilityState {
   stockCommission: boolean;
   budget: boolean;
   investment: boolean;
+  riskInvestment: boolean;
 }
 
 export type PortfolioColumnKey = keyof PortfolioColumnVisibilityState;
@@ -56,7 +57,8 @@ export type SortableStockKey =
   | 'plr'
   | 'stockCommission'
   | 'budget'
-  | 'investment';
+  | 'investment'
+  | 'riskInvestment';
 
 export interface StockSortConfig {
   key: SortableStockKey;
@@ -103,6 +105,7 @@ export interface PortfolioTableProps {
   sortedStocks: PortfolioStockDataType[];
   stockSortConfig: StockSortConfig | null;
   stockInvestments: Record<string, number>;
+  stockRiskInvestments: Record<string, number>;
   latestPrices: LatestPrices;
   pricesLoading: boolean;
   showArchived: boolean;
@@ -155,7 +158,8 @@ export const STOCK_COLUMN_LABELS: Record<SortableStockKey, string> = {
   plr: 'PLR (%)',
   stockCommission: 'Comm (%)',
   budget: 'Budget',
-  investment: 'Inv',
+  investment: 'tInv',
+  riskInvestment: 'rInv',
 };
 
 export const PORTFOLIO_COLUMN_LABELS: Record<PortfolioColumnKey, string> = {
@@ -169,7 +173,8 @@ export const PORTFOLIO_COLUMN_LABELS: Record<PortfolioColumnKey, string> = {
   plr: 'PLR (%)',
   stockCommission: 'Comm (%)',
   budget: 'Budget',
-  investment: 'Inv',
+  investment: 'tInv',
+  riskInvestment: 'rInv',
 };
 
 // ===== MODAL STYLES =====

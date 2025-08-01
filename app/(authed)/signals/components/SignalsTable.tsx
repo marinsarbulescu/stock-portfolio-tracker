@@ -89,9 +89,9 @@ export default function SignalsTable({
                         <th style={{ padding: '5px', width: '30px' }}>
                             {/* Empty header for expand/collapse column */}
                         </th>
-                        {reportColumnVisibility.investment && (
-                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('investment')}>
-                                Inv {sortConfig?.key === 'investment' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                        {reportColumnVisibility.riskInvestment && (
+                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('riskInvestment')}>
+                                rInv {sortConfig?.key === 'riskInvestment' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                             </th>
                         )}
                         <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('symbol')}>
@@ -180,11 +180,11 @@ export default function SignalsTable({
                                             {expandedRows.has(item.id) ? '▼' : '▶'}
                                         </button>
                                     </td>
-                                    {reportColumnVisibility.investment && (
+                                    {reportColumnVisibility.riskInvestment && (
                                         <td
-                                            data-testid={`signals-table-investment-${item.symbol.toUpperCase()}`}
+                                            data-testid={`signals-table-riskInvestment-${item.symbol.toUpperCase()}`}
                                             style={{ padding: '5px' }}>
-                                            {typeof item.investment === 'number' ? item.investment.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '-'}
+                                            {typeof item.riskInvestment === 'number' ? item.riskInvestment.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '-'}
                                         </td>
                                     )}
                                     <td style={{ padding: '5px' }}>
