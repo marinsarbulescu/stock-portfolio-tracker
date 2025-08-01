@@ -73,6 +73,14 @@ export default function SignalsOverview({
                                     minimumFractionDigits: CURRENCY_PRECISION,
                                     maximumFractionDigits: CURRENCY_PRECISION,
                                 })}
+                            </p>
+
+                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>rInv</p>
+                            <p>
+                                ${portfolioBudgetStats.totalRiskInvestment.toLocaleString(undefined, {
+                                    minimumFractionDigits: CURRENCY_PRECISION,
+                                    maximumFractionDigits: CURRENCY_PRECISION,
+                                })}
                             </p>                            
                         </div>
 

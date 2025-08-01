@@ -692,12 +692,16 @@ export default function HomePage() {
 
         const budgetLeft = totalBudget - totalTiedUpInvestment;
 
+        // Calculate total risk investment (sum of all rInv values)
+        const totalRiskInvestment = Object.values(stockRiskInvestments).reduce((sum, rInv) => sum + rInv, 0);
+
         return {
             totalBudget: parseFloat(totalBudget.toFixed(CURRENCY_PRECISION)),
             totalInvested: parseFloat(totalTiedUpInvestment.toFixed(CURRENCY_PRECISION)),
             budgetLeft: parseFloat(budgetLeft.toFixed(CURRENCY_PRECISION)),
+            totalRiskInvestment: parseFloat(totalRiskInvestment.toFixed(CURRENCY_PRECISION)),
         };
-    }, [portfolioStocks, allWallets]);
+    }, [portfolioStocks, allWallets, stockRiskInvestments]);
 
     const portfolioTransactionCounts = useMemo(() => {
         const typedTxns = allTransactions.map(t => t as unknown as Schema['Transaction']['type']);

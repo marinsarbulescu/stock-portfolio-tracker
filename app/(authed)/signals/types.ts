@@ -86,6 +86,7 @@ export interface PortfolioBudgetStats {
   totalBudget: number;
   totalInvested: number;
   budgetLeft: number;
+  totalRiskInvestment: number;
 }
 
 // Portfolio transaction counts
