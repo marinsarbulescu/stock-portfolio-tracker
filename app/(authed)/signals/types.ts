@@ -41,6 +41,7 @@ export interface ReportDataItem {
   symbol: string;
   stockTrend?: string | null; // Stock trend: "Down", "Up", "Sideways"
   riskInvestment: number | null;
+  budget: number | null; // Add budget for conditional styling
   currentPrice: number | null;
   isTestPrice?: boolean; // Flag to indicate if currentPrice is from testPrice override
   fiveDayDip: number | null;

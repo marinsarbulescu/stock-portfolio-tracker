@@ -156,9 +156,20 @@ export default function SignalsTable({
                             </td>
                         </tr>
                     ) : (
-                        sortedTableData.map((item, index) => (
+                        sortedTableData.map((item, index) => {
+                            // Check if rInv is greater than or equal to budget for gray styling
+                            const shouldGrayOut = typeof item.riskInvestment === 'number' && 
+                                                typeof item.budget === 'number' && 
+                                                item.riskInvestment >= item.budget;
+                            
+                            const textColor = shouldGrayOut ? '#9d9d9d' : 'inherit';
+                            
+                            return (
                             <React.Fragment key={item.id}>
-                                <tr style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
+                                <tr style={{ 
+                                    backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent',
+                                    color: textColor
+                                }}>
                                     <td style={{ padding: '5px', textAlign: 'center' }}>
                                         <button
                                             data-testid="signals-table-toggle-row-expansion-button"
@@ -192,7 +203,7 @@ export default function SignalsTable({
                                             href={`/wallets/${item.id}`}
                                             style={{
                                                 textDecoration: 'none',
-                                                color: item.totalCurrentShares === 0 ? 'red' : 'inherit'
+                                                color: item.totalCurrentShares === 0 ? 'red' : (shouldGrayOut ? '#9d9d9d' : 'inherit')
                                             }}
                                         >
                                             {item.symbol}
@@ -227,7 +238,11 @@ export default function SignalsTable({
                                     <td style={{ padding: '5px' }}>{item.sinceSell != null ? `${item.sinceSell} d` : '-'}</td>
                                 )}
                                 {reportColumnVisibility.currentPrice && (
-                                    <td style={{ padding: '5px', textAlign: 'left', color: item.isTestPrice ? '#9f4f96' : 'inherit' }}>
+                                    <td style={{ 
+                                        padding: '5px', 
+                                        textAlign: 'left', 
+                                        color: item.isTestPrice ? '#9f4f96' : (shouldGrayOut ? '#9d9d9d' : 'inherit')
+                                    }}>
                                         {typeof item.currentPrice === 'number' ? formatCurrency(item.currentPrice??0) : '-'}
                                     </td>
                                 )}
@@ -260,7 +275,10 @@ export default function SignalsTable({
                                 </tr>
                                 {/* Expanded row content */}
                                 {expandedRows.has(item.id) && (
-                                    <tr style={{ backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent' }}>
+                                    <tr style={{ 
+                                        backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent',
+                                        color: textColor
+                                    }}>
                                         <td colSpan={visibleColumnCount + 1} style={{ padding: '10px', borderTop: '1px solid #333' }}>
                                             <div style={{ fontSize: '0.9em', color: '#ccc' }}>
                                                 {/* Stock Trend Indicator */}
@@ -291,7 +309,8 @@ export default function SignalsTable({
                                     </tr>
                                 )}
                             </React.Fragment>
-                        ))
+                            );
+                        })
                     )}
                 </tbody>
             </table>

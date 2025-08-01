@@ -658,6 +658,7 @@ export default function HomePage() {
                 symbol: symbol,
                 stockTrend: stock.stockTrend,
                 riskInvestment: stockRiskInvestments[stockId] ?? null,
+                budget: stock.budget ?? null,
                 currentPrice: currentPrice,
                 isTestPrice: isTestPrice,
                 fiveDayDip: fiveDayDipPercent,
