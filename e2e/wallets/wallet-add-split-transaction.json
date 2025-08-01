@@ -9,7 +9,7 @@
     },
     "postSplitPrice": {
       "step": "Step 6", 
-      "description": "Update test price to $100 to simulate 2:1 split effect",
+      "description": "Update test price to $100 to simulate post-split effect and show negative P/L for $120 transactions",
       "price": 100,
       "timing": "After 2:1 stock split transaction"
     }
@@ -118,8 +118,8 @@
     },
     "StockSplit": {
       "testPriceContext": {
-        "priceAtTransaction": 200,
-        "expectedUnrealizedPL": "Stock split transaction doesn't change P&L immediately"
+        "priceAtTransaction": 100,
+        "expectedUnrealizedPL": "Split-adjusted wallets (buy price $100) have no P/L at test price $100"
       },
       "input": {
         "date": "2025-07-02",
@@ -141,9 +141,9 @@
             "totalSells": 0,
             "swingSells": 0,
             "holdSells": 0,
-            "swingShares": "1.20000",
-            "holdShares": "0.80000",
-            "totalShares": "2.00000"
+            "swingShares": "2.40000",
+            "holdShares": "1.60000",
+            "totalShares": "4.00000"
           },
           "realizedPL": {
             "swingDollars": "$0.00",
@@ -172,21 +172,17 @@
         },
         "wallets": {
           "swing": {
-            "wallet200": {
-              "buyPrice": 200,
+            "wallet100": {
+              "buyPrice": 100,
               "investment": 240,
-              "sharesLeft": 1.2,
-              "splitAdjustedBuyPrice": 100,
-              "splitAdjustedShares": 2.4
+              "sharesLeft": 2.4
             }
           },
           "hold": {
-            "wallet200": {
-              "buyPrice": 200,
+            "wallet100": {
+              "buyPrice": 100,
               "investment": 160,
-              "sharesLeft": 0.8,
-              "splitAdjustedBuyPrice": 100,
-              "splitAdjustedShares": 1.6
+              "sharesLeft": 1.6
             }
           }
         },
@@ -221,14 +217,14 @@
     "PostSplitBuy": {
       "testPriceContext": {
         "priceAtTransaction": 100,
-        "expectedUnrealizedPL": "New transaction at $100 should have no unrealized P&L, existing wallets show split-adjusted P&L"
+        "expectedUnrealizedPL": "New transaction at $120 creates negative P/L when test price is $100"
       },
       "input": {
         "date": "2025-07-03",
         "action": "Buy",
         "type": "Split",
         "signal": "LBD",
-        "price": 100,
+        "price": 120,
         "investment": 300
       },
       "output": {
@@ -246,9 +242,9 @@
             "totalSells": 0,
             "swingSells": 0,
             "holdSells": 0,
-            "swingShares": "3.00000",
-            "holdShares": "2.00000",
-            "totalShares": "5.00000"
+            "swingShares": "3.90000",
+            "holdShares": "2.60000",
+            "totalShares": "6.50000"
           },
           "realizedPL": {
             "swingDollars": "$0.00",
@@ -259,49 +255,45 @@
             "stockPercent": "0%"
           },
           "unrealizedPL": {
-            "swingDollars": "$0.00",
-            "swingPercent": "0%",
-            "holdDollars": "$0.00",
-            "holdPercent": "0%",
-            "stockDollars": "$0.00",
-            "stockPercent": "0%"
+            "swingDollars": "-$30.00",
+            "swingPercent": "-7.14%",
+            "holdDollars": "-$20.00",
+            "holdPercent": "-7.14%",
+            "stockDollars": "-$50.00",
+            "stockPercent": "-7.14%"
           },
           "combinedPL": {
-            "swingDollars": "$0.00",
-            "swingPercent": "0%",
-            "holdDollars": "$0.00",
-            "holdPercent": "0%",
-            "stockDollars": "$0.00",
-            "stockPercent": "0%"
+            "swingDollars": "-$30.00",
+            "swingPercent": "-7.14%",
+            "holdDollars": "-$20.00",
+            "holdPercent": "-7.14%",
+            "stockDollars": "-$50.00",
+            "stockPercent": "-7.14%"
           }
         },
         "wallets": {
           "swing": {
-            "wallet200": {
-              "buyPrice": 200,
-              "investment": 240,
-              "sharesLeft": 1.2,
-              "splitAdjustedBuyPrice": 100,
-              "splitAdjustedShares": 2.4
-            },
             "wallet100": {
               "buyPrice": 100,
+              "investment": 240,
+              "sharesLeft": 2.4
+            },
+            "wallet120": {
+              "buyPrice": 120,
               "investment": 180,
-              "sharesLeft": 1.8
+              "sharesLeft": 1.5
             }
           },
           "hold": {
-            "wallet200": {
-              "buyPrice": 200,
-              "investment": 160,
-              "sharesLeft": 0.8,
-              "splitAdjustedBuyPrice": 100,
-              "splitAdjustedShares": 1.6
-            },
             "wallet100": {
               "buyPrice": 100,
+              "investment": 160,
+              "sharesLeft": 1.6
+            },
+            "wallet120": {
+              "buyPrice": 120,
               "investment": 120,
-              "sharesLeft": 1.2
+              "sharesLeft": 1.0
             }
           }
         },
@@ -333,11 +325,11 @@
               "action": "Buy",
               "type": "Split",
               "signal": "LBD",
-              "price": "$100.00",
+              "price": "$120.00",
               "lbd": "-",
               "inv": "$300.00",
               "sellDollars": "-",
-              "qty": "3.00000",
+              "qty": "2.50000",
               "note": "Post-split transaction"
             }
           ]

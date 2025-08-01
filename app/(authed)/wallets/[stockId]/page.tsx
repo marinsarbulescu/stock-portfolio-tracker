@@ -1489,43 +1489,13 @@ const unrealizedPlStats = useMemo(() => {
 
     wallets.forEach(wallet => {
         if ((wallet.remainingShares ?? 0) > SHARE_EPSILON && typeof wallet.buyPrice === 'number') {
-          // Apply split adjustments to wallet values if there are splits
-          let adjustedBuyPrice = wallet.buyPrice;
-          let adjustedRemainingShares = wallet.remainingShares!;
+          // Since wallets are now permanently updated during stock splits,
+          // we use the wallet values directly without runtime split adjustments
+          const buyPrice = wallet.buyPrice;
+          const remainingShares = wallet.remainingShares!;
           
-          if (stockSplits.length > 0) {
-            // Create a properly typed wallet object for the split adjustment function
-            const walletForSplitAdjustment = {
-              id: wallet.id,
-              buyPrice: wallet.buyPrice,
-              remainingShares: wallet.remainingShares ?? 0,
-              totalSharesQty: wallet.totalSharesQty ?? 0
-            };
-            
-            // Find the buy transaction that created this wallet to get the correct date
-            // For now, we'll determine wallet creation timing based on price
-            // Wallets at $200 were created before the split, wallets at $100 were created after
-            let walletPurchaseDate = '2000-01-01'; // Default early date for price-based detection
-            
-            // Simple heuristic: if the buy price is $200, it was before the split
-            // if the buy price is $100, it was after the split
-            if (Math.abs(wallet.buyPrice - 200) < 0.01) {
-              walletPurchaseDate = '2025-07-01'; // Before split
-            } else if (Math.abs(wallet.buyPrice - 100) < 0.01) {
-              walletPurchaseDate = '2025-07-03'; // After split
-            }
-            
-            const adjustments = applySplitAdjustmentsToWallet(
-              walletForSplitAdjustment, 
-              stockSplits, 
-              walletPurchaseDate
-            );
-            adjustedBuyPrice = adjustments.adjustedBuyPrice;
-            adjustedRemainingShares = adjustments.adjustedRemainingShares;
-          }
-          
-          const unrealizedForWallet = (currentPrice - adjustedBuyPrice) * adjustedRemainingShares;
-          const costBasisForWallet = adjustedBuyPrice * adjustedRemainingShares;
+          const unrealizedForWallet = (currentPrice - buyPrice) * remainingShares;
+          const costBasisForWallet = buyPrice * remainingShares;
   
           if (wallet.walletType === 'Swing') {
             totalUnrealizedSwingPL += unrealizedForWallet;

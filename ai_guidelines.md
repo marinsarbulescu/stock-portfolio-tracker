@@ -18,6 +18,7 @@
 ## Testing & E2E Guidelines
 - **Keep E2E tests updated**: Always check if the E2E tests need to be updated, after making changes to the codebase
 - **Use established patterns for new E2E tests**: When creating new E2E tests, use the patterns established in existing E2E tests like wallet-add-transaction.spec.ts
+- **Don't run headed tests unless necessary**
 - **Correct syntax for running E2E Tests**: The correct syntax for running the E2E tests is "npx playwright test e2e/portfolio/portfolio-create-and-edit-stock.spec.ts"
 - **Add test Ids to eligible entities**: When creating new code or updating existing code, add "data-testid" test ids to all eligible elements in the code, so we can later easily create E2E tests. Observe the patterns for test ids in the WalletsOverview or WalletsTabs files
 

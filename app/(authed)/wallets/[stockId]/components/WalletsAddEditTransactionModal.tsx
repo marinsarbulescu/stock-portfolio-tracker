@@ -867,6 +867,105 @@ export default function TransactionForm({
             // === END: UPDATED WALLET UPDATE/CREATE LOGIC ================
             // ============================================================
 
+            // ============================================================
+            // === START: STOCK SPLIT WALLET UPDATE LOGIC =================
+            // ============================================================
+            if (action === 'StockSplit' && splitRatioValue) {
+                console.log('[StockSplit] Processing wallet updates for stock split...');
+                
+                try {
+                    // Fetch all existing wallets for this stock
+                    const { data: existingWallets, errors: fetchErrors } = await client.models.StockWallet.list({
+                        filter: { portfolioStockId: { eq: portfolioStockId } },
+                        selectionSet: [
+                            'id', 'buyPrice', 'totalSharesQty', 'remainingShares', 
+                            'totalInvestment', 'sharesSold', 'realizedPl', 'sellTxnCount', 
+                            'realizedPlPercent', 'walletType', 'tpValue', 'tpPercent'
+                        ]
+                    });
+                    
+                    if (fetchErrors) {
+                        console.error('[StockSplit] Error fetching wallets:', fetchErrors);
+                        throw fetchErrors;
+                    }
+                    
+                    if (!existingWallets || existingWallets.length === 0) {
+                        console.log('[StockSplit] No wallets found to update for stock split');
+                        return;
+                    }
+                    
+                    console.log(`[StockSplit] Found ${existingWallets.length} wallets to update`);
+                    
+                    // Process each wallet: apply split adjustments using direct database updates
+                    // Note: We use direct updates here instead of adjustWalletContribution because:
+                    // 1. Stock splits affect ALL existing wallets proportionally (not single contributions)
+                    // 2. We need to modify buyPrice (price per share) which adjustWalletContribution doesn't handle
+                    // 3. adjustWalletContribution is designed for delta-based changes, not proportional scaling
+                    // 4. Split adjustments require scaling existing values, not adding/subtracting new ones
+                    for (const wallet of existingWallets) {
+                        if (!wallet.id) continue;
+                        
+                        const originalBuyPrice = wallet.buyPrice || 0;
+                        const originalTotalShares = wallet.totalSharesQty || 0;
+                        const originalRemainingShares = wallet.remainingShares || 0;
+                        const originalSharesSold = wallet.sharesSold || 0;
+                        
+                        // Calculate split-adjusted values
+                        const adjustedBuyPrice = originalBuyPrice / splitRatioValue;
+                        const adjustedTotalShares = originalTotalShares * splitRatioValue;
+                        const adjustedRemainingShares = originalRemainingShares * splitRatioValue;
+                        const adjustedSharesSold = originalSharesSold * splitRatioValue;
+                        
+                        // Update TP value if it exists (also needs split adjustment)
+                        const originalTpValue = wallet.tpValue || 0;
+                        const adjustedTpValue = originalTpValue > 0 ? originalTpValue / splitRatioValue : 0;
+                        
+                        console.log(`[StockSplit] Updating wallet ${wallet.id}:`, {
+                            buyPrice: `${originalBuyPrice} → ${adjustedBuyPrice}`,
+                            totalShares: `${originalTotalShares} → ${adjustedTotalShares}`,
+                            remainingShares: `${originalRemainingShares} → ${adjustedRemainingShares}`,
+                            sharesSold: `${originalSharesSold} → ${adjustedSharesSold}`,
+                            tpValue: `${originalTpValue} → ${adjustedTpValue}`
+                        });
+                        
+                        // Prepare wallet update payload
+                        const walletUpdatePayload = {
+                            id: wallet.id,
+                            buyPrice: adjustedBuyPrice,
+                            totalSharesQty: adjustedTotalShares,
+                            remainingShares: adjustedRemainingShares,
+                            sharesSold: adjustedSharesSold,
+                            tpValue: adjustedTpValue,
+                            // Keep other fields unchanged
+                            totalInvestment: wallet.totalInvestment, // Investment amount stays the same
+                            realizedPl: wallet.realizedPl, // P/L dollar amount stays the same
+                            sellTxnCount: wallet.sellTxnCount,
+                            realizedPlPercent: wallet.realizedPlPercent, // Percentage stays the same
+                            walletType: wallet.walletType,
+                            tpPercent: wallet.tpPercent
+                        };
+                        
+                        // Update the wallet in the database
+                        const { errors: updateErrors } = await client.models.StockWallet.update(walletUpdatePayload);
+                        if (updateErrors) {
+                            console.error(`[StockSplit] Error updating wallet ${wallet.id}:`, updateErrors);
+                            throw updateErrors;
+                        }
+                        
+                        console.log(`[StockSplit] Successfully updated wallet ${wallet.id}`);
+                    }
+                    
+                    console.log('[StockSplit] All wallets updated successfully for stock split');
+                    
+                } catch (splitError) {
+                    console.error('[StockSplit] Error updating wallets for stock split:', splitError);
+                    throw new Error(`Stock split transaction saved, but failed to update wallets: ${(splitError as Error).message}`);
+                }
+            } // End if (action === 'StockSplit') wallet logic
+            // ============================================================
+            // === END: STOCK SPLIT WALLET UPDATE LOGIC ===================
+            // ============================================================
+
             // Reset form only on successful CREATE
             setDate(getTodayDateString());
             setAction(forceAction ?? defaultFormState.action);
