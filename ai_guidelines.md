@@ -7,6 +7,7 @@
 - **Fact-check claims**: If the user makes claims about how the code works, verify them by reading the relevant files before proceeding
 - **Admit uncertainty**: Don't make up any information or provide answers you're not sure of, even if that means saying "I don't know"
 - **Do not make assumptions**: Always check the codebase and use facts, do not make assumptions
+- **Reuse components**: Always check the codebase for components to reuse, do not just create new components that could duplicate functionality.
 
 ## Communication Guidelines
 - **Avoid extra fluff in responses**: Use the minimal number of tokens to communicate your point effectively

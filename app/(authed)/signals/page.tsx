@@ -6,6 +6,7 @@ import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
 import { usePrices } from '@/app/contexts/PriceContext'; // Import context hook
 import { mergeTestPricesWithRealPrices } from '@/app/utils/priceUtils'; // Import test price utility
+import { applySplitAdjustments, extractStockSplits } from '@/app/utils/splitUtils'; // Import split adjustment utilities
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { calculateTotalRealizedSwingPL, calculateSingleSalePL, type TransactionForCalculation, type WalletForCalculation } from '@/app/utils/financialCalculations';
 import SignalsOverview from './components/SignalsOverview';
@@ -347,16 +348,28 @@ export default function HomePage() {
             };
 
             const sortedStockTxns = [...stockTxns].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
-            sortedStockTxns.forEach(txn => {
+            
+            // Apply stock split adjustments to transaction prices before processing
+            const stockSplits = extractStockSplits(sortedStockTxns);
+            const splitAdjustedTxns = sortedStockTxns.map(txn => {
+                const adjustment = applySplitAdjustments(txn, stockSplits);
+                return {
+                    ...txn,
+                    price: adjustment.adjustedPrice || txn.price,
+                    quantity: adjustment.adjustedShares || txn.quantity
+                };
+            });
+            
+            splitAdjustedTxns.forEach(txn => {
                 // Update swingBuyCount (specific to Swing and Split-to-Swing buys)
                 if (txn.action === 'Buy' && (txn.txnType === 'Swing' || (txn.txnType === 'Split' && (txn.swingShares ?? 0) > epsilon))) {
                     stockData.swingBuyCount++;
                 }
 
-                // Update lastBuy (for any Buy action: Swing, Hold, Split)
-                if (txn.action === 'Buy') {
-                    if (!stockData.lastBuy || (txn.date && txn.date >= stockData.lastBuy.date)) {
-                        stockData.lastBuy = { date: txn.date, price: txn.price ?? null };
+                // Update lastBuy (for Buy actions with actual prices: Swing, Hold, Split - but exclude StockSplit)
+                if (txn.action === 'Buy' && typeof txn.price === 'number' && txn.price > 0) {
+                    if (!stockData.lastBuy || (txn.date && txn.date > stockData.lastBuy.date)) {
+                        stockData.lastBuy = { date: txn.date, price: txn.price };
                     }
                 }
                 // Modified to include 'Hold' type for lastSell (from previous step)
