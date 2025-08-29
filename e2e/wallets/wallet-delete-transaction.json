@@ -5,6 +5,8 @@
     "name": "E2E Delete Transaction Test Stock",
     "stockType": "Stock",
     "region": "US",
+    "marketCategory": "US_Index",
+    "riskGrowthProfile": "Tortoise",
     "pdp": 5,
     "plr": 2,
     "budget": 600,
@@ -30,7 +32,7 @@
             "pdp": "5%",
             "shr": "50% Swing",
             "plr": "2",
-            "htp": "0%"
+            "htp": "N/A"
           },
           "txnsAndShares": {
             "buys": 1,
@@ -80,7 +82,7 @@
             "pdp": "5%",
             "shr": "50% Swing",
             "plr": "2",
-            "htp": "0%"
+            "htp": "N/A"
           },
           "txnsAndShares": {
             "buys": 0,
@@ -123,7 +125,7 @@
             "pdp": "5%",
             "shr": "50% Swing",
             "plr": "2",
-            "htp": "0%"
+            "htp": "N/A"
           },
           "txnsAndShares": {
             "buys": 1,
@@ -167,7 +169,7 @@
             "pdp": "5%",
             "shr": "50% Swing",
             "plr": "2",
-            "htp": "0%"
+            "htp": "N/A"
           },
           "txnsAndShares": {
             "buys": 0,
@@ -210,7 +212,7 @@
             "pdp": "5%",
             "shr": "50% Swing",
             "plr": "2",
-            "htp": "0%"
+            "htp": "N/A"
           },
           "txnsAndShares": {
             "buys": 1,
@@ -254,7 +256,7 @@
             "pdp": "5%",
             "shr": "50% Swing",
             "plr": "2",
-            "htp": "0%"
+            "htp": "N/A"
           },
           "txnsAndShares": {
             "buys": 0,

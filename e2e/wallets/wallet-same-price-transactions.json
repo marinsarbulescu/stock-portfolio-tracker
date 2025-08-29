@@ -5,6 +5,8 @@
     "name": "E2E Same Price Test",
     "stockType": "ETF",
     "region": "US",
+    "marketCategory": "US_Index",
+    "riskGrowthProfile": "Tortoise",
     "pdp": 5,
     "plr": 2,
     "budget": 600,

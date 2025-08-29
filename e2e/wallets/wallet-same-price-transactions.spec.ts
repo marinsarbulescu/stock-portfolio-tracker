@@ -332,6 +332,8 @@ test.describe('Wallet Same Price Transactions (JSON-driven)', () => {
             name: testConfig.stock.name,
             stockType: testConfig.stock.stockType,
             region: testConfig.stock.region,
+            marketCategory: testConfig.stock.marketCategory,
+            riskGrowthProfile: testConfig.stock.riskGrowthProfile,
             pdp: testConfig.stock.pdp,
             plr: testConfig.stock.plr,
             budget: testConfig.stock.budget,

@@ -82,15 +82,15 @@ export default function WalletsOverview({
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                     <div>
                       <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>PDP</p>
-                      <p data-testid="overview-settings-pdp">{stockPdp != null ? `${stockPdp}%` : 'Not set'}</p>
+                      <p data-testid="overview-settings-pdp">{stockPdp != null ? `${stockPdp}%` : 'N/A'}</p>
                       <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>SHR</p>
-                      <p data-testid="overview-settings-shr">{stockShr != null ? `${stockShr}% Swing` : 'Not set'}</p>
+                      <p data-testid="overview-settings-shr">{stockShr != null ? `${stockShr}% Swing` : 'N/A'}</p>
                     </div>
                     <div>
                       <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>PLR</p>
-                      <p data-testid="overview-settings-plr">{stockPlr != null ? stockPlr : 'Not set'}</p>
+                      <p data-testid="overview-settings-plr">{stockPlr != null ? stockPlr : 'N/A'}</p>
                       <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>HTP</p>
-                      <p data-testid="overview-settings-htp">{stockHtp != null ? `${stockHtp}%` : 'Not set'}</p>
+                      <p data-testid="overview-settings-htp">{stockHtp != null && stockHtp !== 0 ? `${stockHtp}%` : 'N/A'}</p>
                     </div>
                 </div>
               </div>

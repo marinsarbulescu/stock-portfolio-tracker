@@ -604,6 +604,8 @@ test.describe('Wallet Update Transactions Price', () => {
             name: scenario.stock.name,
             stockType: scenario.stock.stockType as "Stock" | "ETF" | "Crypto",
             region: scenario.stock.region as "APAC" | "EU" | "Intl" | "US",
+            marketCategory: scenario.stock.marketCategory as "Crypto" | "APAC_Index" | "China_Index" | "Emerging_Index" | "Europe_Index" | "International_Index" | "Metals" | "Oil" | "Opportunity" | "US_Index",
+            riskGrowthProfile: scenario.stock.riskGrowthProfile as "Hare" | "Tortoise",
             pdp: scenario.stock.pdp,
             plr: scenario.stock.plr,
             budget: scenario.stock.budget,

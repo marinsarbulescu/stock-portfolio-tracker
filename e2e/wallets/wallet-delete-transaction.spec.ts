@@ -253,7 +253,7 @@ async function verifyInitialSettings(
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toHaveText(`${stockConfig.pdp}%`);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toHaveText(`${stockConfig.swingHoldRatio}% Swing`);
     await expect(page.locator('[data-testid="overview-settings-plr"]')).toHaveText(stockConfig.plr.toString());
-    await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(`${stockConfig.htp || 0}%`);
+    await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(stockConfig.htp != null && stockConfig.htp !== 0 ? `${stockConfig.htp}%` : 'N/A');
     
     // Verify initial transaction counts are zero
     await expect(page.locator('[data-testid="overview-txns-buys"]')).toHaveText('0');
@@ -279,6 +279,8 @@ test.describe('Wallet Page - Delete Transactions and Verify Wallets (JSON-driven
                 owner: E2E_TEST_USER_OWNER_ID,
                 stockType: stockConfig.stockType as 'Stock' | 'ETF' | 'Crypto',
                 region: stockConfig.region as 'APAC' | 'EU' | 'Intl' | 'US',
+                marketCategory: stockConfig.marketCategory,
+                riskGrowthProfile: stockConfig.riskGrowthProfile,
                 pdp: stockConfig.pdp,
                 plr: stockConfig.plr,
                 budget: stockConfig.budget,

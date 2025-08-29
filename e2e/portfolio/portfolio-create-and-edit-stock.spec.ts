@@ -26,7 +26,8 @@ import {
     type PortfolioStockCreateData,
 } from '../utils/dataHelpers';
 import { E2E_TEST_USER_OWNER_ID, E2E_TEST_USERNAME } from '../utils/testCredentials';
-import { clearBrowserState, loginUser } from '../utils/pageHelpers';
+import { clearBrowserState, loginUser, createStockViaUI } from '../utils/pageHelpers';
+import { getMarketCategoryLabel, getRiskGrowthProfileLabel } from '../../app/(authed)/portfolio/types';
 
 // Import the JSON helper
 import { 
@@ -89,68 +90,36 @@ async function navigateToPortfolioPage(page: any) {
 async function toggleAllColumnsVisible(page: any) {
     console.log('[PageHelper] Toggling all columns visible...');
     
-    // List of column keys that should be toggled
-    const columnKeys = [
-        'name',
-        'stockType', 
-        'region',
-        'stockTrend',
-        'currentPrice',
-        'pdp',
-        'htp',
-        'plr',
-        'stockCommission',
-        'budget',
-        'investment'
+    // List of column labels that should be toggled (using the actual labels from PORTFOLIO_COLUMN_LABELS)
+    const columnLabels = [
+        'Name',
+        'Type', 
+        'Region',
+        'Trend',
+        'Market',
+        'Risk/Growth',
+        'Last Price',
+        'PDP (%)',
+        'HTP (%)',
+        'PLR (%)',
+        'Comm (%)',
+        'Budget',
+        'tInv',
+        'r-Inv'
     ];
     
-    for (const columnKey of columnKeys) {
-        const checkbox = page.locator(`input[type="checkbox"]`).nth(columnKeys.indexOf(columnKey));
-        await checkbox.check();
-        await expect(checkbox).toBeChecked();
+    for (const columnLabel of columnLabels) {
+        // Find the checkbox by its label text
+        const checkbox = page.locator(`label:has-text("${columnLabel}") input[type="checkbox"]`);
+        if (!(await checkbox.isChecked())) {
+            await checkbox.check();
+        }
     }
     
     console.log('[PageHelper] All columns toggled visible.');
 }
 
 // Helper function to create stock via UI
-async function createStockViaUI(page: any, stockData: PortfolioCreateEditTestConfig['initialStock']) {
-    console.log('[PageHelper] Creating stock via UI...');
-    
-    // Click add stock button
-    const addStockButton = page.locator('[data-testid="portfolio-page-add-stock-button"]');
-    await expect(addStockButton).toBeVisible({ timeout: 10000 });
-    await addStockButton.click();
-    
-    // Wait for symbol field to be visible (indicating modal is ready)
-    const symbolField = page.locator('#symbol');
-    await expect(symbolField).toBeVisible({ timeout: 10000 });
-    
-    // Fill form fields
-    await page.locator('#symbol').fill(stockData.symbol);
-    await page.locator('#type').selectOption(stockData.stockType);
-    await page.locator('#region').selectOption(stockData.region);
-    if (stockData.stockTrend) {
-        await page.locator('#stockTrend').selectOption(stockData.stockTrend);
-    }
-    await page.locator('#name').fill(stockData.name);
-    await page.locator('#pdp').fill(stockData.pdp.toString());
-    await page.locator('#plr').fill(stockData.plr.toString());
-    await page.locator('#shr').fill(stockData.swingHoldRatio.toString());
-    await page.locator('#budget').fill(stockData.budget.toString());
-    await page.locator('#commission').fill(stockData.stockCommission.toString());
-    await page.locator('#htp').fill(stockData.htp!.toString());
-    
-    // Submit form
-    const submitButton = page.locator('button[type="submit"]:has-text("Add Stock")');
-    await submitButton.click();
-    
-    // Wait for modal to close by checking symbol field is no longer visible
-    await expect(symbolField).not.toBeVisible({ timeout: 15000 });
-    
-    console.log('[PageHelper] Stock created via UI.');
-}
-
 // Helper function to verify stock values in table
 async function verifyStockInTable(page: any, stockData: PortfolioCreateEditTestConfig['initialStock']) {
     console.log('[PageHelper] Verifying stock values in table...');
@@ -162,7 +131,7 @@ async function verifyStockInTable(page: any, stockData: PortfolioCreateEditTestC
     await expect(symbolLink).toBeVisible({ timeout: 10000 });
     await expect(symbolLink).toHaveText(symbol);
     
-    // Verify name
+    // Verify name (should be visible after toggling columns)
     const nameCell = page.locator(`[data-testid="portfolio-page-table-name-${symbol}"]`).first();
     await expect(nameCell).toBeVisible();
     await expect(nameCell).toHaveText(stockData.name);
@@ -181,6 +150,16 @@ async function verifyStockInTable(page: any, stockData: PortfolioCreateEditTestC
     const trendCell = page.locator(`[data-testid="portfolio-page-table-stockTrend-${symbol}"]`).first();
     await expect(trendCell).toBeVisible();
     await expect(trendCell).toHaveText(stockData.stockTrend || '-');
+    
+    // Verify market category
+    const marketCategoryCell = page.locator(`[data-testid="portfolio-page-table-marketCategory-${symbol}"]`).first();
+    await expect(marketCategoryCell).toBeVisible();
+    await expect(marketCategoryCell).toHaveText(getMarketCategoryLabel(stockData.marketCategory));
+    
+    // Verify risk/growth profile
+    const riskGrowthCell = page.locator(`[data-testid="portfolio-page-table-riskGrowthProfile-${symbol}"]`).first();
+    await expect(riskGrowthCell).toBeVisible();
+    await expect(riskGrowthCell).toHaveText(getRiskGrowthProfileLabel(stockData.riskGrowthProfile));
     
     // Verify PDP
     const pdpCell = page.locator(`[data-testid="portfolio-page-table-pdp-${symbol}"]`).first();
@@ -230,6 +209,8 @@ async function openEditModalAndVerifyValues(page: any, stockData: PortfolioCreat
     await expect(page.locator('#symbol')).toHaveValue(stockData.symbol.toUpperCase());
     await expect(page.locator('#type')).toHaveValue(stockData.stockType);
     await expect(page.locator('#region')).toHaveValue(stockData.region);
+    await expect(page.locator('#marketCategory')).toHaveValue(stockData.marketCategory);
+    await expect(page.locator('#riskGrowthProfile')).toHaveValue(stockData.riskGrowthProfile);
     if (stockData.stockTrend) {
         await expect(page.locator('#stockTrend')).toHaveValue(stockData.stockTrend);
     }
@@ -251,6 +232,8 @@ async function editStockValues(page: any, editData: PortfolioCreateEditTestConfi
     // Update form fields with new values
     await page.locator('#type').selectOption(editData.stockType);
     await page.locator('#region').selectOption(editData.region);
+    await page.locator('#marketCategory').selectOption(editData.marketCategory);
+    await page.locator('#riskGrowthProfile').selectOption(editData.riskGrowthProfile);
     if (editData.stockTrend) {
         await page.locator('#stockTrend').selectOption(editData.stockTrend);
     }
@@ -291,6 +274,16 @@ async function verifyUpdatedStockInTable(page: any, editData: PortfolioCreateEdi
     const trendCell = page.locator(`[data-testid="portfolio-page-table-stockTrend-${symbol}"]`).first();
     await expect(trendCell).toBeVisible();
     await expect(trendCell).toHaveText(editData.stockTrend || '-');
+    
+    // Verify market category
+    const marketCategoryCell = page.locator(`[data-testid="portfolio-page-table-marketCategory-${symbol}"]`).first();
+    await expect(marketCategoryCell).toBeVisible();
+    await expect(marketCategoryCell).toHaveText(editData.marketCategory);
+    
+    // Verify risk/growth profile
+    const riskGrowthCell = page.locator(`[data-testid="portfolio-page-table-riskGrowthProfile-${symbol}"]`).first();
+    await expect(riskGrowthCell).toBeVisible();
+    await expect(riskGrowthCell).toHaveText(editData.riskGrowthProfile);
     
     // Verify PDP
     const pdpCell = page.locator(`[data-testid="portfolio-page-table-pdp-${symbol}"]`).first();
@@ -363,36 +356,30 @@ test.describe('Portfolio - Create and Edit Stock (JSON-driven)', () => {
         console.log(`[${testConfig.scenario}] Step 1: Navigating to Portfolio page...`);
         await navigateToPortfolioPage(page);
 
-        // Step 2: Toggle all columns visible
+        // Step 2: Toggle all columns visible (once, for the entire test)
         console.log(`[${testConfig.scenario}] Step 2: Toggling all columns visible...`);
         await toggleAllColumnsVisible(page);
 
-        // Step 3: Create stock via UI
+        // Step 3: Create stock via UI (modal operation - stays on same page)
         console.log(`[${testConfig.scenario}] Step 3: Creating stock via UI...`);
-        await createStockViaUI(page, testConfig.initialStock);
+        await createStockViaUI(page, { ...testConfig.initialStock, owner: E2E_TEST_USER_OWNER_ID });
 
         // Step 4: Verify stock was created with correct values
         console.log(`[${testConfig.scenario}] Step 4: Verifying stock creation...`);
+        // Re-toggle columns visible to ensure they're still visible after stock creation
+        await toggleAllColumnsVisible(page);
         await verifyStockInTable(page, testConfig.initialStock);
 
-        // Step 5: Open edit modal and verify prefilled values
+        // Step 5: Open edit modal and verify prefilled values (modal operation - stays on same page)
         console.log(`[${testConfig.scenario}] Step 5: Opening edit modal and verifying prefilled values...`);
         await openEditModalAndVerifyValues(page, testConfig.initialStock);
 
-        // Step 6: Edit stock values
+        // Step 6: Edit stock values (modal operation - stays on same page)
         console.log(`[${testConfig.scenario}] Step 6: Editing stock values...`);
         await editStockValues(page, testConfig.editedStock);
 
-        // Step 7: Navigate back to Portfolio page
-        console.log(`[${testConfig.scenario}] Step 7: Navigating back to Portfolio page...`);
-        await navigateToPortfolioPage(page);
-
-        // Step 8: Toggle all columns visible again
-        console.log(`[${testConfig.scenario}] Step 8: Toggling all columns visible again...`);
-        await toggleAllColumnsVisible(page);
-
-        // Step 9: Verify updated stock values
-        console.log(`[${testConfig.scenario}] Step 9: Verifying updated stock values...`);
+        // Step 7: Verify updated stock values (columns should still be visible after editing)
+        console.log(`[${testConfig.scenario}] Step 7: Verifying updated stock values...`);
         await verifyUpdatedStockInTable(page, testConfig.editedStock);
 
         // Get the stock ID for cleanup

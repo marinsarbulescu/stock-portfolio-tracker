@@ -93,6 +93,8 @@ export default function HomePage() {
             name: stock.name || '',
             stockType: 'Stock' as const,
             region: 'US' as const,
+            marketCategory: 'US_Index' as const,
+            riskGrowthProfile: 'Hare' as const,
             owner: '',
             isHidden: null,
             archived: null,
@@ -102,9 +104,9 @@ export default function HomePage() {
             transactions: null as unknown,
             stockWallets: null as unknown,
             budget: null,
-            pdp: null,
-            plr: null,
-            swingHoldRatio: null,
+            pdp: 1.0, // Default value for required field
+            plr: 1.0, // Default value for required field
+            swingHoldRatio: 50.0, // Default value for required field
             stockCommission: null,
             htp: null,
             stockTrend: null,

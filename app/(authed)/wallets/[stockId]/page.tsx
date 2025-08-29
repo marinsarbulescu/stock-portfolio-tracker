@@ -300,6 +300,9 @@ export default function StockWalletPage() {
     const [stockPlr, setStockPlr] = useState<number | null | undefined>(undefined);
     const [stockCommission, setStockCommission] = useState<number | null | undefined>(undefined);
     const [stockHtp, setStockHtp] = useState<number | null | undefined>(undefined); // HTP percentage
+    const [stockTrend, setStockTrend] = useState<string | null | undefined>(undefined);
+    const [marketCategory, setMarketCategory] = useState<string | null | undefined>(undefined);
+    const [riskGrowthProfile, setRiskGrowthProfile] = useState<string | null | undefined>(undefined);
 
     const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
 
@@ -385,6 +388,27 @@ export default function StockWalletPage() {
         try {
             const { data: stockData, errors } = await client.models.PortfolioStock.get({
                 id: stockId
+            }, {
+                selectionSet: [
+                    'id',
+                    'symbol',
+                    'name',
+                    'region',
+                    'stockType',
+                    'stockTrend',
+                    'marketCategory',
+                    'riskGrowthProfile',
+                    'budget',
+                    'testPrice',
+                    'pdp',
+                    'plr',
+                    'isHidden',
+                    'archived',
+                    'archivedAt',
+                    'swingHoldRatio',
+                    'stockCommission',
+                    'htp'
+                ]
             });
 
             if (errors) {
@@ -402,6 +426,9 @@ export default function StockWalletPage() {
                 setStockShr(stockData.swingHoldRatio);
                 setStockCommission(stockData.stockCommission);
                 setStockHtp(stockData.htp);
+                setStockTrend(stockData.stockTrend);
+                setMarketCategory(stockData.marketCategory);
+                setRiskGrowthProfile(stockData.riskGrowthProfile);
             }
         } catch (err: unknown) {
             console.error('Error fetching current stock:', err);
@@ -2063,8 +2090,11 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 id: stockId,
                 symbol: stockSymbol,
                 name: name,
-                stockType: 'Stock' as const, // Default value
-                region: 'US' as const, // Default value
+                stockType: currentStockData?.stockType ?? 'Stock' as const,
+                region: currentStockData?.region ?? 'US' as const,
+                stockTrend: stockTrend,
+                marketCategory: marketCategory,
+                riskGrowthProfile: riskGrowthProfile,
                 budget: stockBudget,
                 pdp: stockPdp,
                 swingHoldRatio: stockShr,

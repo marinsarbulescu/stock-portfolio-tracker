@@ -14,6 +14,8 @@ export type PortfolioStockCreateInput = Omit<PortfolioStockDataType, 'id' | 'cre
 export type StockTypeValue = PortfolioStockDataType['stockType'];
 export type RegionValue = PortfolioStockDataType['region'];
 export type StockTrendValue = PortfolioStockDataType['stockTrend'];
+export type MarketCategoryValue = PortfolioStockDataType['marketCategory'];
+export type RiskGrowthProfileValue = PortfolioStockDataType['riskGrowthProfile'];
 
 // ===== PRICE-RELATED TYPES =====
 export interface PriceData {
@@ -32,6 +34,8 @@ export interface PortfolioColumnVisibilityState {
   stockType: boolean;
   region: boolean;
   stockTrend: boolean;
+  marketCategory: boolean;
+  riskGrowthProfile: boolean;
   currentPrice: boolean;
   pdp: boolean;
   htp: boolean;
@@ -51,6 +55,8 @@ export type SortableStockKey =
   | 'stockType'
   | 'region'
   | 'stockTrend'
+  | 'marketCategory'
+  | 'riskGrowthProfile'
   | 'currentPrice'
   | 'pdp'
   | 'htp'
@@ -155,6 +161,8 @@ export const STOCK_COLUMN_LABELS: Record<SortableStockKey, string> = {
   stockType: 'Type',
   region: 'Region',
   stockTrend: 'Trend',
+  marketCategory: 'Market',
+  riskGrowthProfile: 'Risk/Growth',
   currentPrice: 'Last Price',
   pdp: 'PDP (%)',
   htp: 'HTP (%)',
@@ -170,6 +178,8 @@ export const PORTFOLIO_COLUMN_LABELS: Record<PortfolioColumnKey, string> = {
   stockType: 'Type',
   region: 'Region',
   stockTrend: 'Trend',
+  marketCategory: 'Market',
+  riskGrowthProfile: 'Risk/Growth',
   currentPrice: 'Last Price',
   pdp: 'PDP (%)',
   htp: 'HTP (%)',
@@ -179,6 +189,36 @@ export const PORTFOLIO_COLUMN_LABELS: Record<PortfolioColumnKey, string> = {
   investment: 'tInv',
   riskInvestment: 'r-Inv',
 };
+
+// ===== DISPLAY LABEL MAPPINGS =====
+export const MARKET_CATEGORY_LABELS: Record<string, string> = {
+  'APAC_Index': 'APAC Index',
+  'China_Index': 'China Index',
+  'Crypto': 'Crypto',
+  'Emerging_Index': 'Emerging Index',
+  'Europe_Index': 'Europe Index',
+  'International_Index': 'International Index',
+  'Metals': 'Metals',
+  'Oil': 'Oil',
+  'Opportunity': 'Opportunity',
+  'US_Index': 'US Index',
+};
+
+export const RISK_GROWTH_PROFILE_LABELS: Record<string, string> = {
+  'Hare': 'Hare',
+  'Tortoise': 'Tortoise',
+};
+
+// Utility functions to get display labels
+export function getMarketCategoryLabel(key: string | null | undefined): string {
+  if (!key) return '-';
+  return MARKET_CATEGORY_LABELS[key] || key;
+}
+
+export function getRiskGrowthProfileLabel(key: string | null | undefined): string {
+  if (!key) return '-';
+  return RISK_GROWTH_PROFILE_LABELS[key] || key;
+}
 
 // ===== MODAL STYLES =====
 export const modalOverlayStyle: React.CSSProperties = {

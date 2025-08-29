@@ -191,7 +191,7 @@ async function verifyInitialSettings(
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toHaveText(`${stockConfig.pdp}%`);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toHaveText(`${stockConfig.swingHoldRatio}% Swing`);
     await expect(page.locator('[data-testid="overview-settings-plr"]')).toHaveText(stockConfig.plr.toString());
-    await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(`${stockConfig.htp || 0}%`);
+    await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(stockConfig.htp != null && stockConfig.htp !== 0 ? `${stockConfig.htp}%` : 'N/A');
     
     // Verify initial transaction counts are zero
     await expect(page.locator('[data-testid="overview-txns-buys"]')).toHaveText('0');
@@ -357,6 +357,8 @@ test.describe('Wallet Add Transaction', () => {
             name: scenario.stock.name,
             stockType: scenario.stock.stockType,
             region: scenario.stock.region,
+            marketCategory: scenario.stock.marketCategory,
+            riskGrowthProfile: scenario.stock.riskGrowthProfile,
             pdp: scenario.stock.pdp,
             plr: scenario.stock.plr,
             budget: scenario.stock.budget,

@@ -50,6 +50,8 @@ interface StockSplitTestConfig {
     name: string;
     stockType: string;
     region: string;
+    marketCategory: string;
+    riskGrowthProfile: string;
     pdp: number;
     plr: number;
     budget: number;
@@ -315,6 +317,8 @@ test.describe('Stock Split Transaction E2E Test', () => {
             name: config.stock.name,
             stockType: config.stock.stockType as "Stock" | "ETF" | "Crypto",
             region: config.stock.region as "US" | "EU" | "Intl" | "APAC",
+            marketCategory: config.stock.marketCategory as "Crypto" | "APAC_Index" | "China_Index" | "Emerging_Index" | "Europe_Index" | "International_Index" | "Metals" | "Oil" | "Opportunity" | "US_Index",
+            riskGrowthProfile: config.stock.riskGrowthProfile as "Hare" | "Tortoise",
             owner: E2E_TEST_USER_OWNER_ID,
             pdp: config.stock.pdp,
             plr: config.stock.plr,

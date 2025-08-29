@@ -17,7 +17,12 @@ import type {
   PortfolioColumnKey,
 } from '../types';
 
-import { STOCK_COLUMN_LABELS, PORTFOLIO_COLUMN_LABELS } from '../types';
+import { 
+  STOCK_COLUMN_LABELS, 
+  PORTFOLIO_COLUMN_LABELS, 
+  getMarketCategoryLabel, 
+  getRiskGrowthProfileLabel 
+} from '../types';
 
 export default function PortfolioTable({
   isLoading,
@@ -112,6 +117,24 @@ export default function PortfolioTable({
               onClick={() => requestStockSort('stockTrend')}
             >
               {STOCK_COLUMN_LABELS.stockTrend} {stockSortConfig?.key === 'stockTrend' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+            </th>
+          )}
+          {columnVisibility.marketCategory && (
+            <th
+              data-testid="portfolio-page-table-marketCategory-header"
+              style={{ padding: '5px', cursor: 'pointer' }}
+              onClick={() => requestStockSort('marketCategory')}
+            >
+              {PORTFOLIO_COLUMN_LABELS.marketCategory} {stockSortConfig?.key === 'marketCategory' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+            </th>
+          )}
+          {columnVisibility.riskGrowthProfile && (
+            <th
+              data-testid="portfolio-page-table-riskGrowthProfile-header"
+              style={{ padding: '5px', cursor: 'pointer' }}
+              onClick={() => requestStockSort('riskGrowthProfile')}
+            >
+              {PORTFOLIO_COLUMN_LABELS.riskGrowthProfile} {stockSortConfig?.key === 'riskGrowthProfile' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
             </th>
           )}
           {columnVisibility.currentPrice && (
@@ -247,6 +270,16 @@ export default function PortfolioTable({
                 <td
                   data-testid={`portfolio-page-table-stockTrend-${stock.symbol?.toUpperCase()}`}
                   style={cellStyle}>{stock.stockTrend ?? '-'}</td>
+              )}
+              {columnVisibility.marketCategory && (
+                <td
+                  data-testid={`portfolio-page-table-marketCategory-${stock.symbol?.toUpperCase()}`}
+                  style={cellStyle}>{stock.marketCategory ? getMarketCategoryLabel(stock.marketCategory) : '-'}</td>
+              )}
+              {columnVisibility.riskGrowthProfile && (
+                <td
+                  data-testid={`portfolio-page-table-riskGrowthProfile-${stock.symbol?.toUpperCase()}`}
+                  style={cellStyle}>{stock.riskGrowthProfile ? getRiskGrowthProfileLabel(stock.riskGrowthProfile) : '-'}</td>
               )}
               {columnVisibility.currentPrice && (
                 <td
