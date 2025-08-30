@@ -188,7 +188,7 @@ export default function TransactionForm({
     let tp_final: number | undefined | null = null;
 
     let pdpValue: number | null | undefined = null;
-    let stpValue: number | null | undefined = null;
+    let plrValue: number | null | undefined = null;
     let stockCommissionValue: number | null | undefined = null;
 
 
@@ -206,15 +206,15 @@ export default function TransactionForm({
             setError("Investment and positive Price are required to calculate quantity for Buy.");
             setIsLoading(false); return;        }
 
-        // Fetch stock details (ratio, pdp, stp)
+        // Fetch stock details (ratio, pdp, plr)
         let ratio = 1.0; // Default to 100% Swing
         try {
             //console.log("Fetching stock details for ratio/TP/LBD...");
             const { data: stock } = await client.models.PortfolioStock.get(
-                { id: portfolioStockId }, { selectionSet: ['swingHoldRatio', 'pdp', 'stp', 'stockCommission'] }
+                { id: portfolioStockId }, { selectionSet: ['swingHoldRatio', 'pdp', 'plr', 'stockCommission'] }
             );
             pdpValue = stock?.pdp;
-            stpValue = stock?.stp;
+            plrValue = stock?.plr;
             stockCommissionValue = stock?.stockCommission;
 
             if (buyType === 'Split') {
@@ -228,7 +228,7 @@ export default function TransactionForm({
             } else if (buyType === 'Hold') {
                 ratio = 0.0; // 0% Swing (100% Hold)
             } // Default ratio remains 1.0 (100% Swing) for 'Swing' type            // Calculate LBD/TP
-            if (typeof pdpValue === 'number' && typeof stpValue === 'number' && priceValue) {
+            if (typeof pdpValue === 'number' && typeof plrValue === 'number' && priceValue) {
               // Calculate target LBD (without commission adjustment)
               const targetLBD = priceValue - (priceValue * (pdpValue / 100));
               
@@ -252,7 +252,7 @@ export default function TransactionForm({
               }
               
               // Calculate base TP using current formula
-              const baseTP = priceValue + (priceValue * (pdpValue * stpValue / 100));
+              const baseTP = priceValue + (priceValue * (pdpValue * plrValue / 100));
                 // Apply commission adjustment to TP if commission is available and > 0
               if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
                 const commissionRate = stockCommissionValue / 100;
@@ -276,7 +276,7 @@ export default function TransactionForm({
               tp_final = parseFloat(tp_raw.toFixed(4)); // Use 4 decimal places for TP precision
               // --- End Rounding ---
             } else { 
-                //console.log("Could not calculate LBD/TP (PDP/STP invalid or price missing)"); 
+                //console.log("Could not calculate LBD/TP (PDP/PLR invalid or price missing)"); 
             }
 
         } catch (fetchErr: unknown) {
@@ -786,9 +786,9 @@ export default function TransactionForm({
 
                           // Recalculate TP for updated wallet using the same logic as new wallets
                           let updatedTpValue = null;
-                          if (finalTotalShares > 0 && finalInvestment > 0 && typeof pdpValue === 'number' && typeof stpValue === 'number' && pdpValue > 0 && stpValue > 0) {
+                          if (finalTotalShares > 0 && finalInvestment > 0 && typeof pdpValue === 'number' && typeof plrValue === 'number' && pdpValue > 0 && plrValue > 0) {
                               const avgBuyPrice = finalInvestment / finalTotalShares;
-                              const baseTP = avgBuyPrice + (avgBuyPrice * (pdpValue * stpValue / 100));
+                              const baseTP = avgBuyPrice + (avgBuyPrice * (pdpValue * plrValue / 100));
                               
                               // Apply commission adjustment if available (use the same stockCommissionValue from earlier fetch)
                               if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
@@ -817,7 +817,7 @@ export default function TransactionForm({
                       } else {
                           // 3b. Create new wallet (use rounded values directly)
                           //console.log(`[Wallet Logic - ${type}] No existing wallet found. Creating new...`);
-                          // Fetch PDP/STP (use previously fetched values)
+                          // Fetch PDP/PLR (use previously fetched values)
                           // Use rounded TP if available
                           const createPayload = {
                               portfolioStockId: portfolioStockId,

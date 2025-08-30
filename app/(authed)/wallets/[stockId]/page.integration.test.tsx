@@ -68,7 +68,7 @@ describe('StockWalletPage - Integration Tests', () => {
             name: 'Test Stock Inc.',
             budget: 10000,
             pdp: 5,
-            stp: 2,
+            plr: 2,
             swingHoldRatio: 50,
             owner: 'test-owner'
             // Add any other fields required by the PortfolioStock type if necessary

@@ -4,14 +4,12 @@ import { getYfinanceData } from '../functions/getYfinanceData/resource.js';
 import { getHistoricalData } from '../functions/getHistoricalData/resource.js';
 
 // Define Enums first
-const stockTypeEnum = a.enum(['Crypto', 'ETF', 'Stock']); // Changed order to alphabetical
-const regionEnum = a.enum(['APAC', 'EU', 'Intl', 'US']); // Alphabetical order: APAC, EU, Intl, US
-const stockTrendEnum = a.enum(['Down', 'Sideways', 'Up']); // Alphabetical order
-const marketCategoryEnum = a.enum(['APAC_Index', 'China_Index', 'Crypto', 'Emerging_Index', 'Europe_Index', 'International_Index', 'Metals', 'Oil', 'Opportunity', 'US_Index']); // Alphabetical order
-const riskGrowthProfileEnum = a.enum(['Hare', 'Tortoise']);
+const stockTypeEnum = a.enum(['Stock', 'ETF', 'Crypto']); // Changed order to match default in form example
+const regionEnum = a.enum(['APAC', 'EU', 'Intl', 'US']); // Intl = International, EU = Europe, APAC = Asia-Pacific
+const stockTrendEnum = a.enum(['Down', 'Up', 'Sideways']); // Stock trend direction
 
-const txnActionEnum = a.enum(['Buy', 'Div', 'Sell', 'SLP', 'StockSplit']); // Alphabetical order: Buy, Div, Sell, SLP, StockSplit
-const txnSignalEnum = a.enum(['_5DD', 'Cust', 'Div', 'EOM', 'Initial', 'LBD', 'TP', 'TPH', 'TPP']); // Alphabetical order
+const txnActionEnum = a.enum(['Buy', 'Sell', 'Div', 'SLP', 'StockSplit']); // Div = Dividend, SLP = Stock Lending Payment, StockSplit = Corporate Stock Split
+const txnSignalEnum = a.enum(['_5DD', 'Cust', 'Initial', 'EOM', 'LBD', 'TPH', 'TPP', 'TP', 'Div']);
 
 const walletTypeEnum = a.enum(['Swing', 'Hold']);
 
@@ -20,8 +18,6 @@ const schema = a.schema({
   StockType: stockTypeEnum,
   Region: regionEnum,
   StockTrend: stockTrendEnum,
-  MarketCategory: marketCategoryEnum,
-  RiskGrowthProfile: riskGrowthProfileEnum,
   TxnAction: txnActionEnum,
   TxnSignal: txnSignalEnum,
   WalletType: walletTypeEnum,
@@ -33,19 +29,17 @@ const schema = a.schema({
       stockType: a.ref('StockType').required(), // Reference the StockType enum, required
       region: a.ref('Region').required(),   // Reference the Region enum, required
       stockTrend: a.ref('StockTrend'), // Reference the StockTrend enum, optional
-      marketCategory: a.ref('MarketCategory').required(), // Reference the MarketCategory enum, required
-      riskGrowthProfile: a.ref('RiskGrowthProfile').required(), // Reference the RiskGrowthProfile enum, required
       name: a.string(), // Stock name, optional
-      pdp: a.float().required(),   // Price Drop Percent, required
-      stp: a.float(),   // Swing Take Profit, optional (was plr before)
+      pdp: a.float(),   // Price Drop Percent
+      plr: a.float(),   // Profit Loss Ratio
       budget: a.float(), // Annual budget, optional number
       testPrice: a.float(), // Test/override price for experimental purposes, optional
       isHidden: a.boolean().default(false), // Hide the stock from the reporting table
       archived: a.boolean().default(false), // Soft delete flag for archived stocks
       archivedAt: a.datetime(), // Timestamp when the stock was archived
-      swingHoldRatio: a.float().required(), // Swing-Hold Ratio, required
+      swingHoldRatio: a.float(),
       stockCommission: a.float(), // Commission for stock trades, optional
-      htp: a.float(), // Hold Take Profit percentage, optional
+      htp: a.float().default(0), // Hold Take Profit percentage, required, default 0
       transactions: a.hasMany('Transaction', 'portfolioStockId'),
       stockWallets: a.hasMany('StockWallet', 'portfolioStockId'),
       // Add owner field if not implicitly added by .authorization
@@ -74,7 +68,7 @@ const schema = a.schema({
       archived: a.boolean().default(false), // Soft delete flag for archived transactions
       archivedAt: a.datetime(), // Timestamp when the transaction was archived
       lbd: a.float(),             // Last Buy Dip ($). Calculated target price for a new Buy Signal. LBD = Buy Price - (Buy Price * PDP)
-      tp: a.float(),              // Take Profit ($). Calculated target price, at which we get a Sell signal. TP = Buy Price + (Buy Price * PDP * STP)
+      tp: a.float(),              // Take Profit ($). Calculated target price, at which we get a Sell signal. TP = Buy Price + (Buy Price * PDP * PLR)
       completedTxnId: a.string(), // Link to another Txn ID (for Sell closing a Buy?)
       txnProfit: a.float(),
       txnProfitPercent: a.float(),

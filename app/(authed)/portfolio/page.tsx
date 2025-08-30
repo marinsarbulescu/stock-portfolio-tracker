@@ -46,9 +46,8 @@ function PortfolioContent() {
   // Sort request handler
   const requestStockSort = (key: SortableStockKey) => {
     let direction: 'ascending' | 'descending' = 'ascending';
-    if (stockSortConfig && stockSortConfig.key === key) {
-      // Toggle between ascending and descending
-      direction = stockSortConfig.direction === 'ascending' ? 'descending' : 'ascending';
+    if (stockSortConfig && stockSortConfig.key === key && stockSortConfig.direction === 'ascending') {
+      direction = 'descending';
     }
     setStockSortConfig({ key, direction });
   };
@@ -77,12 +76,10 @@ function PortfolioContent() {
     stockType: false,
     region: false,
     stockTrend: false,
-    marketCategory: false,
-    riskGrowthProfile: false,
     currentPrice: false,
     pdp: true,
     htp: true,
-    stp: true,
+    plr: true,
     stockCommission: true,
     budget: false,
     investment: true,
@@ -264,14 +261,6 @@ function PortfolioContent() {
             valA = a.stockTrend?.toLowerCase() ?? '';
             valB = b.stockTrend?.toLowerCase() ?? '';
             break;
-          case 'marketCategory':
-            valA = a.marketCategory?.toLowerCase() ?? '';
-            valB = b.marketCategory?.toLowerCase() ?? '';
-            break;
-          case 'riskGrowthProfile':
-            valA = a.riskGrowthProfile?.toLowerCase() ?? '';
-            valB = b.riskGrowthProfile?.toLowerCase() ?? '';
-            break;
           case 'currentPrice':
             valA = mergedPrices[a.symbol ?? '']?.currentPrice ?? null;
             valB = mergedPrices[b.symbol ?? '']?.currentPrice ?? null;
@@ -284,9 +273,9 @@ function PortfolioContent() {
             valA = a.htp;
             valB = b.htp;
             break;
-          case 'stp':
-            valA = a.stp;
-            valB = b.stp;
+          case 'plr':
+            valA = a.plr;
+            valB = b.plr;
             break;
           case 'stockCommission':
             valA = a.stockCommission;
@@ -297,12 +286,12 @@ function PortfolioContent() {
             valB = b.budget;
             break;
           case 'investment':
-            valA = typeof stockInvestments[a.id] === 'number' ? stockInvestments[a.id] : 0;
-            valB = typeof stockInvestments[b.id] === 'number' ? stockInvestments[b.id] : 0;
+            valA = stockInvestments[a.id] ?? null;
+            valB = stockInvestments[b.id] ?? null;
             break;
           case 'riskInvestment':
-            valA = typeof stockRiskInvestments[a.id] === 'number' ? stockRiskInvestments[a.id] : 0;
-            valB = typeof stockRiskInvestments[b.id] === 'number' ? stockRiskInvestments[b.id] : 0;
+            valA = stockRiskInvestments[a.id] ?? null;
+            valB = stockRiskInvestments[b.id] ?? null;
             break;
           default:
             valA = '';
@@ -349,12 +338,10 @@ function PortfolioContent() {
           'region',
           'stockType',
           'stockTrend',
-          'marketCategory',
-          'riskGrowthProfile',
           'budget',
           'testPrice',
           'pdp',
-          'stp',
+          'plr',
           'isHidden',
           'archived',
           'archivedAt',

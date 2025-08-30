@@ -31,10 +31,8 @@
     "name": "E2EATXJSON Global Ventures",
     "stockType": "Stock",
     "region": "US",
-    "marketCategory": "US_Index",
-    "riskGrowthProfile": "Tortoise",
     "pdp": 5,
-    "stp": 2,
+    "plr": 2,
     "budget": 600,
     "swingHoldRatio": 70,
     "stockCommission": 0.1,
@@ -61,8 +59,8 @@
             "invested": 200,
             "pdp": "5%",
             "shr": "70% Swing",
-            "stp": "2",
-            "htp": "N/A"
+            "plr": "2",
+            "htp": "0%"
           },
           "txnsAndShares": {
             "buys": 1,
@@ -134,8 +132,8 @@
             "invested": 200,
             "pdp": "5%",
             "shr": "70% Swing",
-            "stp": "2",
-            "htp": "N/A"
+            "plr": "2",
+            "htp": "0%"
           },
           "txnsAndShares": {
             "buys": 1,
@@ -210,8 +208,8 @@
             "invested": 600,
             "pdp": "5%",
             "shr": "70% Swing",
-            "stp": "2",
-            "htp": "N/A"
+            "plr": "2",
+            "htp": "0%"
           },
           "txnsAndShares": {
             "buys": 2,
@@ -291,8 +289,8 @@
             "invested": 950,
             "pdp": "5%",
             "shr": "70% Swing",
-            "stp": "2",
-            "htp": "N/A"
+            "plr": "2",
+            "htp": "0%"
           },
           "txnsAndShares": {
             "buys": 3,
@@ -374,8 +372,8 @@
             "invested": 950,
             "pdp": "5%",
             "shr": "70% Swing",
-            "stp": "2",
-            "htp": "N/A"
+            "plr": "2",
+            "htp": "0%"
           },
           "txnsAndShares": {
             "buys": 3,
@@ -460,8 +458,8 @@
             "invested": 1050,
             "pdp": "5%",
             "shr": "70% Swing",
-            "stp": "2",
-            "htp": "N/A"
+            "plr": "2",
+            "htp": "0%"
           },
           "txnsAndShares": {
             "buys": 4,

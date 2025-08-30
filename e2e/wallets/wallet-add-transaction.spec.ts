@@ -118,7 +118,7 @@ async function verifyOverview(
     await expect(page.locator('[data-testid="overview-settings-invested"]')).toHaveText(formatCurrency(expectedOverview.settings.invested));
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toHaveText(expectedOverview.settings.pdp);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toHaveText(expectedOverview.settings.shr);
-    await expect(page.locator('[data-testid="overview-settings-stp"]')).toHaveText(expectedOverview.settings.stp);
+    await expect(page.locator('[data-testid="overview-settings-plr"]')).toHaveText(expectedOverview.settings.plr);
     await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(expectedOverview.settings.htp);
     console.log(`[OverviewHelper] ✅ Settings section verified`);
     
@@ -190,8 +190,8 @@ async function verifyInitialSettings(
     await expect(page.locator('[data-testid="overview-settings-invested"]')).toHaveText(formatCurrency(0)); // Should be $0.00 initially
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toHaveText(`${stockConfig.pdp}%`);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toHaveText(`${stockConfig.swingHoldRatio}% Swing`);
-    await expect(page.locator('[data-testid="overview-settings-stp"]')).toHaveText(stockConfig.stp.toString());
-    await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(stockConfig.htp != null && stockConfig.htp !== 0 ? `${stockConfig.htp}%` : 'N/A');
+    await expect(page.locator('[data-testid="overview-settings-plr"]')).toHaveText(stockConfig.plr.toString());
+    await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(`${stockConfig.htp || 0}%`);
     
     // Verify initial transaction counts are zero
     await expect(page.locator('[data-testid="overview-txns-buys"]')).toHaveText('0');
@@ -357,10 +357,8 @@ test.describe('Wallet Add Transaction', () => {
             name: scenario.stock.name,
             stockType: scenario.stock.stockType,
             region: scenario.stock.region,
-            marketCategory: scenario.stock.marketCategory,
-            riskGrowthProfile: scenario.stock.riskGrowthProfile,
             pdp: scenario.stock.pdp,
-            stp: scenario.stock.stp,
+            plr: scenario.stock.plr,
             budget: scenario.stock.budget,
             swingHoldRatio: scenario.stock.swingHoldRatio,
             stockCommission: scenario.stock.stockCommission,

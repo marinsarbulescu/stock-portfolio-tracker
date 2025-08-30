@@ -6,7 +6,7 @@ describe('TP Precision and P/L Accuracy', () => {
     const quantity = 3;
     const commissionPercent = 10;
     const pdp = 3; // 3%
-    const stp = 2; // 2x
+    const plr = 2; // 2x
 
     function calculateSingleSalePLWithCommission(sellPrice: number, buyPrice: number, quantity: number, commissionPercent: number): number {
         const grossPL = (sellPrice - buyPrice) * quantity;
@@ -17,7 +17,7 @@ describe('TP Precision and P/L Accuracy', () => {
 
     it('should demonstrate the precision issue with 2-decimal TP storage', () => {
         // Calculate exact TP using HTP formula
-        const baseTP = buyPrice + (buyPrice * (pdp * stp / 100));
+        const baseTP = buyPrice + (buyPrice * (pdp * plr / 100));
         const exactTP = baseTP / (1 - commissionPercent / 100);
         
         // Simulate old behavior: round TP to 2 decimal places
@@ -28,7 +28,7 @@ describe('TP Precision and P/L Accuracy', () => {
         const plRounded = parseFloat(pl.toFixed(2));
         
         // Expected target profit
-        const targetProfit = buyPrice * quantity * (pdp * stp / 100);
+        const targetProfit = buyPrice * quantity * (pdp * plr / 100);
         
         // This should demonstrate the $0.01 discrepancy
         expect(exactTP).toBe(117.77777777777777);
@@ -40,7 +40,7 @@ describe('TP Precision and P/L Accuracy', () => {
 
     it('should fix the precision issue with 4-decimal TP storage', () => {
         // Calculate exact TP using HTP formula
-        const baseTP = buyPrice + (buyPrice * (pdp * stp / 100));
+        const baseTP = buyPrice + (buyPrice * (pdp * plr / 100));
         const exactTP = baseTP / (1 - commissionPercent / 100);
         
         // Simulate new behavior: round TP to 4 decimal places
@@ -51,7 +51,7 @@ describe('TP Precision and P/L Accuracy', () => {
         const plRounded = parseFloat(pl.toFixed(2));
         
         // Expected target profit
-        const targetProfit = buyPrice * quantity * (pdp * stp / 100);
+        const targetProfit = buyPrice * quantity * (pdp * plr / 100);
         
         // This should demonstrate the fix
         expect(exactTP).toBe(117.77777777777777);

@@ -1,63 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { formatCurrency, formatShares } from '@/app/utils/financialCalculations';
 import { SHARE_PRECISION } from '@/app/config/constants';
-import { getFieldTooltip } from '@/app/config/fieldDefinitions';
 import type { RealizedPLStats, UnrealizedPLStats, CombinedPLStats, TransactionCounts, CurrentShares } from '../types';
-
-// Simple tooltip component
-interface TooltipProps {
-  children: React.ReactNode;
-  content: string;
-}
-
-function Tooltip({ children, content }: TooltipProps) {
-  const [isVisible, setIsVisible] = useState(false);
-
-  return (
-    <div 
-      style={{ position: 'relative', display: 'inline-block' }}
-      onMouseEnter={() => setIsVisible(true)}
-      onMouseLeave={() => setIsVisible(false)}
-    >
-      {children}
-      {isVisible && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '100%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            backgroundColor: '#333',
-            color: '#fff',
-            padding: '8px 12px',
-            borderRadius: '4px',
-            fontSize: '0.75em',
-            width: '200px',
-            textAlign: 'center',
-            zIndex: 1000,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-            marginBottom: '5px',
-          }}
-        >
-          {content}
-          <div
-            style={{
-              position: 'absolute',
-              top: '100%',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: 0,
-              height: 0,
-              borderLeft: '5px solid transparent',
-              borderRight: '5px solid transparent',
-              borderTop: '5px solid #333',
-            }}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
 
 export interface WalletsOverviewProps {
   isExpanded: boolean;
@@ -65,7 +9,7 @@ export interface WalletsOverviewProps {
   stockBudget?: number | null;
   stockPdp?: number | null;
   stockShr?: number | null;
-  stockStp?: number | null;
+  stockPlr?: number | null;
   stockHtp?: number | null;
   totalTiedUpInvestment: number;
   riskInvestment: number;
@@ -83,7 +27,7 @@ export default function WalletsOverview({
   stockBudget,
   stockPdp,
   stockShr,
-  stockStp,
+  stockPlr,
   stockHtp,
   totalTiedUpInvestment,
   riskInvestment,
@@ -114,7 +58,7 @@ export default function WalletsOverview({
 
       {isExpanded && (
         <div style={{ padding: '0px 15px 10px 15px', borderTop: '1px solid #444', fontSize: '0.8em' }}>
-          {stockBudget === undefined || stockPdp === undefined || stockShr === undefined || stockStp === undefined || stockHtp === undefined ? (
+          {stockBudget === undefined || stockPdp === undefined || stockShr === undefined || stockPlr === undefined || stockHtp === undefined ? (
             <p>Loading details...</p>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
@@ -137,24 +81,16 @@ export default function WalletsOverview({
                 </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                     <div>
-                      <Tooltip content={getFieldTooltip('PDP')}>
-                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help', textDecoration: 'underline dotted' }}>PDP</p>
-                      </Tooltip>
-                      <p data-testid="overview-settings-pdp">{stockPdp != null ? `${stockPdp}%` : 'N/A'}</p>
-                      <Tooltip content={getFieldTooltip('STP')}>
-                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help', textDecoration: 'underline dotted' }}>STP</p>
-                      </Tooltip>
-                      <p data-testid="overview-settings-stp">{stockStp != null ? stockStp : 'N/A'}</p>
+                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>PDP</p>
+                      <p data-testid="overview-settings-pdp">{stockPdp != null ? `${stockPdp}%` : 'Not set'}</p>
+                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>SHR</p>
+                      <p data-testid="overview-settings-shr">{stockShr != null ? `${stockShr}% Swing` : 'Not set'}</p>
                     </div>
                     <div>
-                      <Tooltip content={getFieldTooltip('SHR')}>
-                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help', textDecoration: 'underline dotted' }}>SHR</p>
-                      </Tooltip>
-                      <p data-testid="overview-settings-shr">{stockShr != null ? `${stockShr}% Swing` : 'N/A'}</p>
-                      <Tooltip content={getFieldTooltip('HTP')}>
-                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help', textDecoration: 'underline dotted' }}>HTP</p>
-                      </Tooltip>
-                      <p data-testid="overview-settings-htp">{stockHtp != null && stockHtp !== 0 ? `${stockHtp}%` : 'N/A'}</p>
+                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>PLR</p>
+                      <p data-testid="overview-settings-plr">{stockPlr != null ? stockPlr : 'Not set'}</p>
+                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>HTP</p>
+                      <p data-testid="overview-settings-htp">{stockHtp != null ? `${stockHtp}%` : 'Not set'}</p>
                     </div>
                 </div>
               </div>

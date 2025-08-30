@@ -5,10 +5,8 @@
     "name": "E2E Update Transaction Price",
     "stockType": "ETF",
     "region": "US",
-    "marketCategory": "US_Index",
-    "riskGrowthProfile": "Tortoise",
     "pdp": 5,
-    "stp": 2,
+    "plr": 2,
     "budget": 600,
     "swingHoldRatio": 30,
     "commission": 0,
@@ -46,7 +44,7 @@
             "invested": 200,
             "pdp": "5",
             "shr": "30",
-            "stp": "2",
+            "plr": "2",
             "htp": "12"
           },
           "txnsAndShares": {
@@ -100,7 +98,7 @@
             "invested": 500,
             "pdp": "5",
             "shr": "30",
-            "stp": "2",
+            "plr": "2",
             "htp": "12"
           },
           "txnsAndShares": {
@@ -163,7 +161,7 @@
             "invested": 500,
             "pdp": "5",
             "shr": "30",
-            "stp": "2",
+            "plr": "2",
             "htp": "12"
           },
           "txnsAndShares": {
@@ -229,7 +227,7 @@
             "invested": 500,
             "pdp": "5",
             "shr": "30",
-            "stp": "2",
+            "plr": "2",
             "htp": "12"
           },
           "txnsAndShares": {

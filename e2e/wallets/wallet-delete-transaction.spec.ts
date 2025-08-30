@@ -201,7 +201,7 @@ async function verifyOverview(
     await expect(page.locator('[data-testid="overview-settings-invested"]')).toHaveText(formatCurrency(expectedOverview.settings.invested));
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toHaveText(expectedOverview.settings.pdp);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toHaveText(expectedOverview.settings.shr);
-    await expect(page.locator('[data-testid="overview-settings-stp"]')).toHaveText(expectedOverview.settings.stp);
+    await expect(page.locator('[data-testid="overview-settings-plr"]')).toHaveText(expectedOverview.settings.plr);
     await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(expectedOverview.settings.htp);
     console.log(`[OverviewHelper] ✅ Settings section verified`);
     
@@ -252,8 +252,8 @@ async function verifyInitialSettings(
     await expect(page.locator('[data-testid="overview-settings-invested"]')).toHaveText(formatCurrency(0)); // Should be $0.00 initially
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toHaveText(`${stockConfig.pdp}%`);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toHaveText(`${stockConfig.swingHoldRatio}% Swing`);
-    await expect(page.locator('[data-testid="overview-settings-stp"]')).toHaveText(stockConfig.stp.toString());
-    await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(stockConfig.htp != null && stockConfig.htp !== 0 ? `${stockConfig.htp}%` : 'N/A');
+    await expect(page.locator('[data-testid="overview-settings-plr"]')).toHaveText(stockConfig.plr.toString());
+    await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(`${stockConfig.htp || 0}%`);
     
     // Verify initial transaction counts are zero
     await expect(page.locator('[data-testid="overview-txns-buys"]')).toHaveText('0');
@@ -279,10 +279,8 @@ test.describe('Wallet Page - Delete Transactions and Verify Wallets (JSON-driven
                 owner: E2E_TEST_USER_OWNER_ID,
                 stockType: stockConfig.stockType as 'Stock' | 'ETF' | 'Crypto',
                 region: stockConfig.region as 'APAC' | 'EU' | 'Intl' | 'US',
-                marketCategory: stockConfig.marketCategory,
-                riskGrowthProfile: stockConfig.riskGrowthProfile,
                 pdp: stockConfig.pdp,
-                stp: stockConfig.stp,
+                plr: stockConfig.plr,
                 budget: stockConfig.budget,
                 swingHoldRatio: stockConfig.swingHoldRatio,
                 stockCommission: stockConfig.stockCommission,

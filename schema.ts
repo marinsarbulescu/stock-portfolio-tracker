@@ -60,8 +60,8 @@ export const schema: Schema = {
                     "isRequired": false,
                     "attributes": []
                 },
-                "stp": {
-                    "name": "stp",
+                "plr": {
+                    "name": "plr",
                     "isArray": false,
                     "type": "Float",
                     "isRequired": false,

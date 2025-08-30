@@ -50,10 +50,8 @@ interface StockSplitTestConfig {
     name: string;
     stockType: string;
     region: string;
-    marketCategory: string;
-    riskGrowthProfile: string;
     pdp: number;
-    stp: number;
+    plr: number;
     budget: number;
     swingHoldRatio: number;
     stockCommission: number;
@@ -89,7 +87,7 @@ interface OverviewExpectation {
     invested: number;
     pdp: string;
     shr: string;
-    stp: string;
+    plr: string;
     htp: string;
   };
   txnsAndShares: {
@@ -231,7 +229,7 @@ async function verifyOverview(
     await expect(page.locator('[data-testid="overview-settings-invested"]')).toHaveText(formatCurrency(expectedOverview.settings.invested));
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toHaveText(expectedOverview.settings.pdp);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toHaveText(expectedOverview.settings.shr);
-    await expect(page.locator('[data-testid="overview-settings-stp"]')).toHaveText(expectedOverview.settings.stp);
+    await expect(page.locator('[data-testid="overview-settings-plr"]')).toHaveText(expectedOverview.settings.plr);
     await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(expectedOverview.settings.htp);
     console.log(`[OverviewHelper] ✅ Settings section verified`);
     
@@ -317,11 +315,9 @@ test.describe('Stock Split Transaction E2E Test', () => {
             name: config.stock.name,
             stockType: config.stock.stockType as "Stock" | "ETF" | "Crypto",
             region: config.stock.region as "US" | "EU" | "Intl" | "APAC",
-            marketCategory: config.stock.marketCategory as "Crypto" | "APAC_Index" | "China_Index" | "Emerging_Index" | "Europe_Index" | "International_Index" | "Metals" | "Oil" | "Opportunity" | "US_Index",
-            riskGrowthProfile: config.stock.riskGrowthProfile as "Hare" | "Tortoise",
             owner: E2E_TEST_USER_OWNER_ID,
             pdp: config.stock.pdp,
-            stp: config.stock.stp,
+            plr: config.stock.plr,
             budget: config.stock.budget,
             swingHoldRatio: config.stock.swingHoldRatio,
             stockCommission: config.stock.stockCommission,

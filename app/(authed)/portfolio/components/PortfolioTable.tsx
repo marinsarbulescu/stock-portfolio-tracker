@@ -17,12 +17,7 @@ import type {
   PortfolioColumnKey,
 } from '../types';
 
-import { 
-  STOCK_COLUMN_LABELS, 
-  PORTFOLIO_COLUMN_LABELS, 
-  getMarketCategoryLabel, 
-  getRiskGrowthProfileLabel 
-} from '../types';
+import { STOCK_COLUMN_LABELS, PORTFOLIO_COLUMN_LABELS } from '../types';
 
 export default function PortfolioTable({
   isLoading,
@@ -119,24 +114,6 @@ export default function PortfolioTable({
               {STOCK_COLUMN_LABELS.stockTrend} {stockSortConfig?.key === 'stockTrend' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
             </th>
           )}
-          {columnVisibility.marketCategory && (
-            <th
-              data-testid="portfolio-page-table-marketCategory-header"
-              style={{ padding: '5px', cursor: 'pointer' }}
-              onClick={() => requestStockSort('marketCategory')}
-            >
-              {PORTFOLIO_COLUMN_LABELS.marketCategory} {stockSortConfig?.key === 'marketCategory' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-            </th>
-          )}
-          {columnVisibility.riskGrowthProfile && (
-            <th
-              data-testid="portfolio-page-table-riskGrowthProfile-header"
-              style={{ padding: '5px', cursor: 'pointer' }}
-              onClick={() => requestStockSort('riskGrowthProfile')}
-            >
-              {PORTFOLIO_COLUMN_LABELS.riskGrowthProfile} {stockSortConfig?.key === 'riskGrowthProfile' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-            </th>
-          )}
           {columnVisibility.currentPrice && (
             <th
               data-testid="portfolio-page-table-currentPrice-header"
@@ -164,13 +141,13 @@ export default function PortfolioTable({
               {STOCK_COLUMN_LABELS.htp} {stockSortConfig?.key === 'htp' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
             </th>
           )}
-          {columnVisibility.stp && (
+          {columnVisibility.plr && (
             <th
-              data-testid="portfolio-page-table-stp-header"
+              data-testid="portfolio-page-table-plr-header"
               style={{ padding: '5px', cursor: 'pointer' }}
-              onClick={() => requestStockSort('stp')}
+              onClick={() => requestStockSort('plr')}
             >
-              {STOCK_COLUMN_LABELS.stp} {stockSortConfig?.key === 'stp' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              {STOCK_COLUMN_LABELS.plr} {stockSortConfig?.key === 'plr' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
             </th>
           )}
           {columnVisibility.stockCommission && (
@@ -271,16 +248,6 @@ export default function PortfolioTable({
                   data-testid={`portfolio-page-table-stockTrend-${stock.symbol?.toUpperCase()}`}
                   style={cellStyle}>{stock.stockTrend ?? '-'}</td>
               )}
-              {columnVisibility.marketCategory && (
-                <td
-                  data-testid={`portfolio-page-table-marketCategory-${stock.symbol?.toUpperCase()}`}
-                  style={cellStyle}>{stock.marketCategory ? getMarketCategoryLabel(stock.marketCategory) : '-'}</td>
-              )}
-              {columnVisibility.riskGrowthProfile && (
-                <td
-                  data-testid={`portfolio-page-table-riskGrowthProfile-${stock.symbol?.toUpperCase()}`}
-                  style={cellStyle}>{stock.riskGrowthProfile ? getRiskGrowthProfileLabel(stock.riskGrowthProfile) : '-'}</td>
-              )}
               {columnVisibility.currentPrice && (
                 <td
                   data-testid={`portfolio-page-table-price-${stock.symbol?.toUpperCase()}`}
@@ -301,10 +268,10 @@ export default function PortfolioTable({
                   data-testid={`portfolio-page-table-htp-${stock.symbol?.toUpperCase()}`}
                   style={cellStyle}>{stock.htp ?? '-'}</td>
               )}
-              {columnVisibility.stp && (
+              {columnVisibility.plr && (
                 <td
-                  data-testid={`portfolio-page-table-stp-${stock.symbol?.toUpperCase()}`}
-                  style={cellStyle}>{stock.stp ?? '-'}</td>
+                  data-testid={`portfolio-page-table-plr-${stock.symbol?.toUpperCase()}`}
+                  style={cellStyle}>{stock.plr ?? '-'}</td>
               )}
               {columnVisibility.stockCommission && (
                 <td

@@ -9,19 +9,15 @@
 - **No assumptions**: Always check the codebase for facts instead of making assumptions
 - **Reuse existing patterns**: Study existing components and patterns in the codebase before creating new ones
 
-
 ## Communication Style
 - **Be concise**: Provide clear, direct responses without unnecessary explanation
 - **Focus on essentials**: Only include information directly relevant to the task at hand
 - **Ask for clarification**: When requirements are ambiguous, ask specific questions to clarify
-- **Don't use flattery**: Avoid excessive praise or compliments.
-
 
 ## Task Management
 - **Use TodoWrite tool**: For multi-step tasks, use the TodoWrite tool to track progress and give visibility to the user
 - **Mark progress accurately**: Update todo items to 'in_progress' when starting and 'completed' immediately after finishing
 - **Break down complex tasks**: Divide large tasks into smaller, manageable todos
-
 
 ## Code Quality & Build Verification
 - **Run build after significant changes**: After modifying types, interfaces, or component props, run `npm run build` to catch TypeScript errors
@@ -34,7 +30,6 @@
   - After adding new imports or dependencies
 - **Fix errors immediately**: Build errors must be resolved before continuing; lint warnings can be contextual
 
-
 ## Testing & E2E Guidelines
 - **Update E2E tests**: Check if E2E tests need updates after making UI or functionality changes
 - **Follow existing patterns**: Use established patterns from files like wallet-add-transaction.spec.ts
@@ -42,29 +37,24 @@
 - **Run tests headless by default**: Use `npx playwright test` without `--headed` unless specifically needed
 - **Correct E2E syntax**: `npx playwright test e2e/portfolio/portfolio-create-and-edit-stock.spec.ts`
 
-
 ## Domain-Specific Standards
 - **Follow stock market conventions**: Use standard financial terminology and calculations
 - **Maintain consistency**: Follow existing naming patterns for financial entities (stocks, wallets, transactions)
-
 
 ## Git & Version Control
 - **Never commit unless asked**: Only create commits when explicitly requested by the user
 - **Use git rm for deletions**: Use `git rm "filename"` instead of file system commands to properly track deletions
 - **Atomic commits**: When asked to commit, include all related changes in a single, well-described commit
 
-
 ## Development Workflow
 - **Assume dev server is running**: The user typically has the development server running for real-time testing
 - **Test in browser**: Suggest testing changes directly in the browser rather than asking to start the server
 - **Use parallel tool calls**: When multiple independent operations are needed, execute them in parallel for efficiency
 
-
 ## File Operations
 - **Prefer editing over creating**: Always modify existing files when possible rather than creating new ones
 - **No unsolicited documentation**: Don't create README or documentation files unless explicitly requested
 - **Check before writing**: Always use Read tool before Edit/Write to understand current file state
-
 
 ## Error Handling
 - **Provide actionable solutions**: When encountering errors, suggest specific fixes

@@ -15,7 +15,7 @@ export interface OverviewExpectation {
         invested: number;
         pdp: string;
         shr: string;
-        stp: string;
+        plr: string;
         htp: string;
     };
     txnsAndShares: {
@@ -64,13 +64,13 @@ export interface TestPriceUpdate {
 export interface TransactionStep {
     input: {
         date: string;
-        type?: 'Swing' | 'Hold'; // Wallet type
+        type?: 'Split' | 'Swing' | 'Hold';
         signal?: string;
         price?: number;
         investment?: number;
         amount?: number;
         newPrice?: number;
-        action?: 'Buy' | 'Sell' | 'SLP' | 'Div' | 'StockSplit'; // Transaction action
+        action?: 'Buy' | 'Sell' | 'SLP' | 'Div';
     };
     output: {
         overview?: OverviewExpectation;
@@ -86,10 +86,8 @@ export interface StockConfig {
     name: string;
     stockType: 'Stock' | 'ETF' | 'Crypto';
     region: 'APAC' | 'EU' | 'Intl' | 'US';
-    marketCategory: 'APAC_Index' | 'China_Index' | 'Crypto' | 'Emerging_Index' | 'Europe_Index' | 'International_Index' | 'Metals' | 'Oil' | 'Opportunity' | 'US_Index';
-    riskGrowthProfile: 'Hare' | 'Tortoise';
     pdp: number;
-    stp: number;
+    plr: number;
     budget: number;
     swingHoldRatio: number;
     stockCommission: number;

@@ -20,7 +20,7 @@ import {
     type PortfolioStockCreateData,
 } from '../utils/dataHelpers';
 import { E2E_TEST_USER_OWNER_ID, E2E_TEST_USERNAME } from '../utils/testCredentials';
-import { clearBrowserState, loginUser, createStockViaUI } from '../utils/pageHelpers';
+import { clearBrowserState, loginUser } from '../utils/pageHelpers';
 import { cleanupTestStocks } from '../utils/cleanupHelper';
 
 // Configure Amplify
@@ -194,6 +194,47 @@ async function verifyStockHasPrice(page: any, stockSymbol: string) {
     
     expect(priceCellText?.trim()).toMatch(/^\$[\d,]+\.?\d*$/);
     console.log(`[PageHelper] ✅ Confirmed ${stockSymbol} now has price value: ${priceCellText?.trim()}`);
+}
+
+// Helper function to create stock via UI
+async function createStockViaUI(page: any, stockData: PortfolioStockCreateData) {
+    console.log(`[PageHelper] Creating stock ${stockData.symbol} via UI...`);
+    
+    // Navigate to portfolio first
+    await page.goto('/portfolio');
+    await expect(page.locator('[data-testid="portfolio-page-title"]')).toBeVisible({ timeout: 15000 });
+    
+    // Click add stock button using data-testid
+    const addButton = page.locator('[data-testid="portfolio-page-add-stock-button"]');
+    await expect(addButton).toBeVisible({ timeout: 10000 });
+    await addButton.click();
+    
+    // Wait for symbol field to be visible (indicating modal is ready)
+    const symbolField = page.locator('#symbol');
+    await expect(symbolField).toBeVisible({ timeout: 10000 });
+    
+    // Fill the form using ID selectors
+    await page.locator('#symbol').fill(stockData.symbol);
+    await page.locator('#name').fill(stockData.name);
+    await page.locator('#type').selectOption(stockData.stockType);
+    await page.locator('#region').selectOption(stockData.region);
+    await page.locator('#stockTrend').selectOption(stockData.stockTrend);
+    await page.locator('#pdp').fill((stockData.pdp ?? 3).toString());
+    await page.locator('#plr').fill((stockData.plr ?? 2).toString());
+    await page.locator('#budget').fill((stockData.budget ?? 1000).toString());
+    await page.locator('#shr').fill((stockData.swingHoldRatio ?? 30).toString());
+    await page.locator('#commission').fill((stockData.stockCommission ?? 1).toString());
+    await page.locator('#htp').fill((stockData.htp ?? 10).toString());
+    
+    // Submit the form
+    const submitButton = page.locator('button[type="submit"]:has-text("Add Stock")');
+    await expect(submitButton).toBeVisible();
+    await submitButton.click();
+    
+    // Wait for modal to close (indicating stock was created successfully)
+    const modal = page.locator('[role="dialog"]').first();
+    await expect(modal).not.toBeVisible({ timeout: 10000 });
+    console.log(`[PageHelper] ✅ Stock ${stockData.symbol} created successfully.`);
 }
 
 test.describe('Signals Price Fetch', () => {
