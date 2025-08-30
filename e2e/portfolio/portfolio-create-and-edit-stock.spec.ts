@@ -90,6 +90,13 @@ async function navigateToPortfolioPage(page: any) {
 async function toggleAllColumnsVisible(page: any) {
     console.log('[PageHelper] Toggling all columns visible...');
     
+    // Wait for the portfolio table to be visible first
+    await expect(page.locator('table')).toBeVisible({ timeout: 10000 });
+    
+    // Wait for the column visibility controls to be present
+    const columnControls = page.locator('div:has(input[type="checkbox"])').first();
+    await expect(columnControls).toBeVisible({ timeout: 10000 });
+    
     // List of column labels that should be toggled (using the actual labels from PORTFOLIO_COLUMN_LABELS)
     const columnLabels = [
         'Name',
@@ -101,7 +108,7 @@ async function toggleAllColumnsVisible(page: any) {
         'Last Price',
         'PDP (%)',
         'HTP (%)',
-        'PLR (%)',
+        'STP (%)',
         'Comm (%)',
         'Budget',
         'tInv',
@@ -109,10 +116,21 @@ async function toggleAllColumnsVisible(page: any) {
     ];
     
     for (const columnLabel of columnLabels) {
-        // Find the checkbox by its label text
-        const checkbox = page.locator(`label:has-text("${columnLabel}") input[type="checkbox"]`);
-        if (!(await checkbox.isChecked())) {
-            await checkbox.check();
+        try {
+            // Find the checkbox by its label text with a more flexible approach
+            const labelElement = page.locator(`label:has-text("${columnLabel}")`);
+            await expect(labelElement).toBeVisible({ timeout: 5000 });
+            
+            const checkbox = labelElement.locator('input[type="checkbox"]');
+            const isChecked = await checkbox.isChecked();
+            
+            if (!isChecked) {
+                await checkbox.check();
+                console.log(`[PageHelper] Enabled column: ${columnLabel}`);
+            }
+        } catch (error) {
+            console.warn(`[PageHelper] Could not toggle column ${columnLabel}:`, error);
+            // Continue with other columns instead of failing
         }
     }
     
@@ -171,10 +189,10 @@ async function verifyStockInTable(page: any, stockData: PortfolioCreateEditTestC
     await expect(htpCell).toBeVisible();
     await expect(htpCell).toHaveText(stockData.htp!.toString());
     
-    // Verify PLR
-    const plrCell = page.locator(`[data-testid="portfolio-page-table-plr-${symbol}"]`).first();
-    await expect(plrCell).toBeVisible();
-    await expect(plrCell).toHaveText(stockData.plr.toString());
+    // Verify STP
+    const stpCell = page.locator(`[data-testid="portfolio-page-table-stp-${symbol}"]`).first();
+    await expect(stpCell).toBeVisible();
+    await expect(stpCell).toHaveText(stockData.stp.toString());
     
     // Verify commission
     const commissionCell = page.locator(`[data-testid="portfolio-page-table-stockCommission-${symbol}"]`).first();
@@ -216,7 +234,7 @@ async function openEditModalAndVerifyValues(page: any, stockData: PortfolioCreat
     }
     await expect(page.locator('#name')).toHaveValue(stockData.name);
     await expect(page.locator('#pdp')).toHaveValue(stockData.pdp.toString());
-    await expect(page.locator('#plr')).toHaveValue(stockData.plr.toString());
+    await expect(page.locator('#stp')).toHaveValue(stockData.stp.toString());
     await expect(page.locator('#shr')).toHaveValue(stockData.swingHoldRatio.toString());
     await expect(page.locator('#budget')).toHaveValue(stockData.budget.toString());
     await expect(page.locator('#commission')).toHaveValue(stockData.stockCommission.toString());
@@ -238,7 +256,7 @@ async function editStockValues(page: any, editData: PortfolioCreateEditTestConfi
         await page.locator('#stockTrend').selectOption(editData.stockTrend);
     }
     await page.locator('#pdp').fill(editData.pdp.toString());
-    await page.locator('#plr').fill(editData.plr.toString());
+    await page.locator('#stp').fill(editData.stp.toString());
     await page.locator('#shr').fill(editData.swingHoldRatio.toString());
     await page.locator('#budget').fill(editData.budget.toString());
     await page.locator('#commission').fill(editData.stockCommission.toString());
@@ -295,10 +313,10 @@ async function verifyUpdatedStockInTable(page: any, editData: PortfolioCreateEdi
     await expect(htpCell).toBeVisible();
     await expect(htpCell).toHaveText(editData.htp!.toString());
     
-    // Verify PLR
-    const plrCell = page.locator(`[data-testid="portfolio-page-table-plr-${symbol}"]`).first();
-    await expect(plrCell).toBeVisible();
-    await expect(plrCell).toHaveText(editData.plr.toString());
+    // Verify STP
+    const stpCell = page.locator(`[data-testid="portfolio-page-table-stp-${symbol}"]`).first();
+    await expect(stpCell).toBeVisible();
+    await expect(stpCell).toHaveText(editData.stp.toString());
     
     // Verify commission
     const commissionCell = page.locator(`[data-testid="portfolio-page-table-stockCommission-${symbol}"]`).first();

@@ -22,7 +22,7 @@
     "marketCategory": "US_Index",
     "riskGrowthProfile": "Tortoise",
     "pdp": 5,
-    "plr": 2,
+    "stp": 2,
     "budget": 1000,
     "swingHoldRatio": 60,
     "stockCommission": 0,
@@ -49,7 +49,7 @@
             "invested": 400,
             "pdp": "5%",
             "shr": "60% Swing", 
-            "plr": "2",
+            "stp": "2",
             "htp": "N/A"
           },
           "txnsAndShares": {
@@ -135,7 +135,7 @@
             "invested": 400,
             "pdp": "5%",
             "shr": "60% Swing",
-            "plr": "2", 
+            "stp": "2", 
             "htp": "N/A"
           },
           "txnsAndShares": {
@@ -236,7 +236,7 @@
             "invested": 700,
             "pdp": "5%",
             "shr": "60% Swing",
-            "plr": "2",
+            "stp": "2",
             "htp": "N/A"
           },
           "txnsAndShares": {

@@ -533,7 +533,7 @@ async function verifyOverview(
     await expect(page.locator('[data-testid="overview-settings-invested"]')).toContainText(`${expectedOverview.settings.invested.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`);
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toContainText(`${expectedOverview.settings.pdp}%`);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toContainText(`${expectedOverview.settings.shr}%`);
-    await expect(page.locator('[data-testid="overview-settings-plr"]')).toContainText(`${expectedOverview.settings.plr}`);
+    await expect(page.locator('[data-testid="overview-settings-stp"]')).toContainText(`${expectedOverview.settings.stp}`);
     await expect(page.locator('[data-testid="overview-settings-htp"]')).toContainText(`${expectedOverview.settings.htp}`);
     console.log(`[OverviewHelper] ✅ Settings section verified`);
     
@@ -578,7 +578,7 @@ async function verifyInitialSettings(page: Page, stockConfig: any): Promise<void
     await expect(page.locator('[data-testid="overview-settings-invested"]')).toContainText('0');
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toContainText(`${stockConfig.pdp}%`);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toContainText(`${stockConfig.swingHoldRatio}%`);
-    await expect(page.locator('[data-testid="overview-settings-plr"]')).toContainText(`${stockConfig.plr}`);
+    await expect(page.locator('[data-testid="overview-settings-stp"]')).toContainText(`${stockConfig.stp}`);
     await expect(page.locator('[data-testid="overview-settings-htp"]')).toContainText(`${stockConfig.htp}`);
     
     console.log('[OverviewHelper] ✅ Initial settings verification completed');
@@ -607,7 +607,7 @@ test.describe('Wallet Update Transactions Price', () => {
             marketCategory: scenario.stock.marketCategory as "Crypto" | "APAC_Index" | "China_Index" | "Emerging_Index" | "Europe_Index" | "International_Index" | "Metals" | "Oil" | "Opportunity" | "US_Index",
             riskGrowthProfile: scenario.stock.riskGrowthProfile as "Hare" | "Tortoise",
             pdp: scenario.stock.pdp,
-            plr: scenario.stock.plr,
+            stp: scenario.stock.stp,
             budget: scenario.stock.budget,
             swingHoldRatio: scenario.stock.swingHoldRatio,
             stockCommission: scenario.stock.stockCommission,

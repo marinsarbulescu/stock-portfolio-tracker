@@ -35,7 +35,7 @@ export default function AddStockModal({
   const [riskGrowthProfile, setRiskGrowthProfile] = useState<RiskGrowthProfileValue>('' as RiskGrowthProfileValue);
   const [name, setName] = useState('');
   const [pdp, setPdp] = useState('');
-  const [plr, setPlr] = useState('');
+  const [stp, setStp] = useState('');
   const [budget, setBudget] = useState('');
   const [testPrice, setTestPrice] = useState('');
   const [swingHoldRatio, setSwingHoldRatio] = useState('');
@@ -56,7 +56,7 @@ export default function AddStockModal({
       setRiskGrowthProfile('' as RiskGrowthProfileValue);
       setName('');
       setPdp('');
-      setPlr('');
+      setStp('');
       setBudget('');
       setTestPrice('');
       setSwingHoldRatio('');
@@ -73,7 +73,7 @@ export default function AddStockModal({
     setError(null);
 
     // --- Basic Validation ---
-    if (!symbol || !stockType || !region || !marketCategory || !riskGrowthProfile || !pdp || !plr || !swingHoldRatio) {
+    if (!symbol || !stockType || !region || !marketCategory || !riskGrowthProfile || !pdp || !stp || !swingHoldRatio) {
       setError('Symbol, Security Type, Region, Market Category, Risk/Growth Profile, PDP, STP, and SHR are required.');
       setIsLoading(false);
       return;
@@ -88,8 +88,8 @@ export default function AddStockModal({
     }
 
     // Validate STP (must be a valid number)
-    const plrValue = parseFloat(plr);
-    if (isNaN(plrValue)) {
+    const stpValue = parseFloat(stp);
+    if (isNaN(stpValue)) {
       setError('Swing Take Profit (STP) must be a valid number.');
       setIsLoading(false);
       return;
@@ -129,7 +129,7 @@ export default function AddStockModal({
       riskGrowthProfile: riskGrowthProfile as RiskGrowthProfileValue,
       name: name || undefined,
       pdp: pdpValue, // Required field, always a number
-      plr: plrValue, // Required field, always a number
+      stp: stpValue, // Required field, always a number
       budget: budget ? parseFloat(budget) : null,
       testPrice: testPriceValue,
       swingHoldRatio: shrValue, // Required field, always a number
@@ -364,15 +364,15 @@ export default function AddStockModal({
               </div>
 
               <div>
-                <label htmlFor="plr" style={{display: 'block', marginBottom: '3px'}}>
+                <label htmlFor="stp" style={{display: 'block', marginBottom: '3px'}}>
                   Swing Take Profit (STP) <span style={{color: 'red'}}>*</span>
                 </label>
                 <input 
-                  id="plr" 
+                  id="stp" 
                   type="number" 
                   step="any" 
-                  value={plr} 
-                  onChange={(e) => setPlr(e.target.value)}
+                  value={stp} 
+                  onChange={(e) => setStp(e.target.value)}
                   placeholder="e.g., 1.5 = 150%" 
                   required
                   disabled={isLoading}

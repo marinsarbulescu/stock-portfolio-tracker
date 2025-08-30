@@ -105,7 +105,7 @@ export default function HomePage() {
             stockWallets: null as unknown,
             budget: null,
             pdp: 1.0, // Default value for required field
-            plr: 1.0, // Default value for required field
+            stp: 1.0, // Default value for required field
             swingHoldRatio: 50.0, // Default value for required field
             stockCommission: null,
             htp: null,

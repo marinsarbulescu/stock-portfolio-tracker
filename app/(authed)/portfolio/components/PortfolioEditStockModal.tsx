@@ -33,7 +33,7 @@ export default function EditStockModal({
   const [riskGrowthProfile, setRiskGrowthProfile] = useState<RiskGrowthProfileValue>('Hare');
   const [name, setName] = useState('');
   const [pdp, setPdp] = useState('');
-  const [plr, setPlr] = useState('');
+  const [stp, setStp] = useState('');
   const [budget, setBudget] = useState('');
   const [testPrice, setTestPrice] = useState('');
   const [swingHoldRatio, setSwingHoldRatio] = useState('');
@@ -56,7 +56,7 @@ export default function EditStockModal({
       setMarketCategory(stockToEditData.marketCategory ?? 'US_Index');
       setRiskGrowthProfile(stockToEditData.riskGrowthProfile ?? 'Hare');
       setPdp(stockToEditData.pdp?.toString() ?? '');
-      setPlr(stockToEditData.plr?.toString() ?? '');
+      setStp(stockToEditData.stp?.toString() ?? '');
       setBudget(stockToEditData.budget?.toString() ?? '');
       setTestPrice(stockToEditData.testPrice?.toString() ?? '');
       setSwingHoldRatio(stockToEditData.swingHoldRatio?.toString() ?? '');
@@ -72,7 +72,7 @@ export default function EditStockModal({
     setError(null);
 
     // --- Basic Validation ---
-    if (!symbol || !stockType || !region || !marketCategory || !riskGrowthProfile || !pdp || !plr || !swingHoldRatio) {
+    if (!symbol || !stockType || !region || !marketCategory || !riskGrowthProfile || !pdp || !stp || !swingHoldRatio) {
       setError('Symbol, Security Type, Region, Market Category, Risk/Growth Profile, PDP, STP, and SHR are required.');
       setIsLoading(false);
       return;
@@ -87,8 +87,8 @@ export default function EditStockModal({
     }
 
     // Validate STP (must be a valid number)
-    const plrValue = parseFloat(plr);
-    if (isNaN(plrValue)) {
+    const stpValue = parseFloat(stp);
+    if (isNaN(stpValue)) {
       setError('Swing Take Profit (STP) must be a valid number.');
       setIsLoading(false);
       return;
@@ -134,7 +134,7 @@ export default function EditStockModal({
       riskGrowthProfile: riskGrowthProfile as RiskGrowthProfileValue,
       name: name || undefined,
       pdp: pdpValue, // Required field, always a number
-      plr: plrValue, // Required field, always a number
+      stp: stpValue, // Required field, always a number
       budget: budget ? parseFloat(budget) : undefined,
       testPrice: testPriceValue ? testPriceValue : undefined,
       swingHoldRatio: shrValue, // Required field, always a number
@@ -371,15 +371,15 @@ export default function EditStockModal({
               </div>
 
               <div>
-                <label htmlFor="plr" style={{display: 'block', marginBottom: '3px'}}>
+                <label htmlFor="stp" style={{display: 'block', marginBottom: '3px'}}>
                   Swing Take Profit (STP) <span style={{color: 'red'}}>*</span>
                 </label>
                 <input 
-                  id="plr" 
+                  id="stp" 
                   type="number" 
                   step="any" 
-                  value={plr} 
-                  onChange={(e) => setPlr(e.target.value)}
+                  value={stp} 
+                  onChange={(e) => setStp(e.target.value)}
                   placeholder="e.g., 1.5 = 150%" 
                   required
                   disabled={isLoading}

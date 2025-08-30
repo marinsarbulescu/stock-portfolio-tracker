@@ -9,7 +9,7 @@ export interface WalletsOverviewProps {
   stockBudget?: number | null;
   stockPdp?: number | null;
   stockShr?: number | null;
-  stockPlr?: number | null;
+  stockStp?: number | null;
   stockHtp?: number | null;
   totalTiedUpInvestment: number;
   riskInvestment: number;
@@ -27,7 +27,7 @@ export default function WalletsOverview({
   stockBudget,
   stockPdp,
   stockShr,
-  stockPlr,
+  stockStp,
   stockHtp,
   totalTiedUpInvestment,
   riskInvestment,
@@ -58,7 +58,7 @@ export default function WalletsOverview({
 
       {isExpanded && (
         <div style={{ padding: '0px 15px 10px 15px', borderTop: '1px solid #444', fontSize: '0.8em' }}>
-          {stockBudget === undefined || stockPdp === undefined || stockShr === undefined || stockPlr === undefined || stockHtp === undefined ? (
+          {stockBudget === undefined || stockPdp === undefined || stockShr === undefined || stockStp === undefined || stockHtp === undefined ? (
             <p>Loading details...</p>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
@@ -87,8 +87,8 @@ export default function WalletsOverview({
                       <p data-testid="overview-settings-shr">{stockShr != null ? `${stockShr}% Swing` : 'N/A'}</p>
                     </div>
                     <div>
-                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>PLR</p>
-                      <p data-testid="overview-settings-plr">{stockPlr != null ? stockPlr : 'N/A'}</p>
+                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>STP</p>
+                      <p data-testid="overview-settings-stp">{stockStp != null ? stockStp : 'N/A'}</p>
                       <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>HTP</p>
                       <p data-testid="overview-settings-htp">{stockHtp != null && stockHtp !== 0 ? `${stockHtp}%` : 'N/A'}</p>
                     </div>

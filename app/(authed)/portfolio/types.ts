@@ -39,7 +39,7 @@ export interface PortfolioColumnVisibilityState {
   currentPrice: boolean;
   pdp: boolean;
   htp: boolean;
-  plr: boolean;
+  stp: boolean;
   stockCommission: boolean;
   budget: boolean;
   investment: boolean;
@@ -60,7 +60,7 @@ export type SortableStockKey =
   | 'currentPrice'
   | 'pdp'
   | 'htp'
-  | 'plr'
+  | 'stp'
   | 'stockCommission'
   | 'budget'
   | 'investment'
@@ -166,7 +166,7 @@ export const STOCK_COLUMN_LABELS: Record<SortableStockKey, string> = {
   currentPrice: 'Last Price',
   pdp: 'PDP (%)',
   htp: 'HTP (%)',
-  plr: 'PLR (%)',
+  stp: 'STP (%)',
   stockCommission: 'Comm (%)',
   budget: 'Budget',
   investment: 'tInv',
@@ -183,7 +183,7 @@ export const PORTFOLIO_COLUMN_LABELS: Record<PortfolioColumnKey, string> = {
   currentPrice: 'Last Price',
   pdp: 'PDP (%)',
   htp: 'HTP (%)',
-  plr: 'PLR (%)',
+  stp: 'STP (%)',
   stockCommission: 'Comm (%)',
   budget: 'Budget',
   investment: 'tInv',

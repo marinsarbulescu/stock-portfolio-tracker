@@ -82,7 +82,7 @@ function PortfolioContent() {
     currentPrice: false,
     pdp: true,
     htp: true,
-    plr: true,
+    stp: true,
     stockCommission: true,
     budget: false,
     investment: true,
@@ -284,9 +284,9 @@ function PortfolioContent() {
             valA = a.htp;
             valB = b.htp;
             break;
-          case 'plr':
-            valA = a.plr;
-            valB = b.plr;
+          case 'stp':
+            valA = a.stp;
+            valB = b.stp;
             break;
           case 'stockCommission':
             valA = a.stockCommission;
@@ -354,7 +354,7 @@ function PortfolioContent() {
           'budget',
           'testPrice',
           'pdp',
-          'plr',
+          'stp',
           'isHidden',
           'archived',
           'archivedAt',

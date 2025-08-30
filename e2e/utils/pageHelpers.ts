@@ -96,7 +96,7 @@ export async function createStockViaUI(page: Page, stockData: PortfolioStockCrea
     await page.locator('#marketCategory').selectOption(stockData.marketCategory);
     await page.locator('#riskGrowthProfile').selectOption(stockData.riskGrowthProfile);
     await page.locator('#pdp').fill((stockData.pdp ?? 3).toString());
-    await page.locator('#plr').fill((stockData.plr ?? 2).toString());
+    await page.locator('#stp').fill((stockData.stp ?? 2).toString());
     await page.locator('#budget').fill((stockData.budget ?? 1000).toString());
     await page.locator('#shr').fill((stockData.swingHoldRatio ?? 30).toString());
     await page.locator('#commission').fill((stockData.stockCommission ?? 1).toString());
@@ -978,10 +978,11 @@ export async function logoutUser(page: Page) {
 // Transaction helper interfaces and functions
 export interface TransactionData {
     date?: string; // YYYY-MM-DD format, defaults to today if not provided
-    type: 'Split' | 'Swing' | 'Hold';
+    type?: 'Swing' | 'Hold'; // Wallet type for Buy/Sell transactions
     signal: string;
     price: number;
     investment: number;
+    action?: 'Buy' | 'Div' | 'Sell' | 'SLP' | 'StockSplit'; // Transaction action
 }
 
 /**
@@ -991,7 +992,7 @@ export interface TransactionData {
  * @param transactionData - The transaction data to fill in the form.
  */
 export async function addTransaction(page: Page, transactionData: TransactionData) {
-    console.log(`[PageHelper] Adding ${transactionData.type} transaction:`, transactionData);
+    console.log(`[PageHelper] Adding transaction:`, transactionData);
     
     // Open Add Transaction modal
     const addTransactionButton = page.locator('[data-testid="add-transaction-button"]');
@@ -1008,20 +1009,20 @@ export async function addTransaction(page: Page, transactionData: TransactionDat
     await page.locator('[data-testid="txn-form-price"]').fill(transactionData.price.toString());
     await page.locator('[data-testid="txn-form-investment"]').fill(transactionData.investment.toString());
     
-    // Select transaction type using radio buttons
-    console.log(`[PageHelper] Selecting transaction type: ${transactionData.type}`);
-    if (transactionData.type === 'Swing') {
-        const swingRadio = page.locator('[data-testid="txn-form-txnType-swing"]');
-        await expect(swingRadio).toBeVisible({ timeout: 5000 });
-        await swingRadio.click();
-    } else if (transactionData.type === 'Hold') {
-        const holdRadio = page.locator('[data-testid="txn-form-txnType-hold"]');
-        await expect(holdRadio).toBeVisible({ timeout: 5000 });
-        await holdRadio.click();
-    } else if (transactionData.type === 'Split') {
-        const splitRadio = page.locator('[data-testid="txn-form-txnType-split"]');
-        await expect(splitRadio).toBeVisible({ timeout: 5000 });
-        await splitRadio.click();
+    // Select transaction type using radio buttons (if specified)
+    if (transactionData.type) {
+        console.log(`[PageHelper] Selecting transaction type: ${transactionData.type}`);
+        if (transactionData.type === 'Swing') {
+            const swingRadio = page.locator('[data-testid="txn-form-txnType-swing"]');
+            await expect(swingRadio).toBeVisible({ timeout: 5000 });
+            await swingRadio.click();
+        } else if (transactionData.type === 'Hold') {
+            const holdRadio = page.locator('[data-testid="txn-form-txnType-hold"]');
+            await expect(holdRadio).toBeVisible({ timeout: 5000 });
+            await holdRadio.click();
+        }
+    } else {
+        console.log(`[PageHelper] No transaction type specified, using default selection.`);
     }
     
     // Select signal
