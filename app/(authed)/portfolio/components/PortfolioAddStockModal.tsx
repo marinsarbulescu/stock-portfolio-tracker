@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { type Schema } from '@/amplify/data/resource';
 import { generateClient } from 'aws-amplify/data';
+import { getFieldDefinition } from '@/app/config/fieldDefinitions';
 
 // Import types from the portfolio types file
 import type {
