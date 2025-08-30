@@ -29,7 +29,7 @@ export default function EditStockModal({
   const [stockTrend, setStockTrend] = useState<StockTrendValue>(null);
   const [name, setName] = useState('');
   const [pdp, setPdp] = useState('');
-  const [plr, setPlr] = useState('');
+  const [stp, setStp] = useState('9'); // Default to 9
   const [budget, setBudget] = useState('');
   const [testPrice, setTestPrice] = useState('');
   const [swingHoldRatio, setSwingHoldRatio] = useState('');
@@ -50,7 +50,7 @@ export default function EditStockModal({
       setRegion(stockToEditData.region ?? 'US');
       setStockTrend(stockToEditData.stockTrend ?? null);
       setPdp(stockToEditData.pdp?.toString() ?? '');
-      setPlr(stockToEditData.plr?.toString() ?? '');
+      setStp(stockToEditData.stp?.toString() ?? '9'); // Default to 9 if not set
       setBudget(stockToEditData.budget?.toString() ?? '');
       setTestPrice(stockToEditData.testPrice?.toString() ?? '');
       setSwingHoldRatio(stockToEditData.swingHoldRatio?.toString() ?? '');
@@ -110,7 +110,7 @@ export default function EditStockModal({
       stockTrend: stockTrend as StockTrendValue,
       name: name || undefined,
       pdp: pdp ? parseFloat(pdp) : null,
-      plr: plr ? parseFloat(plr) : null,
+      stp: stp ? parseFloat(stp) : 9, // STP is required with default value of 9
       budget: budget ? parseFloat(budget) : null,
       testPrice: testPriceValue,
       swingHoldRatio: shrValue,
@@ -255,16 +255,18 @@ export default function EditStockModal({
           </div>
           
           <div>
-            <label htmlFor="plr" style={{display: 'block', marginBottom: '3px'}}>Profit Loss Ratio (PLR):</label>
+            <label htmlFor="stp" style={{display: 'block', marginBottom: '3px'}}>Swing Take Profit (STP) %:</label>
             <input 
-              id="plr" 
+              id="stp" 
               type="number" 
               step="any" 
-              value={plr} 
-              onChange={(e) => setPlr(e.target.value)}
-              placeholder="e.g., 1.5 = 150%" 
+              value={stp} 
+              onChange={(e) => setStp(e.target.value)}
+              placeholder="e.g., 9 = 9% profit target" 
               disabled={isLoading}
               style={{width: '100%', padding: '8px'}}
+              min="0"
+              required
             />
           </div>
           

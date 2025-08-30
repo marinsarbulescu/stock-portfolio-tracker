@@ -201,7 +201,7 @@ async function verifyOverview(
     await expect(page.locator('[data-testid="overview-settings-invested"]')).toHaveText(formatCurrency(expectedOverview.settings.invested));
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toHaveText(expectedOverview.settings.pdp);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toHaveText(expectedOverview.settings.shr);
-    await expect(page.locator('[data-testid="overview-settings-plr"]')).toHaveText(expectedOverview.settings.plr);
+    await expect(page.locator('[data-testid="overview-settings-stp"]')).toHaveText(expectedOverview.settings.stp);
     await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(expectedOverview.settings.htp);
     console.log(`[OverviewHelper] ✅ Settings section verified`);
     
@@ -252,7 +252,7 @@ async function verifyInitialSettings(
     await expect(page.locator('[data-testid="overview-settings-invested"]')).toHaveText(formatCurrency(0)); // Should be $0.00 initially
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toHaveText(`${stockConfig.pdp}%`);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toHaveText(`${stockConfig.swingHoldRatio}% Swing`);
-    await expect(page.locator('[data-testid="overview-settings-plr"]')).toHaveText(stockConfig.plr.toString());
+    await expect(page.locator('[data-testid="overview-settings-stp"]')).toHaveText(`${stockConfig.stp}%`);
     await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(`${stockConfig.htp || 0}%`);
     
     // Verify initial transaction counts are zero
@@ -280,7 +280,7 @@ test.describe('Wallet Page - Delete Transactions and Verify Wallets (JSON-driven
                 stockType: stockConfig.stockType as 'Stock' | 'ETF' | 'Crypto',
                 region: stockConfig.region as 'APAC' | 'EU' | 'Intl' | 'US',
                 pdp: stockConfig.pdp,
-                plr: stockConfig.plr,
+                stp: stockConfig.stp,
                 budget: stockConfig.budget,
                 swingHoldRatio: stockConfig.swingHoldRatio,
                 stockCommission: stockConfig.stockCommission,
@@ -401,8 +401,8 @@ test.describe('Wallet Page - Delete Transactions and Verify Wallets (JSON-driven
             
             await addTransaction(page, {
                 date: addStep.input.date!,
-                type: addStep.input.type,
-                signal: addStep.input.signal,
+                type: addStep.input.type!,
+                signal: addStep.input.signal!,
                 price: addStep.input.price!,
                 investment: addStep.input.investment!
             });

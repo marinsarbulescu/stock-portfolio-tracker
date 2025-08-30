@@ -15,7 +15,7 @@ export interface OverviewExpectation {
         invested: number;
         pdp: string;
         shr: string;
-        plr: string;
+        stp: string;
         htp: string;
     };
     txnsAndShares: {
@@ -87,7 +87,7 @@ export interface StockConfig {
     stockType: 'Stock' | 'ETF' | 'Crypto';
     region: 'APAC' | 'EU' | 'Intl' | 'US';
     pdp: number;
-    plr: number;
+    stp: number;
     budget: number;
     swingHoldRatio: number;
     stockCommission: number;

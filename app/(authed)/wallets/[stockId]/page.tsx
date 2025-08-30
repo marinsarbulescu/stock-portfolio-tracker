@@ -45,8 +45,8 @@ type PortfolioStockUpdateInput = Partial<PortfolioStockDataType> & { id: string 
 
 interface StockInfoForWalletService {
     owner: string; // Cognito User Sub ID
-    plr?: number | null;
-    pdp?: number | null; // Add PDP for base TP calculation
+    stp?: number | null; // Swing Take Profit percentage
+    pdp?: number | null; // Add PDP for base TP calculation (still used for LBD)
     stockCommission?: number | null; // Add commission for TP adjustment
 }
 
@@ -297,7 +297,7 @@ export default function StockWalletPage() {
 
     const [stockPdp, setStockPdp] = useState<number | null | undefined>(undefined);
     const [stockShr, setStockShr] = useState<number | null | undefined>(undefined); // Swing-Hold Ratio
-    const [stockPlr, setStockPlr] = useState<number | null | undefined>(undefined);
+    const [stockStp, setStockStp] = useState<number | null | undefined>(undefined);
     const [stockCommission, setStockCommission] = useState<number | null | undefined>(undefined);
     const [stockHtp, setStockHtp] = useState<number | null | undefined>(undefined); // HTP percentage
 
@@ -398,7 +398,7 @@ export default function StockWalletPage() {
                 setStockName(stockData.name || 'Unknown');
                 setStockBudget(stockData.budget);
                 setStockPdp(stockData.pdp);
-                setStockPlr(stockData.plr);
+                setStockStp(stockData.stp);
                 setStockShr(stockData.swingHoldRatio);
                 setStockCommission(stockData.stockCommission);
                 setStockHtp(stockData.htp);
@@ -518,7 +518,7 @@ export default function StockWalletPage() {
             return;
         }        const stockInfoForService: StockInfoForWalletService = { // Ensure this type matches what walletService expects
             owner: ownerId, // Use the concatenated string
-            plr: stockPlr,
+            stp: stockStp,
             pdp: stockPdp,
             stockCommission: stockCommission,
         };
@@ -1001,7 +1001,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
             //console.log(`Workspaceing symbol for stockId: ${stockId}`);
             client.models.PortfolioStock.get(
                 { id: stockId }, 
-                { selectionSet: ['symbol', 'name', 'budget', 'pdp', 'swingHoldRatio', 'plr', 'stockCommission', 'htp', 'stockTrend'] })
+                { selectionSet: ['symbol', 'name', 'budget', 'pdp', 'swingHoldRatio', 'stp', 'stockCommission', 'htp', 'stockTrend'] })
                 .then(({ data, errors }) => {
                     if (errors) {
                         //console.error("[StockWalletPage] - Error fetching stock symbol:", errors);
@@ -1010,7 +1010,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                         setStockBudget(null);
                         setStockPdp(null);
                         setStockShr(null);
-                        setStockPlr(null);
+                        setStockStp(null);
                         setStockCommission(null);
                         setStockHtp(null);
                     } else if (data) {
@@ -1018,7 +1018,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                         setStockBudget(data.budget);
                         setStockPdp(data.pdp);       // <<< Set PDP state
                         setStockShr(data.swingHoldRatio); // <<< Set SHR state
-                        setStockPlr(data.plr);       // <<< Set PLR state
+                        setStockStp(data.stp);       // <<< Set STP state
                         setStockCommission(data.stockCommission); // <<< Set Commission state
                         setStockHtp(data.htp);       // <<< Set HTP state
                     } else {
@@ -1026,7 +1026,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                         setStockBudget(null);
                         setStockPdp(null); // Set related state to null if not found
                         setStockShr(null);
-                        setStockPlr(null);
+                        setStockStp(null);
                         setStockCommission(null);
                         setStockHtp(null);
                     }
@@ -1036,7 +1036,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                     setStockSymbol("Error");
                     setStockName("Error");                    setStockBudget(null);
                     setStockShr(null);
-                    setStockPlr(null);
+                    setStockStp(null);
                     setStockCommission(null);
                     setStockHtp(null);
                 });
@@ -1046,7 +1046,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
             setStockBudget(undefined);
             setStockPdp(undefined);
             setStockShr(undefined);
-            setStockPlr(undefined);
+            setStockStp(undefined);
             setStockCommission(undefined);
             setStockHtp(undefined);
         }
@@ -2068,7 +2068,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 budget: stockBudget,
                 pdp: stockPdp,
                 swingHoldRatio: stockShr,
-                plr: stockPlr,
+                stp: stockStp,
                 stockCommission: stockCommission,
                 htp: stockHtp,
                 testPrice: currentStockData?.testPrice ?? null, // Include test price from current stock data
@@ -2113,7 +2113,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                     setStockBudget(updatedStock.budget);
                     setStockPdp(updatedStock.pdp);
                     setStockShr(updatedStock.swingHoldRatio);
-                    setStockPlr(updatedStock.plr);
+                    setStockStp(updatedStock.stp);
                     setStockCommission(updatedStock.stockCommission);
                     setStockHtp(updatedStock.htp);
                 }
@@ -2168,7 +2168,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 stockBudget={stockBudget}
                 stockPdp={stockPdp}
                 stockShr={stockShr}
-                stockPlr={stockPlr}
+                stockStp={stockStp}
                 stockHtp={stockHtp}
                 totalTiedUpInvestment={totalTiedUpInvestment}
                 riskInvestment={riskInvestment}

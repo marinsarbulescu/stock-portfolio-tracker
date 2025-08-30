@@ -263,7 +263,7 @@ async function verifyOverview(
     await expect(page.locator('[data-testid="overview-settings-invested"]')).toContainText(`${expectedOverview.settings.invested.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`);
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toContainText(`${expectedOverview.settings.pdp}%`);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toContainText(`${expectedOverview.settings.shr}%`);
-    await expect(page.locator('[data-testid="overview-settings-plr"]')).toContainText(`${expectedOverview.settings.plr}`);
+    await expect(page.locator('[data-testid="overview-settings-stp"]')).toContainText(`${expectedOverview.settings.stp}`);
     await expect(page.locator('[data-testid="overview-settings-htp"]')).toContainText(`${expectedOverview.settings.htp}`);
     console.log(`[OverviewHelper] ✅ Settings section verified`);
     
@@ -308,7 +308,7 @@ async function verifyInitialSettings(page: any, stockConfig: any): Promise<void>
     await expect(page.locator('[data-testid="overview-settings-invested"]')).toContainText('$0.00');
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toContainText(`${stockConfig.pdp}%`);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toContainText(`${stockConfig.swingHoldRatio}%`);
-    await expect(page.locator('[data-testid="overview-settings-plr"]')).toContainText(`${stockConfig.plr}`);
+    await expect(page.locator('[data-testid="overview-settings-stp"]')).toContainText(`${stockConfig.stp}%`);
     await expect(page.locator('[data-testid="overview-settings-htp"]')).toContainText(`${stockConfig.htp}`);
     
     console.log('[OverviewHelper] ✅ Initial settings verification completed');
@@ -333,7 +333,7 @@ test.describe('Wallet Same Price Transactions (JSON-driven)', () => {
             stockType: testConfig.stock.stockType,
             region: testConfig.stock.region,
             pdp: testConfig.stock.pdp,
-            plr: testConfig.stock.plr,
+            stp: testConfig.stock.stp,
             budget: testConfig.stock.budget,
             swingHoldRatio: testConfig.stock.swingHoldRatio,
             stockCommission: testConfig.stock.stockCommission,
@@ -430,8 +430,8 @@ test.describe('Wallet Same Price Transactions (JSON-driven)', () => {
             console.log(`[${testConfig.scenario}] Step ${4 + i * 2}: Adding ${transactionKey}...`);
             await addTransaction(page, {
                 date: transaction.input.date,
-                type: transaction.input.type,
-                signal: transaction.input.signal,
+                type: transaction.input.type!,
+                signal: transaction.input.signal!,
                 price: transaction.input.price!,
                 investment: transaction.input.investment!
             });

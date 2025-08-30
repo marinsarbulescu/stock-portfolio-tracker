@@ -31,7 +31,8 @@ const schema = a.schema({
       stockTrend: a.ref('StockTrend'), // Reference the StockTrend enum, optional
       name: a.string(), // Stock name, optional
       pdp: a.float(),   // Price Drop Percent
-      plr: a.float(),   // Profit Loss Ratio
+      plr: a.float(),   // Profit Loss Ratio (DEPRECATED - kept for historical data)
+      stp: a.float().required().default(9), // Swing Take Profit percentage (e.g., 9 = 9% profit target)
       budget: a.float(), // Annual budget, optional number
       testPrice: a.float(), // Test/override price for experimental purposes, optional
       isHidden: a.boolean().default(false), // Hide the stock from the reporting table
@@ -68,7 +69,7 @@ const schema = a.schema({
       archived: a.boolean().default(false), // Soft delete flag for archived transactions
       archivedAt: a.datetime(), // Timestamp when the transaction was archived
       lbd: a.float(),             // Last Buy Dip ($). Calculated target price for a new Buy Signal. LBD = Buy Price - (Buy Price * PDP)
-      tp: a.float(),              // Take Profit ($). Calculated target price, at which we get a Sell signal. TP = Buy Price + (Buy Price * PDP * PLR)
+      tp: a.float(),              // Take Profit ($). Calculated target price, at which we get a Sell signal. TP = Buy Price + (Buy Price * STP / 100)
       completedTxnId: a.string(), // Link to another Txn ID (for Sell closing a Buy?)
       txnProfit: a.float(),
       txnProfitPercent: a.float(),

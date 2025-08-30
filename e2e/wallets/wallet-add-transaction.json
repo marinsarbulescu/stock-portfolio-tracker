@@ -32,7 +32,7 @@
     "stockType": "Stock",
     "region": "US",
     "pdp": 5,
-    "plr": 2,
+    "stp": 10,
     "budget": 600,
     "swingHoldRatio": 70,
     "stockCommission": 0.1,
@@ -59,7 +59,7 @@
             "invested": 200,
             "pdp": "5%",
             "shr": "70% Swing",
-            "plr": "2",
+            "stp": "10%",
             "htp": "0%"
           },
           "txnsAndShares": {
@@ -132,7 +132,7 @@
             "invested": 200,
             "pdp": "5%",
             "shr": "70% Swing",
-            "plr": "2",
+            "stp": "10%",
             "htp": "0%"
           },
           "txnsAndShares": {
@@ -208,7 +208,7 @@
             "invested": 600,
             "pdp": "5%",
             "shr": "70% Swing",
-            "plr": "2",
+            "stp": "10%",
             "htp": "0%"
           },
           "txnsAndShares": {
@@ -289,7 +289,7 @@
             "invested": 950,
             "pdp": "5%",
             "shr": "70% Swing",
-            "plr": "2",
+            "stp": "10%",
             "htp": "0%"
           },
           "txnsAndShares": {
@@ -372,7 +372,7 @@
             "invested": 950,
             "pdp": "5%",
             "shr": "70% Swing",
-            "plr": "2",
+            "stp": "10%",
             "htp": "0%"
           },
           "txnsAndShares": {
@@ -458,7 +458,7 @@
             "invested": 1050,
             "pdp": "5%",
             "shr": "70% Swing",
-            "plr": "2",
+            "stp": "10%",
             "htp": "0%"
           },
           "txnsAndShares": {

@@ -220,7 +220,7 @@ async function createStockViaUI(page: any, stockData: PortfolioStockCreateData) 
     await page.locator('#region').selectOption(stockData.region);
     await page.locator('#stockTrend').selectOption(stockData.stockTrend);
     await page.locator('#pdp').fill((stockData.pdp ?? 3).toString());
-    await page.locator('#plr').fill((stockData.plr ?? 2).toString());
+    await page.locator('#stp').fill((stockData.stp ?? 9).toString());
     await page.locator('#budget').fill((stockData.budget ?? 1000).toString());
     await page.locator('#shr').fill((stockData.swingHoldRatio ?? 30).toString());
     await page.locator('#commission').fill((stockData.stockCommission ?? 1).toString());

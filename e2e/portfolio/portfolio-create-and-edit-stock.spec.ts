@@ -98,7 +98,7 @@ async function toggleAllColumnsVisible(page: any) {
         'currentPrice',
         'pdp',
         'htp',
-        'plr',
+        'stp',
         'stockCommission',
         'budget',
         'investment'
@@ -135,7 +135,7 @@ async function createStockViaUI(page: any, stockData: PortfolioCreateEditTestCon
     }
     await page.locator('#name').fill(stockData.name);
     await page.locator('#pdp').fill(stockData.pdp.toString());
-    await page.locator('#plr').fill(stockData.plr.toString());
+    await page.locator('#stp').fill(stockData.stp.toString());
     await page.locator('#shr').fill(stockData.swingHoldRatio.toString());
     await page.locator('#budget').fill(stockData.budget.toString());
     await page.locator('#commission').fill(stockData.stockCommission.toString());
@@ -192,10 +192,10 @@ async function verifyStockInTable(page: any, stockData: PortfolioCreateEditTestC
     await expect(htpCell).toBeVisible();
     await expect(htpCell).toHaveText(stockData.htp!.toString());
     
-    // Verify PLR
-    const plrCell = page.locator(`[data-testid="portfolio-page-table-plr-${symbol}"]`).first();
-    await expect(plrCell).toBeVisible();
-    await expect(plrCell).toHaveText(stockData.plr.toString());
+    // Verify STP
+    const stpCell = page.locator(`[data-testid="portfolio-page-table-stp-${symbol}"]`).first();
+    await expect(stpCell).toBeVisible();
+    await expect(stpCell).toHaveText(stockData.stp.toString());
     
     // Verify commission
     const commissionCell = page.locator(`[data-testid="portfolio-page-table-stockCommission-${symbol}"]`).first();
@@ -235,7 +235,7 @@ async function openEditModalAndVerifyValues(page: any, stockData: PortfolioCreat
     }
     await expect(page.locator('#name')).toHaveValue(stockData.name);
     await expect(page.locator('#pdp')).toHaveValue(stockData.pdp.toString());
-    await expect(page.locator('#plr')).toHaveValue(stockData.plr.toString());
+    await expect(page.locator('#stp')).toHaveValue(stockData.stp.toString());
     await expect(page.locator('#shr')).toHaveValue(stockData.swingHoldRatio.toString());
     await expect(page.locator('#budget')).toHaveValue(stockData.budget.toString());
     await expect(page.locator('#commission')).toHaveValue(stockData.stockCommission.toString());
@@ -255,7 +255,7 @@ async function editStockValues(page: any, editData: PortfolioCreateEditTestConfi
         await page.locator('#stockTrend').selectOption(editData.stockTrend);
     }
     await page.locator('#pdp').fill(editData.pdp.toString());
-    await page.locator('#plr').fill(editData.plr.toString());
+    await page.locator('#stp').fill(editData.stp.toString());
     await page.locator('#shr').fill(editData.swingHoldRatio.toString());
     await page.locator('#budget').fill(editData.budget.toString());
     await page.locator('#commission').fill(editData.stockCommission.toString());
@@ -302,10 +302,10 @@ async function verifyUpdatedStockInTable(page: any, editData: PortfolioCreateEdi
     await expect(htpCell).toBeVisible();
     await expect(htpCell).toHaveText(editData.htp!.toString());
     
-    // Verify PLR
-    const plrCell = page.locator(`[data-testid="portfolio-page-table-plr-${symbol}"]`).first();
-    await expect(plrCell).toBeVisible();
-    await expect(plrCell).toHaveText(editData.plr.toString());
+    // Verify STP
+    const stpCell = page.locator(`[data-testid="portfolio-page-table-stp-${symbol}"]`).first();
+    await expect(stpCell).toBeVisible();
+    await expect(stpCell).toHaveText(editData.stp.toString());
     
     // Verify commission
     const commissionCell = page.locator(`[data-testid="portfolio-page-table-stockCommission-${symbol}"]`).first();

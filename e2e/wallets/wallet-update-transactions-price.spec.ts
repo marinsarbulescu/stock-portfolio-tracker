@@ -533,7 +533,7 @@ async function verifyOverview(
     await expect(page.locator('[data-testid="overview-settings-invested"]')).toContainText(`${expectedOverview.settings.invested.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`);
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toContainText(`${expectedOverview.settings.pdp}%`);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toContainText(`${expectedOverview.settings.shr}%`);
-    await expect(page.locator('[data-testid="overview-settings-plr"]')).toContainText(`${expectedOverview.settings.plr}`);
+    await expect(page.locator('[data-testid="overview-settings-stp"]')).toContainText(`${expectedOverview.settings.stp}`);
     await expect(page.locator('[data-testid="overview-settings-htp"]')).toContainText(`${expectedOverview.settings.htp}`);
     console.log(`[OverviewHelper] ✅ Settings section verified`);
     
@@ -578,7 +578,7 @@ async function verifyInitialSettings(page: Page, stockConfig: any): Promise<void
     await expect(page.locator('[data-testid="overview-settings-invested"]')).toContainText('0');
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toContainText(`${stockConfig.pdp}%`);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toContainText(`${stockConfig.swingHoldRatio}%`);
-    await expect(page.locator('[data-testid="overview-settings-plr"]')).toContainText(`${stockConfig.plr}`);
+    await expect(page.locator('[data-testid="overview-settings-stp"]')).toContainText(`${stockConfig.stp}`);
     await expect(page.locator('[data-testid="overview-settings-htp"]')).toContainText(`${stockConfig.htp}`);
     
     console.log('[OverviewHelper] ✅ Initial settings verification completed');
@@ -605,7 +605,7 @@ test.describe('Wallet Update Transactions Price', () => {
             stockType: scenario.stock.stockType as "Stock" | "ETF" | "Crypto",
             region: scenario.stock.region as "APAC" | "EU" | "Intl" | "US",
             pdp: scenario.stock.pdp,
-            plr: scenario.stock.plr,
+            stp: scenario.stock.stp,
             budget: scenario.stock.budget,
             swingHoldRatio: scenario.stock.swingHoldRatio,
             stockCommission: scenario.stock.stockCommission,
@@ -675,7 +675,7 @@ test.describe('Wallet Update Transactions Price', () => {
         const transactionA: TransactionData = {
             date: scenario.transactions.AddTransactionA.input.date,
             type: scenario.transactions.AddTransactionA.input.type as 'Split' | 'Swing' | 'Hold',
-            signal: scenario.transactions.AddTransactionA.input.signal,
+            signal: scenario.transactions.AddTransactionA.input.signal!,
             price: scenario.transactions.AddTransactionA.input.price!,
             investment: scenario.transactions.AddTransactionA.input.investment!
         };
@@ -697,7 +697,7 @@ test.describe('Wallet Update Transactions Price', () => {
         const transactionB: TransactionData = {
             date: scenario.transactions.AddTransactionB.input.date,
             type: scenario.transactions.AddTransactionB.input.type as 'Split' | 'Swing' | 'Hold',
-            signal: scenario.transactions.AddTransactionB.input.signal,
+            signal: scenario.transactions.AddTransactionB.input.signal!,
             price: scenario.transactions.AddTransactionB.input.price!,
             investment: scenario.transactions.AddTransactionB.input.investment!
         };

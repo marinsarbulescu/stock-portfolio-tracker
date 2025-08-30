@@ -51,7 +51,7 @@ interface StockSplitTestConfig {
     stockType: string;
     region: string;
     pdp: number;
-    plr: number;
+    stp: number;
     budget: number;
     swingHoldRatio: number;
     stockCommission: number;
@@ -87,7 +87,7 @@ interface OverviewExpectation {
     invested: number;
     pdp: string;
     shr: string;
-    plr: string;
+    stp: string;
     htp: string;
   };
   txnsAndShares: {
@@ -229,7 +229,7 @@ async function verifyOverview(
     await expect(page.locator('[data-testid="overview-settings-invested"]')).toHaveText(formatCurrency(expectedOverview.settings.invested));
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toHaveText(expectedOverview.settings.pdp);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toHaveText(expectedOverview.settings.shr);
-    await expect(page.locator('[data-testid="overview-settings-plr"]')).toHaveText(expectedOverview.settings.plr);
+    await expect(page.locator('[data-testid="overview-settings-stp"]')).toHaveText(expectedOverview.settings.stp);
     await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(expectedOverview.settings.htp);
     console.log(`[OverviewHelper] ✅ Settings section verified`);
     
@@ -317,7 +317,7 @@ test.describe('Stock Split Transaction E2E Test', () => {
             region: config.stock.region as "US" | "EU" | "Intl" | "APAC",
             owner: E2E_TEST_USER_OWNER_ID,
             pdp: config.stock.pdp,
-            plr: config.stock.plr,
+            stp: config.stock.stp,
             budget: config.stock.budget,
             swingHoldRatio: config.stock.swingHoldRatio,
             stockCommission: config.stock.stockCommission,

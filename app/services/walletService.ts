@@ -17,8 +17,8 @@ type AmplifyClient = ReturnType<typeof generateClient<Schema>>;
 // Define the structure for stock-specific data needed (e.g., for TP calculation)
 interface StockInfoForTp {
     owner: string;
-    plr?: number | null;
-    pdp?: number | null; // Add PDP for base TP calculation
+    stp?: number | null; // Swing Take Profit percentage
+    pdp?: number | null; // Add PDP for base TP calculation (still used for LBD)
     stockCommission?: number | null; // Add commission for TP adjustment
     // Add any other fields needed for TP calculation (e.g., specific overrides?)
 }
@@ -55,20 +55,19 @@ function calculateTpForWallet(
     totalShares: number,
     stockInfo: StockInfoForTp
 ): TpCalculationResult {
-    const plr = stockInfo.plr;
-    const pdp = stockInfo.pdp;
+    const stp = stockInfo.stp;
     const stockCommission = stockInfo.stockCommission;
 
     let tpValue: number | null = null;
     let tpPercent: number | null = null;
     
-    if (typeof plr === 'number' && typeof pdp === 'number' && plr > 0 && pdp > 0 && 
+    if (typeof stp === 'number' && stp > 0 && 
         totalShares > SHARE_EPSILON && totalInvestment > CURRENCY_EPSILON) {
         
         const buyPrice = totalInvestment / totalShares;
         
-        // Calculate base TP using the same formula as TransactionForm
-        const baseTP = buyPrice + (buyPrice * (pdp * plr / 100));
+        // Calculate base TP using the new STP formula
+        const baseTP = buyPrice + (buyPrice * (stp / 100));
         // Apply commission adjustment if commission is available and > 0
         
         if (typeof stockCommission === 'number' && stockCommission > 0) {

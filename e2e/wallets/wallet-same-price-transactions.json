@@ -6,11 +6,11 @@
     "stockType": "ETF",
     "region": "US",
     "pdp": 5,
-    "plr": 2,
+    "stp": 10,
     "budget": 600,
     "swingHoldRatio": 30,
     "stockCommission": 0,
-    "htp": 12
+    "htp": 0
   },
   "transactions": {
     "TransactionA": {
@@ -44,8 +44,8 @@
             "invested": 200,
             "pdp": "5",
             "shr": "30",
-            "plr": "2",
-            "htp": "12"
+            "stp": "10%",
+            "htp": "0%"
           },
           "txnsAndShares": {
             "buys": 1,
@@ -98,8 +98,8 @@
             "invested": 500,
             "pdp": "5",
             "shr": "30",
-            "plr": "2",
-            "htp": "12"
+            "stp": "10%",
+            "htp": "0%"
           },
           "txnsAndShares": {
             "buys": 2,
@@ -152,8 +152,8 @@
             "invested": 900,
             "pdp": "5",
             "shr": "30",
-            "plr": "2",
-            "htp": "12"
+            "stp": "10%",
+            "htp": "0%"
           },
           "txnsAndShares": {
             "buys": 3,
@@ -206,8 +206,8 @@
             "invested": 1400,
             "pdp": "5",
             "shr": "30",
-            "plr": "2",
-            "htp": "12"
+            "stp": "10%",
+            "htp": "0%"
           },
           "txnsAndShares": {
             "buys": 4,
