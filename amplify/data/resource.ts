@@ -32,7 +32,7 @@ const schema = a.schema({
       name: a.string(), // Stock name, optional
       pdp: a.float(),   // Price Drop Percent
       plr: a.float(),   // Profit Loss Ratio (DEPRECATED - kept for historical data)
-      stp: a.float().required().default(9), // Swing Take Profit percentage (e.g., 9 = 9% profit target)
+      stp: a.float().default(9), // Swing Take Profit percentage (e.g., 9 = 9% profit target)
       budget: a.float(), // Annual budget, optional number
       testPrice: a.float(), // Test/override price for experimental purposes, optional
       isHidden: a.boolean().default(false), // Hide the stock from the reporting table
