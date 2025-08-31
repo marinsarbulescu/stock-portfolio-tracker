@@ -253,7 +253,7 @@ async function verifyInitialSettings(
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toHaveText(`${stockConfig.pdp}%`);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toHaveText(`${stockConfig.swingHoldRatio}% Swing`);
     await expect(page.locator('[data-testid="overview-settings-stp"]')).toHaveText(`${stockConfig.stp}%`);
-    await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(`${stockConfig.htp || 0}%`);
+    await expect(page.locator('[data-testid="overview-settings-htp"]')).toHaveText(stockConfig.htp != null && stockConfig.htp > 0 ? `${stockConfig.htp}%` : '-');
     
     // Verify initial transaction counts are zero
     await expect(page.locator('[data-testid="overview-txns-buys"]')).toHaveText('0');
@@ -284,7 +284,7 @@ test.describe('Wallet Page - Delete Transactions and Verify Wallets (JSON-driven
                 budget: stockConfig.budget,
                 swingHoldRatio: stockConfig.swingHoldRatio,
                 stockCommission: stockConfig.stockCommission,
-                htp: stockConfig.htp || 0,
+                htp: stockConfig.htp || null, // Use null instead of 0 for undefined HTP
             };
             
             const portfolioStock = await createPortfolioStock(stockInput);

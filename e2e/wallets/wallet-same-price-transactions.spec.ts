@@ -309,7 +309,7 @@ async function verifyInitialSettings(page: any, stockConfig: any): Promise<void>
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toContainText(`${stockConfig.pdp}%`);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toContainText(`${stockConfig.swingHoldRatio}%`);
     await expect(page.locator('[data-testid="overview-settings-stp"]')).toContainText(`${stockConfig.stp}%`);
-    await expect(page.locator('[data-testid="overview-settings-htp"]')).toContainText(`${stockConfig.htp}`);
+    await expect(page.locator('[data-testid="overview-settings-htp"]')).toContainText(stockConfig.htp != null && stockConfig.htp > 0 ? `${stockConfig.htp}%` : '-');
     
     console.log('[OverviewHelper] ✅ Initial settings verification completed');
 }

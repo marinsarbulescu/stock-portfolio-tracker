@@ -36,7 +36,7 @@ export default function AddStockModal({
   const [testPrice, setTestPrice] = useState('');
   const [swingHoldRatio, setSwingHoldRatio] = useState('');
   const [stockCommission, setStockCommission] = useState('');
-  const [htp, setHtp] = useState('0'); // Default to 0 as per requirement
+  const [htp, setHtp] = useState(''); // Optional field, start empty
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export default function AddStockModal({
       setTestPrice('');
       setSwingHoldRatio('');
       setStockCommission('');
-      setHtp('0'); // Reset to default value
+      setHtp(''); // Reset to empty
       setError(null);
     }
   }, [isOpen]);
@@ -81,9 +81,9 @@ export default function AddStockModal({
       return;
     }
 
-    // Validate HTP (must be >= 0)
-    const htpValue = parseFloat(htp || '0');
-    if (isNaN(htpValue) || htpValue < 0) {
+    // Validate HTP (must be >= 0 if provided)
+    const htpValue = htp ? parseFloat(htp) : null;
+    if (htpValue !== null && (isNaN(htpValue) || htpValue < 0)) {
       setError('HTP must be a number >= 0.');
       setIsLoading(false);
       return;
@@ -110,7 +110,7 @@ export default function AddStockModal({
       testPrice: testPriceValue,
       swingHoldRatio: shrValue,
       stockCommission: stockCommission ? parseFloat(stockCommission) : null,
-      htp: htpValue, // Always include HTP value
+      htp: htpValue, // Include HTP value or null if not provided
     };
 
     try {
@@ -326,7 +326,7 @@ export default function AddStockModal({
           </div>
 
           <div>
-            <label htmlFor="htp" style={{display: 'block', marginBottom: '3px'}}>HTP (%):</label>
+            <label htmlFor="htp" style={{display: 'block', marginBottom: '3px'}}>HTP (%) (Optional):</label>
             <input 
               id="htp" 
               type="number" 
@@ -337,7 +337,6 @@ export default function AddStockModal({
               placeholder="e.g., 10 for 10% Hold Take Profit" 
               disabled={isLoading}
               style={{width: '100%', padding: '8px'}}
-              required
             />
           </div>
 

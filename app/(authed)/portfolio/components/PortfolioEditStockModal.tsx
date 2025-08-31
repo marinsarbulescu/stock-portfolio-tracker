@@ -34,7 +34,7 @@ export default function EditStockModal({
   const [testPrice, setTestPrice] = useState('');
   const [swingHoldRatio, setSwingHoldRatio] = useState('');
   const [stockCommission, setStockCommission] = useState('');
-  const [htp, setHtp] = useState('0'); // Default to 0
+  const [htp, setHtp] = useState(''); // Optional field, start empty
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export default function EditStockModal({
       setTestPrice(stockToEditData.testPrice?.toString() ?? '');
       setSwingHoldRatio(stockToEditData.swingHoldRatio?.toString() ?? '');
       setStockCommission(stockToEditData.stockCommission?.toString() ?? '');
-      setHtp(stockToEditData.htp?.toString() ?? '0'); // Default to 0 if not set
+      setHtp(stockToEditData.htp?.toString() ?? ''); // Empty if not set
     }
   }, [isOpen, stockToEditData]);
 
@@ -80,9 +80,9 @@ export default function EditStockModal({
       return;
     }
 
-    // Validate HTP (must be >= 0)
-    const htpValue = parseFloat(htp || '0');
-    if (isNaN(htpValue) || htpValue < 0) {
+    // Validate HTP (must be >= 0 if provided)
+    const htpValue = htp ? parseFloat(htp) : null;
+    if (htpValue !== null && (isNaN(htpValue) || htpValue < 0)) {
       setError('HTP must be a number >= 0.');
       setIsLoading(false);
       return;
@@ -115,7 +115,7 @@ export default function EditStockModal({
       testPrice: testPriceValue,
       swingHoldRatio: shrValue,
       stockCommission: stockCommission ? parseFloat(stockCommission) : null,
-      htp: htpValue, // Always include HTP value
+      htp: htpValue, // Include HTP value or null if not provided
     };
 
     // Construct payload matching PortfolioStockUpdateInput type
@@ -333,7 +333,7 @@ export default function EditStockModal({
           </div>
 
           <div>
-            <label htmlFor="htp" style={{display: 'block', marginBottom: '3px'}}>HTP (%):</label>
+            <label htmlFor="htp" style={{display: 'block', marginBottom: '3px'}}>HTP (%) (Optional):</label>
             <input 
               id="htp" 
               type="number" 
@@ -344,7 +344,6 @@ export default function EditStockModal({
               placeholder="e.g., 10 for 10% Hold Take Profit" 
               disabled={isLoading}
               style={{width: '100%', padding: '8px'}}
-              required
             />
           </div>
 

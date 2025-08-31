@@ -35,8 +35,7 @@
     "stp": 10,
     "budget": 600,
     "swingHoldRatio": 70,
-    "stockCommission": 0.1,
-    "htp": 0
+    "stockCommission": 0.1
   },
   "transactions": {
     "SplitBuyInitial": {
@@ -60,7 +59,7 @@
             "pdp": "5%",
             "shr": "70% Swing",
             "stp": "10%",
-            "htp": "0%"
+            "htp": "-"
           },
           "txnsAndShares": {
             "buys": 1,
@@ -133,7 +132,7 @@
             "pdp": "5%",
             "shr": "70% Swing",
             "stp": "10%",
-            "htp": "0%"
+            "htp": "-"
           },
           "txnsAndShares": {
             "buys": 1,
@@ -209,7 +208,7 @@
             "pdp": "5%",
             "shr": "70% Swing",
             "stp": "10%",
-            "htp": "0%"
+            "htp": "-"
           },
           "txnsAndShares": {
             "buys": 2,
@@ -290,7 +289,7 @@
             "pdp": "5%",
             "shr": "70% Swing",
             "stp": "10%",
-            "htp": "0%"
+            "htp": "-"
           },
           "txnsAndShares": {
             "buys": 3,
@@ -373,7 +372,7 @@
             "pdp": "5%",
             "shr": "70% Swing",
             "stp": "10%",
-            "htp": "0%"
+            "htp": "-"
           },
           "txnsAndShares": {
             "buys": 3,
@@ -459,7 +458,7 @@
             "pdp": "5%",
             "shr": "70% Swing",
             "stp": "10%",
-            "htp": "0%"
+            "htp": "-"
           },
           "txnsAndShares": {
             "buys": 4,
@@ -536,3 +535,4 @@
     }
   }
 }
+

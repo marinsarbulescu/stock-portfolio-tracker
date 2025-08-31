@@ -90,7 +90,7 @@ export default function WalletsOverview({
                       <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>STP</p>
                       <p data-testid="overview-settings-stp">{stockStp != null ? `${stockStp}%` : 'Not set'}</p>
                       <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>HTP</p>
-                      <p data-testid="overview-settings-htp">{stockHtp != null ? `${stockHtp}%` : 'Not set'}</p>
+                      <p data-testid="overview-settings-htp">{stockHtp != null && stockHtp > 0 ? `${stockHtp}%` : '-'}</p>
                     </div>
                 </div>
               </div>

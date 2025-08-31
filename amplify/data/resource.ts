@@ -32,7 +32,7 @@ const schema = a.schema({
       name: a.string(), // Stock name, optional
       pdp: a.float(),   // Price Drop Percent
       plr: a.float(),   // Profit Loss Ratio (DEPRECATED - kept for historical data)
-      stp: a.float().default(9), // Swing Take Profit percentage (e.g., 9 = 9% profit target)
+      stp: a.float().required(), // Swing Take Profit percentage (e.g., 9 = 9% profit target)
       budget: a.float(), // Annual budget, optional number
       testPrice: a.float(), // Test/override price for experimental purposes, optional
       isHidden: a.boolean().default(false), // Hide the stock from the reporting table
@@ -40,7 +40,7 @@ const schema = a.schema({
       archivedAt: a.datetime(), // Timestamp when the stock was archived
       swingHoldRatio: a.float(),
       stockCommission: a.float(), // Commission for stock trades, optional
-      htp: a.float().default(0), // Hold Take Profit percentage, required, default 0
+      htp: a.float(), // Hold Take Profit percentage, optional
       transactions: a.hasMany('Transaction', 'portfolioStockId'),
       stockWallets: a.hasMany('StockWallet', 'portfolioStockId'),
       // Add owner field if not implicitly added by .authorization

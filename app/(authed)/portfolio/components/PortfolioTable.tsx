@@ -266,7 +266,7 @@ export default function PortfolioTable({
               {columnVisibility.htp && (
                 <td
                   data-testid={`portfolio-page-table-htp-${stock.symbol?.toUpperCase()}`}
-                  style={cellStyle}>{stock.htp ?? '-'}</td>
+                  style={cellStyle}>{stock.htp != null && stock.htp > 0 ? stock.htp : '-'}</td>
               )}
               {columnVisibility.stp && (
                 <td
