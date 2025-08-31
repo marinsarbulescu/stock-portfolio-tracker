@@ -10,13 +10,15 @@ import {
     addTransaction,
     updateStockTestPrice,
     verifyStockTestPrice,
-    refreshWalletsPage
+    refreshWalletsPage,
+    createStockViaUI
 } from '../utils/pageHelpers';
 import { 
     createPortfolioStock, 
     deleteStockWalletsForStockByStockId, 
     deletePortfolioStock, 
     deleteTransactionsForStockByStockId,
+    getPortfolioStockBySymbol,
     type PortfolioStockCreateData
 } from '../utils/dataHelpers';
 import { E2E_TEST_USERNAME, E2E_TEST_USER_OWNER_ID } from '../utils/testCredentials';
@@ -309,24 +311,39 @@ test.describe('Stock Split Transaction E2E Test', () => {
         console.log('🔐 Logging in user...');
         await loginUser(page, TEST_EMAIL);
         
-        console.log('📈 Creating test stock...');
-        const stockData: PortfolioStockCreateData = {
-            symbol: config.stock.symbol,
-            name: config.stock.name,
-            stockType: config.stock.stockType as "Stock" | "ETF" | "Crypto",
-            region: config.stock.region as "US" | "EU" | "Intl" | "APAC",
-            owner: E2E_TEST_USER_OWNER_ID,
-            pdp: config.stock.pdp,
-            stp: config.stock.stp,
-            budget: config.stock.budget,
-            swingHoldRatio: config.stock.swingHoldRatio,
-            stockCommission: config.stock.stockCommission,
-            htp: config.stock.htp
-        };
-
-        const createdStock = await createPortfolioStock(stockData);
+        // Clean up any existing test stock first
+        try {
+            const existingStock = await getPortfolioStockBySymbol(config.stock.symbol.toUpperCase());
+            if (existingStock) {
+                console.log(`🧹 Cleaning up existing stock ${config.stock.symbol}...`);
+                await deleteStockWalletsForStockByStockId(existingStock.id);
+                await deleteTransactionsForStockByStockId(existingStock.id);
+                await deletePortfolioStock(existingStock.id);
+                console.log(`✅ Existing stock cleaned up.`);
+            }
+        } catch (error) {
+            console.log(`ℹ️ No existing stock to clean up.`);
+        }
+        
+        console.log('📈 Creating test stock via UI...');
+        
+        // Navigate to portfolio page first
+        await page.goto('/portfolio');
+        await page.waitForLoadState('networkidle');
+        
+        // Create stock using UI method
+        await createStockViaUI(page, { 
+            ...config.stock, 
+            owner: E2E_TEST_USER_OWNER_ID 
+        });
+        
+        // Get the created stock ID for use in the test
+        const createdStock = await getPortfolioStockBySymbol(config.stock.symbol.toUpperCase());
+        if (!createdStock) {
+            throw new Error(`❌ Failed to find created stock ${config.stock.symbol}`);
+        }
         stockId = createdStock.id;
-        console.log(`✅ Test stock created with ID: ${stockId}`);
+        console.log(`✅ Test stock created via UI with ID: ${stockId}`);
         
         console.log('🧭 Navigating to stock wallet page...');
         await navigateToStockWalletPage(page, stockId, config.stock.symbol);
