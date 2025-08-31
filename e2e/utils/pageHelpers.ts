@@ -1,5 +1,6 @@
 import { type Page, expect } from '@playwright/test';
 import { E2E_TEST_USERNAME, E2E_TEST_PASSWORD } from './testCredentials';
+import type { PortfolioStockCreateData } from './dataHelpers';
 
 // Define a more specific interface for buy transaction data, aligning with SingleStockLifecycleScenario fields
 export interface BuyTransactionParams {
@@ -54,6 +55,124 @@ export async function loginUser(page: Page, username = E2E_TEST_USERNAME, passwo
         // Consider taking a screenshot for debugging
         await page.screenshot({ path: `e2e_login_error_helper_${Date.now()}.png`, fullPage: true });
         throw new Error(`Login failed for ${username} during helper execution.`);
+    }
+}
+
+/**
+ * Creates a stock via the UI by filling and submitting the Add Stock form.
+ * This function navigates to the Portfolio page, opens the Add Stock modal, 
+ * fills all required fields, and submits the form.
+ * @param page - The Playwright Page object.
+ * @param stockData - The stock data to use for form filling.
+ */
+export async function createStockViaUI(page: Page, stockData: PortfolioStockCreateData) {
+    console.log(`[PageHelper] Creating stock ${stockData.symbol} via UI...`);
+    
+    // Navigate to portfolio first
+    await page.goto('/portfolio');
+    await expect(page.locator('[data-testid="portfolio-page-title"]')).toBeVisible({ timeout: 15000 });
+    
+    // Click add stock button using data-testid
+    const addButton = page.locator('[data-testid="portfolio-page-add-stock-button"]');
+    await expect(addButton).toBeVisible({ timeout: 10000 });
+    await addButton.click();
+    
+    // Wait for symbol field to be visible (indicating modal is ready)
+    const symbolField = page.locator('#symbol');
+    await expect(symbolField).toBeVisible({ timeout: 10000 });
+    
+    // Fill the form using ID selectors
+    await page.locator('#symbol').fill(stockData.symbol);
+    await page.locator('#name').fill(stockData.name || '');
+    await page.locator('#type').selectOption(stockData.stockType);
+    await page.locator('#region').selectOption(stockData.region);
+    
+    // Handle optional stockTrend field
+    if (stockData.stockTrend) {
+        await page.locator('#stockTrend').selectOption(stockData.stockTrend);
+    }
+    
+    // Handle required STP field
+    await page.locator('#stp').fill((stockData.stp ?? 9).toString());
+    
+    // Fill other required fields
+    await page.locator('#pdp').fill((stockData.pdp ?? 3).toString());
+    await page.locator('#budget').fill((stockData.budget ?? 1000).toString());
+    await page.locator('#shr').fill((stockData.swingHoldRatio ?? 30).toString());
+    await page.locator('#commission').fill((stockData.stockCommission ?? 1).toString());
+    
+    // Handle optional HTP field
+    if (stockData.htp !== undefined && stockData.htp !== null) {
+        await page.locator('#htp').fill(stockData.htp.toString());
+    }
+    
+    // Handle optional testPrice field
+    if (stockData.testPrice !== undefined && stockData.testPrice !== null) {
+        await page.locator('#testPrice').fill(stockData.testPrice.toString());
+    }
+    
+    // Submit the form
+    const submitButton = page.locator('button[type="submit"]:has-text("Add Stock")');
+    await expect(submitButton).toBeVisible();
+    await submitButton.click();
+    
+    // Wait for modal to close (indicating stock was created successfully)
+    const modal = page.locator('[role="dialog"]').first();
+    try {
+        await expect(modal).not.toBeVisible({ timeout: 10000 });
+        console.log(`[PageHelper] Modal closed successfully after stock creation.`);
+    } catch (error) {
+        console.log(`[PageHelper] Modal did not close - form submission may have failed.`);
+        await page.screenshot({ path: `debug_modal_not_closed_${stockData.symbol}_${Date.now()}.png`, fullPage: true });
+        throw error;
+    }
+    
+    // Wait a moment for backend processing
+    console.log(`[PageHelper] Waiting for backend processing and UI update...`);
+    await page.waitForTimeout(3000);
+    
+    // Wait for the stock to appear in the portfolio table
+    const stockSymbolUpper = stockData.symbol.toUpperCase();
+    const stockInTable = page.locator(`[data-testid="portfolio-page-table-wallet-link-${stockSymbolUpper}"]`).first();
+    console.log(`[PageHelper] Looking for stock with data-testid: portfolio-page-table-wallet-link-${stockSymbolUpper}`);
+    
+    try {
+        await expect(stockInTable).toBeVisible({ timeout: 10000 });
+        console.log(`[PageHelper] ✅ Stock ${stockData.symbol} created successfully.`);
+    } catch (error) {
+        console.log(`[PageHelper] Stock ${stockData.symbol} did not appear in table after creation.`);
+        
+        // Take a screenshot to see what's on the page
+        await page.screenshot({ path: `debug_portfolio_page_${stockData.symbol}_${Date.now()}.png`, fullPage: true });
+        
+        // Check if there are any stocks in the table at all
+        const anyStockRows = page.locator('[data-testid^="portfolio-page-table-name-"]');
+        const stockCount = await anyStockRows.count();
+        console.log(`[PageHelper] Found ${stockCount} stocks in the portfolio table.`);
+        
+        // List all the stocks that are visible with their data-testids
+        for (let i = 0; i < stockCount; i++) {
+            const stockRow = anyStockRows.nth(i);
+            const stockText = await stockRow.textContent();
+            const testId = await stockRow.getAttribute('data-testid');
+            console.log(`[PageHelper] Stock ${i + 1}: ${testId} - "${stockText}"`);
+        }
+        
+        // Check if stock exists in database
+        try {
+            const { getPortfolioStockBySymbol } = await import('./dataHelpers');
+            const stockFromDb = await getPortfolioStockBySymbol(stockData.symbol);
+            if (stockFromDb) {
+                console.log(`[PageHelper] Stock ${stockData.symbol} was created in database but not visible in UI. Stock ID: ${stockFromDb.id}`);
+            } else {
+                console.log(`[PageHelper] Stock ${stockData.symbol} was NOT created in database.`);
+            }
+        } catch (dbError) {
+            console.log(`[PageHelper] Error checking database for stock ${stockData.symbol}:`, dbError);
+        }
+        
+        await page.screenshot({ path: `debug_stock_not_in_table_${stockData.symbol}_${Date.now()}.png`, fullPage: true });
+        throw error;
     }
 }
 
