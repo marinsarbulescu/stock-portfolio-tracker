@@ -15,7 +15,7 @@ export async function cleanupTestStocks(symbols: string[] = ['AAPL', 'BTC-USD', 
     
     try {
         // Get all portfolio stocks
-        const { data: allStocks, errors } = await client.models.PortfolioStock.list();
+        const { data: allStocks, errors } = await client.models.PortfolioStock.list({} as any);
         
         if (errors) {
             console.error('[cleanupHelper] Error listing stocks for cleanup:', errors);

@@ -299,7 +299,7 @@ async function verifyTransactionTable(
 }
 
 test.describe('Stock Split Transaction E2E Test', () => {
-    const config = testData as StockSplitTestConfig;
+    const config = testData as any as StockSplitTestConfig;
     let stockId: string;
     let page: Page;
 
@@ -335,7 +335,7 @@ test.describe('Stock Split Transaction E2E Test', () => {
         await createStockViaUI(page, { 
             ...config.stock, 
             owner: E2E_TEST_USER_OWNER_ID 
-        });
+        } as any);
         
         // Get the created stock ID for use in the test
         const createdStock = await getPortfolioStockBySymbol(config.stock.symbol.toUpperCase());

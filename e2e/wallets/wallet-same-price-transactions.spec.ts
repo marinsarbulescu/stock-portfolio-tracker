@@ -4,14 +4,16 @@ import {
     clearBrowserState,
     loginUser,
     addTransaction,
-    navigateToStockWalletPage
+    navigateToStockWalletPage,
+    createStockViaUI
 } from '../utils/pageHelpers';
 import { 
     PortfolioStockCreateData,
     createPortfolioStock,
     deletePortfolioStock,
     deleteStockWalletsForStockByStockId,
-    deleteTransactionsForStockByStockId
+    deleteTransactionsForStockByStockId,
+    getPortfolioStockBySymbol
 } from '../utils/dataHelpers';
 import { E2E_TEST_USER_OWNER_ID, E2E_TEST_USERNAME } from '../utils/testCredentials';
 import { Amplify } from 'aws-amplify';
@@ -319,15 +321,19 @@ test.describe('Wallet Same Price Transactions (JSON-driven)', () => {
     let testPortfolioStockId: string | null = null;
     let testStockSymbol: string | null = null;
 
-    test.beforeAll(async () => {
-        console.log('[BEFORE ALL] Starting test setup...');
+    test.beforeEach(async ({ page }) => {
+        console.log('[BEFORE EACH] Starting fresh session setup...');
+        await clearBrowserState(page);
+        console.log('[BEFORE EACH] Browser state cleared.');
+        
+        console.log(`[BEFORE EACH] Attempting login as ${E2E_TEST_USERNAME}...`);
+        await loginUser(page, E2E_TEST_USERNAME);
+        console.log('[BEFORE EACH] Login successful.');
         
         testStockSymbol = testConfig.stock.symbol;
         
-        console.log(`[BEFORE ALL] Creating test stock ${testStockSymbol}...`);
-        
-        const stockData: PortfolioStockCreateData = {
-            owner: E2E_TEST_USER_OWNER_ID,
+        console.log(`[BEFORE EACH] Creating test stock ${testStockSymbol} via UI...`);
+        await createStockViaUI(page, { 
             symbol: testConfig.stock.symbol,
             name: testConfig.stock.name,
             stockType: testConfig.stock.stockType,
@@ -337,51 +343,37 @@ test.describe('Wallet Same Price Transactions (JSON-driven)', () => {
             budget: testConfig.stock.budget,
             swingHoldRatio: testConfig.stock.swingHoldRatio,
             stockCommission: testConfig.stock.stockCommission,
-            htp: testConfig.stock.htp
-        };
+            htp: testConfig.stock.htp,
+            owner: E2E_TEST_USER_OWNER_ID
+        } as any);
         
-        try {
-            const createdStock = await createPortfolioStock(stockData);
-            testPortfolioStockId = createdStock.id;
-            console.log(`[BEFORE ALL] Stock created successfully with ID: ${testPortfolioStockId}`);
-        } catch (error) {
-            console.error('[BEFORE ALL] Failed to create stock:', error);
-            throw error;
+        const portfolioStock = await getPortfolioStockBySymbol(testStockSymbol);
+        if (!portfolioStock) {
+            throw new Error(`Portfolio stock not found for symbol: ${testStockSymbol}`);
         }
+        testPortfolioStockId = portfolioStock.id;
+        console.log(`[BEFORE EACH] Stock created via UI with ID: ${testPortfolioStockId}`);
     });
 
-    test.afterAll(async () => {
-        console.log('[AFTER ALL] Starting cleanup...');
+    test.afterEach(async () => {
+        console.log('[AFTER EACH] Starting cleanup...');
         
         if (testPortfolioStockId) {
             try {
-                console.log(`[AFTER ALL] Deleting wallets for stock ID ${testPortfolioStockId}...`);
+                console.log(`[AFTER EACH] Deleting wallets for stock ID ${testPortfolioStockId}...`);
                 await deleteStockWalletsForStockByStockId(testPortfolioStockId);
                 
-                console.log(`[AFTER ALL] Deleting transactions for stock ID ${testPortfolioStockId}...`);
+                console.log(`[AFTER EACH] Deleting transactions for stock ID ${testPortfolioStockId}...`);
                 await deleteTransactionsForStockByStockId(testPortfolioStockId);
                 
-                console.log(`[AFTER ALL] Deleting stock ${testPortfolioStockId}...`);
+                console.log(`[AFTER EACH] Deleting stock ${testPortfolioStockId}...`);
                 await deletePortfolioStock(testPortfolioStockId);
                 
-                console.log('[AFTER ALL] Cleanup completed successfully.');
+                console.log('[AFTER EACH] Cleanup completed successfully.');
             } catch (error) {
-                console.error('[AFTER ALL] Error during cleanup:', error);
+                console.error('[AFTER EACH] Error during cleanup:', error);
             }
         }
-    });
-
-    test.beforeEach(async ({ page }) => {
-        console.log('[BEFORE EACH] Starting fresh session setup...');
-        
-        // Clear browser state and establish clean session
-        await clearBrowserState(page);
-        console.log('[BEFORE EACH] Browser state cleared.');
-
-        // Login with test credentials
-        console.log(`[BEFORE EACH] Attempting login as ${E2E_TEST_USERNAME}...`);
-        await loginUser(page);
-        console.log('[BEFORE EACH] Login successful.');
     });
 
     test(`${testConfig.scenario} - Test Same Price Transaction Behavior`, async ({ page }) => {

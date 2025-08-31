@@ -394,7 +394,7 @@ test.describe('Wallet Add Transaction', () => {
         await createStockViaUI(page, { 
             ...scenario.stock, 
             owner: E2E_TEST_USER_OWNER_ID 
-        });
+        } as any);
         
         // Get the created stock ID for use in the test
         const createdStock = await getPortfolioStockBySymbol(scenario.stock.symbol.toUpperCase());

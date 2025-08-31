@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "allowJs": true,
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["*"]
+    },
+    "types": ["node", "@types/jest"],
+    "lib": ["es2020", "dom"]
+  },
+  "include": [
+    "**/*.ts",
+    "../amplify_outputs.json",
+    "**/*.json",
+    "../amplify/data/resource.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

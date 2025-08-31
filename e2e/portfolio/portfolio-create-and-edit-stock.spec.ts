@@ -286,7 +286,7 @@ test.describe('Portfolio - Create and Edit Stock (JSON-driven)', () => {
 
         // Step 3: Create stock via UI
         console.log(`[${testConfig.scenario}] Step 3: Creating stock via UI...`);
-        await createStockViaUI(page, { ...testConfig.initialStock, owner: E2E_TEST_USER_OWNER_ID });
+        await createStockViaUI(page, { ...testConfig.initialStock, owner: E2E_TEST_USER_OWNER_ID } as any);
 
         // Step 4: Verify stock was created with correct values
         console.log(`[${testConfig.scenario}] Step 4: Verifying stock creation...`);

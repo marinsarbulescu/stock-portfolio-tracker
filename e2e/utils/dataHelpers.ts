@@ -1,6 +1,6 @@
 // e2e/utils/dataHelpers.ts
 import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '@/amplify/data/resource';
+import type { Schema } from '../../amplify/data/resource';
 
 let client: ReturnType<typeof generateClient<Schema>>; // Declare client variable
 

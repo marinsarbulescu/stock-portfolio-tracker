@@ -8,13 +8,15 @@ import {
     loginUser, 
     navigateToStockWalletPage,
     addTransaction,
-    TransactionData
+    TransactionData,
+    createStockViaUI
 } from '../utils/pageHelpers';
 import { 
     createPortfolioStock, 
     deleteStockWalletsForStockByStockId, 
     deleteTransactionsForStockByStockId, 
     deletePortfolioStock,
+    getPortfolioStockBySymbol,
     type PortfolioStockCreateData
 } from '../utils/dataHelpers';
 import { loadTestData, TestConfig, WalletExpectation, TransactionStep, OverviewExpectation } from '../utils/jsonHelper';
@@ -589,34 +591,6 @@ let testData: TestConfig;
 let stockId: string;
 
 test.describe('Wallet Update Transactions Price', () => {
-    test.beforeAll(async () => {
-        console.log('[BEFORE ALL] Starting test setup...');
-        
-        // Load test data from JSON
-        testData = loadTestData('e2e/wallets/wallet-update-transactions-price.json');
-        const scenario = testData;
-        
-        console.log(`[BEFORE ALL] Creating test stock ${scenario.stock.symbol}...`);
-        
-        const stockData: PortfolioStockCreateData = {
-            owner: E2E_TEST_USER_OWNER_ID,
-            symbol: scenario.stock.symbol,
-            name: scenario.stock.name,
-            stockType: scenario.stock.stockType as "Stock" | "ETF" | "Crypto",
-            region: scenario.stock.region as "APAC" | "EU" | "Intl" | "US",
-            pdp: scenario.stock.pdp,
-            stp: scenario.stock.stp,
-            budget: scenario.stock.budget,
-            swingHoldRatio: scenario.stock.swingHoldRatio,
-            stockCommission: scenario.stock.stockCommission,
-            htp: scenario.stock.htp
-        };
-        
-        const createdStock = await createPortfolioStock(stockData);
-        stockId = createdStock.id;
-        console.log(`[BEFORE ALL] Stock created successfully with ID: ${stockId}`);
-    });
-
     test.beforeEach(async ({ page }) => {
         console.log('[BEFORE EACH] Starting fresh session setup...');
         
@@ -626,21 +600,61 @@ test.describe('Wallet Update Transactions Price', () => {
         console.log(`[BEFORE EACH] Attempting login as ${TEST_EMAIL}...`);
         await loginUser(page, TEST_EMAIL);
         console.log('[BEFORE EACH] Login successful.');
+        
+        // Load test data from JSON
+        testData = loadTestData('e2e/wallets/wallet-update-transactions-price.json');
+        const scenario = testData;
+        
+        // Clean up any existing test stock first
+        try {
+            const existingStock = await getPortfolioStockBySymbol(scenario.stock.symbol.toUpperCase());
+            if (existingStock) {
+                console.log(`[BEFORE EACH] Cleaning up existing stock ${scenario.stock.symbol}...`);
+                await deleteStockWalletsForStockByStockId(existingStock.id);
+                await deleteTransactionsForStockByStockId(existingStock.id);
+                await deletePortfolioStock(existingStock.id);
+                console.log(`[BEFORE EACH] Existing stock cleaned up.`);
+            }
+        } catch (error) {
+            console.log(`[BEFORE EACH] No existing stock to clean up.`);
+        }
+        
+        console.log(`[BEFORE EACH] Creating test stock ${scenario.stock.symbol} via UI...`);
+        
+        // Navigate to portfolio page first
+        await page.goto('/portfolio');
+        await page.waitForLoadState('networkidle');
+        
+        // Create stock using UI method
+        await createStockViaUI(page, { 
+            ...scenario.stock, 
+            owner: E2E_TEST_USER_OWNER_ID 
+        } as any);
+        
+        // Get the created stock ID for use in the test
+        const createdStock = await getPortfolioStockBySymbol(scenario.stock.symbol.toUpperCase());
+        if (!createdStock) {
+            throw new Error(`[BEFORE EACH] Failed to find created stock ${scenario.stock.symbol}`);
+        }
+        stockId = createdStock.id;
+        console.log(`[BEFORE EACH] Stock created via UI with ID: ${stockId}`);
     });
 
-    test.afterAll(async () => {
-        console.log('[AFTER ALL] Starting cleanup...');
+    test.afterEach(async () => {
+        console.log('[AFTER EACH] Starting cleanup...');
         
-        console.log(`[AFTER ALL] Deleting wallets for stock ID ${stockId}...`);
-        await deleteStockWalletsForStockByStockId(stockId);
-        
-        console.log(`[AFTER ALL] Deleting transactions for stock ID ${stockId}...`);
-        await deleteTransactionsForStockByStockId(stockId);
-        
-        console.log(`[AFTER ALL] Deleting stock ${stockId}...`);
-        await deletePortfolioStock(stockId);
-        
-        console.log('[AFTER ALL] Cleanup completed successfully.');
+        if (stockId) {
+            console.log(`[AFTER EACH] Deleting wallets for stock ID ${stockId}...`);
+            await deleteStockWalletsForStockByStockId(stockId);
+            
+            console.log(`[AFTER EACH] Deleting transactions for stock ID ${stockId}...`);
+            await deleteTransactionsForStockByStockId(stockId);
+            
+            console.log(`[AFTER EACH] Deleting stock ${stockId}...`);
+            await deletePortfolioStock(stockId);
+            
+            console.log('[AFTER EACH] Cleanup completed successfully.');
+        }
     });
 
     test('Update Transaction Price - Detailed Wallet Validations', async ({ page }) => {

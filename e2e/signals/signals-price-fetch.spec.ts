@@ -237,7 +237,7 @@ test.describe('Signals Price Fetch', () => {
         // Step 1: Create stocks via UI
         for (const stockData of testData.stocks) {
             console.log(`[SignalsPriceFetch] Step 1.${testData.stocks.indexOf(stockData) + 1}: Creating stock ${stockData.symbol}...`);
-            await createStockViaUI(page, { ...stockData, owner: E2E_TEST_USER_OWNER_ID });
+            await createStockViaUI(page, { ...stockData, owner: E2E_TEST_USER_OWNER_ID } as any);
             
             // Get the created stock ID for cleanup with retry logic
             let createdStock = null;

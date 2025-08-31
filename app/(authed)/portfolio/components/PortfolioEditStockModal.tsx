@@ -50,7 +50,7 @@ export default function EditStockModal({
       setRegion(stockToEditData.region ?? 'US');
       setStockTrend(stockToEditData.stockTrend ?? null);
       setPdp(stockToEditData.pdp?.toString() ?? '');
-      setStp(stockToEditData.stp?.toString() ?? '9'); // Default to 9 if not set
+      setStp(stockToEditData.stp?.toString() ?? ''); // Allow empty STP for stocks without it set
       setBudget(stockToEditData.budget?.toString() ?? '');
       setTestPrice(stockToEditData.testPrice?.toString() ?? '');
       setSwingHoldRatio(stockToEditData.swingHoldRatio?.toString() ?? '');
@@ -110,7 +110,7 @@ export default function EditStockModal({
       stockTrend: stockTrend as StockTrendValue,
       name: name || undefined,
       pdp: pdp ? parseFloat(pdp) : null,
-      stp: stp ? parseFloat(stp) : 9, // STP is required with default value of 9
+      stp: stp ? parseFloat(stp) : null, // STP is now optional - temporarily  
       budget: budget ? parseFloat(budget) : null,
       testPrice: testPriceValue,
       swingHoldRatio: shrValue,
@@ -255,7 +255,7 @@ export default function EditStockModal({
           </div>
           
           <div>
-            <label htmlFor="stp" style={{display: 'block', marginBottom: '3px'}}>Swing Take Profit (STP) %:</label>
+            <label htmlFor="stp" style={{display: 'block', marginBottom: '3px'}}>Swing Take Profit (STP) % (Optional):</label>
             <input 
               id="stp" 
               type="number" 
@@ -266,7 +266,6 @@ export default function EditStockModal({
               disabled={isLoading}
               style={{width: '100%', padding: '8px'}}
               min="0"
-              required
             />
           </div>
           

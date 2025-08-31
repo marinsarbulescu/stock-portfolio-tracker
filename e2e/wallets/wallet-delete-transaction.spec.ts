@@ -38,9 +38,10 @@ import {
     deleteStockWalletsForStockByStockId,
     deletePortfolioStock,
     deleteTransactionsForStockByStockId,
+    getPortfolioStockBySymbol,
 } from '../utils/dataHelpers';
 import { E2E_TEST_USER_OWNER_ID, E2E_TEST_USERNAME, E2E_TEST_PASSWORD } from '../utils/testCredentials';
-import { clearBrowserState, loginUser, navigateToStockWalletPage, addTransaction, deleteTransaction } from '../utils/pageHelpers';
+import { clearBrowserState, loginUser, navigateToStockWalletPage, addTransaction, deleteTransaction, createStockViaUI } from '../utils/pageHelpers';
 import { loadDeleteTransactionTestData, type DeleteTransactionTestConfig, type TransactionStep, type WalletExpectation, type OverviewExpectation } from '../utils/jsonHelper';
 
 import {
@@ -63,8 +64,7 @@ test.setTimeout(60000);
 // Load test configuration from JSON
 const testConfig: DeleteTransactionTestConfig = loadDeleteTransactionTestData('e2e/wallets/wallet-delete-transaction.json');
 
-// Global test state
-let sharedTestPortfolioStockId: string | null = null;
+// Data client for cleanup operations
 const client = generateClient<Schema>();
 
 // Helper function to verify wallet details
@@ -265,98 +265,6 @@ async function verifyInitialSettings(
 
 test.describe('Wallet Page - Delete Transactions and Verify Wallets (JSON-driven)', () => {
     
-    test.beforeAll(async () => {
-        console.log('[BEFORE ALL] Starting test setup...');
-        
-        // Create a shared test stock using JSON configuration
-        const stockConfig = testConfig.stock;
-        console.log(`[BEFORE ALL] Creating test stock ${stockConfig.symbol}...`);
-        
-        try {
-            const stockInput = {
-                symbol: stockConfig.symbol,
-                name: stockConfig.name,
-                owner: E2E_TEST_USER_OWNER_ID,
-                stockType: stockConfig.stockType as 'Stock' | 'ETF' | 'Crypto',
-                region: stockConfig.region as 'APAC' | 'EU' | 'Intl' | 'US',
-                pdp: stockConfig.pdp,
-                stp: stockConfig.stp,
-                budget: stockConfig.budget,
-                swingHoldRatio: stockConfig.swingHoldRatio,
-                stockCommission: stockConfig.stockCommission,
-                htp: stockConfig.htp || null, // Use null instead of 0 for undefined HTP
-            };
-            
-            const portfolioStock = await createPortfolioStock(stockInput);
-            sharedTestPortfolioStockId = portfolioStock.id;
-            
-            console.log(`[BEFORE ALL] Stock created successfully with ID: ${sharedTestPortfolioStockId}`);
-        } catch (error) {
-            console.error(`[BEFORE ALL] Stock creation failed:`, error);
-            throw error;
-        }
-    });
-
-    test.afterAll(async () => {
-        if (sharedTestPortfolioStockId) {
-            console.log(`[AFTER ALL] Starting cleanup...`);
-            try {
-                console.log(`[AFTER ALL] Deleting wallets for stock ID ${sharedTestPortfolioStockId}...`);
-                await deleteStockWalletsForStockByStockId(sharedTestPortfolioStockId);
-                
-                console.log(`[AFTER ALL] Deleting transactions for stock ID ${sharedTestPortfolioStockId}...`);
-                await deleteTransactionsForStockByStockId(sharedTestPortfolioStockId);
-                
-                console.log(`[AFTER ALL] Deleting stock ${sharedTestPortfolioStockId}...`);
-                await deletePortfolioStock(sharedTestPortfolioStockId);
-                
-                console.log(`[AFTER ALL] Cleanup completed successfully.`);
-            } catch (error) {
-                console.error(`[AFTER ALL] Error during cleanup:`, error);
-            }
-        }
-    });
-
-    test.beforeEach(async ({ page }) => {
-        console.log(`[BEFORE EACH] Starting fresh session setup...`);
-        
-        // Clear browser state
-        await clearBrowserState(page);
-        console.log(`[BEFORE EACH] Browser state cleared.`);
-        
-        // Login
-        console.log(`[BEFORE EACH] Attempting login as ${E2E_TEST_USERNAME}...`);
-        await loginUser(page, E2E_TEST_USERNAME, E2E_TEST_PASSWORD);
-        console.log(`[BEFORE EACH] Login successful.`);
-        
-        // Navigate to wallet page
-        if (!sharedTestPortfolioStockId) {
-            throw new Error("Test setup failed: Missing stock ID");
-        }
-        
-        console.log(`[BEFORE EACH] Navigating to wallet page for ${testConfig.stock.symbol} (ID: ${sharedTestPortfolioStockId})...`);
-        await navigateToStockWalletPage(page, sharedTestPortfolioStockId, testConfig.stock.symbol);
-        console.log(`[BEFORE EACH] Successfully on wallet page for ${testConfig.stock.symbol}.`);
-        
-        // Clean up any existing data for test isolation
-        try {
-            await deleteStockWalletsForStockByStockId(sharedTestPortfolioStockId);
-            await deleteTransactionsForStockByStockId(sharedTestPortfolioStockId);
-            
-            // Reload page to reflect cleanup
-            await page.reload();
-            
-            // Wait for page to be ready after reload
-            const titleElement = page.locator('[data-testid="wallet-page-title"]');
-            await expect(titleElement).toBeVisible({ timeout: 15000 });
-            await expect(titleElement).toContainText(testConfig.stock.symbol.toUpperCase(), { timeout: 5000 });
-            
-            console.log(`[BEFORE EACH] Data cleanup and page reload completed.`);
-        } catch (error) {
-            console.warn(`[BEFORE EACH] Warning during cleanup:`, error);
-        }
-    });
-
     // Generate tests for Split, Swing, and Hold transactions
     const transactionTypes = ['Split', 'Swing', 'Hold'];
     
@@ -375,10 +283,51 @@ test.describe('Wallet Page - Delete Transactions and Verify Wallets (JSON-driven
             
             console.log(`[${scenarioName}] Starting test...`);
             
+            // Create unique stock symbol for this test iteration to avoid conflicts with parallel workers
+            const uniqueStockSymbol = `${testConfig.stock.symbol}${transactionType.toUpperCase()}`;
+            const stockConfig = { ...testConfig.stock, symbol: uniqueStockSymbol };
+            let testPortfolioStockId: string | null = null;
+            
+            try {
+                // Setup: Clear browser state and login
+                console.log(`[${scenarioName}] Setting up fresh session...`);
+                await clearBrowserState(page);
+                await loginUser(page, E2E_TEST_USERNAME);
+                console.log(`[${scenarioName}] Login successful.`);
+                
+                // Create test stock for this specific iteration
+                console.log(`[${scenarioName}] Creating test stock ${uniqueStockSymbol} via UI...`);
+                
+                await createStockViaUI(page, {
+                    symbol: stockConfig.symbol,
+                    name: `${stockConfig.name} ${transactionType}`,
+                    stockType: stockConfig.stockType as 'Stock' | 'ETF' | 'Crypto',
+                    region: stockConfig.region as 'APAC' | 'EU' | 'Intl' | 'US',
+                    pdp: stockConfig.pdp,
+                    stp: stockConfig.stp,
+                    budget: stockConfig.budget,
+                    swingHoldRatio: stockConfig.swingHoldRatio,
+                    stockCommission: stockConfig.stockCommission,
+                    htp: stockConfig.htp || null,
+                    owner: E2E_TEST_USER_OWNER_ID
+                } as any);
+                
+                const portfolioStock = await getPortfolioStockBySymbol(stockConfig.symbol);
+                if (!portfolioStock) {
+                    throw new Error(`Portfolio stock not found for symbol: ${stockConfig.symbol}`);
+                }
+                testPortfolioStockId = portfolioStock.id;
+                console.log(`[${scenarioName}] Stock created via UI with ID: ${testPortfolioStockId}`);
+
+            // Navigate to wallet page
+            console.log(`[${scenarioName}] Navigating to wallet page for ${stockConfig.symbol} (ID: ${testPortfolioStockId})...`);
+            await navigateToStockWalletPage(page, testPortfolioStockId!, stockConfig.symbol);
+            console.log(`[${scenarioName}] Successfully on wallet page for ${stockConfig.symbol}.`);
+            
             // Clean up any existing wallets/transactions first
             try {
-                await deleteStockWalletsForStockByStockId(sharedTestPortfolioStockId!);
-                await deleteTransactionsForStockByStockId(sharedTestPortfolioStockId!);
+                await deleteStockWalletsForStockByStockId(testPortfolioStockId!);
+                await deleteTransactionsForStockByStockId(testPortfolioStockId!);
                 await page.reload();
                 
                 const titleElement = page.locator('[data-testid="wallet-page-title"]');
@@ -394,7 +343,7 @@ test.describe('Wallet Page - Delete Transactions and Verify Wallets (JSON-driven
             
             // Verify initial settings in Overview section
             console.log(`[${scenarioName}] Step 1.5: Verifying initial settings in Overview section...`);
-            await verifyInitialSettings(page, testConfig.stock);
+            await verifyInitialSettings(page, stockConfig);
             
             // Step 2: Add the transaction
             console.log(`[${scenarioName}] Step 2: Adding ${transactionType} transaction...`);
@@ -416,7 +365,7 @@ test.describe('Wallet Page - Delete Transactions and Verify Wallets (JSON-driven
             // Wait for page to be ready after reload
             const titleElement = page.locator('[data-testid="wallet-page-title"]');
             await expect(titleElement).toBeVisible({ timeout: 15000 });
-            await expect(titleElement).toContainText(testConfig.stock.symbol.toUpperCase(), { timeout: 5000 });
+            await expect(titleElement).toContainText(stockConfig.symbol.toUpperCase(), { timeout: 5000 });
             
             // Wait for wallets table to be loaded or no-wallets message to appear
             const walletsTable = page.locator('[data-testid="wallets-table"]');
@@ -459,6 +408,21 @@ test.describe('Wallet Page - Delete Transactions and Verify Wallets (JSON-driven
             console.log(`[${scenarioName}] Transaction removal confirmed.`);
             
             console.log(`[${scenarioName}] Test completed successfully!`);
+            
+            } finally {
+                // Cleanup: Delete the test stock and its data
+                if (testPortfolioStockId) {
+                    console.log(`[${scenarioName}] Cleaning up test stock ${uniqueStockSymbol}...`);
+                    try {
+                        await deleteStockWalletsForStockByStockId(testPortfolioStockId);
+                        await deleteTransactionsForStockByStockId(testPortfolioStockId);
+                        await deletePortfolioStock(testPortfolioStockId);
+                        console.log(`[${scenarioName}] Cleanup completed successfully.`);
+                    } catch (error) {
+                        console.error(`[${scenarioName}] Error during cleanup:`, error);
+                    }
+                }
+            }
         });
     });
 });
