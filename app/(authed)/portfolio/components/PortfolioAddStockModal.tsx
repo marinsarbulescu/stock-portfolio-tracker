@@ -105,7 +105,7 @@ export default function AddStockModal({
       stockTrend: stockTrend as StockTrendValue,
       name: name || undefined,
       pdp: pdp ? parseFloat(pdp) : null,
-      stp: stp ? parseFloat(stp) : null, // STP is now optional - temporarily
+      stp: stp ? parseFloat(stp) : 9, // STP is required with default value of 9
       budget: budget ? parseFloat(budget) : null,
       testPrice: testPriceValue,
       swingHoldRatio: shrValue,
@@ -248,7 +248,7 @@ export default function AddStockModal({
           </div>
           
           <div>
-            <label htmlFor="stp" style={{display: 'block', marginBottom: '3px'}}>Swing Take Profit (STP) % (Optional):</label>
+            <label htmlFor="stp" style={{display: 'block', marginBottom: '3px'}}>Swing Take Profit (STP) %:</label>
             <input 
               id="stp" 
               type="number" 
@@ -259,6 +259,7 @@ export default function AddStockModal({
               disabled={isLoading}
               style={{width: '100%', padding: '8px'}}
               min="0"
+              required
             />
           </div>
           
