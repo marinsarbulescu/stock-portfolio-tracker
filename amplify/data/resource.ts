@@ -47,7 +47,7 @@ const schema = a.schema({
       owner: a.string()
     })
     // Add owner-based authorization: grants full access ONLY to the record's owner
-    .authorization((allow) => [
+    .authorization((allow: any) => [
       allow.owner(), // Keep owner auth for the app
       allow.publicApiKey().to(['create', 'read', 'delete', 'update']) // Allow API Key access needed by helpers
       // Add 'update' if your helpers might update
@@ -78,7 +78,7 @@ const schema = a.schema({
       // Add owner field if not implicitly added by .authorization
       owner: a.string()
     })
-    .authorization((allow) => [
+    .authorization((allow: any) => [
       allow.owner(), // Keep owner auth for the app
       allow.publicApiKey().to(['create', 'read', 'delete', 'update']) // Allow API Key access needed by helpers
       // Add 'update' if your helpers might update
@@ -94,7 +94,7 @@ const schema = a.schema({
       intStocksTarget: a.integer(), // # of Int stocks target (optional integer)
       intEtfsTarget: a.integer(),   // # of Int ETFs target (optional integer)
     })
-    .authorization((allow) => [
+    .authorization((allow: any) => [
       allow.owner(), // Keep owner auth for the app
       allow.publicApiKey().to(['create', 'read', 'delete', 'update']) // Allow API Key access needed by helpers
       // Add 'update' if your helpers might update
@@ -122,7 +122,7 @@ const schema = a.schema({
       // Add owner field if not implicitly added by .authorization
       owner: a.string(),
     })
-    .authorization((allow) => [
+    .authorization((allow: any) => [
       allow.owner(), // Keep owner auth for the app
       allow.publicApiKey().to(['create', 'read', 'delete', 'update']) // Allow API Key access needed by helpers
       // Add 'update' if your helpers might update
@@ -133,7 +133,7 @@ const schema = a.schema({
   getLatestPrices: a.query()
     .arguments({ symbols: a.string().array().required() })
     .returns(a.ref('PriceResult').array()) // This correctly points to the updated PriceResult
-    .authorization(allow => [allow.authenticated()])
+    .authorization((allow: any) => [allow.authenticated()])
     .handler(a.handler.function(getYfinanceData)), // Handler import assumed correct now
 
   // Define the custom query to get historical data
@@ -144,7 +144,7 @@ const schema = a.schema({
       endDate: a.string().required()
     })
     .returns(a.ref('PriceResult').array())
-    .authorization(allow => [allow.authenticated()])
+    .authorization((allow: any) => [allow.authenticated()])
     .handler(a.handler.function(getHistoricalData)),
 
     // --- Define Type for Historical Close ---

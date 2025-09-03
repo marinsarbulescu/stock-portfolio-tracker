@@ -105,10 +105,12 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
     let overallError: string | null = null;
 
     try {
-      // console.log('[PriceContext.tsx] - Fetching all stock symbols from backend...');
+      // console.log('[PriceContext.tsx] - Starting price fetch. Fetching all stock symbols from backend...');
       const { data: stocksData, errors: stockErrors } = await client.models.PortfolioStock.list({
         selectionSet: ['symbol', 'archived', 'isHidden']
       });
+
+      // console.log('[PriceContext.tsx] - Raw response from PortfolioStock.list:', { stocksData, stockErrors });
 
       if (stockErrors) {
         // console.error("[PriceContext.tsx] - Error fetching stock list:", stockErrors);
@@ -149,7 +151,14 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
           // console.log(`[PriceContext.tsx] - Fetching prices for batch ${currentBatchNumber}/${totalBatches} (Size: ${PRICE_FETCH_BATCH_SIZE}):`, batchSymbols);
 
           try {
+            // console.log(`[PriceContext.tsx] - About to call client.queries.getLatestPrices with symbols:`, batchSymbols);
             const { data: batchPriceResults, errors: batchPriceErrors } = await client.queries.getLatestPrices({ symbols: batchSymbols });
+            // console.log(`[PriceContext.tsx] - Raw API response for batch ${currentBatchNumber}:`, { 
+            //   data: batchPriceResults, 
+            //   errors: batchPriceErrors,
+            //   dataType: typeof batchPriceResults,
+            //   dataLength: Array.isArray(batchPriceResults) ? batchPriceResults.length : 'not array'
+            // });
 
             if (batchPriceErrors) {
               // console.error(`[PriceContext.tsx] - Error fetching prices for batch ${batchSymbols.join(',')}:`, batchPriceErrors);
@@ -167,17 +176,25 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
 
             if (batchPriceResults) {
               // console.log(`[PriceContext.tsx] - Batch ${currentBatchNumber} results:`, batchPriceResults);
-              batchPriceResults.forEach(result => {
-                if (result && result.symbol) {
-                  const validHistoricalCloses = (result.historicalCloses ?? [])
+              batchPriceResults.forEach((result: unknown, index: number) => {
+                // console.log(`[PriceContext.tsx] - Processing result ${index + 1}:`, result);
+                const typedResult = result as { symbol?: string; historicalCloses?: unknown[]; currentPrice?: number };
+                if (typedResult && typedResult.symbol) {
+                  const validHistoricalCloses = (typedResult.historicalCloses ?? [])
                     .filter((hc): hc is HistoricalCloseData => hc !== null && hc !== undefined);
-                  allFetchedPricesMap[result.symbol] = {
-                    symbol: result.symbol,
-                    currentPrice: result.currentPrice ?? null,
+                  const priceToUse = typedResult.currentPrice ?? null;
+                  // console.log(`[PriceContext.tsx] - Mapped ${typedResult.symbol}: price=${priceToUse}, histCloses=${validHistoricalCloses.length}`);
+                  allFetchedPricesMap[typedResult.symbol] = {
+                    symbol: typedResult.symbol,
+                    currentPrice: priceToUse,
                     historicalCloses: validHistoricalCloses
                   };
+                } else {
+                  // console.warn(`[PriceContext.tsx] - Invalid result structure:`, result);
                 }
               });
+            } else {
+              // console.warn(`[PriceContext.tsx] - Batch ${currentBatchNumber} returned no results`);
             }
             // console.log(`[PriceContext.tsx] - Successfully processed batch ${currentBatchNumber}`);
           } catch (batchErr: unknown) {
@@ -190,15 +207,23 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
           }
         }
         
+        // console.log('[PriceContext.tsx] - All batches processed. Final prices map:', allFetchedPricesMap);
+        // console.log('[PriceContext.tsx] - Overall error status:', overallError);
         setLatestPrices(allFetchedPricesMap);
         setLastPriceFetchTimestamp(new Date());
         if (overallError) {
             setPricesError(overallError + " (Some batches may have failed)");
         }
-        // console.log('[PriceContext.tsx] - All batches processed. Prices updated in context:', allFetchedPricesMap);
+        // console.log('[PriceContext.tsx] - Prices updated in context state');
       }
     } catch (err: unknown) {
       // console.error("[PriceContext.tsx] - Error in fetchLatestPricesForAllStocks (Outer catch):", err);
+      // console.error("[PriceContext.tsx] - Error details:", {
+      //   message: (err as Error).message,
+      //   stack: (err as Error).stack,
+      //   type: typeof err,
+      //   isArray: Array.isArray(err)
+      // });
       let outerErrMsg = "An unexpected error occurred";
       if (Array.isArray(err) && err.length > 0 && (err as Array<{message: string}>)[0].message) {
         outerErrMsg = (err as Array<{message: string}>)[0].message;
@@ -208,6 +233,7 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
       setPricesError(outerErrMsg);
       setLatestPrices({});
     } finally {
+      // console.log('[PriceContext.tsx] - Price fetch process completed');
       setPricesLoading(false);
       setProgressMessage(null); // Clear progress message when done
     }

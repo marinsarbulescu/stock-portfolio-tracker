@@ -393,15 +393,16 @@ export default function StockWalletPage() {
             }
 
             if (stockData) {
-                setCurrentStockData(stockData as PortfolioStockDataType);
-                setStockSymbol(stockData.symbol || 'Unknown');
-                setStockName(stockData.name || 'Unknown');
-                setStockBudget(stockData.budget);
-                setStockPdp(stockData.pdp);
-                setStockStp(stockData.stp);
-                setStockShr(stockData.swingHoldRatio);
-                setStockCommission(stockData.stockCommission);
-                setStockHtp(stockData.htp);
+                const stock = stockData as unknown as PortfolioStockDataType;
+                setCurrentStockData(stock);
+                setStockSymbol(stock.symbol || 'Unknown');
+                setStockName(stock.name || 'Unknown');
+                setStockBudget(stock.budget);
+                setStockPdp(stock.pdp);
+                setStockStp(stock.stp);
+                setStockShr(stock.swingHoldRatio);
+                setStockCommission(stock.stockCommission);
+                setStockHtp(stock.htp);
             }
         } catch (err: unknown) {
             console.error('Error fetching current stock:', err);
@@ -809,21 +810,23 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                 if (!wallet) {
                     throw new Error(`Could not find associated Stock Wallet (ID: ${walletIdToUpdate}) to update.`);
                 }
-                if (typeof wallet.buyPrice !== 'number') {
+                
+                const walletData = wallet as unknown as StockWalletDataType;
+                if (typeof walletData.buyPrice !== 'number') {
                      throw new Error(`Cannot reverse P/L: Wallet (ID: ${walletIdToUpdate}) is missing its Buy Price.`);
                 }
 
                 // Calculate the P/L impact of the transaction being deleted
-                const plImpact = (sellPrice - wallet.buyPrice) * quantitySold;
+                const plImpact = (sellPrice - walletData.buyPrice) * quantitySold;
 
                 // Calculate the reversed wallet values
-                const newSharesSold = Math.max(0, (wallet.sharesSold ?? 0) - quantitySold); // Prevent going below 0
-                const newRemainingShares = (wallet.remainingShares ?? 0) + quantitySold; // Add back sold shares
-                const newRealizedPl = (wallet.realizedPl ?? 0) - plImpact; // Subtract the P/L of this sale
-                const newSellTxnCount = Math.max(0, (wallet.sellTxnCount ?? 0) - 1); // Decrement count, prevent going below 0
+                const newSharesSold = Math.max(0, (walletData.sharesSold ?? 0) - quantitySold); // Prevent going below 0
+                const newRemainingShares = (walletData.remainingShares ?? 0) + quantitySold; // Add back sold shares
+                const newRealizedPl = (walletData.realizedPl ?? 0) - plImpact; // Subtract the P/L of this sale
+                const newSellTxnCount = Math.max(0, (walletData.sellTxnCount ?? 0) - 1); // Decrement count, prevent going below 0
 
                 // Recalculate Realized P/L % for the wallet based on NEW totals
-                const newCostBasis = wallet.buyPrice * newSharesSold; // Cost basis of REMAINING sold shares
+                const newCostBasis = walletData.buyPrice * newSharesSold; // Cost basis of REMAINING sold shares
                 let newRealizedPlPercent: number | null = null;
                 if (newCostBasis !== 0) {
                     newRealizedPlPercent = (newRealizedPl / newCostBasis) * 100;
@@ -1014,13 +1017,14 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                         setStockCommission(null);
                         setStockHtp(null);
                     } else if (data) {
-                        setStockSymbol(data.symbol ?? "Unknown");                        setStockName(data.name ?? "Unknown");
-                        setStockBudget(data.budget);
-                        setStockPdp(data.pdp);       // <<< Set PDP state
-                        setStockShr(data.swingHoldRatio); // <<< Set SHR state
-                        setStockStp(data.stp);       // <<< Set STP state
-                        setStockCommission(data.stockCommission); // <<< Set Commission state
-                        setStockHtp(data.htp);       // <<< Set HTP state
+                        const stock = data as unknown as PortfolioStockDataType;
+                        setStockSymbol(stock.symbol ?? "Unknown");                        setStockName(stock.name ?? "Unknown");
+                        setStockBudget(stock.budget);
+                        setStockPdp(stock.pdp);       // <<< Set PDP state
+                        setStockShr(stock.swingHoldRatio); // <<< Set SHR state
+                        setStockStp(stock.stp);       // <<< Set STP state
+                        setStockCommission(stock.stockCommission); // <<< Set Commission state
+                        setStockHtp(stock.htp);       // <<< Set HTP state
                     } else {
                         setStockSymbol("Not Found");                        setStockName("Not Found");
                         setStockBudget(null);
@@ -1611,6 +1615,59 @@ const combinedPlStats = useMemo(() => {
 }, [realizedPlStats, unrealizedPlStats]);
 // --- END: Memo for All-Time COMBINED P/L ---
 
+// --- START: ROIC (Return on Initial Capital) Calculation ---
+const roicValue = useMemo(() => {
+  // Need transactions for ROIC calculation
+  if (!transactions || transactions.length === 0) {
+    return null;
+  }
+
+  // Sort transactions by date to process chronologically
+  const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  let totalOutOfPocket = 0;
+  let cashBalance = 0;
+
+  // Process each transaction to track out-of-pocket investment
+  for (const txn of sortedTransactions) {
+    if (txn.action === 'Buy') {
+      const investmentNeeded = txn.investment || 0;
+      
+      if (cashBalance >= investmentNeeded) {
+        // Can fund from existing cash balance (from previous sales)
+        cashBalance -= investmentNeeded;
+      } else {
+        // Need additional out-of-pocket cash
+        const additionalCashNeeded = investmentNeeded - cashBalance;
+        totalOutOfPocket += additionalCashNeeded;
+        cashBalance = 0; // Used all available cash
+      }
+    } else if (txn.action === 'Sell') {
+      // Add sale proceeds to cash balance
+      const saleProceeds = (txn.price || 0) * (txn.quantity || 0);
+      cashBalance += saleProceeds;
+    }
+  }
+
+  if (totalOutOfPocket <= 0) {
+    return null;
+  }
+
+  // Calculate total current value (cash balance + value of remaining shares)
+  const totalCurrentShares = currentShares?.total ?? 0;
+  const currentPrice = mergedPrices[stockSymbol || '']?.currentPrice;
+  const currentValue = (totalCurrentShares > 0 && typeof currentPrice === 'number') 
+    ? totalCurrentShares * currentPrice 
+    : 0;
+
+  const totalValue = cashBalance + currentValue;
+
+  // Calculate ROIC: (Total Value - Total Out-of-Pocket) / Total Out-of-Pocket * 100
+  const roicPercent = ((totalValue - totalOutOfPocket) / totalOutOfPocket) * 100;
+
+  return roicPercent;
+}, [transactions, currentShares, mergedPrices, stockSymbol]);
+// --- END: ROIC Calculation ---
 
 const totalTiedUpInvestment = useMemo(() => {
     // Ensure wallets data is loaded
@@ -2109,13 +2166,14 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 console.log('Stock updated successfully:', updatedStock);
                 // Update local state with new values
                 if (updatedStock) {
-                    setStockName(updatedStock.name ?? name);
-                    setStockBudget(updatedStock.budget);
-                    setStockPdp(updatedStock.pdp);
-                    setStockShr(updatedStock.swingHoldRatio);
-                    setStockStp(updatedStock.stp);
-                    setStockCommission(updatedStock.stockCommission);
-                    setStockHtp(updatedStock.htp);
+                    const stock = updatedStock as unknown as PortfolioStockDataType;
+                    setStockName(stock.name ?? name);
+                    setStockBudget(stock.budget);
+                    setStockPdp(stock.pdp);
+                    setStockShr(stock.swingHoldRatio);
+                    setStockStp(stock.stp);
+                    setStockCommission(stock.stockCommission);
+                    setStockHtp(stock.htp);
                 }
                 handleCancelEditStock();
             }
@@ -2177,7 +2235,9 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 realizedPlStats={realizedPlStats}
                 unrealizedPlStats={unrealizedPlStats}
                 combinedPlStats={combinedPlStats}
-                pricesLoading={pricesLoading}            />
+                pricesLoading={pricesLoading}
+                roicValue={roicValue}
+            />
             {/* --- START: Wallets section --- */}
             <WalletsTabs
               swingWallets={swingWallets}

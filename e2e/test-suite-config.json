@@ -1,7 +1,7 @@
 {
   "testSuites": {
     "portfolio": {
-      "enabled": true,
+      "enabled": false,
       "description": "Portfolio management tests",
       "tests": [
         {
@@ -20,12 +20,12 @@
       ]
     },
     "wallets": {
-      "enabled": true,
+      "enabled": false,
       "description": "Wallet and transaction management tests",
       "tests": [
         {
           "name": "wallet-add-transaction",
-          "enabled": false,
+          "enabled": true,
           "file": "e2e/wallets/wallet-add-transaction.spec.ts",
           "description": "Test adding transactions to wallet",
           "tags": [
@@ -38,7 +38,7 @@
         },
         {
           "name": "wallet-add-split-transaction",
-          "enabled": false,
+          "enabled": true,
           "file": "e2e/wallets/wallet-add-split-transaction.spec.ts",
           "description": "Test stock split transactions and P/L adjustments",
           "tags": [
@@ -66,7 +66,7 @@
         },
         {
           "name": "wallet-update-transactions-price",
-          "enabled": false,
+          "enabled": true,
           "file": "e2e/wallets/wallet-update-transactions-price.spec.ts",
           "description": "Test updating transaction prices",
           "tags": [
@@ -79,7 +79,7 @@
         },
         {
           "name": "wallet-same-price-transactions",
-          "enabled": false,
+          "enabled": true,
           "file": "e2e/wallets/wallet-same-price-transactions.spec.ts",
           "description": "Test handling transactions with same price",
           "tags": [
@@ -98,7 +98,7 @@
       "tests": [
         {
           "name": "signals-price-fetch",
-          "enabled": false,
+          "enabled": true,
           "file": "e2e/signals/signals-price-fetch.spec.ts",
           "description": "Test price fetching and signal generation",
           "tags": [
@@ -120,7 +120,7 @@
     "retries": 0,
     "timeout": 60000,
     "browser": "chromium",
-    "workers": 2
+    "workers": 1
   },
   "presets": {
     "smoke": {

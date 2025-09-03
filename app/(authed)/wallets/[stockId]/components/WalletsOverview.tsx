@@ -19,6 +19,7 @@ export interface WalletsOverviewProps {
   unrealizedPlStats: UnrealizedPLStats;
   combinedPlStats: CombinedPLStats;
   pricesLoading: boolean;
+  roicValue?: number | null;
 }
 
 export default function WalletsOverview({
@@ -37,6 +38,7 @@ export default function WalletsOverview({
   unrealizedPlStats,
   combinedPlStats,
   pricesLoading,
+  roicValue,
 }: WalletsOverviewProps) {
   return (
     <div style={{ marginBottom: '1rem', border: '1px solid #444' }}>
@@ -141,6 +143,12 @@ export default function WalletsOverview({
                   &nbsp;(
                   <span data-testid="overview-realized-stock-pl-percent">{`${realizedPlStats.realizedStockPercent ?? 0}%`}</span>
                   )
+                </p>
+                <p style={{ fontWeight: 'bold', marginTop: '15px', fontSize: '0.9em', color: '#4CAF50' }}>ROIC</p>
+                <p>
+                  <span data-testid="overview-roic-value">
+                    {(roicValue === null || roicValue === undefined) ? (pricesLoading ? 'Loading...' : 'N/A') : `${roicValue.toFixed(2)}%`}
+                  </span>
                 </p>
               </div>
 

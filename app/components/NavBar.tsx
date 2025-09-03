@@ -76,7 +76,10 @@ export default function NavBar({ accessStatus }: NavBarProps) {
                 )}
                 {isApproved && (
                   <button
-                      onClick={fetchLatestPricesForAllStocks}
+                      onClick={() => {
+                        // console.log('[NavBar.tsx] - Fetch Prices button clicked!');
+                        fetchLatestPricesForAllStocks();
+                      }}
                       disabled={pricesLoading}
                       style={{
                         padding: '8px 16px',

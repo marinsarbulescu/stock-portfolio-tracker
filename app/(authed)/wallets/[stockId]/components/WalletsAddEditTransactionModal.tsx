@@ -213,13 +213,13 @@ export default function TransactionForm({
             const { data: stock } = await client.models.PortfolioStock.get(
                 { id: portfolioStockId }, { selectionSet: ['swingHoldRatio', 'pdp', 'stp', 'stockCommission'] }
             );
-            pdpValue = stock?.pdp;
-            stpValue = stock?.stp;
-            stockCommissionValue = stock?.stockCommission;
+            pdpValue = (stock as unknown as { pdp?: number })?.pdp;
+            stpValue = (stock as unknown as { stp?: number })?.stp;
+            stockCommissionValue = (stock as unknown as { stockCommission?: number })?.stockCommission;
 
             if (buyType === 'Split') {
-                if (typeof stock?.swingHoldRatio === 'number' && stock.swingHoldRatio >= 0 && stock.swingHoldRatio <= 100) {
-                    ratio = stock.swingHoldRatio / 100.0;
+                if (typeof (stock as unknown as { swingHoldRatio?: number })?.swingHoldRatio === 'number' && (stock as unknown as { swingHoldRatio: number }).swingHoldRatio >= 0 && (stock as unknown as { swingHoldRatio: number }).swingHoldRatio <= 100) {
+                    ratio = (stock as unknown as { swingHoldRatio: number }).swingHoldRatio / 100.0;
                     //console.log(`Using fetched ratio for split: ${ratio * 100}% Swing`);
                 } else {
                     ratio = 0.5; // Default 50/50 if type is Split but ratio missing/invalid
@@ -340,7 +340,7 @@ export default function TransactionForm({
                         { selectionSet: ['buyPrice'] }
                     );
                     
-                    if (wallet?.buyPrice && typeof wallet.buyPrice === 'number') {
+                    if ((wallet as unknown as { buyPrice?: number })?.buyPrice && typeof (wallet as unknown as { buyPrice: number }).buyPrice === 'number') {
                         // Fetch stock commission for commission-adjusted P/L calculation
                         let stockCommissionValue = 0;
                         try {
@@ -348,16 +348,16 @@ export default function TransactionForm({
                                 { id: portfolioStockId },
                                 { selectionSet: ['stockCommission'] }
                             );
-                            stockCommissionValue = stock?.stockCommission ?? 0;
+                            stockCommissionValue = (stock as unknown as { stockCommission?: number })?.stockCommission ?? 0;
                         } catch (error) {
                             console.warn("[Sell Edit] Could not fetch stock commission, using 0:", error);
                         }
                         
                         // Recalculate P/L using new price with commission adjustment
-                        txnProfit = calculateSingleSalePLWithCommission(newPrice, wallet.buyPrice, currentQuantity, stockCommissionValue);
+                        txnProfit = calculateSingleSalePLWithCommission(newPrice, (wallet as unknown as { buyPrice: number }).buyPrice, currentQuantity, stockCommissionValue);
                         
                         // Calculate percentage
-                        const costBasis = wallet.buyPrice * currentQuantity;
+                        const costBasis = (wallet as unknown as { buyPrice: number }).buyPrice * currentQuantity;
                         calculatedTxnProfitPercent = costBasis !== 0 ? (txnProfit / costBasis) * 100 : 0;
                         
                         console.log(`[Sell Edit] Recalculated P/L: ${txnProfit}, %: ${calculatedTxnProfitPercent}`);
@@ -432,7 +432,6 @@ export default function TransactionForm({
                 console.log('[DEBUG StockSplit] StockSplit update details:', { splitRatioValue, fromForm: splitRatio, inPayload: updatePayload.splitRatio });
             }
             
-            // @ts-expect-error Simulate result for consistency if needed downstream
             savedTransaction = { ...initialData, ...updatePayload };
 
             // ================================================================
@@ -465,9 +464,9 @@ export default function TransactionForm({
                            { id: portfolioStockId },
                            { selectionSet: ['swingHoldRatio'] }
                        );
-                       //console.log(`[Edit Wallet Logic] Fetched stock.swingHoldRatio: ${stock?.swingHoldRatio}`);
-                       if (typeof stock?.swingHoldRatio === 'number' && stock.swingHoldRatio >= 0 && stock.swingHoldRatio <= 100) {
-                           ratio = stock.swingHoldRatio / 100.0;
+                       //console.log(`[Edit Wallet Logic] Fetched stock.swingHoldRatio: ${(stock as unknown as { swingHoldRatio?: number })?.swingHoldRatio}`);
+                       if (typeof (stock as unknown as { swingHoldRatio?: number })?.swingHoldRatio === 'number' && (stock as unknown as { swingHoldRatio: number }).swingHoldRatio >= 0 && (stock as unknown as { swingHoldRatio: number }).swingHoldRatio <= 100) {
+                           ratio = (stock as unknown as { swingHoldRatio: number }).swingHoldRatio / 100.0;
                        } else {
                           //console.warn("[Edit Wallet Logic] swingHoldRatio not found/invalid, deciding default ratio based on buyType...");
                           if (initialData?.txnType === 'Hold') {
@@ -643,10 +642,10 @@ export default function TransactionForm({
                           const plDifference = newTxnProfit - originalTxnProfit;
                           
                           // Update wallet P/L
-                          const newRealizedPl = (wallet.realizedPl ?? 0) + plDifference;
+                          const newRealizedPl = ((wallet as unknown as { realizedPl?: number }).realizedPl ?? 0) + plDifference;
                           
                           // Recalculate wallet P/L percentage
-                          const totalCostBasis = (wallet.buyPrice ?? 0) * (wallet.sharesSold ?? 0);
+                          const totalCostBasis = ((wallet as unknown as { buyPrice?: number }).buyPrice ?? 0) * ((wallet as unknown as { sharesSold?: number }).sharesSold ?? 0);
                           const newRealizedPlPercent = totalCostBasis !== 0 ? (newRealizedPl / totalCostBasis) * 100 : 0;
                           
                           // Update wallet

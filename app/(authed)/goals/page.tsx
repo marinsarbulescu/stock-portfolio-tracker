@@ -50,7 +50,7 @@ export default function GoalsPage() {
     setError(null);
     try {
       // Owner auth rules mean list() will return 0 or 1 item for the logged-in user
-      const { data: goalsList, errors } = await client.models.PortfolioGoals.list();
+      const { data: goalsList, errors } = await client.models.PortfolioGoals.list({});
       if (errors) throw errors;
 
       const currentGoals = goalsList[0]; // This is ClientModel<...>
