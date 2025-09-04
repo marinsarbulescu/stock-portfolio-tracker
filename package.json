@@ -23,7 +23,8 @@
     "e2e:smoke": "node e2e/scripts/test-runner.js run smoke",
     "e2e:full": "node e2e/scripts/test-runner.js run full",
     "e2e:list": "node e2e/scripts/test-runner.js list",
-    "e2e:summary": "node e2e/scripts/test-runner.js summary"
+    "e2e:summary": "node e2e/scripts/test-runner.js summary",
+    "migrate:cash-flows": "node scripts/migrate-cash-flows.js"
   },
   "dependencies": {
     "@aws-amplify/adapter-nextjs": "^1.6.0",

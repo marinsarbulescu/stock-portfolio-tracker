@@ -20,7 +20,7 @@
 - **Break down complex tasks**: Divide large tasks into smaller, manageable todos
 
 ## Code Quality & Build Verification
-- **Run build after significant changes**: After modifying types, interfaces, or component props, run `npm run build` to catch TypeScript errors
+- **Run build after significant changes**: After modifying types, interfaces, or component props, run `npm run build` to catch TypeScript errors. Before running the build, stop the development server. After the build is successful, re-start the dev server.
 - **Check lint regularly**: Use `npm run lint` to maintain code quality standards
 - **When to verify**:
   - After modifying TypeScript types or interfaces

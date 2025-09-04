@@ -41,6 +41,8 @@ const schema = a.schema({
       swingHoldRatio: a.float(),
       stockCommission: a.float(), // Commission for stock trades, optional
       htp: a.float(), // Hold Take Profit percentage, optional
+      totalOutOfPocket: a.float().default(0), // Total cumulative out-of-pocket investment for this stock
+      currentCashBalance: a.float().default(0), // Current cash balance available for this stock
       transactions: a.hasMany('Transaction', 'portfolioStockId'),
       stockWallets: a.hasMany('StockWallet', 'portfolioStockId'),
       // Add owner field if not implicitly added by .authorization

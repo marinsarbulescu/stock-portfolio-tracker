@@ -1,7 +1,7 @@
 {
   "testSuites": {
     "portfolio": {
-      "enabled": false,
+      "enabled": true,
       "description": "Portfolio management tests",
       "tests": [
         {
@@ -20,7 +20,7 @@
       ]
     },
     "wallets": {
-      "enabled": false,
+      "enabled": true,
       "description": "Wallet and transaction management tests",
       "tests": [
         {
@@ -120,7 +120,7 @@
     "retries": 0,
     "timeout": 60000,
     "browser": "chromium",
-    "workers": 1
+    "workers": 7
   },
   "presets": {
     "smoke": {

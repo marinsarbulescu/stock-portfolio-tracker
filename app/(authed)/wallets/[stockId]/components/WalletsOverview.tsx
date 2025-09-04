@@ -20,6 +20,8 @@ export interface WalletsOverviewProps {
   combinedPlStats: CombinedPLStats;
   pricesLoading: boolean;
   roicValue?: number | null;
+  totalOOP: number;
+  currentCashBalance: number;
 }
 
 export default function WalletsOverview({
@@ -39,6 +41,8 @@ export default function WalletsOverview({
   combinedPlStats,
   pricesLoading,
   roicValue,
+  totalOOP,
+  currentCashBalance,
 }: WalletsOverviewProps) {
   return (
     <div style={{ marginBottom: '1rem', border: '1px solid #444' }}>
@@ -63,7 +67,7 @@ export default function WalletsOverview({
           {stockBudget === undefined || stockPdp === undefined || stockShr === undefined || stockStp === undefined || stockHtp === undefined ? (
             <p>Loading details...</p>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
 
               <div>
                 <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Settings</p>
@@ -95,6 +99,20 @@ export default function WalletsOverview({
                       <p data-testid="overview-settings-htp">{stockHtp != null && stockHtp > 0 ? `${stockHtp}%` : '-'}</p>
                     </div>
                 </div>
+              </div>
+
+              <div>
+                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>$ Performance</p>
+                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Total OOP</p>
+                <p data-testid="overview-cash-total-oop">{formatCurrency(totalOOP)}</p>
+                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>$ Balance</p>
+                <p data-testid="overview-cash-balance">{formatCurrency(currentCashBalance)}</p>
+                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>ROIC</p>
+                <p>
+                  <span data-testid="overview-roic-value">
+                    {(roicValue === null || roicValue === undefined) ? (pricesLoading ? 'Loading...' : 'N/A') : `${roicValue.toFixed(2)}%`}
+                  </span>
+                </p>
               </div>
 
               <div>
@@ -143,12 +161,6 @@ export default function WalletsOverview({
                   &nbsp;(
                   <span data-testid="overview-realized-stock-pl-percent">{`${realizedPlStats.realizedStockPercent ?? 0}%`}</span>
                   )
-                </p>
-                <p style={{ fontWeight: 'bold', marginTop: '15px', fontSize: '0.9em', color: '#4CAF50' }}>ROIC</p>
-                <p>
-                  <span data-testid="overview-roic-value">
-                    {(roicValue === null || roicValue === undefined) ? (pricesLoading ? 'Loading...' : 'N/A') : `${roicValue.toFixed(2)}%`}
-                  </span>
                 </p>
               </div>
 

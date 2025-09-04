@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { type Schema } from '@/amplify/data/resource'; // Adjust path if needed
 import { generateClient } from 'aws-amplify/data';
 import { calculateSingleSalePL, calculateSingleSalePLWithCommission } from '@/app/utils/financialCalculations';
+import { processTransactionCashFlow } from '@/app/utils/stockCashFlowManager';
 import { FETCH_LIMIT_WALLETS_GENEROUS } from '@/app/config/constants';
 
 const client = generateClient<Schema>();
@@ -106,7 +107,6 @@ export default function TransactionForm({
   // --- Effect to populate form for editing or set defaults ---
   useEffect(() => {
     //console.log("[TransactionForm useEffect] Running effect, clearing messages. Mode:", isEditMode, "Initial Data:", initialData);
-    console.log('[DEBUG StockSplit] useEffect triggered:', { isEditMode, initialDataId: initialData?.id, initialDataAction: initialData?.action, initialDataSplitRatio: initialData?.splitRatio });
     setError(null);
     setSuccess(null);
     setWarning(null);
@@ -122,7 +122,6 @@ export default function TransactionForm({
       setCompletedTxnId(initialData.completedTxnId ?? defaultFormState.completedTxnId);
       setBuyType((initialData.txnType as BuyTypeValue) ?? defaultFormState.buyType);
       const splitRatioValue = initialData.splitRatio?.toString() ?? '2';
-      console.log('[DEBUG StockSplit] Setting split ratio from initialData:', { from: initialData.splitRatio, to: splitRatioValue });
       setSplitRatio(splitRatioValue); // Initialize split ratio from data
     } else {
       // Reset form for Add mode
@@ -385,6 +384,9 @@ export default function TransactionForm({
     }
     // --- End TxnProfit ---
 
+    // --- Cash flow is now handled at stock level, not per transaction ---
+    const outOfPocketValue = null;  // No longer calculated per transaction
+    const cashBalanceValue = null;  // No longer calculated per transaction
 
     // --- Prepare Final Payload for Transaction (using FINAL rounded values) ---
     const finalPayload: Partial<Omit<TransactionDataType, 'id' | 'portfolioStock' | 'createdAt' | 'updatedAt' | 'owner'>> = {
@@ -411,6 +413,7 @@ export default function TransactionForm({
         completedTxnId: (action === 'Sell') ? (completedTxnId || undefined) : undefined,
         txnProfit: (action === 'Sell') ? txnProfit : null, // Only Sell uses txnProfit
         txnProfitPercent: (action === 'Sell') ? calculatedTxnProfitPercent : null, // Only Sell uses txnProfitPercent
+        // Cash flow fields removed - now handled at stock level
     };
     // --- End Payload Prep ---
 
@@ -705,6 +708,35 @@ export default function TransactionForm({
 
             setSuccess('Transaction added successfully!');
             savedTransaction = newTransaction; // Store the newly created transaction
+
+            // === UPDATE STOCK CASH FLOW TOTALS (New Simplified Logic) ===
+            try {
+                // Prepare transaction data for cash flow calculation
+                let transactionCashFlow = null;
+
+                if (action === 'Buy') {
+                    transactionCashFlow = {
+                        action: action,
+                        investmentAmount: investmentValue || 0
+                    };
+                } else if (action === 'Sell') {
+                    const saleProceeds = (priceValue || 0) * (quantity || 0);
+                    transactionCashFlow = {
+                        action: action,
+                        saleProceeds: saleProceeds
+                    };
+                }
+                // For other actions (Div, SLP, StockSplit), no cash flow impact yet
+
+                // Update stock cash flow using the new component
+                if (transactionCashFlow) {
+                    await processTransactionCashFlow(client, portfolioStockId, transactionCashFlow);
+                }
+            } catch (stockError) {
+                console.error('Error updating stock cash flow:', stockError);
+                // Continue anyway - transaction was created successfully
+            }
+            // === END: UPDATE STOCK CASH FLOW TOTALS ===
 
 
             // ============================================================

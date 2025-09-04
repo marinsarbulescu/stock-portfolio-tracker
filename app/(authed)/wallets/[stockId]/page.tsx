@@ -206,6 +206,48 @@ export default function StockWalletPage() {
 
     const { ownerId } = useOwnerId();
 
+    // Function to fetch current stock data including cash flow fields
+    const fetchCurrentStockData = useCallback(async () => {
+        if (!stockId) return;
+        
+        try {
+            const { data: stock, errors } = await client.models.PortfolioStock.get(
+                { id: stockId },
+                { 
+                    selectionSet: [
+                        'id', 'name', 'symbol', 'budget', 'pdp', 'swingHoldRatio', 
+                        'stp', 'stockCommission', 'htp', 'totalOutOfPocket', 'currentCashBalance', 'testPrice'
+                    ] 
+                }
+            );
+
+            if (errors) {
+                console.error('Error fetching stock data:', errors);
+                setError(errors[0].message || 'Failed to fetch stock data.');
+            } else if (stock) {
+                // Cast to the proper type
+                const stockData = stock as unknown as PortfolioStockDataType & {
+                    totalOutOfPocket?: number;
+                    currentCashBalance?: number;
+                };
+                
+                setCurrentStockData(stockData);
+                // Update other stock-related state
+                setStockSymbol(stockData.symbol || undefined);
+                setStockName(stockData.name || undefined);
+                setStockBudget(stockData.budget);
+                setStockPdp(stockData.pdp);
+                setStockShr(stockData.swingHoldRatio);
+                setStockStp(stockData.stp);
+                setStockCommission(stockData.stockCommission);
+                setStockHtp(stockData.htp);
+            }
+        } catch (err) {
+            console.error('Error fetching current stock data:', err);
+            setError((err as Error).message || 'An error occurred while fetching stock data.');
+        }
+    }, [stockId]);
+
     useEffect(() => {
             if (!isLoading && ownerId) {
                 console.log("[StockWalletPage] - Fetched Owner ID:", ownerId);
@@ -690,6 +732,9 @@ export default function StockWalletPage() {
             setTxnToEdit(null);
             fetchTransactions();
             fetchWallets();
+            fetchCurrentStockData(); // Refresh stock data to get updated OOP and cash flow values
+
+            // Transaction update completed successfully
         
         } catch (err: unknown) {
             // console.error('[StockWalletPage] - Error in handleUpdateTransaction:', err);
@@ -954,10 +999,75 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
 
         // --- Finally, Delete the Transaction IF preceding wallet logic didn't critically fail ---
         if (overallSuccess) {
+            // === REVERSE STOCK CASH FLOW IMPACT BEFORE DELETION ===
+            try {
+                // Get current stock cash flow values
+                const { data: currentStock } = await client.models.PortfolioStock.get(
+                    { id: stockId },
+                    { selectionSet: ['id', 'totalOutOfPocket', 'currentCashBalance'] }
+                );
+
+                if (currentStock) {
+                    // Use actual schema fields
+                    const currentTotalOOP = (currentStock as { totalOutOfPocket?: number }).totalOutOfPocket || 0;
+                    const currentCashBalance = (currentStock as { currentCashBalance?: number }).currentCashBalance || 0;
+
+                    // Calculate the reverse impact of deleting this transaction
+                    let oopReverse = 0;
+                    let cashBalanceReverse = 0;
+
+                    if (txnToDelete.action === 'Buy') {
+                        const investmentAmount = txnToDelete.investment || 0;
+                        
+                        // This is complex - we need to determine if this buy was funded from cash balance or OOP
+                        // For simplification, we'll recalculate from scratch after deletion
+                        // But for now, let's make a best-effort reverse calculation
+                        
+                        // If current cash balance can cover the investment, assume it was cash-funded
+                        if (currentCashBalance >= investmentAmount) {
+                            cashBalanceReverse = investmentAmount; // Add back to cash
+                            oopReverse = 0;
+                        } else {
+                            // Otherwise, it was likely OOP funded
+                            oopReverse = -Math.min(investmentAmount, currentTotalOOP); // Reduce OOP (negative)
+                            cashBalanceReverse = 0;
+                        }
+                    } else if (txnToDelete.action === 'Sell') {
+                        // Remove sale proceeds from cash balance
+                        const saleProceeds = (txnToDelete.price || 0) * (txnToDelete.quantity || 0);
+                        cashBalanceReverse = -saleProceeds;
+                        oopReverse = 0;
+                    }
+                    // For Div, SLP, and StockSplit, no cash flow impact
+
+                    // Apply the reverse impact
+                    const newTotalOOP = Math.max(0, currentTotalOOP + oopReverse);
+                    const newCashBalance = Math.max(0, currentCashBalance + cashBalanceReverse);
+
+                    const { errors: stockUpdateErrors } = await client.models.PortfolioStock.update({
+                        id: stockId,
+                        totalOutOfPocket: newTotalOOP,
+                        currentCashBalance: newCashBalance
+                    });
+
+                    if (stockUpdateErrors) {
+                        console.error('Failed to reverse stock cash flow impact:', stockUpdateErrors);
+                        // Continue anyway - this is not critical to the deletion
+                    }
+                } else {
+                    console.warn('Could not fetch current stock data for cash flow reverse calculation');
+                }
+            } catch (stockError) {
+                console.error('Error reversing stock cash flow impact:', stockError);
+                // Continue anyway - this is not critical to the deletion
+            }
+            // === END: REVERSE STOCK CASH FLOW IMPACT ===
+
             //console.log(`[StockWalletPage] - Proceeding to delete transaction ${idToDelete}`);
             const { errors: deleteErrors } = await client.models.Transaction.delete({ id: idToDelete });
             if (deleteErrors) throw deleteErrors; // Throw delete error if it occurs
             //console.log('[StockWalletPage] - Transaction deleted successfully!');
+            
             finalMessage = `Transaction deleted successfully.${finalMessage}`;
             setTxnError(null); // Clear any previous warnings if fully successful
             // You might want a success state here too: setTxnSuccess(finalMessage);
@@ -993,6 +1103,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
         //console.log("[StockWalletPage] - Refreshing wallets and transactions after delete attempt.");
         fetchTransactions();
         fetchWallets();
+        fetchCurrentStockData(); // Refresh stock data to get updated OOP and cash flow values
         // Reset loading state if applicable
     }
 };
@@ -1061,6 +1172,11 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
     useEffect(() => {
         fetchWallets();
     }, [fetchWallets]); // fetchWallets dependency includes stockId
+
+    // Fetch current stock data including OOP and cash flow fields
+    useEffect(() => {
+        fetchCurrentStockData();
+    }, [fetchCurrentStockData]);
 
     // --- Add Calculations using useMemo ---
     const transactionCounts = useMemo(() => {
@@ -1615,42 +1731,33 @@ const combinedPlStats = useMemo(() => {
 }, [realizedPlStats, unrealizedPlStats]);
 // --- END: Memo for All-Time COMBINED P/L ---
 
+// --- START: Cash Flow Metrics Calculation ---
+const cashFlowMetrics = useMemo(() => {
+  // Use the actual OOP and cash balance data from the fetched stock data
+  if (!currentStockData) {
+    return { totalOOP: 0, currentCashBalance: 0 };
+  }
+
+  const stockDataWithCashFlow = currentStockData as unknown as PortfolioStockDataType & {
+    totalOutOfPocket?: number;
+    currentCashBalance?: number;
+  };
+
+  return {
+    totalOOP: stockDataWithCashFlow.totalOutOfPocket || 0,
+    currentCashBalance: stockDataWithCashFlow.currentCashBalance || 0
+  };
+}, [currentStockData]); // Depend on currentStockData so it updates when stock data changes
+// --- END: Cash Flow Metrics Calculation ---
+
 // --- START: ROIC (Return on Initial Capital) Calculation ---
 const roicValue = useMemo(() => {
-  // Need transactions for ROIC calculation
-  if (!transactions || transactions.length === 0) {
-    return null;
-  }
-
-  // Sort transactions by date to process chronologically
-  const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  
-  let totalOutOfPocket = 0;
-  let cashBalance = 0;
-
-  // Process each transaction to track out-of-pocket investment
-  for (const txn of sortedTransactions) {
-    if (txn.action === 'Buy') {
-      const investmentNeeded = txn.investment || 0;
-      
-      if (cashBalance >= investmentNeeded) {
-        // Can fund from existing cash balance (from previous sales)
-        cashBalance -= investmentNeeded;
-      } else {
-        // Need additional out-of-pocket cash
-        const additionalCashNeeded = investmentNeeded - cashBalance;
-        totalOutOfPocket += additionalCashNeeded;
-        cashBalance = 0; // Used all available cash
-      }
-    } else if (txn.action === 'Sell') {
-      // Add sale proceeds to cash balance
-      const saleProceeds = (txn.price || 0) * (txn.quantity || 0);
-      cashBalance += saleProceeds;
-    }
-  }
+  // Use the pre-calculated cash flow metrics
+  const totalOutOfPocket = cashFlowMetrics.totalOOP;
+  const currentCashBalance = cashFlowMetrics.currentCashBalance;
 
   if (totalOutOfPocket <= 0) {
-    return null;
+    return null; // Can't calculate ROIC without initial investment
   }
 
   // Calculate total current value (cash balance + value of remaining shares)
@@ -1660,13 +1767,13 @@ const roicValue = useMemo(() => {
     ? totalCurrentShares * currentPrice 
     : 0;
 
-  const totalValue = cashBalance + currentValue;
+  const totalValue = currentCashBalance + currentValue;
 
   // Calculate ROIC: (Total Value - Total Out-of-Pocket) / Total Out-of-Pocket * 100
   const roicPercent = ((totalValue - totalOutOfPocket) / totalOutOfPocket) * 100;
 
   return roicPercent;
-}, [transactions, currentShares, mergedPrices, stockSymbol]);
+}, [cashFlowMetrics, currentShares, mergedPrices, stockSymbol]);
 // --- END: ROIC Calculation ---
 
 const totalTiedUpInvestment = useMemo(() => {
@@ -2051,6 +2158,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 txnType: walletToSell.walletType,
                 txnProfit: roundedTxnPl,             // Add rounded P/L $ for THIS txn
                 txnProfitPercent: roundedTxnPlPercent
+                // Cash flow fields removed - now handled at stock level
             };
             //console.log("[StockWalletPage] - Creating Transaction with payload:", transactionPayload);
     
@@ -2058,15 +2166,34 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
             // --- Execute DB Operations ---
             const updatedWallet = await client.models.StockWallet.update(walletPayload);
             if (updatedWallet.errors) throw updatedWallet.errors;
-    
+
             const newTransaction = await client.models.Transaction.create(transactionPayload);
             if (newTransaction.errors) throw newTransaction.errors;
-    
+
+            // === UPDATE STOCK CASH FLOW TOTALS (Fixed) ===
+            try {
+                // Use the new stock cash flow manager
+                const { processTransactionCashFlow } = await import('@/app/utils/stockCashFlowManager');
+                
+                const saleProceeds = price * quantity;
+                const transactionCashFlow = {
+                    action: 'Sell' as const,
+                    saleProceeds: saleProceeds
+                };
+
+                await processTransactionCashFlow(client, walletToSell.portfolioStockId, transactionCashFlow);
+            } catch (stockError) {
+                console.error('Error updating stock cash flow:', stockError);
+                // Continue anyway - transaction was created successfully
+            }
+            // === END: UPDATE STOCK CASH FLOW TOTALS ===
+
             // --- Success ---
             //console.log("[StockWalletPage] - Sell recorded successfully!", { updatedWallet: updatedWallet.data, newTransaction: newTransaction.data });
             setIsSellModalOpen(false);
             fetchWallets();
             fetchTransactions(); // Refresh relevant data
+            fetchCurrentStockData(); // Refresh stock data to get updated OOP and cash flow values
     
         } catch (err: unknown) {
             // --- Error Handling ---
@@ -2108,6 +2235,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
         //await new Promise(resolve => setTimeout(resolve, 750));
         fetchWallets();
         fetchTransactions();
+        fetchCurrentStockData(); // Refresh stock data to get updated OOP values
         // You might also need to refresh other data if transactions impact other calculations on the page
     };
     // --- END HANDLERS ---
@@ -2237,6 +2365,8 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 combinedPlStats={combinedPlStats}
                 pricesLoading={pricesLoading}
                 roicValue={roicValue}
+                totalOOP={cashFlowMetrics.totalOOP}
+                currentCashBalance={cashFlowMetrics.currentCashBalance}
             />
             {/* --- START: Wallets section --- */}
             <WalletsTabs
