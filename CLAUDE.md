@@ -20,7 +20,11 @@
 - **Break down complex tasks**: Divide large tasks into smaller, manageable todos
 
 ## Code Quality & Build Verification
-- **Run build after significant changes**: After modifying types, interfaces, or component props: stop the dev server, run `npx next build` to catch TypeScript errors, then restart the dev server.
+- **Build verification sequence**: Follow this exact sequence for reliable TypeScript error detection:
+  1. **Stop dev server**: Run `taskkill /f /im node.exe` to ensure all Node processes are terminated regardless of current state
+  2. **Run build**: Execute `npm run build` to catch TypeScript errors
+  3. **Restart dev server**: Only if build was successful, run `npm run dev` (use background=true)
+  4. **Fix errors immediately**: Build errors must be resolved before continuing; restart sequence if needed
 - **Check lint regularly**: Use `npm run lint` to maintain code quality standards
 - **When to verify**:
   - After modifying TypeScript types or interfaces
@@ -28,7 +32,6 @@
   - After refactoring or moving files
   - Before completing complex tasks
   - After adding new imports or dependencies
-- **Fix errors immediately**: Build errors must be resolved before continuing; lint warnings can be contextual
 
 ## Testing & E2E Guidelines
 - **Update E2E tests**: Check if E2E tests need updates after making UI or functionality changes

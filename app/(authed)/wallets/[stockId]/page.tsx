@@ -2332,7 +2332,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
             } else {
                 console.log('Stock updated successfully:', updatedStock);
                 // Refresh all stock data from database to ensure we have the latest values
-                await fetchCurrentStock();
+                await fetchCurrentStockData();
                 handleCancelEditStock();
             }
         } catch (err: unknown) {
@@ -2345,11 +2345,11 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
     // --- ADD: Initial data loading useEffect ---
     useEffect(() => {
         if (stockId) {
-            fetchCurrentStock();
+            fetchCurrentStockData();
             fetchWallets();
             fetchTransactions();
         }
-    }, [stockId, fetchCurrentStock, fetchWallets, fetchTransactions]);
+    }, [stockId, fetchCurrentStockData, fetchWallets, fetchTransactions]);
     
     
     // --- Render Logic ---
