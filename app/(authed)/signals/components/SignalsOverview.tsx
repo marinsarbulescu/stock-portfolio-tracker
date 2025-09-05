@@ -9,6 +9,7 @@ export default function SignalsOverview({
     toggleExpand,
     portfolioBudgetStats,
     portfolioTransactionCounts,
+    portfolioPerformanceMetrics,
     portfolioRealizedPL,
     portfolioUnrealizedPL,
     portfolioTotalPL,
@@ -55,7 +56,7 @@ export default function SignalsOverview({
                     fontSize: '0.8em'
                 }}>
                     {/* First row with existing data */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
                         <div>
                             <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Budget</p>
 
@@ -82,6 +83,27 @@ export default function SignalsOverview({
                                     maximumFractionDigits: CURRENCY_PRECISION,
                                 })}
                             </p>                            
+                        </div>
+
+                        <div>
+                            <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>$ Performance</p>
+                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Total OOP</p>
+                            <p data-testid="portfolio-performance-total-oop">
+                                {formatCurrency(portfolioPerformanceMetrics.totalOOP)}
+                            </p>
+                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>$ Balance</p>
+                            <p data-testid="portfolio-performance-cash-balance">
+                                {formatCurrency(portfolioPerformanceMetrics.totalCashBalance)}
+                            </p>
+                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>ROIC</p>
+                            <p>
+                                <span data-testid="portfolio-performance-roic">
+                                    {portfolioPerformanceMetrics.portfolioROIC !== null 
+                                        ? `${portfolioPerformanceMetrics.portfolioROIC.toFixed(PERCENT_PRECISION)}%`
+                                        : 'N/A'
+                                    }
+                                </span>
+                            </p>
                         </div>
 
                         <div>

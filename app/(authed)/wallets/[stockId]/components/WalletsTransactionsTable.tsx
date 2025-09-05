@@ -2,7 +2,7 @@
 import React from 'react';
 import type { TransactionDataType, TransactionTableColumnVisibilityState, SortableTxnKey, SortConfig } from '../types';
 import { formatCurrency, formatPercent, formatShares } from '@/app/utils/financialCalculations';
-import { formatToMDYYYY } from '@/app/utils/dateFormatter';
+import { formatToMDYYYY, formatToShortDateTime } from '@/app/utils/dateFormatter';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { SHARE_PRECISION } from '@/app/config/constants';
 
@@ -127,6 +127,11 @@ export default function WalletsTransactionsTable({
                 {columnLabels.completedTxnId}
               </th>
             }
+            {columnVisibility.createdAt && 
+              <th data-testid={`wallets-transaction-table-createdAt-header`} style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('createdAt')}>
+                {columnLabels.createdAt} {sortConfig?.key === 'createdAt' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+            }
             <th data-testid={`wallets-transaction-table-actions-header`} style={{ padding: '5px', textAlign: 'center' }}>Actions</th>
           </tr>
         </thead>
@@ -201,6 +206,11 @@ export default function WalletsTransactionsTable({
                 {columnVisibility.completedTxnId && 
                   <td style={{ padding: '5px', fontSize: '0.9em', color: 'grey' }} data-testid="wallets-transaction-table-completedTxnId-display">
                     {txn.action==='Sell'?truncateId(txn.completedTxnId):'-'}
+                  </td>
+                }
+                {columnVisibility.createdAt && 
+                  <td style={{ padding: '5px', fontSize: '0.7em', color: 'grey' }} data-testid="wallets-transaction-table-createdAt-display">
+                    {formatToShortDateTime(txn.createdAt)}
                   </td>
                 }
                 <td style={{ padding: '5px', textAlign: 'center' }}>

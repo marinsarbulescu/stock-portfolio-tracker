@@ -6,6 +6,7 @@ import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
 import { usePrices } from '@/app/contexts/PriceContext';
 import { mergeTestPricesWithRealPrices } from '@/app/utils/priceUtils';
+import { migrateStockCashFlow, type MigrationResult } from '@/app/utils/cashFlowMigration';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import {
@@ -516,6 +517,71 @@ function PortfolioContent() {
     } catch (err: unknown) {
       console.error(`Unexpected error ${action}ing stock:`, err);
       setError((err as Error).message || `An error occurred during ${action}.`);
+    }
+  };
+
+  // Migration Handler
+  const handleMigrateStock = async (stock: PortfolioStockDataType) => {
+    if (!window.confirm(`Run cash flow migration for ${stock.symbol?.toUpperCase()}? This will recalculate OOP, $ Balance and ROIC based on transaction history.`)) {
+      return;
+    }
+
+    console.log(`Running migration for stock: ${stock.id}`);
+    setError(null);
+
+    try {
+      const result = await migrateStockCashFlow(client, stock.id);
+
+      if (result.success) {
+        console.log('Migration successful:', result);
+        alert(`✅ Migration completed for ${result.stockSymbol}!\n\nResults:\n- Total OOP: $${result.calculatedOOP}\n- Cash Balance: $${result.calculatedCashBalance}\n- Transactions processed: ${result.transactionsProcessed}\n\n${result.debugLog ? result.debugLog.join('\n') : ''}`);
+        fetchPortfolio(); // Refresh the data
+      } else {
+        console.error('Migration failed:', result.error);
+        alert(`❌ Migration failed for ${stock.symbol}:\n${result.error}`);
+      }
+    } catch (err: unknown) {
+      console.error('Unexpected error during migration:', err);
+      setError((err as Error).message || 'An error occurred during migration.');
+    }
+  };
+
+  // Migration Handler for retroactive cash flow calculation
+  const handleMigrateCashFlow = async (stock: PortfolioStockDataType) => {
+    const confirmMessage = `This will retroactively calculate and update OOP, $ Balance, and ROIC for ${stock.symbol?.toUpperCase()}. This cannot be undone. Continue?`;
+    
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    console.log(`Starting cash flow migration for stock: ${stock.id} (${stock.symbol})`);
+    setError(null);
+
+    try {
+      // Show loading state (you could add a loading indicator here)
+      const result: MigrationResult = await migrateStockCashFlow(client, stock.id);
+
+      if (result.success) {
+        const message = `Migration completed for ${result.stockSymbol}:\n` +
+          `- Total OOP: $${result.calculatedOOP.toFixed(2)}\n` +
+          `- $ Balance: $${result.calculatedCashBalance.toFixed(2)}\n` +
+          `- Transactions processed: ${result.transactionsProcessed}`;
+        
+        alert(message);
+        
+        // Refresh the portfolio to show updated values
+        fetchPortfolio();
+      } else {
+        const errorMessage = `Migration failed for ${result.stockSymbol}: ${result.error}`;
+        console.error(errorMessage);
+        setError(errorMessage);
+        alert(errorMessage);
+      }
+    } catch (err: unknown) {
+      const errorMessage = `Unexpected error during migration: ${(err as Error).message}`;
+      console.error('Migration error:', err);
+      setError(errorMessage);
+      alert(errorMessage);
     }
   };
 
@@ -1054,6 +1120,7 @@ function PortfolioContent() {
         handleEditClick={handleEditClick}
         handleToggleHidden={handleToggleHidden}
         handleArchiveStock={handleArchiveStock}
+        handleMigrateCashFlow={handleMigrateStock}
       />
 
       {/* Add Stock Modal */}

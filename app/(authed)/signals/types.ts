@@ -98,6 +98,13 @@ export interface PortfolioTransactionCounts {
   totalSells: number;
 }
 
+// Portfolio performance metrics (OOP, Cash Balance, ROIC)
+export interface PortfolioPerformanceMetrics {
+  totalOOP: number;
+  totalCashBalance: number;
+  portfolioROIC: number | null;
+}
+
 // Portfolio realized P/L statistics
 export interface PortfolioRealizedPL {
   totalSwingPlDollars: number;
@@ -170,6 +177,7 @@ export interface SignalsOverviewProps {
   toggleExpand: () => void;
   portfolioBudgetStats: PortfolioBudgetStats;
   portfolioTransactionCounts: PortfolioTransactionCounts;
+  portfolioPerformanceMetrics: PortfolioPerformanceMetrics;
   portfolioRealizedPL: PortfolioRealizedPL;
   portfolioUnrealizedPL: PortfolioUnrealizedPL;
   portfolioTotalPL: PortfolioTotalPL;

@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { FaEdit, FaEye, FaEyeSlash, FaArchive, FaTrashRestore } from 'react-icons/fa';
+import { FaEdit, FaEye, FaEyeSlash, FaArchive, FaTrashRestore, FaCalculator } from 'react-icons/fa';
 import { formatCurrency } from '@/app/utils/financialCalculations';
 
 // Import types from the portfolio types file
@@ -37,6 +37,7 @@ export default function PortfolioTable({
   handleEditClick,
   handleToggleHidden,
   handleArchiveStock,
+  handleMigrateCashFlow,
 }: PortfolioTableProps) {
   if (isLoading) {
     return <p>Loading stocks...</p>;
@@ -301,6 +302,14 @@ export default function PortfolioTable({
                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray', marginRight: '5px' }}
                   title="Edit Stock">
                     <FaEdit />
+                </button>
+
+                <button 
+                  data-testid="portfolio-page-table-action-migrate-button"
+                  onClick={() => handleMigrateCashFlow(stock)} 
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'orange', marginRight: '5px' }}
+                  title="Migrate Cash Flow (OOP & Balance)">
+                    <FaCalculator />
                 </button>
                 
                 {!showArchived && (

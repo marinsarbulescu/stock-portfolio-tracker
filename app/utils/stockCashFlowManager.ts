@@ -16,6 +16,7 @@ export interface TransactionCashFlowInput {
   action: 'Buy' | 'Sell' | 'Div' | 'SLP' | 'StockSplit';
   investmentAmount?: number; // For Buy transactions
   saleProceeds?: number;     // For Sell transactions
+  dividendAmount?: number;   // For Div and SLP transactions
 }
 
 /**
@@ -56,8 +57,13 @@ export function calculateNewCashFlowState(
       newCashBalance = Math.max(0, newCashBalance);
     }
     // OOP remains unchanged for sell transactions
+  } else if ((transaction.action === 'Div' || transaction.action === 'SLP') && 
+             typeof transaction.dividendAmount === 'number') {
+    // Dividend and SLP payments increase cash balance but do NOT affect out-of-pocket
+    newCashBalance = newCashBalance + transaction.dividendAmount;
+    // newTotalOOP remains unchanged (not an investment)
   }
-  // For Div, SLP, and StockSplit, no cash flow impact (could be extended later)
+  // For StockSplit, no cash flow impact (could be extended later)
 
   return {
     totalOutOfPocket: Math.max(0, newTotalOOP), // Ensure non-negative

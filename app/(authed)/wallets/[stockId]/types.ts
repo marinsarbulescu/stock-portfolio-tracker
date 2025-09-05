@@ -127,6 +127,7 @@ export interface TransactionTableColumnVisibilityState {
   txnProfit: boolean;
   txnProfitPercent: boolean;
   completedTxnId: boolean;
+  createdAt: boolean;
 }
 
 export type SortableTxnKey =
@@ -141,4 +142,5 @@ export type SortableTxnKey =
   | 'quantity'
   | 'proceeds'
   | 'txnProfit'
-  | 'txnProfitPercent';
+  | 'txnProfitPercent'
+  | 'createdAt';

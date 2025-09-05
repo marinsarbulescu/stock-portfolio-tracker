@@ -117,6 +117,7 @@ export interface PortfolioTableProps {
   handleEditClick: (stock: PortfolioStockDataType) => void;
   handleToggleHidden: (stock: PortfolioStockDataType) => void;
   handleArchiveStock: (stock: PortfolioStockDataType) => void;
+  handleMigrateCashFlow: (stock: PortfolioStockDataType) => void;
 }
 
 export interface PortfolioOverviewProps {

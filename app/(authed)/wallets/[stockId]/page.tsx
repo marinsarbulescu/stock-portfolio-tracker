@@ -83,6 +83,7 @@ export default function StockWalletPage() {
      txnProfit: false,
      txnProfitPercent: false,
      completedTxnId: false,
+     createdAt: false,
  });
 
     const [txnSortConfig, setTxnSortConfig] = useState<{ key: SortableTxnKey; direction: 'ascending' | 'descending' } | null>(null);
@@ -102,6 +103,7 @@ export default function StockWalletPage() {
         txnProfit: 'P/L',
         txnProfitPercent: 'P/L (%)',
         completedTxnId: 'Wallet ID',
+        createdAt: 'Created At',
     };
     
     const requestTxnSort = (key: SortableTxnKey) => {

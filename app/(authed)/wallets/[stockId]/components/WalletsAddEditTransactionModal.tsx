@@ -725,8 +725,13 @@ export default function TransactionForm({
                         action: action,
                         saleProceeds: saleProceeds
                     };
+                } else if (action === 'Div' || action === 'SLP') {
+                    transactionCashFlow = {
+                        action: action,
+                        dividendAmount: amountValue || 0
+                    };
                 }
-                // For other actions (Div, SLP, StockSplit), no cash flow impact yet
+                // For StockSplit, no cash flow impact
 
                 // Update stock cash flow using the new component
                 if (transactionCashFlow) {

@@ -244,7 +244,7 @@ export default function HomePage() {
         try {
             const [stockResult, allTxnsData, walletResult] = await Promise.all([
                 client.models.PortfolioStock.list({
-                    selectionSet: ['id', 'symbol', 'pdp', 'name', 'budget', 'testPrice', 'isHidden', 'archived', 'region', 'htp', 'stockCommission', 'stockTrend'], // Added testPrice, htp, stockCommission, and stockTrend fields
+                    selectionSet: ['id', 'symbol', 'pdp', 'name', 'budget', 'testPrice', 'isHidden', 'archived', 'region', 'htp', 'stockCommission', 'stockTrend', 'totalOutOfPocket', 'currentCashBalance'], // Added cash flow fields
                     filter: {
                         and: [
                             { isHidden: { ne: true } }, // not hidden
@@ -713,6 +713,51 @@ export default function HomePage() {
         return { buys, swingSells, holdSells, totalSells };
     }, [allTransactions]);
 
+    const portfolioPerformanceMetrics = useMemo(() => {
+        // Calculate total OOP and cash balance from portfolio stocks
+        let totalOOP = 0;
+        let totalCashBalance = 0;
+
+        portfolioStocks.forEach(stock => {
+            // Type assertion to access cash flow fields
+            const stockWithCashFlow = stock as unknown as PortfolioStockDataType & {
+                totalOutOfPocket?: number;
+                currentCashBalance?: number;
+            };
+            totalOOP += stockWithCashFlow.totalOutOfPocket || 0;
+            totalCashBalance += stockWithCashFlow.currentCashBalance || 0;
+        });
+
+        // Calculate portfolio ROIC
+        let portfolioROIC: number | null = null;
+        
+        if (totalOOP > 0) {
+            // Calculate total current value (cash balance + market value of all held shares)
+            let totalSharesValue = 0;
+            
+            allWallets.forEach(wallet => {
+                if ((wallet.remainingShares ?? 0) > SHARE_EPSILON) {
+                    const stockInfo = portfolioStocks.find(s => s.id === wallet.portfolioStockId);
+                    const stockSymbol = stockInfo?.symbol;
+                    const currentPrice = stockSymbol ? (mergedPrices[stockSymbol]?.currentPrice ?? null) : null;
+                    
+                    if (typeof currentPrice === 'number') {
+                        totalSharesValue += (wallet.remainingShares ?? 0) * currentPrice;
+                    }
+                }
+            });
+
+            const totalPortfolioValue = totalCashBalance + totalSharesValue;
+            portfolioROIC = ((totalPortfolioValue - totalOOP) / totalOOP) * 100;
+        }
+
+        return {
+            totalOOP: parseFloat(totalOOP.toFixed(CURRENCY_PRECISION)),
+            totalCashBalance: parseFloat(totalCashBalance.toFixed(CURRENCY_PRECISION)),
+            portfolioROIC: portfolioROIC !== null ? parseFloat(portfolioROIC.toFixed(PERCENT_PRECISION)) : null,
+        };
+    }, [portfolioStocks, allWallets, mergedPrices]);
+
     const portfolioRealizedPL = useMemo(() => {
         // Create wallet buy price map for fallback calculations
         const walletBuyPriceMap = new Map<string, number>();
@@ -1076,6 +1121,7 @@ export default function HomePage() {
                 toggleExpand={() => setIsOverviewExpanded(prev => !prev)}
                 portfolioBudgetStats={portfolioBudgetStats}
                 portfolioTransactionCounts={portfolioTransactionCounts}
+                portfolioPerformanceMetrics={portfolioPerformanceMetrics}
                 portfolioRealizedPL={portfolioRealizedPL}
                 portfolioUnrealizedPL={portfolioUnrealizedPL}
                 portfolioTotalPL={portfolioTotalPL}
