@@ -43,14 +43,15 @@ describe('Cash Flow Migration - Dividend and SLP', () => {
   });
 
   test('should handle Buy, Dividend, and SLP transactions chronologically', async () => {
-    // Mock transactions with mixed types
+    // Mock transactions with mixed types - using investment field for Buy transactions
     const mockTransactions = [
       {
         date: '2024-01-01',
         createdAt: '2024-01-01T10:00:00Z',
         action: 'Buy',
         price: 100,
-        quantity: 10
+        quantity: 10,
+        investment: 1000 // Use investment field, not price * quantity
       },
       {
         date: '2024-01-15',
@@ -69,7 +70,8 @@ describe('Cash Flow Migration - Dividend and SLP', () => {
         createdAt: '2024-02-15T10:00:00Z',
         action: 'Buy',
         price: 105,
-        quantity: 5
+        quantity: 5,
+        investment: 525 // Use investment field
       }
     ];
 
@@ -135,7 +137,8 @@ describe('Cash Flow Migration - Dividend and SLP', () => {
         createdAt: '2024-01-01T10:00:00Z',
         action: 'Buy',
         price: 100,
-        quantity: 10 // $1000 investment
+        quantity: 10, // $1000 investment
+        investment: 1000 // Add investment field
       },
       {
         date: '2024-01-15',
@@ -187,6 +190,40 @@ describe('Cash Flow Migration - Dividend and SLP', () => {
     expect(result.success).toBe(true);
     expect(result.transactionsProcessed).toBe(0); // No valid transactions processed
     expect(result.calculatedOOP).toBe(0);
+    expect(result.calculatedCashBalance).toBe(0);
+  });
+
+  test('should use investment field for Buy transactions, not price * quantity', async () => {
+    // Test the specific bug fix - investment field vs calculated amount
+    const mockTransactions = [
+      {
+        date: '2024-01-01',
+        createdAt: '2024-01-01T10:00:00Z',
+        action: 'Buy',
+        price: 38.22,
+        quantity: 1.0,
+        investment: 38.22 // Should use this, not price * quantity
+      },
+      {
+        date: '2024-01-02',
+        createdAt: '2024-01-02T10:00:00Z',
+        action: 'Buy',
+        price: 37.03,
+        quantity: 2.0,
+        investment: 74.06 // Commission might make this different from 37.03 * 2
+      }
+    ];
+
+    (mockClient.models.Transaction.list as jest.Mock).mockResolvedValue({
+      data: mockTransactions,
+      errors: null
+    });
+
+    const result = await migrateStockCashFlow(mockClient, stockId);
+
+    expect(result.success).toBe(true);
+    expect(result.transactionsProcessed).toBe(2);
+    expect(result.calculatedOOP).toBe(112.28); // 38.22 + 74.06
     expect(result.calculatedCashBalance).toBe(0);
   });
 });

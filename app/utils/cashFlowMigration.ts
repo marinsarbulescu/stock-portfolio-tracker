@@ -21,7 +21,8 @@ export interface MigrationResult {
 
 /**
  * Retroactively calculate and update OOP and Cash Balance for a single stock
- * by processing all transactions in chronological order
+ * by processing all transactions in chronological order.
+ * Always resets OOP and Cash Balance to 0 at start for clean recalculation.
  */
 export async function migrateStockCashFlow(
   client: AmplifyClient,
@@ -50,7 +51,15 @@ export async function migrateStockCashFlow(
 
     const stockSymbol = stockData.symbol;
 
-    // 2. Get all transactions for this stock, ordered by date
+    // 2. Reset OOP and Cash Balance to 0 before migration
+    await updateStockCashFlow(client, stockId, {
+      totalOutOfPocket: 0,
+      currentCashBalance: 0
+    });
+
+    console.log(`[Migration] Reset ${stockSymbol} cash flow metrics to 0 before recalculation`);
+
+    // 3. Get all transactions for this stock, ordered by date
     const { data: transactions } = await client.models.Transaction.list({
       filter: {
         portfolioStockId: { eq: stockId }
@@ -80,7 +89,7 @@ export async function migrateStockCashFlow(
       };
     }
 
-    // 3. Sort transactions by date (chronological order), then by createdAt
+    // 4. Sort transactions by date (chronological order), then by createdAt
     const sortedTransactions = [...transactions].sort((a, b) => {
       const dateA = a.date || '';
       const dateB = b.date || '';
@@ -95,7 +104,7 @@ export async function migrateStockCashFlow(
       return createdAtA.localeCompare(createdAtB);
     });
 
-    // 4. Process transactions chronologically to calculate cash flow
+    // 5. Process transactions chronologically to calculate cash flow
     const currentState: StockCashFlowState = {
       totalOutOfPocket: 0,
       currentCashBalance: 0
@@ -103,6 +112,7 @@ export async function migrateStockCashFlow(
 
     let transactionsProcessed = 0;
     const debugLog: string[] = [];
+    debugLog.push(`[RESET] Initializing ${stockSymbol} with OOP=$0, Balance=$0 for clean recalculation`);
     debugLog.push(`Starting migration for ${stockSymbol} with ${sortedTransactions.length} transactions`);
 
     for (const txn of sortedTransactions) {
@@ -150,11 +160,11 @@ export async function migrateStockCashFlow(
       currentState.currentCashBalance = Math.max(0, currentState.currentCashBalance);
     }
 
-    // 5. Round to currency precision
+    // 6. Round to currency precision
     const finalOOP = parseFloat(currentState.totalOutOfPocket.toFixed(CURRENCY_PRECISION));
     const finalCashBalance = parseFloat(currentState.currentCashBalance.toFixed(CURRENCY_PRECISION));
 
-    // 6. Update the stock in the database
+    // 7. Update the stock in the database with final calculated values
     await updateStockCashFlow(client, stockId, {
       totalOutOfPocket: finalOOP,
       currentCashBalance: finalCashBalance

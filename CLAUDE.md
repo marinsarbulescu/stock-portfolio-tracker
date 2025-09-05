@@ -20,7 +20,7 @@
 - **Break down complex tasks**: Divide large tasks into smaller, manageable todos
 
 ## Code Quality & Build Verification
-- **Run build after significant changes**: After modifying types, interfaces, or component props, run `npx next build` to catch TypeScript errors
+- **Run build after significant changes**: After modifying types, interfaces, or component props: stop the dev server, run `npx next build` to catch TypeScript errors, then restart the dev server.
 - **Check lint regularly**: Use `npm run lint` to maintain code quality standards
 - **When to verify**:
   - After modifying TypeScript types or interfaces
