@@ -429,6 +429,13 @@ export default function StockWalletPage() {
         try {
             const { data: stockData, errors } = await client.models.PortfolioStock.get({
                 id: stockId
+            }, {
+                selectionSet: [
+                    'id', 'symbol', 'name', 'stockType', 'region', 'stockTrend',
+                    'budget', 'pdp', 'stp', 'swingHoldRatio', 'stockCommission', 'htp',
+                    'testPrice', 'owner', 'isHidden', 'archived', 'archivedAt',
+                    'createdAt', 'updatedAt'
+                ]
             });
 
             if (errors) {
@@ -2243,33 +2250,63 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
     // --- END HANDLERS ---
 
     // --- Edit Stock Modal Handlers ---
-    const handleEditStock = () => {
-        // Create stock data object from current state
-        if (stockId && stockSymbol && name) {
-            const stockData = {
+    const handleEditStock = async () => {
+        if (!stockId) return;
+        
+        // Ensure we have the latest stock data
+        let stockData = currentStockData;
+        if (!stockData) {
+            console.log('Current stock data not available, fetching fresh data...');
+            try {
+                const { data: freshStockData, errors } = await client.models.PortfolioStock.get({
+                    id: stockId
+                }, {
+                    selectionSet: [
+                        'id', 'symbol', 'name', 'stockType', 'region', 'stockTrend',
+                        'budget', 'pdp', 'stp', 'swingHoldRatio', 'stockCommission', 'htp',
+                        'testPrice', 'owner', 'isHidden', 'archived', 'archivedAt',
+                        'createdAt', 'updatedAt'
+                    ]
+                });
+
+                if (errors) {
+                    console.error('Error fetching stock data for edit:', errors);
+                    return;
+                }
+
+                stockData = freshStockData as unknown as PortfolioStockDataType;
+            } catch (err: unknown) {
+                console.error('Error fetching stock data for edit:', err);
+                return;
+            }
+        }
+
+        if (stockData) {
+            const editStockData = {
                 id: stockId,
-                symbol: stockSymbol,
-                name: name,
-                stockType: 'Stock' as const, // Default value
-                region: 'US' as const, // Default value
-                budget: stockBudget,
-                pdp: stockPdp,
-                swingHoldRatio: stockShr,
-                stp: stockStp,
-                stockCommission: stockCommission,
-                htp: stockHtp,
-                testPrice: currentStockData?.testPrice ?? null, // Include test price from current stock data
-                owner: ownerId ?? '',
-                isHidden: null,
-                archived: null,
-                archivedAt: null,
-                createdAt: '',
-                updatedAt: '',
+                symbol: stockData.symbol || stockSymbol || 'Unknown',
+                name: stockData.name || name || 'Unknown',
+                stockType: stockData.stockType ?? 'Stock' as const,
+                region: stockData.region ?? 'US' as const,
+                stockTrend: stockData.stockTrend ?? null,
+                budget: stockData.budget ?? stockBudget,
+                pdp: stockData.pdp ?? stockPdp,
+                swingHoldRatio: stockData.swingHoldRatio ?? stockShr,
+                stp: stockData.stp ?? stockStp,
+                stockCommission: stockData.stockCommission ?? stockCommission,
+                htp: stockData.htp ?? stockHtp,
+                testPrice: stockData.testPrice ?? null,
+                owner: stockData.owner || ownerId || '',
+                isHidden: stockData.isHidden,
+                archived: stockData.archived,
+                archivedAt: stockData.archivedAt,
+                createdAt: stockData.createdAt || '',
+                updatedAt: stockData.updatedAt || '',
                 transactions: null as unknown, // Not needed for edit
                 stockWallets: null as unknown, // Not needed for edit
             };
             
-            setStockToEditData(stockData as PortfolioStockDataType);
+            setStockToEditData(editStockData as PortfolioStockDataType);
             setIsEditStockModalOpen(true);
         }
     };
@@ -2294,17 +2331,8 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 setError(errors[0].message || 'Failed to update stock.');
             } else {
                 console.log('Stock updated successfully:', updatedStock);
-                // Update local state with new values
-                if (updatedStock) {
-                    const stock = updatedStock as unknown as PortfolioStockDataType;
-                    setStockName(stock.name ?? name);
-                    setStockBudget(stock.budget);
-                    setStockPdp(stock.pdp);
-                    setStockShr(stock.swingHoldRatio);
-                    setStockStp(stock.stp);
-                    setStockCommission(stock.stockCommission);
-                    setStockHtp(stock.htp);
-                }
+                // Refresh all stock data from database to ensure we have the latest values
+                await fetchCurrentStock();
                 handleCancelEditStock();
             }
         } catch (err: unknown) {
