@@ -812,7 +812,16 @@ export default function TransactionForm({
 
                           // Calculate NEW totals
                           const newTotalShares_raw = currentTotalShares + sharesToAdd;
-                          const newInvestment_raw = currentInvestment + roundedInvestmentToAdd;
+                          
+                          // *** FIX: Reset investment for empty wallets being reused ***
+                          // If the wallet has no remaining shares (was previously emptied), 
+                          // reset the investment to 0 before adding new investment
+                          const effectiveCurrentInv = (currentRemaining <= SHARE_EPSILON) ? 0 : currentInvestment;
+                          if (currentRemaining <= SHARE_EPSILON && currentInvestment > 0.001) {
+                              console.log(`[WalletsAddEditTransactionModal] Resetting investment for empty wallet ${existingWallet.id}: ${currentInvestment.toFixed(CURRENCY_PRECISION)} -> 0 (remaining shares: ${currentRemaining.toFixed(SHARE_PRECISION)})`);
+                          }
+                          const newInvestment_raw = effectiveCurrentInv + roundedInvestmentToAdd;
+                          
                           const newRemaining_raw = currentRemaining + sharesToAdd;
 
                           // ROUND final totals before saving

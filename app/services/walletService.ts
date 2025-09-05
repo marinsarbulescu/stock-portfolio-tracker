@@ -186,7 +186,16 @@ export async function adjustWalletContribution(
         const hasSales = (walletToUpdate.sharesSold ?? 0) > SHARE_EPSILON || (walletToUpdate.sellTxnCount ?? 0) > 0;
 
         const newTotalShares = currentTotalShares + sharesDelta;
-        const newTotalInv = currentTotalInv + investmentDelta;
+        
+        // *** FIX: Reset investment for empty wallets being reused ***
+        // If the wallet has no remaining shares (was previously emptied), 
+        // reset the investment to 0 before adding new investment
+        const effectiveCurrentInv = (currentRemaining <= SHARE_EPSILON) ? 0 : currentTotalInv;
+        if (currentRemaining <= SHARE_EPSILON && currentTotalInv > CURRENCY_EPSILON) {
+            console.log(`[WalletService] Resetting investment for empty wallet ${walletToUpdate.id}: ${currentTotalInv.toFixed(CURRENCY_PRECISION)} -> 0 (remaining shares: ${currentRemaining.toFixed(SHARE_PRECISION)})`);
+        }
+        const newTotalInv = effectiveCurrentInv + investmentDelta;
+        
         const newRemaining = currentRemaining + sharesDelta; // Adjust remaining by the same share delta
 
         // --- Validation ---
