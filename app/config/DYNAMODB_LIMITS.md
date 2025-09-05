@@ -16,7 +16,7 @@ If you want to find the "last buy transaction" with `limit: 1`, but the last 3 r
 
 ## Constants Defined
 
-### `FETCH_LIMIT_FOR_UNIQUE_WALLET = 1000`
+### `FETCH_LIMIT_FOR_UNIQUE_WALLET = 5000`
 - **Purpose**: Finding specific wallets by price and type
 - **Usage**: `walletService.ts`, wallet queries in pages
 - **Reason**: Ensures finding wallets even when many exist at different prices
@@ -26,22 +26,22 @@ If you want to find the "last buy transaction" with `limit: 1`, but the last 3 r
 - **Usage**: `signals/page.tsx` for fetching all transactions
 - **Reason**: Maximizes efficiency for bulk transaction processing
 
-### `FETCH_LIMIT_TRANSACTIONS_STANDARD = 1000`
+### `FETCH_LIMIT_TRANSACTIONS_STANDARD = 5000`
 - **Purpose**: Standard transaction queries
 - **Usage**: `wallets/[stockId]/page.tsx`
 - **Reason**: Sufficient for most single-stock transaction queries
 
-### `FETCH_LIMIT_STOCKS_STANDARD = 1000`
+### `FETCH_LIMIT_STOCKS_STANDARD = 5000`
 - **Purpose**: Portfolio stock queries
 - **Usage**: `portfolio/page.tsx`, `signals/page.tsx`
 - **Reason**: Handles large portfolios efficiently
 
-### `FETCH_LIMIT_WALLETS_GENEROUS = 3000`
+### `FETCH_LIMIT_WALLETS_GENEROUS = 5000`
 - **Purpose**: Wallet queries that need generous limits
 - **Usage**: `signals/page.tsx` for comprehensive wallet analysis, `WalletsAddEditTransactionModal.tsx` for stock split wallet updates
 - **Reason**: Ensures all wallets are found for portfolio calculations and critical operations like stock splits
 
-### `FETCH_LIMIT_WALLETS_CANDIDATES = 500`
+### `FETCH_LIMIT_WALLETS_CANDIDATES = 5000`
 - **Purpose**: Wallet candidate searches
 - **Usage**: `wallets/[stockId]/page.tsx`
 - **Reason**: Sufficient for finding wallet matches with price tolerance
