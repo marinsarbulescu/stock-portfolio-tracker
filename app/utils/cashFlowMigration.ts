@@ -4,7 +4,7 @@
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
 import { updateStockCashFlow, type StockCashFlowState } from './stockCashFlowManager';
-import { CURRENCY_PRECISION } from '@/app/config/constants';
+import { CURRENCY_PRECISION, FETCH_LIMIT_TRANSACTIONS_STANDARD } from '@/app/config/constants';
 
 type AmplifyClient = ReturnType<typeof generateClient<Schema>>;
 
@@ -59,11 +59,12 @@ export async function migrateStockCashFlow(
 
     console.log(`[Migration] Reset ${stockSymbol} cash flow metrics to 0 before recalculation`);
 
-    // 3. Get all transactions for this stock, ordered by date
+    // 3. Get all transactions for this stock with high limit for complete data
     const { data: transactions } = await client.models.Transaction.list({
       filter: {
         portfolioStockId: { eq: stockId }
       },
+      limit: FETCH_LIMIT_TRANSACTIONS_STANDARD, // Use high limit to ensure all transactions are fetched
       selectionSet: [
         'id',
         'date',
