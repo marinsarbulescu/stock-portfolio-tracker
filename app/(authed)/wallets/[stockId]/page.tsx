@@ -1785,6 +1785,25 @@ const roicValue = useMemo(() => {
 }, [cashFlowMetrics, currentShares, mergedPrices, stockSymbol]);
 // --- END: ROIC Calculation ---
 
+// --- START: Budget Management Calculations ---
+const budgetMetrics = useMemo(() => {
+  const totalOOP = cashFlowMetrics.totalOOP;
+  const currentCashBalance = cashFlowMetrics.currentCashBalance;
+  const riskBudget = stockBudget ?? 0;
+
+  // Budget Used = Net Cash Investment (OOP - Cash Balance)
+  const budgetUsed = totalOOP - currentCashBalance;
+  
+  // Budget Available = Risk Budget - Budget Used
+  const budgetAvailable = riskBudget - budgetUsed;
+
+  return {
+    budgetUsed: Math.max(0, budgetUsed), // Ensure non-negative
+    budgetAvailable: Math.max(0, budgetAvailable) // Ensure non-negative
+  };
+}, [cashFlowMetrics, stockBudget]);
+// --- END: Budget Management Calculations ---
+
 const totalTiedUpInvestment = useMemo(() => {
     // Ensure wallets data is loaded
     if (!wallets || wallets.length ===  0) {
@@ -2398,6 +2417,8 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 totalOOP={cashFlowMetrics.totalOOP}
                 currentCashBalance={cashFlowMetrics.currentCashBalance}
                 marketValue={(currentShares?.total ?? 0) * (mergedPrices[stockSymbol || '']?.currentPrice ?? 0)}
+                budgetUsed={budgetMetrics.budgetUsed}
+                budgetAvailable={budgetMetrics.budgetAvailable}
             />
             {/* --- START: Wallets section --- */}
             <WalletsTabs

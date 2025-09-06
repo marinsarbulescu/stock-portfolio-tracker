@@ -60,7 +60,7 @@ export default function SignalsOverview({
                         <div>
                             <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Budget</p>
 
-                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Annual</p>
+                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Risk Budget</p>
                             <p>
                                 ${portfolioBudgetStats.totalBudget.toLocaleString(undefined, {
                                     minimumFractionDigits: CURRENCY_PRECISION,
@@ -68,7 +68,23 @@ export default function SignalsOverview({
                                 })}
                             </p>
 
-                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Invested</p>
+                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Budget Used</p>
+                            <p>
+                                ${portfolioBudgetStats.totalBudgetUsed.toLocaleString(undefined, {
+                                    minimumFractionDigits: CURRENCY_PRECISION,
+                                    maximumFractionDigits: CURRENCY_PRECISION,
+                                })}
+                            </p>
+
+                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Budget Available</p>
+                            <p>
+                                ${portfolioBudgetStats.totalBudgetAvailable.toLocaleString(undefined, {
+                                    minimumFractionDigits: CURRENCY_PRECISION,
+                                    maximumFractionDigits: CURRENCY_PRECISION,
+                                })}
+                            </p>
+
+                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Tied-Up</p>
                             <p>
                                 ${portfolioBudgetStats.totalInvested.toLocaleString(undefined, {
                                     minimumFractionDigits: CURRENCY_PRECISION,

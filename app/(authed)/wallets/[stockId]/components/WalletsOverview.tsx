@@ -23,6 +23,8 @@ export interface WalletsOverviewProps {
   totalOOP: number;
   currentCashBalance: number;
   marketValue: number;
+  budgetUsed: number;
+  budgetAvailable: number;
 }
 
 export default function WalletsOverview({
@@ -45,6 +47,8 @@ export default function WalletsOverview({
   totalOOP,
   currentCashBalance,
   marketValue,
+  budgetUsed,
+  budgetAvailable,
 }: WalletsOverviewProps) {
   return (
     <div style={{ marginBottom: '1rem', border: '1px solid #444' }}>
@@ -75,11 +79,19 @@ export default function WalletsOverview({
                 <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Settings</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                   <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Budget</p>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Risk Budget</p>
                     <p data-testid="overview-settings-budget">{formatCurrency(stockBudget ?? 0)}</p>
                   </div>
                   <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>tInv</p>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Budget Used</p>
+                    <p data-testid="overview-settings-budget-used">{formatCurrency(budgetUsed)}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Budget Available</p>
+                    <p data-testid="overview-settings-budget-available">{formatCurrency(budgetAvailable)}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Tied-Up</p>
                     <p data-testid="overview-settings-invested">{formatCurrency(totalTiedUpInvestment)}</p>
                   </div>
                   <div>

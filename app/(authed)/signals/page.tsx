@@ -696,11 +696,20 @@ export default function HomePage() {
         // Calculate total risk investment (sum of all rInv values)
         const totalRiskInvestment = Object.values(stockRiskInvestments).reduce((sum, rInv) => sum + rInv, 0);
 
+        // Calculate portfolio-level budget metrics using allWallets
+        const totalOOP = allWallets.reduce((sum, wallet) => sum + (wallet.totalInvestment || 0), 0);
+        const totalCashBalance = allWallets.reduce((sum, wallet) => sum + (wallet.cashBalance || 0), 0);
+
+        const totalBudgetUsed = Math.max(0, totalOOP - totalCashBalance);
+        const totalBudgetAvailable = Math.max(0, totalBudget - totalBudgetUsed);
+
         return {
             totalBudget: parseFloat(totalBudget.toFixed(CURRENCY_PRECISION)),
             totalInvested: parseFloat(totalTiedUpInvestment.toFixed(CURRENCY_PRECISION)),
             budgetLeft: parseFloat(budgetLeft.toFixed(CURRENCY_PRECISION)),
             totalRiskInvestment: parseFloat(totalRiskInvestment.toFixed(CURRENCY_PRECISION)),
+            totalBudgetUsed: parseFloat(totalBudgetUsed.toFixed(CURRENCY_PRECISION)),
+            totalBudgetAvailable: parseFloat(totalBudgetAvailable.toFixed(CURRENCY_PRECISION)),
         };
     }, [portfolioStocks, allWallets, stockRiskInvestments]);
 
