@@ -2397,6 +2397,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 roicValue={roicValue}
                 totalOOP={cashFlowMetrics.totalOOP}
                 currentCashBalance={cashFlowMetrics.currentCashBalance}
+                marketValue={(currentShares?.total ?? 0) * (mergedPrices[stockSymbol || '']?.currentPrice ?? 0)}
             />
             {/* --- START: Wallets section --- */}
             <WalletsTabs

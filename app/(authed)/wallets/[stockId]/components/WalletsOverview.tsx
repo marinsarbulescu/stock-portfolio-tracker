@@ -22,6 +22,7 @@ export interface WalletsOverviewProps {
   roicValue?: number | null;
   totalOOP: number;
   currentCashBalance: number;
+  marketValue: number;
 }
 
 export default function WalletsOverview({
@@ -43,6 +44,7 @@ export default function WalletsOverview({
   roicValue,
   totalOOP,
   currentCashBalance,
+  marketValue,
 }: WalletsOverviewProps) {
   return (
     <div style={{ marginBottom: '1rem', border: '1px solid #444' }}>
@@ -107,6 +109,8 @@ export default function WalletsOverview({
                 <p data-testid="overview-cash-total-oop">{formatCurrency(totalOOP)}</p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>$ Balance</p>
                 <p data-testid="overview-cash-balance">{formatCurrency(currentCashBalance)}</p>
+                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Market Value</p>
+                <p data-testid="overview-market-value">{pricesLoading ? 'Loading...' : formatCurrency(marketValue)}</p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>ROIC</p>
                 <p>
                   <span data-testid="overview-roic-value">
