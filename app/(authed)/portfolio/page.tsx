@@ -83,6 +83,7 @@ function PortfolioContent() {
     stp: true,
     stockCommission: true,
     budget: false,
+    oop: true,
     investment: true,
     riskInvestment: true,
   });
@@ -147,6 +148,21 @@ function PortfolioContent() {
     });
     
     return invMap;
+  }, [allWallets]);
+
+  // Compute total OOP (Out of Pocket) per stock by summing totalInvestment for all wallets
+  const stockOOPInvestments = useMemo(() => {
+    const oopMap: Record<string, number> = {};
+    
+    // Group wallets by stock ID and calculate total OOP
+    allWallets.forEach(wallet => {
+      if (wallet.portfolioStockId) {
+        const totalInvestment = wallet.totalInvestment ?? 0;
+        oopMap[wallet.portfolioStockId] = (oopMap[wallet.portfolioStockId] ?? 0) + totalInvestment;
+      }
+    });
+    
+    return oopMap;
   }, [allWallets]);
 
   // Compute risk investment per stock (investment in wallets where TP hasn't been met)
@@ -286,6 +302,10 @@ function PortfolioContent() {
             valA = a.budget;
             valB = b.budget;
             break;
+          case 'oop':
+            valA = stockOOPInvestments[a.id] ?? null;
+            valB = stockOOPInvestments[b.id] ?? null;
+            break;
           case 'investment':
             valA = stockInvestments[a.id] ?? null;
             valB = stockInvestments[b.id] ?? null;
@@ -321,7 +341,7 @@ function PortfolioContent() {
     }
 
     return sortableItems;
-  }, [activeStocks, archivedStocks, showArchived, stockSortConfig, mergedPrices, stockInvestments, stockRiskInvestments]);
+  }, [activeStocks, archivedStocks, showArchived, stockSortConfig, mergedPrices, stockInvestments, stockOOPInvestments, stockRiskInvestments]);
 
   // Fetch Portfolio Function
   const fetchPortfolio = useCallback(async () => {
@@ -1108,6 +1128,7 @@ function PortfolioContent() {
         sortedStocks={sortedStocks}
         stockSortConfig={stockSortConfig}
         stockInvestments={stockInvestments}
+        stockOOPInvestments={stockOOPInvestments}
         stockRiskInvestments={stockRiskInvestments}
         latestPrices={mergedPrices}
         pricesLoading={pricesLoading}

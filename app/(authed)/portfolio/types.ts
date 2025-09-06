@@ -38,6 +38,7 @@ export interface PortfolioColumnVisibilityState {
   stp: boolean;
   stockCommission: boolean;
   budget: boolean;
+  oop: boolean;
   investment: boolean;
   riskInvestment: boolean;
 }
@@ -57,6 +58,7 @@ export type SortableStockKey =
   | 'stp'
   | 'stockCommission'
   | 'budget'
+  | 'oop'
   | 'investment'
   | 'riskInvestment';
 
@@ -105,6 +107,7 @@ export interface PortfolioTableProps {
   sortedStocks: PortfolioStockDataType[];
   stockSortConfig: StockSortConfig | null;
   stockInvestments: Record<string, number>;
+  stockOOPInvestments: Record<string, number>;
   stockRiskInvestments: Record<string, number>;
   latestPrices: LatestPrices;
   pricesLoading: boolean;
@@ -162,7 +165,8 @@ export const STOCK_COLUMN_LABELS: Record<SortableStockKey, string> = {
   stp: 'STP (%)',
   stockCommission: 'Comm (%)',
   budget: 'Budget',
-  investment: 'tInv',
+  oop: 'OOP',
+  investment: 'Tied-Up',
   riskInvestment: 'r-Inv',
 };
 
@@ -177,7 +181,8 @@ export const PORTFOLIO_COLUMN_LABELS: Record<PortfolioColumnKey, string> = {
   stp: 'STP (%)',
   stockCommission: 'Comm (%)',
   budget: 'Budget',
-  investment: 'tInv',
+  oop: 'OOP',
+  investment: 'Tied-Up',
   riskInvestment: 'r-Inv',
 };
 

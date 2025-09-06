@@ -25,6 +25,7 @@ export default function PortfolioTable({
   sortedStocks,
   stockSortConfig,
   stockInvestments,
+  stockOOPInvestments,
   stockRiskInvestments,
   latestPrices,
   pricesLoading,
@@ -169,6 +170,15 @@ export default function PortfolioTable({
               {STOCK_COLUMN_LABELS.budget} {stockSortConfig?.key === 'budget' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
             </th>
           )}
+          {columnVisibility.oop && (
+            <th
+              data-testid="portfolio-page-table-oop-header"
+              style={{ padding: '5px', cursor: 'pointer' }}
+              onClick={() => requestStockSort('oop')}
+            >
+              {STOCK_COLUMN_LABELS.oop} {stockSortConfig?.key === 'oop' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+            </th>
+          )}
           {columnVisibility.investment && (
             <th
               data-testid="portfolio-page-table-investment-header"
@@ -283,6 +293,11 @@ export default function PortfolioTable({
                 <td
                   data-testid={`portfolio-page-table-budget-${stock.symbol?.toUpperCase()}`}
                   style={cellStyle}>{typeof stock.budget === 'number' ? formatCurrency(stock.budget??0) : '-'}</td>
+              )}
+              {columnVisibility.oop && (
+                <td
+                  data-testid={`portfolio-page-table-oop-${stock.symbol?.toUpperCase()}`}
+                  style={cellStyle}>{typeof stockOOPInvestments[stock.id] === 'number' ? stockOOPInvestments[stock.id].toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '-'}</td>
               )}
               {columnVisibility.investment && (
                 <td
