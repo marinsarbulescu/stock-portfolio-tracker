@@ -95,6 +95,10 @@ export default function SignalsOverview({
                             <p data-testid="portfolio-performance-cash-balance">
                                 {formatCurrency(portfolioPerformanceMetrics.totalCashBalance)}
                             </p>
+                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Market Value</p>
+                            <p data-testid="portfolio-performance-market-value">
+                                {formatCurrency(portfolioPerformanceMetrics.totalMarketValue)}
+                            </p>
                             <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>ROIC</p>
                             <p>
                                 <span data-testid="portfolio-performance-roic">

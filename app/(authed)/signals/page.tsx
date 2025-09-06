@@ -728,32 +728,31 @@ export default function HomePage() {
             totalCashBalance += stockWithCashFlow.currentCashBalance || 0;
         });
 
-        // Calculate portfolio ROIC
+        // Calculate portfolio ROIC and total market value
         let portfolioROIC: number | null = null;
+        let totalMarketValue = 0;
+        
+        allWallets.forEach(wallet => {
+            if ((wallet.remainingShares ?? 0) > SHARE_EPSILON) {
+                const stockInfo = portfolioStocks.find(s => s.id === wallet.portfolioStockId);
+                const stockSymbol = stockInfo?.symbol;
+                const currentPrice = stockSymbol ? (mergedPrices[stockSymbol]?.currentPrice ?? null) : null;
+                
+                if (typeof currentPrice === 'number') {
+                    totalMarketValue += (wallet.remainingShares ?? 0) * currentPrice;
+                }
+            }
+        });
         
         if (totalOOP > 0) {
-            // Calculate total current value (cash balance + market value of all held shares)
-            let totalSharesValue = 0;
-            
-            allWallets.forEach(wallet => {
-                if ((wallet.remainingShares ?? 0) > SHARE_EPSILON) {
-                    const stockInfo = portfolioStocks.find(s => s.id === wallet.portfolioStockId);
-                    const stockSymbol = stockInfo?.symbol;
-                    const currentPrice = stockSymbol ? (mergedPrices[stockSymbol]?.currentPrice ?? null) : null;
-                    
-                    if (typeof currentPrice === 'number') {
-                        totalSharesValue += (wallet.remainingShares ?? 0) * currentPrice;
-                    }
-                }
-            });
-
-            const totalPortfolioValue = totalCashBalance + totalSharesValue;
+            const totalPortfolioValue = totalCashBalance + totalMarketValue;
             portfolioROIC = ((totalPortfolioValue - totalOOP) / totalOOP) * 100;
         }
 
         return {
             totalOOP: parseFloat(totalOOP.toFixed(CURRENCY_PRECISION)),
             totalCashBalance: parseFloat(totalCashBalance.toFixed(CURRENCY_PRECISION)),
+            totalMarketValue: parseFloat(totalMarketValue.toFixed(CURRENCY_PRECISION)),
             portfolioROIC: portfolioROIC !== null ? parseFloat(portfolioROIC.toFixed(PERCENT_PRECISION)) : null,
         };
     }, [portfolioStocks, allWallets, mergedPrices]);

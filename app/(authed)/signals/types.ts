@@ -98,10 +98,11 @@ export interface PortfolioTransactionCounts {
   totalSells: number;
 }
 
-// Portfolio performance metrics (OOP, Cash Balance, ROIC)
+// Portfolio performance metrics (OOP, Cash Balance, Market Value, ROIC)
 export interface PortfolioPerformanceMetrics {
   totalOOP: number;
   totalCashBalance: number;
+  totalMarketValue: number;
   portfolioROIC: number | null;
 }
 
