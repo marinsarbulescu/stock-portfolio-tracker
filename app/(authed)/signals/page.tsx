@@ -590,29 +590,22 @@ export default function HomePage() {
     const stockBudgetAvailable = useMemo(() => {
         const budgetAvailableMap: Record<string, number> = {};
         
-        // Group wallets by stock to calculate per-stock totals
-        const stockWalletGroups: Record<string, StockWalletDataType[]> = {};
-        allWallets.forEach(wallet => {
-            if (wallet.portfolioStockId) {
-                if (!stockWalletGroups[wallet.portfolioStockId]) {
-                    stockWalletGroups[wallet.portfolioStockId] = [];
-                }
-                stockWalletGroups[wallet.portfolioStockId].push(wallet);
-            }
-        });
-        
-        // Calculate budget available for each stock
+        // Calculate budget available for each stock using stock-level cash flow data
         portfolioStocks.forEach(stock => {
             const stockId = stock.id;
             const stockBudget = stock.budget ?? 0;
-            const stockWallets = stockWalletGroups[stockId] || [];
             
-            // Calculate Total OOP and Cash Balance for this stock
-            const totalOOP = stockWallets.reduce((sum, wallet) => sum + (wallet.totalInvestment || 0), 0);
-            const totalCashBalance = stockWallets.reduce((sum, wallet) => sum + (wallet.cashBalance || 0), 0);
+            // Use the same cash flow data as WalletsOverview
+            const stockWithCashFlow = stock as unknown as PortfolioStockDataType & {
+                totalOutOfPocket?: number;
+                currentCashBalance?: number;
+            };
+            
+            const totalOOP = stockWithCashFlow.totalOutOfPocket || 0;
+            const currentCashBalance = stockWithCashFlow.currentCashBalance || 0;
             
             // Budget Used = Net Cash Investment (OOP - Cash Balance)
-            const budgetUsed = totalOOP - totalCashBalance;
+            const budgetUsed = totalOOP - currentCashBalance;
             
             // Budget Available = Risk Budget - Budget Used
             const budgetAvailable = Math.max(0, stockBudget - budgetUsed);
@@ -621,7 +614,7 @@ export default function HomePage() {
         });
         
         return budgetAvailableMap;
-    }, [allWallets, portfolioStocks]);
+    }, [portfolioStocks]);
 
     const reportData = useMemo((): ReportDataItem[] => {
         return portfolioStocks.map(stock => {
