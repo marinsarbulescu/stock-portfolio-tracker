@@ -1838,9 +1838,9 @@ const riskInvestment = useMemo(() => {
     // Get current price from mergedPrices (includes test price if set)
     const currentPrice = mergedPrices[stockSymbol ?? '']?.currentPrice;
     
-    // If no current price available, return total investment (all at risk)
+    // If no current price available, return 0 (can't assess risk without price)
     if (typeof currentPrice !== 'number') {
-        return totalTiedUpInvestment;
+        return 0;
     }
     
     // Calculate investment in wallets where TP has been MET

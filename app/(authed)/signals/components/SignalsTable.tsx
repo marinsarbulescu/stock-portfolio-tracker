@@ -89,6 +89,11 @@ export default function SignalsTable({
                         <th style={{ padding: '5px', width: '30px' }}>
                             {/* Empty header for expand/collapse column */}
                         </th>
+                        {reportColumnVisibility.riskInvestment && (
+                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('riskInvestment')}>
+                                r-Inv {sortConfig?.key === 'riskInvestment' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                            </th>
+                        )}
                         {reportColumnVisibility.budgetAvailable && (
                             <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('budgetAvailable')}>
                                 Available {sortConfig?.key === 'budgetAvailable' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
@@ -191,6 +196,13 @@ export default function SignalsTable({
                                             {expandedRows.has(item.id) ? '▼' : '▶'}
                                         </button>
                                     </td>
+                                    {reportColumnVisibility.riskInvestment && (
+                                        <td
+                                            data-testid={`signals-table-riskInvestment-${item.symbol.toUpperCase()}`}
+                                            style={{ padding: '5px' }}>
+                                            {typeof item.riskInvestment === 'number' ? item.riskInvestment.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '-'}
+                                        </td>
+                                    )}
                                     {reportColumnVisibility.budgetAvailable && (
                                         <td
                                             data-testid={`signals-table-budgetAvailable-${item.symbol.toUpperCase()}`}

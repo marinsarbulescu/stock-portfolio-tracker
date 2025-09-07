@@ -42,6 +42,7 @@ const client = generateClient<Schema>();
 export default function HomePage() {    
     
     const [reportColumnVisibility, setReportColumnVisibility] = useState<ReportColumnVisibilityState>({
+        riskInvestment: true,
         budgetAvailable: true,
         fiveDayDip: true,
         lbd: true,
@@ -56,6 +57,7 @@ export default function HomePage() {
     });
 
     const COLUMN_LABELS: Record<keyof ReportColumnVisibilityState, string> = {
+        riskInvestment: 'r-Inv',
         budgetAvailable: 'Available',
         fiveDayDip: '5DD',      
         lbd: 'LBD',
@@ -551,25 +553,18 @@ export default function HomePage() {
 
     // Compute risk investment per stock (investment in wallets where TP hasn't been met)
     const stockRiskInvestments = useMemo(() => {
-        const riskMap: Record<string, number> = {};
+        const riskMap: Record<string, number | null> = {};
+        
+        // First, calculate total tied-up investment per stock
+        const stockTotalInvestments: Record<string, number> = {};
         
         allWallets.forEach(wallet => {
             if (wallet.portfolioStockId) {
                 const stockId = wallet.portfolioStockId;
                 const remainingShares = wallet.remainingShares ?? 0;
-                const tp = wallet.tpValue;
                 
                 // Skip if no remaining shares
                 if (remainingShares <= SHARE_EPSILON) {
-                    return;
-                }
-                
-                // Get current price from mergedPrices (includes test price)
-                const stockSymbol = portfolioStocks.find(s => s.id === stockId)?.symbol;
-                const currentPrice = mergedPrices[stockSymbol || '']?.currentPrice;
-                
-                // If no current price or TP has been met (tp <= currentPrice), don't include in risk
-                if (typeof currentPrice !== 'number' || typeof tp !== 'number' || tp <= currentPrice) {
                     return;
                 }
                 
@@ -577,10 +572,54 @@ export default function HomePage() {
                 const totalInvestment = wallet.totalInvestment ?? 0;
                 const totalShares = wallet.totalSharesQty ?? 0;
                 const investmentPerShare = (totalShares > SHARE_EPSILON) ? (totalInvestment / totalShares) : 0;
-                const riskInvestment = investmentPerShare * remainingShares;
+                const tiedUpInWallet = investmentPerShare * remainingShares;
                 
-                riskMap[stockId] = (riskMap[stockId] ?? 0) + riskInvestment;
+                stockTotalInvestments[stockId] = (stockTotalInvestments[stockId] ?? 0) + tiedUpInWallet;
             }
+        });
+        
+        // Then, for each stock, calculate risk investment using WalletsOverview logic
+        Object.keys(stockTotalInvestments).forEach(stockId => {
+            const totalTiedUpInvestment = stockTotalInvestments[stockId];
+            
+            // Get current price from mergedPrices (includes test price)
+            const stockSymbol = portfolioStocks.find(s => s.id === stockId)?.symbol;
+            const currentPrice = mergedPrices[stockSymbol || '']?.currentPrice;
+            
+            // If no current price available, return null (can't assess risk without price)
+            if (typeof currentPrice !== 'number') {
+                riskMap[stockId] = null;
+                return;
+            }
+            
+            // Calculate investment in wallets where TP has been MET
+            const investmentWithMetTP = allWallets
+                .filter(wallet => wallet.portfolioStockId === stockId)
+                .reduce((total, wallet) => {
+                    const remainingShares = wallet.remainingShares ?? 0;
+                    const tp = wallet.tpValue;
+                    
+                    // Skip if no remaining shares
+                    if (remainingShares <= SHARE_EPSILON) {
+                        return total;
+                    }
+                    
+                    // Check if TP has been MET (tp <= currentPrice)
+                    if (typeof tp === 'number' && tp <= currentPrice) {
+                        // Calculate this wallet's tied-up investment
+                        const totalInvestment = wallet.totalInvestment ?? 0;
+                        const totalShares = wallet.totalSharesQty ?? 0;
+                        const investmentPerShare = (totalShares > SHARE_EPSILON) ? (totalInvestment / totalShares) : 0;
+                        const tiedUpInWallet = investmentPerShare * remainingShares;
+                        
+                        return total + tiedUpInWallet;
+                    }
+                    
+                    return total;
+                }, 0);
+            
+            // Risk Investment = Total Investment - Investment with met TP
+            riskMap[stockId] = totalTiedUpInvestment - investmentWithMetTP;
         });
         
         return riskMap;
@@ -687,6 +726,7 @@ export default function HomePage() {
                 id: stockId,
                 symbol: symbol,
                 stockTrend: stock.stockTrend,
+                riskInvestment: stockRiskInvestments[stockId] ?? null,
                 budgetAvailable: stockBudgetAvailable[stockId] ?? null,
                 budget: stock.budget ?? null,
                 currentPrice: currentPrice,
@@ -707,7 +747,7 @@ export default function HomePage() {
                 htpValues: htpValues,
             };
         });
-    }, [portfolioStocks, mergedPrices, processedData, checkHtpSignalForStock, getHtpValuesForStock, stockBudgetAvailable]);
+    }, [portfolioStocks, mergedPrices, processedData, checkHtpSignalForStock, getHtpValuesForStock, stockBudgetAvailable, stockRiskInvestments]);
 
     const portfolioBudgetStats = useMemo(() => {
         const totalBudget = portfolioStocks.reduce((sum, stock) => sum + (stock.budget ?? 0), 0);
@@ -724,7 +764,7 @@ export default function HomePage() {
         const budgetLeft = totalBudget - totalTiedUpInvestment;
 
         // Calculate total risk investment (sum of all rInv values)
-        const totalRiskInvestment = Object.values(stockRiskInvestments).reduce((sum, rInv) => sum + rInv, 0);
+        const totalRiskInvestment = Object.values(stockRiskInvestments).reduce((sum: number, rInv: number | null) => sum + (rInv ?? 0), 0);
 
         // Calculate portfolio-level budget metrics using allWallets
         const totalOOP = allWallets.reduce((sum, wallet) => sum + (wallet.totalInvestment || 0), 0);
@@ -1016,18 +1056,18 @@ export default function HomePage() {
                }
                return val;
             }
-    
+
             sortableItems.sort((a, b) => {
                 const valA = a[sortConfig.key];
                 const valB = b[sortConfig.key];
                 let comparison = 0;
-    
+
                 const resolvedA = handleNullCurrent(valA);
                 const resolvedB = handleNullCurrent(valB);
-    
+
                 if (resolvedA < resolvedB) comparison = -1;
                 else if (resolvedA > resolvedB) comparison = 1;
-    
+
                 return sortConfig.direction === 'ascending' ? comparison : comparison * -1;
             });
         } else {
