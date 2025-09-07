@@ -30,7 +30,19 @@ function LoginHandler() {
 export default function LoginPage() {
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-      <Authenticator>
+      <Authenticator 
+        hideSignUp={true}
+        components={{
+          Header() {
+            return (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <h2>Stock Portfolio Tracker</h2>
+                <p>Sign in to your account</p>
+              </div>
+            );
+          },
+        }}
+      >
         {/*
           Render LoginHandler as a child function component.
           This ensures LoginHandler is rendered *within* the Authenticator's context.

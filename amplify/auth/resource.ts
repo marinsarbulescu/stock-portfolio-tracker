@@ -8,11 +8,9 @@ export const auth = defineAuth({
   loginWith: {
     email: true,
   },
-  // --- ADD THIS ---
   // Define user groups within Cognito User Pool
   groups: [
     'ApprovedUsers', // Group for users allowed full access
     // 'Admins' // Optionally add an Admins group if needed later
     ]
-  // --- END ADD ---
 });

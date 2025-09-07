@@ -21,6 +21,10 @@ const backend = defineBackend({
   // ... other resources ...
 });
 
+// Disable self-registration in Cognito User Pool
+const userPool = backend.auth.resources.userPool.node.defaultChild as any;
+userPool.addPropertyOverride('AdminCreateUserConfig.AllowAdminCreateUserOnly', true);
+
 // --- REMOVE the separate CDK Table definition ---
 // const allowlistTable = new dynamodb.Table(...) // DELETE THIS BLOCK
 
