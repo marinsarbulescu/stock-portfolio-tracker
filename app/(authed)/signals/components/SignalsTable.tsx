@@ -89,9 +89,9 @@ export default function SignalsTable({
                         <th style={{ padding: '5px', width: '30px' }}>
                             {/* Empty header for expand/collapse column */}
                         </th>
-                        {reportColumnVisibility.riskInvestment && (
-                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('riskInvestment')}>
-                                r-Inv {sortConfig?.key === 'riskInvestment' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                        {reportColumnVisibility.budgetAvailable && (
+                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('budgetAvailable')}>
+                                Available {sortConfig?.key === 'budgetAvailable' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                             </th>
                         )}
                         <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('symbol')}>
@@ -157,10 +157,10 @@ export default function SignalsTable({
                         </tr>
                     ) : (
                         sortedTableData.map((item, index) => {
-                            // Check if rInv is greater than or equal to budget for gray styling
-                            const shouldGrayOut = typeof item.riskInvestment === 'number' && 
+                            // Check if budget available is negative for gray styling
+                            const shouldGrayOut = typeof item.budgetAvailable === 'number' && 
                                                 typeof item.budget === 'number' && 
-                                                item.riskInvestment >= item.budget;
+                                                item.budgetAvailable <= 0;
                             
                             const textColor = shouldGrayOut ? '#9d9d9d' : 'inherit';
                             
@@ -191,11 +191,11 @@ export default function SignalsTable({
                                             {expandedRows.has(item.id) ? '▼' : '▶'}
                                         </button>
                                     </td>
-                                    {reportColumnVisibility.riskInvestment && (
+                                    {reportColumnVisibility.budgetAvailable && (
                                         <td
-                                            data-testid={`signals-table-riskInvestment-${item.symbol.toUpperCase()}`}
+                                            data-testid={`signals-table-budgetAvailable-${item.symbol.toUpperCase()}`}
                                             style={{ padding: '5px' }}>
-                                            {typeof item.riskInvestment === 'number' ? item.riskInvestment.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '-'}
+                                            {typeof item.budgetAvailable === 'number' ? item.budgetAvailable.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '-'}
                                         </td>
                                     )}
                                     <td style={{ padding: '5px' }}>

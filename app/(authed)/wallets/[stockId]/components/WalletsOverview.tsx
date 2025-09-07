@@ -1,6 +1,7 @@
 import React from 'react';
 import { formatCurrency, formatShares } from '@/app/utils/financialCalculations';
 import { SHARE_PRECISION } from '@/app/config/constants';
+import { WALLETS_OVERVIEW_TOOLTIPS } from '@/app/config/tooltips';
 import type { RealizedPLStats, UnrealizedPLStats, CombinedPLStats, TransactionCounts, CurrentShares } from '../types';
 
 export interface WalletsOverviewProps {
@@ -79,19 +80,19 @@ export default function WalletsOverview({
                 <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Settings</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                   <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Risk Budget</p>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }} title={WALLETS_OVERVIEW_TOOLTIPS.RISK_BUDGET}>Risk Budget</p>
                     <p data-testid="overview-settings-budget">{formatCurrency(stockBudget ?? 0)}</p>
                   </div>
                   <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Budget Used</p>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }} title={WALLETS_OVERVIEW_TOOLTIPS.BUDGET_USED}>Budget Used</p>
                     <p data-testid="overview-settings-budget-used">{formatCurrency(budgetUsed)}</p>
                   </div>
                   <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Budget Available</p>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }} title={WALLETS_OVERVIEW_TOOLTIPS.BUDGET_AVAILABLE}>Budget Available</p>
                     <p data-testid="overview-settings-budget-available">{formatCurrency(budgetAvailable)}</p>
                   </div>
                   <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Tied-Up</p>
+                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }} title={WALLETS_OVERVIEW_TOOLTIPS.TIED_UP}>Tied-Up</p>
                     <p data-testid="overview-settings-invested">{formatCurrency(totalTiedUpInvestment)}</p>
                   </div>
                   <div>
@@ -117,13 +118,13 @@ export default function WalletsOverview({
 
               <div>
                 <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>$ Performance</p>
-                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Total OOP</p>
+                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }} title={WALLETS_OVERVIEW_TOOLTIPS.TOTAL_OOP}>Total OOP</p>
                 <p data-testid="overview-cash-total-oop">{formatCurrency(totalOOP)}</p>
-                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>$ Balance</p>
+                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }} title={WALLETS_OVERVIEW_TOOLTIPS.CASH_BALANCE}>$ Balance</p>
                 <p data-testid="overview-cash-balance">{formatCurrency(currentCashBalance)}</p>
                 <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Market Value</p>
                 <p data-testid="overview-market-value">{pricesLoading ? 'Loading...' : formatCurrency(marketValue)}</p>
-                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>ROIC</p>
+                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }} title={WALLETS_OVERVIEW_TOOLTIPS.ROIC}>ROIC</p>
                 <p>
                   <span data-testid="overview-roic-value">
                     {(roicValue === null || roicValue === undefined) ? (pricesLoading ? 'Loading...' : 'N/A') : `${roicValue.toFixed(2)}%`}

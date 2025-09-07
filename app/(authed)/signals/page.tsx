@@ -42,7 +42,7 @@ const client = generateClient<Schema>();
 export default function HomePage() {    
     
     const [reportColumnVisibility, setReportColumnVisibility] = useState<ReportColumnVisibilityState>({
-        riskInvestment: true,
+        budgetAvailable: true,
         fiveDayDip: true,
         lbd: true,
         swingWalletCount: true,
@@ -56,7 +56,7 @@ export default function HomePage() {
     });
 
     const COLUMN_LABELS: Record<keyof ReportColumnVisibilityState, string> = {
-        riskInvestment: 'r-Inv',
+        budgetAvailable: 'Available',
         fiveDayDip: '5DD',      
         lbd: 'LBD',
         swingWalletCount: 'Swing Wallets',         
@@ -586,6 +586,43 @@ export default function HomePage() {
         return riskMap;
     }, [allWallets, portfolioStocks, mergedPrices]);
 
+    // Compute budget available per stock (Budget - Budget Used)
+    const stockBudgetAvailable = useMemo(() => {
+        const budgetAvailableMap: Record<string, number> = {};
+        
+        // Group wallets by stock to calculate per-stock totals
+        const stockWalletGroups: Record<string, StockWalletDataType[]> = {};
+        allWallets.forEach(wallet => {
+            if (wallet.portfolioStockId) {
+                if (!stockWalletGroups[wallet.portfolioStockId]) {
+                    stockWalletGroups[wallet.portfolioStockId] = [];
+                }
+                stockWalletGroups[wallet.portfolioStockId].push(wallet);
+            }
+        });
+        
+        // Calculate budget available for each stock
+        portfolioStocks.forEach(stock => {
+            const stockId = stock.id;
+            const stockBudget = stock.budget ?? 0;
+            const stockWallets = stockWalletGroups[stockId] || [];
+            
+            // Calculate Total OOP and Cash Balance for this stock
+            const totalOOP = stockWallets.reduce((sum, wallet) => sum + (wallet.totalInvestment || 0), 0);
+            const totalCashBalance = stockWallets.reduce((sum, wallet) => sum + (wallet.cashBalance || 0), 0);
+            
+            // Budget Used = Total OOP - Cash Balance (net cash investment)
+            const budgetUsed = Math.max(0, totalOOP - totalCashBalance);
+            
+            // Budget Available = Risk Budget - Budget Used
+            const budgetAvailable = Math.max(0, stockBudget - budgetUsed);
+            
+            budgetAvailableMap[stockId] = budgetAvailable;
+        });
+        
+        return budgetAvailableMap;
+    }, [allWallets, portfolioStocks]);
+
     const reportData = useMemo((): ReportDataItem[] => {
         return portfolioStocks.map(stock => {
             const stockId: string = stock.id;
@@ -657,7 +694,7 @@ export default function HomePage() {
                 id: stockId,
                 symbol: symbol,
                 stockTrend: stock.stockTrend,
-                riskInvestment: stockRiskInvestments[stockId] ?? null,
+                budgetAvailable: stockBudgetAvailable[stockId] ?? null,
                 budget: stock.budget ?? null,
                 currentPrice: currentPrice,
                 isTestPrice: isTestPrice,
@@ -677,7 +714,7 @@ export default function HomePage() {
                 htpValues: htpValues,
             };
         });
-    }, [portfolioStocks, mergedPrices, processedData, checkHtpSignalForStock, getHtpValuesForStock, stockRiskInvestments]);
+    }, [portfolioStocks, mergedPrices, processedData, checkHtpSignalForStock, getHtpValuesForStock, stockBudgetAvailable]);
 
     const portfolioBudgetStats = useMemo(() => {
         const totalBudget = portfolioStocks.reduce((sum, stock) => sum + (stock.budget ?? 0), 0);

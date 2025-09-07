@@ -2,6 +2,8 @@
 'use client';
 
 import React from 'react';
+import { SIGNALS_OVERVIEW_TOOLTIPS } from '@/app/config/tooltips';
+import Tooltip from '@/app/components/Tooltip';
 import type { SignalsOverviewProps } from '../types';
 
 export default function SignalsOverview({
@@ -60,7 +62,9 @@ export default function SignalsOverview({
                         <div>
                             <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Budget</p>
 
-                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Risk Budget</p>
+                            <Tooltip content={SIGNALS_OVERVIEW_TOOLTIPS.RISK_BUDGET}>
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Max Risk</p>
+                            </Tooltip>
                             <p>
                                 ${portfolioBudgetStats.totalBudget.toLocaleString(undefined, {
                                     minimumFractionDigits: CURRENCY_PRECISION,
@@ -68,7 +72,9 @@ export default function SignalsOverview({
                                 })}
                             </p>
 
-                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Budget Used</p>
+                            <Tooltip content={SIGNALS_OVERVIEW_TOOLTIPS.BUDGET_USED}>
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Used</p>
+                            </Tooltip>
                             <p>
                                 ${portfolioBudgetStats.totalBudgetUsed.toLocaleString(undefined, {
                                     minimumFractionDigits: CURRENCY_PRECISION,
@@ -76,7 +82,9 @@ export default function SignalsOverview({
                                 })}
                             </p>
 
-                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Budget Available</p>
+                            <Tooltip content={SIGNALS_OVERVIEW_TOOLTIPS.BUDGET_AVAILABLE}>
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Available</p>
+                            </Tooltip>
                             <p>
                                 ${portfolioBudgetStats.totalBudgetAvailable.toLocaleString(undefined, {
                                     minimumFractionDigits: CURRENCY_PRECISION,
@@ -84,7 +92,9 @@ export default function SignalsOverview({
                                 })}
                             </p>
 
-                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Tied-Up</p>
+                            <Tooltip content={SIGNALS_OVERVIEW_TOOLTIPS.TIED_UP}>
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Tied-Up</p>
+                            </Tooltip>
                             <p>
                                 ${portfolioBudgetStats.totalInvested.toLocaleString(undefined, {
                                     minimumFractionDigits: CURRENCY_PRECISION,
@@ -92,7 +102,9 @@ export default function SignalsOverview({
                                 })}
                             </p>
 
-                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>r-Inv</p>
+                            <Tooltip content={SIGNALS_OVERVIEW_TOOLTIPS.R_INV}>
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>r-Inv</p>
+                            </Tooltip>
                             <p>
                                 ${portfolioBudgetStats.totalRiskInvestment.toLocaleString(undefined, {
                                     minimumFractionDigits: CURRENCY_PRECISION,
@@ -103,19 +115,27 @@ export default function SignalsOverview({
 
                         <div>
                             <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>$ Performance</p>
-                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Total OOP</p>
+                            <Tooltip content={SIGNALS_OVERVIEW_TOOLTIPS.TOTAL_OOP}>
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Total OOP</p>
+                            </Tooltip>
                             <p data-testid="portfolio-performance-total-oop">
                                 {formatCurrency(portfolioPerformanceMetrics.totalOOP)}
                             </p>
-                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>$ Balance</p>
+                            <Tooltip content={SIGNALS_OVERVIEW_TOOLTIPS.CASH_BALANCE}>
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>$ Balance</p>
+                            </Tooltip>
                             <p data-testid="portfolio-performance-cash-balance">
                                 {formatCurrency(portfolioPerformanceMetrics.totalCashBalance)}
                             </p>
-                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Market Value</p>
+                            <Tooltip content={SIGNALS_OVERVIEW_TOOLTIPS.MARKET_VALUE}>
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Market Value</p>
+                            </Tooltip>
                             <p data-testid="portfolio-performance-market-value">
                                 {formatCurrency(portfolioPerformanceMetrics.totalMarketValue)}
                             </p>
-                            <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>ROIC</p>
+                            <Tooltip content={SIGNALS_OVERVIEW_TOOLTIPS.ROIC}>
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>ROIC</p>
+                            </Tooltip>
                             <p>
                                 <span data-testid="portfolio-performance-roic">
                                     {portfolioPerformanceMetrics.portfolioROIC !== null 
