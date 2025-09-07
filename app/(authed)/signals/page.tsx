@@ -611,8 +611,8 @@ export default function HomePage() {
             const totalOOP = stockWallets.reduce((sum, wallet) => sum + (wallet.totalInvestment || 0), 0);
             const totalCashBalance = stockWallets.reduce((sum, wallet) => sum + (wallet.cashBalance || 0), 0);
             
-            // Budget Used = Total OOP - Cash Balance (net cash investment)
-            const budgetUsed = Math.max(0, totalOOP - totalCashBalance);
+            // Budget Used = Net Cash Investment (OOP - Cash Balance)
+            const budgetUsed = totalOOP - totalCashBalance;
             
             // Budget Available = Risk Budget - Budget Used
             const budgetAvailable = Math.max(0, stockBudget - budgetUsed);
