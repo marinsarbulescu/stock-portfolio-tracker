@@ -99,7 +99,7 @@ export default function StockWalletPage() {
         investment: 'Inv',
         amount: 'Amount',
         quantity: 'Qty',
-        proceeds: 'Sell $',
+        proceeds: 'Proceeds',
         txnProfit: 'P/L',
         txnProfitPercent: 'P/L (%)',
         completedTxnId: 'Wallet ID',

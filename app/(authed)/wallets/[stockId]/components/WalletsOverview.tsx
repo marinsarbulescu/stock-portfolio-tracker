@@ -2,6 +2,7 @@ import React from 'react';
 import { formatCurrency, formatShares } from '@/app/utils/financialCalculations';
 import { SHARE_PRECISION } from '@/app/config/constants';
 import { WALLETS_OVERVIEW_TOOLTIPS } from '@/app/config/tooltips';
+import Tooltip from '@/app/components/Tooltip';
 import type { RealizedPLStats, UnrealizedPLStats, CombinedPLStats, TransactionCounts, CurrentShares } from '../types';
 
 export interface WalletsOverviewProps {
@@ -77,40 +78,58 @@ export default function WalletsOverview({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr', gap: '0px 15px', marginTop: '10px' }}>
 
               <div>
-                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Settings</p>
+                <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Budget</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                   <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }} title={WALLETS_OVERVIEW_TOOLTIPS.RISK_BUDGET}>Risk Budget</p>
+                    <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.RISK_BUDGET}>
+                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Max Risk</p>
+                    </Tooltip>
                     <p data-testid="overview-settings-budget">{formatCurrency(stockBudget ?? 0)}</p>
                   </div>
                   <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }} title={WALLETS_OVERVIEW_TOOLTIPS.BUDGET_USED}>Budget Used</p>
+                    <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.BUDGET_USED}>
+                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Used</p>
+                    </Tooltip>
                     <p data-testid="overview-settings-budget-used">{formatCurrency(budgetUsed)}</p>
                   </div>
                   <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }} title={WALLETS_OVERVIEW_TOOLTIPS.BUDGET_AVAILABLE}>Budget Available</p>
+                    <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.BUDGET_AVAILABLE}>
+                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Available</p>
+                    </Tooltip>
                     <p data-testid="overview-settings-budget-available">{formatCurrency(budgetAvailable)}</p>
                   </div>
                   <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }} title={WALLETS_OVERVIEW_TOOLTIPS.TIED_UP}>Tied-Up</p>
+                    <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.TIED_UP}>
+                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Tied-Up</p>
+                    </Tooltip>
                     <p data-testid="overview-settings-invested">{formatCurrency(totalTiedUpInvestment)}</p>
                   </div>
                   <div>
-                    <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>r-Inv</p>
+                    <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.R_INV}>
+                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>r-Inv</p>
+                    </Tooltip>
                     <p data-testid="overview-settings-risk-investment">{formatCurrency(riskInvestment)}</p>
                   </div>
                 </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                     <div>
-                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>PDP</p>
+                      <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.PDP}>
+                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>PDP</p>
+                      </Tooltip>
                       <p data-testid="overview-settings-pdp">{stockPdp != null ? `${stockPdp}%` : 'Not set'}</p>
-                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>SHR</p>
-                      <p data-testid="overview-settings-shr">{stockShr != null ? `${stockShr}% Swing` : 'Not set'}</p>
+                      <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.STP}>
+                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>STP</p>
+                      </Tooltip>
+                      <p data-testid="overview-settings-stp">{stockStp != null ? `${stockStp}%` : 'Not set'}</p>
                     </div>
                     <div>
-                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>STP</p>
-                      <p data-testid="overview-settings-stp">{stockStp != null ? `${stockStp}%` : 'Not set'}</p>
-                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>HTP</p>
+                      <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.SHR}>
+                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>SHR</p>
+                      </Tooltip>
+                      <p data-testid="overview-settings-shr">{stockShr != null ? `${stockShr}% Swing` : 'Not set'}</p>
+                      <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.HTP}>
+                        <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>HTP</p>
+                      </Tooltip>
                       <p data-testid="overview-settings-htp">{stockHtp != null && stockHtp > 0 ? `${stockHtp}%` : '-'}</p>
                     </div>
                 </div>
@@ -118,13 +137,21 @@ export default function WalletsOverview({
 
               <div>
                 <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>$ Performance</p>
-                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }} title={WALLETS_OVERVIEW_TOOLTIPS.TOTAL_OOP}>Total OOP</p>
+                <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.TOTAL_OOP}>
+                  <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Total OOP</p>
+                </Tooltip>
                 <p data-testid="overview-cash-total-oop">{formatCurrency(totalOOP)}</p>
-                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }} title={WALLETS_OVERVIEW_TOOLTIPS.CASH_BALANCE}>$ Balance</p>
+                <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.CASH_BALANCE}>
+                  <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>$ Balance</p>
+                </Tooltip>
                 <p data-testid="overview-cash-balance">{formatCurrency(currentCashBalance)}</p>
-                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }}>Market Value</p>
+                <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.MARKET_VALUE}>
+                  <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Market Value</p>
+                </Tooltip>
                 <p data-testid="overview-market-value">{pricesLoading ? 'Loading...' : formatCurrency(marketValue)}</p>
-                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em' }} title={WALLETS_OVERVIEW_TOOLTIPS.ROIC}>ROIC</p>
+                <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.ROIC}>
+                  <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>ROIC</p>
+                </Tooltip>
                 <p>
                   <span data-testid="overview-roic-value">
                     {(roicValue === null || roicValue === undefined) ? (pricesLoading ? 'Loading...' : 'N/A') : `${roicValue.toFixed(2)}%`}
