@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { generateClient } from 'aws-amplify/data';
+import { isHtpSignalActive, getHtpDisplayValue } from '@/app/utils/htpCalculations';
 import type { Schema } from '@/amplify/data/resource';
 import { usePrices } from '@/app/contexts/PriceContext'; // Import context hook
 import { mergeTestPricesWithRealPrices } from '@/app/utils/priceUtils'; // Import test price utility
@@ -51,7 +52,7 @@ export default function HomePage() {
         sinceSell: false,
         currentPrice: false,
         percentToBe: false,
-        ltpiaTakeProfitPrice: true,
+        ltpiaTakeProfitPrice: false,
         percentToTp: true,
         tpShares: true,
     });
@@ -460,7 +461,7 @@ export default function HomePage() {
         }
 
         // Get commission percentage for the stock
-        const stockCommission = stock.stockCommission; // Add this field to PortfolioStockDataType if not present
+        const stockCommission = stock.stockCommission;
 
         // Get Hold wallets for this stock with remaining shares
         const stockHoldWallets = allWallets.filter(wallet => 
@@ -469,30 +470,15 @@ export default function HomePage() {
             (wallet.remainingShares ?? 0) > SHARE_EPSILON
         );
 
-        // Check if any Hold wallet has HTP signal
+        // Check if any Hold wallet has HTP signal using shared utility
         return stockHoldWallets.some(wallet => {
-            const tp = wallet.tpValue;
-            const htp = stock.htp;
-
-            // Must have valid TP and HTP
-            if (typeof tp !== 'number' || typeof htp !== 'number' || htp <= 0) {
+            const buyPrice = wallet.buyPrice;
+            
+            if (typeof buyPrice !== 'number' || buyPrice <= 0 || typeof stock.htp !== 'number') {
                 return false;
             }
 
-            // Calculate HTP trigger price using the same formula as WalletsSection
-            // Current Price >= TP Value + (TP Value × HTP%) + ((TP Value + HTP Amount) × Commission%)
-            const htpAmount = tp * (htp / 100); // HTP Amount = TP Value × HTP%
-            const tpPlusHtpAmount = tp + htpAmount; // TP Value + HTP Amount
-            
-            // Commission calculation: if commission is provided, calculate commission on (TP Value + HTP Amount)
-            const commissionAmount = (typeof stockCommission === 'number' && stockCommission > 0) 
-                ? (tpPlusHtpAmount * (stockCommission / 100))
-                : 0;
-            
-            const htpTriggerPrice = tp + htpAmount + commissionAmount;
-
-            // Check if current price meets or exceeds the HTP trigger price
-            return currentStockPrice >= htpTriggerPrice;
+            return isHtpSignalActive(buyPrice, stock.htp, currentStockPrice, stockCommission);
         });
     }, [portfolioStocks, allWallets]);
 
@@ -518,33 +504,17 @@ export default function HomePage() {
             (wallet.remainingShares ?? 0) > SHARE_EPSILON
         );
 
-        // Collect HTP values for wallets with active HTP signals
+        // Collect HTP values for wallets with active HTP signals using shared utility
         const htpValues: string[] = [];
         
         stockHoldWallets.forEach(wallet => {
-            const tp = wallet.tpValue;
             const buyPrice = wallet.buyPrice;
-            const htp = stock.htp;
 
-            // Must have valid TP, buy price and HTP
-            if (typeof tp !== 'number' || typeof buyPrice !== 'number' || typeof htp !== 'number' || htp <= 0 || buyPrice <= 0) {
-                return;
-            }
-
-            // Calculate HTP trigger price using the same formula as WalletsSection
-            const htpAmount = tp * (htp / 100);
-            const tpPlusHtpAmount = tp + htpAmount;
-            
-            const commissionAmount = (typeof stockCommission === 'number' && stockCommission > 0) 
-                ? (tpPlusHtpAmount * (stockCommission / 100))
-                : 0;
-            
-            const htpTriggerPrice = tp + htpAmount + commissionAmount;
-
-            // If HTP signal is active, calculate percentage gain
-            if (currentStockPrice >= htpTriggerPrice) {
-                const percentageGain = ((currentStockPrice - buyPrice) / buyPrice) * 100;
-                htpValues.push(`${percentageGain.toFixed(2)}%`);
+            if (typeof buyPrice === 'number' && buyPrice > 0 && typeof stock.htp === 'number') {
+                const displayValue = getHtpDisplayValue(buyPrice, stock.htp, currentStockPrice, stockCommission);
+                if (displayValue !== '-') {
+                    htpValues.push(displayValue);
+                }
             }
         });
 
@@ -1119,16 +1089,17 @@ export default function HomePage() {
             return {};
         }
         
-        // Get the current month (1-12)
-        const currentDate = new Date();
-        const currentMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11
-        
-        // New logic: Check both days AND wallet count against current month
-        if ((days > 30 && swingWalletCount < currentMonth) || (swingWalletCount === 0)) {
-            // Return red for more than 30 days AND fewer wallets than current month
+        // Check for zero swing wallets (always red)
+        if (swingWalletCount === 0) {
             return { color: '#ff0000' };
-        } else if (days > 20 && swingWalletCount < currentMonth) {
-            // Return orange for 20-30 days AND fewer wallets than current month
+        }
+        
+        // Color based purely on days since last buy
+        if (days > 30) {
+            // Return red for more than 30 days
+            return { color: '#ff0000' };
+        } else if (days > 20) {
+            // Return orange for 20-30 days
             return { color: '#ffb400' };
         } else {
             return {};

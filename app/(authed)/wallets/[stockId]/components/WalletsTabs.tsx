@@ -1,6 +1,7 @@
 //app/(authed)/wallets/[stockId]/components/WalletsTabs.tsx
 import React from 'react';
-import type { StockWalletDataType, WalletsTableColumnVisibilityState, WalletsTableSortableKey } from '../types';
+import { StockWalletDataType, WalletsTableColumnVisibilityState, WalletsTableSortableKey } from '../types';
+import { isHtpSignalActive, getHtpDisplayValue } from '@/app/utils/htpCalculations';
 import type { Dispatch, SetStateAction } from 'react';
 import { formatCurrency, formatShares } from '@/app/utils/financialCalculations';
 import { formatPercent } from '@/app/utils/financialCalculations';
@@ -86,35 +87,22 @@ export default function WalletsTabs({
     }
 
     const remaining = wallet.remainingShares ?? 0;
-    const tp = wallet.tpValue;
-    const htp = stockHtp; // HTP percentage from stock settings
-    const commission = stockCommission; // Commission from stock settings
+    const buyPrice = wallet.buyPrice;
 
-    // Must have remaining shares, valid TP, valid current price, and valid HTP
+    // Must have remaining shares, valid buy price, valid current price, and valid HTP
     if (
       remaining <= SHARE_EPSILON ||
-      typeof tp !== 'number' ||
+      typeof buyPrice !== 'number' ||
       typeof currentStockPrice !== 'number' ||
-      typeof htp !== 'number' ||
-      htp <= 0
+      typeof stockHtp !== 'number' ||
+      stockHtp <= 0 ||
+      buyPrice <= 0
     ) {
       return {};
     }
 
-    // Calculate HTP trigger price using the formula:
-    // Current Price >= TP Value + (TP Value × HTP%) + ((TP Value + HTP Amount) × Commission%)
-    const htpAmount = tp * (htp / 100); // HTP Amount = TP Value × HTP%
-    const tpPlusHtpAmount = tp + htpAmount; // TP Value + HTP Amount
-    
-    // Commission calculation: if commission is provided, calculate commission on (TP Value + HTP Amount)
-    const commissionAmount = (typeof commission === 'number' && commission > 0) 
-      ? (tpPlusHtpAmount * (commission / 100))
-      : 0;
-    
-    const htpTriggerPrice = tp + htpAmount + commissionAmount;
-
-    // Check if current price meets or exceeds the HTP trigger price
-    if (currentStockPrice >= htpTriggerPrice) {
+    // Use shared utility to check if HTP signal is active
+    if (isHtpSignalActive(buyPrice, stockHtp, currentStockPrice, stockCommission)) {
       return { color: 'lightgreen' };
     }
 
@@ -122,50 +110,29 @@ export default function WalletsTabs({
   };
 
   // HTP Display Value function - calculates percentage from buy price to current price for HTP signals
-  const getHtpDisplayValue = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
+  const getHtpDisplayValueForWallet = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
     // Only show HTP value for Hold wallets with HTP signal
     if (wallet.walletType !== 'Hold') {
       return '-';
     }
 
     const remaining = wallet.remainingShares ?? 0;
-    const tp = wallet.tpValue;
     const buyPrice = wallet.buyPrice;
-    const htp = stockHtp; // HTP percentage from stock settings
-    const commission = stockCommission; // Commission from stock settings
 
-    // Must have remaining shares, valid TP, valid current price, valid buy price, and valid HTP
+    // Must have remaining shares, valid buy price, valid current price, and valid HTP
     if (
       remaining <= SHARE_EPSILON ||
-      typeof tp !== 'number' ||
-      typeof currentStockPrice !== 'number' ||
       typeof buyPrice !== 'number' ||
-      typeof htp !== 'number' ||
-      htp <= 0 ||
+      typeof currentStockPrice !== 'number' ||
+      typeof stockHtp !== 'number' ||
+      stockHtp <= 0 ||
       buyPrice <= 0
     ) {
       return '-';
     }
 
-    // Calculate HTP trigger price using the same formula as getHtpCellStyle
-    const htpAmount = tp * (htp / 100); // HTP Amount = TP Value × HTP%
-    const tpPlusHtpAmount = tp + htpAmount; // TP Value + HTP Amount
-    
-    // Commission calculation: if commission is provided, calculate commission on (TP Value + HTP Amount)
-    const commissionAmount = (typeof commission === 'number' && commission > 0) 
-      ? (tpPlusHtpAmount * (commission / 100))
-      : 0;
-    
-    const htpTriggerPrice = tp + htpAmount + commissionAmount;
-
-    // Only show percentage if current price meets or exceeds the HTP trigger price
-    if (currentStockPrice >= htpTriggerPrice) {
-      // Calculate percentage from buy price to current price
-      const percentageGain = ((currentStockPrice - buyPrice) / buyPrice) * 100;
-      return `${percentageGain.toFixed(2)}%`;
-    }
-
-    return '-';
+    // Use shared utility to get HTP display value
+    return getHtpDisplayValue(buyPrice, stockHtp, currentStockPrice, stockCommission);
   };
 
   const visibleColumns = Object.keys(walletColumnVisibility) as Array<keyof WalletsTableColumnVisibilityState>;
@@ -308,7 +275,7 @@ export default function WalletsTabs({
                   {walletColumnVisibility.buyPrice && <td data-testid="wallet-buyPrice-display" style={{ padding: '5px' }}>{formatCurrency(wallet.buyPrice ?? 0)}</td>}
                   {walletColumnVisibility.totalInvestment && <td data-testid="wallet-totalInvestment-display" style={{ padding: '5px' }}>{formatCurrency(wallet.totalInvestment ?? 0)}</td>}
                   {walletColumnVisibility.tpValue && <td data-testid="wallet-tpValue-display" style={{ padding: '5px', ...getTpCellStyle(wallet, currentPrice) }}>{formatCurrency(wallet.tpValue ?? 0)}</td>}
-                  {walletColumnVisibility.htp && <td data-testid="wallet-htp-display" style={{ padding: '5px', ...getHtpCellStyle(wallet, currentPrice) }}>{getHtpDisplayValue(wallet, currentPrice)}</td>}
+                  {walletColumnVisibility.htp && <td data-testid="wallet-htp-display" style={{ padding: '5px', ...getHtpCellStyle(wallet, currentPrice) }}>{getHtpDisplayValueForWallet(wallet, currentPrice)}</td>}
                   {walletColumnVisibility.sellTxnCount && <td data-testid="wallet-sellTxnCount-display" style={{ padding: '5px' }}>{wallet.sellTxnCount ?? 0}</td>}
                   {walletColumnVisibility.sharesSold && <td data-testid="wallet-sharesSold-display" style={{ padding: '5px' }}>{formatShares(wallet.sharesSold ?? 0, SHARE_PRECISION)}</td>}
                   {walletColumnVisibility.realizedPl && <td data-testid="wallet-realizedPl-display" style={{ padding: '5px' }}>{formatCurrency(wallet.realizedPl ?? 0)}</td>}
