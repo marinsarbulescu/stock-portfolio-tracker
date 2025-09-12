@@ -79,13 +79,9 @@ export default function WalletsTabs({
     );
   };
 
-  // HTP Sell Signal Logic - Only for Hold wallets
+  // HTP Sell Signal Logic - Apply to both Swing and Hold wallets
   const getHtpCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
-    // Only apply HTP logic for Hold wallets
-    if (wallet.walletType !== 'Hold') {
-      return {};
-    }
-
+    // Apply HTP logic for both Swing and Hold wallets
     const remaining = wallet.remainingShares ?? 0;
     const buyPrice = wallet.buyPrice;
 
@@ -111,11 +107,7 @@ export default function WalletsTabs({
 
   // HTP Display Value function - calculates percentage from buy price to current price for HTP signals
   const getHtpDisplayValueForWallet = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
-    // Only show HTP value for Hold wallets with HTP signal
-    if (wallet.walletType !== 'Hold') {
-      return '-';
-    }
-
+    // Show HTP value for both Swing and Hold wallets with HTP signal
     const remaining = wallet.remainingShares ?? 0;
     const buyPrice = wallet.buyPrice;
 
@@ -152,13 +144,9 @@ export default function WalletsTabs({
     return {};
   };
 
-  // HTP Cell Style - highlights when current price meets or exceeds HTP target (Hold wallets only)
+  // HTP Cell Style - highlights when current price meets or exceeds HTP target (both Swing and Hold wallets)
   const getHtpValueCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
-    // Only apply green highlighting for Hold wallets
-    if (wallet.walletType !== 'Hold') {
-      return {};
-    }
-
+    // Apply green highlighting for both Swing and Hold wallets
     const buyPrice = wallet.buyPrice;
     const remaining = wallet.remainingShares ?? 0;
 
@@ -181,7 +169,7 @@ export default function WalletsTabs({
       return {};
     }
 
-    // If current price >= HTP target, show green (target met or exceeded) - Hold wallets only
+    // If current price >= HTP target, show green (target met or exceeded)
     if (currentStockPrice >= htpTargetPrice) {
       return { color: 'lightgreen' };
     }
@@ -189,13 +177,9 @@ export default function WalletsTabs({
     return {};
   };
 
-  // %2HTP Cell Style - highlights when current price meets or exceeds HTP target (Hold wallets only)
+  // %2HTP Cell Style - highlights when current price meets or exceeds HTP target (both Swing and Hold wallets)
   const getPercentToHtpCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
-    // Only apply green highlighting for Hold wallets
-    if (wallet.walletType !== 'Hold') {
-      return {};
-    }
-
+    // Apply green highlighting for both Swing and Hold wallets
     const buyPrice = wallet.buyPrice;
 
     if (
@@ -216,7 +200,7 @@ export default function WalletsTabs({
       return {};
     }
 
-    // If current price >= HTP target, show green (percentage >= 0) - Hold wallets only
+    // If current price >= HTP target, show green (percentage >= 0)
     if (currentStockPrice >= htpTargetPrice) {
       return { color: 'lightgreen' };
     }

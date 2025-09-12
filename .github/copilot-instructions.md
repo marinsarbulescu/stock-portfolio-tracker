@@ -34,6 +34,9 @@
   - After adding new imports or dependencies
 
 ## Testing & E2E Guidelines
+- **Always use data-testid selectors**: Prefer `data-testid` selectors over CSS selectors, text content, or DOM structure for E2E tests
+- **Create testids when missing**: If an element lacks a `data-testid`, add one following the existing naming convention from the same page
+- **Testid naming convention**: Use descriptive, kebab-case names like `signals-table-ticker-${symbol}` or `wallet-page-title`
 - **Update E2E tests**: Check if E2E tests need updates after making UI or functionality changes
 - **Follow existing patterns**: Use established patterns from files like wallet-add-transaction.spec.ts
 - **Add test IDs**: Include `data-testid` attributes on new UI elements for E2E test accessibility

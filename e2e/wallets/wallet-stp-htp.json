@@ -6,6 +6,12 @@
       "description": "Set test price to $100 for baseline calculations",
       "price": 100,
       "timing": "Before any transactions"
+    },
+    "nearStpPrice": {
+      "step": "Step 8",
+      "description": "Update test price to $109 to test near-STP behavior",
+      "price": 109,
+      "timing": "After initial validation, before cleanup"
     }
   },
   "stock": {
@@ -48,9 +54,13 @@
     "swing": {
       "stpValue": "$110.00",
       "percentToStp": "-9.09%",
+      "htpValue": "$120.00",
+      "percentToHtp": "-16.67%",
       "colorValidation": {
         "stpValue": "default",
-        "percentToStp": "default"
+        "percentToStp": "default",
+        "htpValue": "default",
+        "percentToHtp": "default"
       }
     },
     "hold": {
@@ -63,6 +73,114 @@
         "percentToStp": "default",
         "htpValue": "default",
         "percentToHtp": "default"
+      }
+    }
+  },
+  "expectedValuesAt109": {
+    "expectedSignalsValues": {
+      "percentToStp": "-0.91%",
+      "percentToHtp": "-9.17%",
+      "colorValidation": {
+        "percentToStp": "default",
+        "percentToHtp": "default"
+      }
+    },
+    "expectedWalletTabs": {
+      "swing": {
+        "stpValue": "$110.00",
+        "percentToStp": "-0.91%",
+        "htpValue": "$120.00",
+        "percentToHtp": "-9.17%",
+        "colorValidation": {
+          "stpValue": "default",
+          "percentToStp": "default",
+          "htpValue": "default",
+          "percentToHtp": "default"
+        }
+      },
+      "hold": {
+        "stpValue": "$110.00",
+        "percentToStp": "-0.91%",
+        "htpValue": "$120.00",
+        "percentToHtp": "-9.17%",
+        "colorValidation": {
+          "stpValue": "default",
+          "percentToStp": "default",
+          "htpValue": "default",
+          "percentToHtp": "default"
+        }
+      }
+    }
+  },
+  "expectedValuesAt115": {
+    "expectedSignalsValues": {
+      "percentToStp": "4.55%",
+      "percentToHtp": "-4.17%",
+      "colorValidation": {
+        "percentToStp": "green",
+        "percentToHtp": "default"
+      }
+    },
+    "expectedWalletTabs": {
+      "swing": {
+        "stpValue": "$110.00",
+        "percentToStp": "4.55%",
+        "htpValue": "$120.00",
+        "percentToHtp": "-4.17%",
+        "colorValidation": {
+          "stpValue": "default",
+          "percentToStp": "green",
+          "htpValue": "default",
+          "percentToHtp": "default"
+        }
+      },
+      "hold": {
+        "stpValue": "$110.00",
+        "percentToStp": "4.55%",
+        "htpValue": "$120.00",
+        "percentToHtp": "-4.17%",
+        "colorValidation": {
+          "stpValue": "default",
+          "percentToStp": "default",
+          "htpValue": "default",
+          "percentToHtp": "default"
+        }
+      }
+    }
+  },
+  "expectedValuesAt122": {
+    "expectedSignalsValues": {
+      "percentToStp": "10.91%",
+      "percentToHtp": "1.67%",
+      "colorValidation": {
+        "percentToStp": "green",
+        "percentToHtp": "green"
+      }
+    },
+    "expectedWalletTabs": {
+      "swing": {
+        "stpValue": "$110.00",
+        "percentToStp": "10.91%",
+        "htpValue": "$120.00",
+        "percentToHtp": "1.67%",
+        "colorValidation": {
+          "stpValue": "default",
+          "percentToStp": "green",
+          "htpValue": "default",
+          "percentToHtp": "default"
+        }
+      },
+      "hold": {
+        "stpValue": "$110.00",
+        "percentToStp": "10.91%",
+        "htpValue": "$120.00",
+        "percentToHtp": "1.67%",
+        "colorValidation": {
+          "stpValue": "default",
+          "percentToStp": "default",
+          "htpValue": "default",
+          "percentToHtp": "green"
+        }
       }
     }
   }
