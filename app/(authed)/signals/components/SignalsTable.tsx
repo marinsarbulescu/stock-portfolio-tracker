@@ -1,7 +1,7 @@
 // app/(authed)/signals/components/SignalsTable.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { formatCurrency } from '@/app/utils/financialCalculations';
 import type { 
@@ -42,22 +42,6 @@ export default function SignalsTable({
     const { formatPercent } = formatters;
     const { getBreakEvenCellStyle, getSinceBuyCellStyle } = cellStyles;
 
-    // State to track which rows are expanded
-    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-
-    // Function to toggle row expansion
-    const toggleRowExpansion = (stockId: string) => {
-        setExpandedRows(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(stockId)) {
-                newSet.delete(stockId);
-            } else {
-                newSet.add(stockId);
-            }
-            return newSet;
-        });
-    };
-
     if (isLoading) return <p>Loading...</p>;
 
     return (
@@ -86,9 +70,6 @@ export default function SignalsTable({
             <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
                 <thead>
                     <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
-                        <th style={{ padding: '5px', width: '30px' }}>
-                            {/* Empty header for expand/collapse column */}
-                        </th>
                         {reportColumnVisibility.riskInvestment && (
                             <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('riskInvestment')}>
                                 r-Inv {sortConfig?.key === 'riskInvestment' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
@@ -144,7 +125,12 @@ export default function SignalsTable({
                         )}
                         {reportColumnVisibility.percentToTp && (
                             <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('percentToTp')}>
-                                %2TP {sortConfig?.key === 'percentToTp' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                                %2STP {sortConfig?.key === 'percentToTp' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                            </th>
+                        )}
+                        {reportColumnVisibility.percentToHtp && (
+                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('percentToHtp')}>
+                                %2HTP {sortConfig?.key === 'percentToHtp' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                             </th>
                         )}
                         
@@ -175,27 +161,6 @@ export default function SignalsTable({
                                     backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent',
                                     color: textColor
                                 }}>
-                                    <td style={{ padding: '5px', textAlign: 'center' }}>
-                                        <button
-                                            data-testid="signals-table-toggle-row-expansion-button"
-                                            onClick={() => toggleRowExpansion(item.id)}
-                                            style={{
-                                                background: item.hasHtpSignal ? 'green' : 'none',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                color: item.hasHtpSignal ? 'white' : '#ccc',
-                                                fontSize: '0.8em',
-                                                padding: '2px'
-                                            }}
-                                            title={
-                                                item.hasHtpSignal 
-                                                    ? `${expandedRows.has(item.id) ? 'Collapse' : 'Expand'} details (HTP Signal Active)`
-                                                    : `${expandedRows.has(item.id) ? 'Collapse' : 'Expand'} details`
-                                            }
-                                        >
-                                            {expandedRows.has(item.id) ? '▼' : '▶'}
-                                        </button>
-                                    </td>
                                     {reportColumnVisibility.riskInvestment && (
                                         <td
                                             data-testid={`signals-table-riskInvestment-${item.symbol.toUpperCase()}`}
@@ -277,6 +242,13 @@ export default function SignalsTable({
                                             : '-'}
                                     </td>
                                 )}
+                                {reportColumnVisibility.percentToHtp && (
+                                    <td style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToHtp) }}>
+                                        {typeof item.percentToHtp === 'number'
+                                            ? `${item.percentToHtp.toFixed(2)}%`
+                                            : '-'}
+                                    </td>
+                                )}
                                 {reportColumnVisibility.tpShares && (
                                     <td style={{ padding: '5px' }}>
                                         {typeof item.tpShares === 'number'
@@ -285,41 +257,6 @@ export default function SignalsTable({
                                     </td>
                                 )}
                                 </tr>
-                                {/* Expanded row content */}
-                                {expandedRows.has(item.id) && (
-                                    <tr style={{ 
-                                        backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent',
-                                        color: textColor
-                                    }}>
-                                        <td colSpan={visibleColumnCount + 1} style={{ padding: '10px', borderTop: '1px solid #333' }}>
-                                            <div style={{ fontSize: '0.9em', color: '#ccc' }}>
-                                                {/* Stock Trend Indicator */}
-                                                {item.stockTrend && item.stockTrend !== 'Sideways' && (
-                                                    <p style={{ margin: '5px 0' }}>
-                                                        <strong>Trend:</strong>{' '}
-                                                        <span style={{ 
-                                                            display: 'inline-flex', 
-                                                            alignItems: 'center', 
-                                                            gap: '6px' 
-                                                        }}>
-                                                            {item.stockTrend}
-                                                            <StockTrendIndicator stockTrend={item.stockTrend} />
-                                                        </span>
-                                                    </p>
-                                                )}
-                                                {/* Show HTP values if HTP signal is active */}
-                                                {item.hasHtpSignal && item.htpValues.length > 0 && (
-                                                    <p>
-                                                        <strong style={{ color: 'lightgreen' }}>HTP:</strong>{' '}
-                                                        <span style={{ color: 'lightgreen' }}>
-                                                            {item.htpValues.join(', ')}
-                                                        </span>
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )}
                             </React.Fragment>
                             );
                         })

@@ -124,6 +124,8 @@ export default function StockWalletPage() {
         totalInvestment: boolean;
         //totalSharesQty: boolean;
         tpValue: boolean;
+        percentToStp: boolean;
+        htpValue: boolean;
         htp: boolean;
         sellTxnCount: boolean;
         sharesSold: boolean;
@@ -138,6 +140,8 @@ export default function StockWalletPage() {
         | 'totalInvestment'
         //| 'totalSharesQty'
         | 'tpValue'
+        | 'percentToStp'
+        | 'htpValue'
         | 'htp'
         | 'sellTxnCount'
         | 'sharesSold'
@@ -151,8 +155,10 @@ export default function StockWalletPage() {
         totalInvestment: true,
         //totalSharesQty: true,
         tpValue: true,
+        percentToStp: true,
+        htpValue: false,
         htp: false,
-        sellTxnCount: true,
+        sellTxnCount: false,
         sharesSold: false,
         realizedPl: false,
         realizedPlPercent: false,
@@ -164,8 +170,10 @@ export default function StockWalletPage() {
         buyPrice: 'Buy Price',
         totalInvestment: 'Inv',
         //totalSharesQty: 'Shares',
-        tpValue: 'TP',
-        htp: 'HTP',
+        tpValue: 'STP',
+        percentToStp: '%2STP',
+        htpValue: 'HTP',
+        htp: '%2HTP',
         sellTxnCount: 'Sells',
         sharesSold: 'Shs Sold',
         realizedPl: 'P/L',

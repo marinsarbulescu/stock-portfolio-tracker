@@ -92,6 +92,8 @@ export interface WalletsTableColumnVisibilityState {
   buyPrice: boolean;
   totalInvestment: boolean;
   tpValue: boolean;
+  percentToStp: boolean;
+  htpValue: boolean;
   htp: boolean;
   sellTxnCount: boolean;
   sharesSold: boolean;
@@ -105,6 +107,8 @@ export type WalletsTableSortableKey =
   | 'buyPrice'
   | 'totalInvestment'
   | 'tpValue'
+  | 'percentToStp'
+  | 'htpValue'
   | 'htp'
   | 'sellTxnCount'
   | 'sharesSold'

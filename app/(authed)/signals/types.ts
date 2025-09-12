@@ -33,6 +33,7 @@ export interface ReportColumnVisibilityState {
   percentToBe: boolean;
   ltpiaTakeProfitPrice: boolean;
   percentToTp: boolean;
+  percentToHtp: boolean;
   tpShares: boolean;
 }
 
@@ -55,6 +56,7 @@ export interface ReportDataItem {
   percentToBe: number | null;
   ltpiaTakeProfitPrice: number | null;
   percentToTp: number | null;
+  percentToHtp: number | null;
   tpShares: number | null;
   totalCurrentShares: number;
   incompleteBuyCount: number;
@@ -76,6 +78,7 @@ export type ReportColumnKey =
   | 'incompleteBuyCount' 
   | 'percentToBe' 
   | 'percentToTp' 
+  | 'percentToHtp'
   | 'ltpiaTakeProfitPrice' 
   | 'tpShares';
 

@@ -9,7 +9,7 @@ import { usePrices } from '@/app/contexts/PriceContext'; // Import context hook
 import { mergeTestPricesWithRealPrices } from '@/app/utils/priceUtils'; // Import test price utility
 import { applySplitAdjustments, extractStockSplits } from '@/app/utils/splitUtils'; // Import split adjustment utilities
 import { fetchAuthSession } from 'aws-amplify/auth';
-import { calculateTotalRealizedSwingPL, calculateSingleSalePL, type TransactionForCalculation, type WalletForCalculation } from '@/app/utils/financialCalculations';
+import { calculateTotalRealizedSwingPL, calculateSingleSalePL, calculatePercentToStp, calculatePercentToHtp, calculateHtpTargetPrice, type TransactionForCalculation, type WalletForCalculation } from '@/app/utils/financialCalculations';
 import SignalsOverview from './components/SignalsOverview';
 import SignalsTable from './components/SignalsTable';
 // import { useAuthStatus } from '@/app/contexts/AuthStatusContext'; // Import useAuthStatus - Unused
@@ -54,6 +54,7 @@ export default function HomePage() {
         percentToBe: false,
         ltpiaTakeProfitPrice: false,
         percentToTp: true,
+        percentToHtp: true,
         tpShares: true,
     });
 
@@ -68,7 +69,8 @@ export default function HomePage() {
         currentPrice: 'Price',
         percentToBe: '%2BE',          
         ltpiaTakeProfitPrice: 'TP',
-        percentToTp: '%2TP',          
+        percentToTp: '%2STP',
+        percentToHtp: '%2HTP',
         tpShares: 'TP Shares',
     };
     
@@ -679,7 +681,31 @@ export default function HomePage() {
             const lowestSwingTpShares = procData.lowestSwingTpWallet?.remainingShares;
             let percentToTp: number | null = null;
             if (typeof currentPrice === 'number' && typeof lowestSwingTpPrice === 'number' && lowestSwingTpPrice > 0) {
-                percentToTp = (currentPrice / lowestSwingTpPrice - 1) * 100;
+                percentToTp = calculatePercentToStp(currentPrice, lowestSwingTpPrice);
+            }
+
+            // Calculate %2HTP: percentage difference between current price and HTP target for Hold wallets
+            let percentToHtp: number | null = null;
+            if (typeof currentPrice === 'number' && typeof stock.htp === 'number' && stock.htp > 0) {
+                // Get Hold wallets for this stock with remaining shares
+                const stockHoldWallets = allWallets.filter(wallet => 
+                    wallet.portfolioStockId === stockId &&
+                    wallet.walletType === 'Hold' &&
+                    (wallet.remainingShares ?? 0) > SHARE_EPSILON
+                );
+                
+                // Find the lowest buy price among Hold wallets (similar to %2TP logic)
+                if (stockHoldWallets.length > 0) {
+                    const lowestHoldWallet = stockHoldWallets.reduce((lowest, current) => {
+                        const currentBuyPrice = current.buyPrice ?? 0;
+                        const lowestBuyPrice = lowest.buyPrice ?? 0;
+                        return currentBuyPrice < lowestBuyPrice ? current : lowest;
+                    });
+                    
+                    if (lowestHoldWallet?.buyPrice) {
+                        percentToHtp = calculatePercentToHtp(currentPrice, lowestHoldWallet.buyPrice, stock.htp, stock.stockCommission);
+                    }
+                }
             }
 
             const sinceBuyDays = calculateDaysAgo(procData.lastBuy?.date); // Changed from procData.lastSwingBuy?.date
@@ -706,6 +732,7 @@ export default function HomePage() {
                 percentToBe: percentToBe,
                 ltpiaTakeProfitPrice: lowestSwingTpPrice ?? null,
                 percentToTp: percentToTp,
+                percentToHtp: percentToHtp,
                 tpShares: lowestSwingTpShares ?? null,
                 sinceBuy: sinceBuyDays,
                 sinceSell: sinceSellDays,

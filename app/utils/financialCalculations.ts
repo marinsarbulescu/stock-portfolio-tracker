@@ -289,3 +289,125 @@ export function formatPercent(value: number | null | undefined): string {
     }
     return `${value.toFixed(PERCENT_PRECISION)}%`;
 }
+
+/**
+ * Calculates the percentage difference between current price and STP target price.
+ * Shows how close the current price is to reaching the STP target.
+ * Formula: (currentPrice - stpValue) / stpValue * 100
+ * @param currentPrice - The current stock price
+ * @param stpValue - The stop take profit target price
+ * @returns The percentage difference from STP target, or null if invalid inputs
+ * 
+ * @example
+ * calculatePercentToStp(230, 243.80) // Returns -5.66 (current price below STP)
+ * calculatePercentToStp(243.80, 243.80) // Returns 0 (current price at STP)
+ * calculatePercentToStp(260, 243.80) // Returns 6.64 (current price above STP)
+ */
+export function calculatePercentToStp(
+    currentPrice: number | null | undefined,
+    stpValue: number | null | undefined
+): number | null {
+    // Validate inputs
+    if (
+        typeof currentPrice !== 'number' || 
+        typeof stpValue !== 'number' || 
+        isNaN(currentPrice) || 
+        isNaN(stpValue) || 
+        currentPrice <= 0 || 
+        stpValue <= 0
+    ) {
+        return null;
+    }
+
+    // Calculate percentage difference from STP target
+    // Formula: (currentPrice - stpValue) / stpValue * 100
+    return (currentPrice - stpValue) / stpValue * 100;
+}
+
+/**
+ * Calculates the HTP target price from buy price and HTP percentage.
+ * Formula: buyPrice × (1 + htpPercentage/100) + commission
+ * @param buyPrice - The original buy price
+ * @param htpPercentage - The HTP percentage (e.g., 18 for 18%)
+ * @param commissionPercentage - Optional commission percentage
+ * @returns The HTP target price, or null if invalid inputs
+ * 
+ * @example
+ * calculateHtpTargetPrice(100, 18, 3) // Returns 121 (18% gain + 3% commission)
+ * calculateHtpTargetPrice(240, 18) // Returns 283.20 (18% gain, no commission)
+ */
+export function calculateHtpTargetPrice(
+    buyPrice: number | null | undefined,
+    htpPercentage: number | null | undefined,
+    commissionPercentage?: number | null | undefined
+): number | null {
+    // Validate inputs
+    if (
+        typeof buyPrice !== 'number' || 
+        typeof htpPercentage !== 'number' || 
+        isNaN(buyPrice) || 
+        isNaN(htpPercentage) || 
+        buyPrice <= 0 || 
+        htpPercentage <= 0
+    ) {
+        return null;
+    }
+
+    // Calculate HTP target price from buy price
+    const htpTargetBeforeCommission = buyPrice * (1 + htpPercentage / 100);
+    
+    // Add commission if provided
+    const commissionAmount = (typeof commissionPercentage === 'number' && commissionPercentage > 0) 
+        ? (htpTargetBeforeCommission * (commissionPercentage / 100))
+        : 0;
+    
+    return htpTargetBeforeCommission + commissionAmount;
+}
+
+/**
+ * Calculates the percentage difference between current price and HTP target price.
+ * Shows how close the current price is to reaching the HTP target.
+ * Formula: (currentPrice - htpTargetPrice) / htpTargetPrice * 100
+ * @param currentPrice - The current stock price
+ * @param buyPrice - The original buy price
+ * @param htpPercentage - The HTP percentage (e.g., 18 for 18%)
+ * @param commissionPercentage - Optional commission percentage
+ * @returns The percentage difference from HTP target, or null if invalid inputs
+ * 
+ * @example
+ * calculatePercentToHtp(271.40, 230, 18, 3) // Returns 0 (current price at HTP)
+ * calculatePercentToHtp(260, 240, 18) // Returns -8.20 (current price below HTP)
+ * calculatePercentToHtp(300, 240, 18) // Returns 6.04 (current price above HTP)
+ */
+export function calculatePercentToHtp(
+    currentPrice: number | null | undefined,
+    buyPrice: number | null | undefined,
+    htpPercentage: number | null | undefined,
+    commissionPercentage?: number | null | undefined
+): number | null {
+    // Validate inputs
+    if (
+        typeof currentPrice !== 'number' || 
+        typeof buyPrice !== 'number' ||
+        typeof htpPercentage !== 'number' ||
+        isNaN(currentPrice) || 
+        isNaN(buyPrice) ||
+        isNaN(htpPercentage) ||
+        currentPrice <= 0 || 
+        buyPrice <= 0 ||
+        htpPercentage <= 0
+    ) {
+        return null;
+    }
+
+    // Calculate HTP target price
+    const htpTargetPrice = calculateHtpTargetPrice(buyPrice, htpPercentage, commissionPercentage);
+    
+    if (!htpTargetPrice) {
+        return null;
+    }
+
+    // Calculate percentage difference from HTP target
+    // Formula: (currentPrice - htpTargetPrice) / htpTargetPrice * 100
+    return (currentPrice - htpTargetPrice) / htpTargetPrice * 100;
+}

@@ -3,8 +3,7 @@ import React from 'react';
 import { StockWalletDataType, WalletsTableColumnVisibilityState, WalletsTableSortableKey } from '../types';
 import { isHtpSignalActive, getHtpDisplayValue } from '@/app/utils/htpCalculations';
 import type { Dispatch, SetStateAction } from 'react';
-import { formatCurrency, formatShares } from '@/app/utils/financialCalculations';
-import { formatPercent } from '@/app/utils/financialCalculations';
+import { formatCurrency, formatShares, formatPercent, calculatePercentToStp, calculateHtpTargetPrice, calculatePercentToHtp } from '@/app/utils/financialCalculations';
 import { SHARE_EPSILON, SHARE_PRECISION } from '@/app/config/constants';
 
 export interface WalletsTabsProps {
@@ -54,6 +53,11 @@ export default function WalletsTabs({
   };
 
   const getTpCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
+    // Only apply green highlighting for Swing wallets
+    if (wallet.walletType !== 'Swing') {
+      return {};
+    }
+
     const remaining = wallet.remainingShares ?? 0;
     const tp = wallet.tpValue;
     if (
@@ -133,6 +137,99 @@ export default function WalletsTabs({
 
     // Use shared utility to get HTP display value
     return getHtpDisplayValue(buyPrice, stockHtp, currentStockPrice, stockCommission);
+  };
+
+  // %2STP Cell Style - highlights when current price meets or exceeds STP target (Swing wallets only)
+  const getPercentToStpCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
+    // Only apply green highlighting for Swing wallets
+    if (wallet.walletType !== 'Swing') {
+      return {};
+    }
+
+    const stpValue = wallet.tpValue;
+    
+    if (typeof currentStockPrice !== 'number' || typeof stpValue !== 'number' || currentStockPrice <= 0 || stpValue <= 0) {
+      return {};
+    }
+    
+    // If current price >= STP target, show green (target met or exceeded) - Swing wallets only
+    if (currentStockPrice >= stpValue) {
+      return { color: 'lightgreen' };
+    }
+    
+    return {};
+  };
+
+  // HTP Cell Style - highlights when current price meets or exceeds HTP target (Hold wallets only)
+  const getHtpValueCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
+    // Only apply green highlighting for Hold wallets
+    if (wallet.walletType !== 'Hold') {
+      return {};
+    }
+
+    const buyPrice = wallet.buyPrice;
+    const remaining = wallet.remainingShares ?? 0;
+
+    if (
+      remaining <= SHARE_EPSILON ||
+      typeof currentStockPrice !== 'number' || 
+      typeof buyPrice !== 'number' || 
+      typeof stockHtp !== 'number' ||
+      currentStockPrice <= 0 || 
+      buyPrice <= 0 || 
+      stockHtp <= 0
+    ) {
+      return {};
+    }
+
+    // Calculate HTP target price
+    const htpTargetPrice = calculateHtpTargetPrice(buyPrice, stockHtp, stockCommission);
+    
+    if (!htpTargetPrice) {
+      return {};
+    }
+
+    // If current price >= HTP target, show green (target met or exceeded) - Hold wallets only
+    if (currentStockPrice >= htpTargetPrice) {
+      return { color: 'lightgreen' };
+    }
+    
+    return {};
+  };
+
+  // %2HTP Cell Style - highlights when current price meets or exceeds HTP target (Hold wallets only)
+  const getPercentToHtpCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
+    // Only apply green highlighting for Hold wallets
+    if (wallet.walletType !== 'Hold') {
+      return {};
+    }
+
+    const buyPrice = wallet.buyPrice;
+
+    if (
+      typeof currentStockPrice !== 'number' || 
+      typeof buyPrice !== 'number' || 
+      typeof stockHtp !== 'number' ||
+      currentStockPrice <= 0 || 
+      buyPrice <= 0 || 
+      stockHtp <= 0
+    ) {
+      return {};
+    }
+
+    // Calculate HTP target price
+    const htpTargetPrice = calculateHtpTargetPrice(buyPrice, stockHtp, stockCommission);
+    
+    if (!htpTargetPrice) {
+      return {};
+    }
+
+    // If current price >= HTP target, show green (percentage >= 0) - Hold wallets only
+    if (currentStockPrice >= htpTargetPrice) {
+      return { color: 'lightgreen' };
+    }
+    
+    return {};
   };
 
   const visibleColumns = Object.keys(walletColumnVisibility) as Array<keyof WalletsTableColumnVisibilityState>;
@@ -235,10 +332,10 @@ export default function WalletsTabs({
             {walletColumnVisibility.totalInvestment && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('totalInvestment')}>Inv {walletSortConfig?.key === 'totalInvestment' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
             {walletColumnVisibility.tpValue && (
               <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('tpValue')}>
-                TP
+                STP
                 {typeof stockCommission === 'number' && stockCommission > 0 && (
                   <span 
-                    title={`TP includes the ${stockCommission}% stock commission`}
+                    title={`STP includes the ${stockCommission}% stock commission`}
                     style={{ color: 'orange', marginLeft: '2px', fontSize: '0.8em' }}
                   >
                     *
@@ -248,7 +345,23 @@ export default function WalletsTabs({
                 {walletSortConfig?.key === 'tpValue' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
               </th>
             )}
-            {walletColumnVisibility.htp && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('htp')}>HTP (%) {walletSortConfig?.key === 'htp' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
+            {walletColumnVisibility.percentToStp && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('percentToStp')}>%2STP {walletSortConfig?.key === 'percentToStp' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
+            {walletColumnVisibility.htpValue && (
+              <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('htpValue')}>
+                HTP
+                {typeof stockCommission === 'number' && stockCommission > 0 && (
+                  <span 
+                    title={`HTP includes the ${stockCommission}% stock commission`}
+                    style={{ color: 'orange', marginLeft: '2px', fontSize: '0.8em' }}
+                  >
+                    *
+                  </span>
+                )}
+                {' '}
+                {walletSortConfig?.key === 'htpValue' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+              </th>
+            )}
+            {walletColumnVisibility.htp && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('htp')}>%2HTP {walletSortConfig?.key === 'htp' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
             {walletColumnVisibility.sellTxnCount && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('sellTxnCount')}>Sells {walletSortConfig?.key === 'sellTxnCount' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
             {walletColumnVisibility.sharesSold && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('sharesSold')}>Shs Sold {walletSortConfig?.key === 'sharesSold' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
             {walletColumnVisibility.realizedPl && <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestWalletSort('realizedPl')}>P/L {walletSortConfig?.key === 'realizedPl' ? (walletSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}</th>}
@@ -275,7 +388,23 @@ export default function WalletsTabs({
                   {walletColumnVisibility.buyPrice && <td data-testid="wallet-buyPrice-display" style={{ padding: '5px' }}>{formatCurrency(wallet.buyPrice ?? 0)}</td>}
                   {walletColumnVisibility.totalInvestment && <td data-testid="wallet-totalInvestment-display" style={{ padding: '5px' }}>{formatCurrency(wallet.totalInvestment ?? 0)}</td>}
                   {walletColumnVisibility.tpValue && <td data-testid="wallet-tpValue-display" style={{ padding: '5px', ...getTpCellStyle(wallet, currentPrice) }}>{formatCurrency(wallet.tpValue ?? 0)}</td>}
-                  {walletColumnVisibility.htp && <td data-testid="wallet-htp-display" style={{ padding: '5px', ...getHtpCellStyle(wallet, currentPrice) }}>{getHtpDisplayValueForWallet(wallet, currentPrice)}</td>}
+                  {walletColumnVisibility.percentToStp && (
+                    <td data-testid="wallet-percentToStp-display" style={{ padding: '5px', ...getPercentToStpCellStyle(wallet, currentPrice) }}>
+                      {wallet.tpValue && currentPrice ? formatPercent(calculatePercentToStp(currentPrice, wallet.tpValue)) : '-'}
+                    </td>
+                  )}
+                  {walletColumnVisibility.htpValue && (
+                    <td data-testid="wallet-htpValue-display" style={{ padding: '5px', ...getHtpValueCellStyle(wallet, currentPrice) }}>
+                      {wallet.buyPrice && stockHtp ? 
+                        formatCurrency(calculateHtpTargetPrice(wallet.buyPrice, stockHtp, stockCommission) ?? 0) : '-'}
+                    </td>
+                  )}
+                  {walletColumnVisibility.htp && (
+                    <td data-testid="wallet-htp-display" style={{ padding: '5px', ...getPercentToHtpCellStyle(wallet, currentPrice) }}>
+                      {wallet.buyPrice && stockHtp && currentPrice ? 
+                        formatPercent(calculatePercentToHtp(currentPrice, wallet.buyPrice, stockHtp, stockCommission)) : '-'}
+                    </td>
+                  )}
                   {walletColumnVisibility.sellTxnCount && <td data-testid="wallet-sellTxnCount-display" style={{ padding: '5px' }}>{wallet.sellTxnCount ?? 0}</td>}
                   {walletColumnVisibility.sharesSold && <td data-testid="wallet-sharesSold-display" style={{ padding: '5px' }}>{formatShares(wallet.sharesSold ?? 0, SHARE_PRECISION)}</td>}
                   {walletColumnVisibility.realizedPl && <td data-testid="wallet-realizedPl-display" style={{ padding: '5px' }}>{formatCurrency(wallet.realizedPl ?? 0)}</td>}
