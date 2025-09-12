@@ -89,6 +89,23 @@
           ],
           "priority": "low",
           "estimatedDuration": "1-2 minutes"
+        },
+        {
+          "name": "wallet-stp-htp",
+          "enabled": true,
+          "file": "e2e/wallets/wallet-stp-htp.spec.ts",
+          "description": "Test STP and HTP calculations, highlighting, and validation across wallet tabs and signals page",
+          "tags": [
+            "wallet",
+            "stp",
+            "htp",
+            "calculations",
+            "highlighting",
+            "validation",
+            "integration"
+          ],
+          "priority": "high",
+          "estimatedDuration": "4-5 minutes"
         }
       ]
     },
@@ -120,7 +137,7 @@
     "retries": 0,
     "timeout": 60000,
     "browser": "chromium",
-    "workers": 7
+    "workers": 8
   },
   "presets": {
     "smoke": {

@@ -178,6 +178,7 @@ export default function SignalsTable({
                                     <td style={{ padding: '5px' }}>
                                         <Link
                                             href={`/wallets/${item.id}`}
+                                            data-testid={`signals-table-ticker-${item.symbol.toUpperCase()}`}
                                             style={{
                                                 textDecoration: 'none',
                                                 color: item.totalCurrentShares === 0 ? 'red' : (shouldGrayOut ? '#9d9d9d' : 'inherit')
@@ -236,14 +237,18 @@ export default function SignalsTable({
                                     </td>
                                 )}
                                 {reportColumnVisibility.percentToTp && (
-                                    <td style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToTp) }}>
+                                    <td 
+                                        data-testid={`signals-table-percent-stp-${item.symbol.toUpperCase()}`}
+                                        style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToTp) }}>
                                         {typeof item.percentToTp === 'number'
                                             ? `${item.percentToTp.toFixed(2)}%`
                                             : '-'}
                                     </td>
                                 )}
                                 {reportColumnVisibility.percentToHtp && (
-                                    <td style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToHtp) }}>
+                                    <td 
+                                        data-testid={`signals-table-percent-htp-${item.symbol.toUpperCase()}`}
+                                        style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToHtp) }}>
                                         {typeof item.percentToHtp === 'number'
                                             ? `${item.percentToHtp.toFixed(2)}%`
                                             : '-'}

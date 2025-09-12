@@ -65,6 +65,7 @@ export default function WalletsOverview({
           alignItems: 'center',
         }}
         onClick={onToggle}
+        data-testid="overview-toggle"
       >
         Overview
         <span style={{ fontSize: '0.8em' }}>{isExpanded ? '▼' : '▶'}</span>

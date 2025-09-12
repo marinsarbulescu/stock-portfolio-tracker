@@ -53,11 +53,7 @@ export default function WalletsTabs({
   };
 
   const getTpCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
-    // Only apply green highlighting for Swing wallets
-    if (wallet.walletType !== 'Swing') {
-      return {};
-    }
-
+    // Apply green highlighting for both Swing and Hold wallets
     const remaining = wallet.remainingShares ?? 0;
     const tp = wallet.tpValue;
     if (
@@ -139,20 +135,16 @@ export default function WalletsTabs({
     return getHtpDisplayValue(buyPrice, stockHtp, currentStockPrice, stockCommission);
   };
 
-  // %2STP Cell Style - highlights when current price meets or exceeds STP target (Swing wallets only)
+  // %2STP Cell Style - highlights when current price meets or exceeds STP target (both Swing and Hold wallets)
   const getPercentToStpCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
-    // Only apply green highlighting for Swing wallets
-    if (wallet.walletType !== 'Swing') {
-      return {};
-    }
-
+    // Apply green highlighting for both Swing and Hold wallets
     const stpValue = wallet.tpValue;
     
     if (typeof currentStockPrice !== 'number' || typeof stpValue !== 'number' || currentStockPrice <= 0 || stpValue <= 0) {
       return {};
     }
     
-    // If current price >= STP target, show green (target met or exceeded) - Swing wallets only
+    // If current price >= STP target, show green (target met or exceeded)
     if (currentStockPrice >= stpValue) {
       return { color: 'lightgreen' };
     }
