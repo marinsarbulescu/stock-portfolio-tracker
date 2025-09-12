@@ -492,7 +492,7 @@ export default function StockWalletPage() {
             'holdShares',     // Keep
             // --- END UPDATE ---
             'splitRatio',     // ADDED - needed for StockSplit transactions
-            'tp', 'txnProfit', 'txnProfitPercent', // Keep for potential edit logic display
+            'txnProfit', 'txnProfitPercent', // Keep for potential edit logic display
         ] as const;
 
 

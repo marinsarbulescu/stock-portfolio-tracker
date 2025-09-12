@@ -182,10 +182,9 @@ export default function TransactionForm({
     let calculatedHoldShares_final: number | undefined | null = null;
 
     let lbd_raw: number | undefined | null = null;
-    let tp_raw: number | undefined | null = null;
     let lbd_final: number | undefined | null = null;
-    let tp_final: number | undefined | null = null;
-
+    // tp variables removed - field deprecated and removed from schema
+    
     let pdpValue: number | null | undefined = null;
     let stpValue: number | null | undefined = null;
     let stockCommissionValue: number | null | undefined = null;
@@ -250,32 +249,13 @@ export default function TransactionForm({
                 lbd_raw = targetLBD;
               }
               
-              // Calculate base TP using new STP formula
-              const baseTP = priceValue + (priceValue * (stpValue / 100));
-                // Apply commission adjustment to TP if commission is available and > 0
-              if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
-                const commissionRate = stockCommissionValue / 100;
-                
-                // Prevent division by zero or negative values
-                if (commissionRate >= 1) {
-                  console.warn(`Commission rate (${stockCommissionValue}%) is too high, using base TP calculation`);
-                  tp_raw = baseTP;
-                } else {
-                  // Commission-adjusted TP: baseTP / (1 - commissionRate)
-                  tp_raw = baseTP / (1 - commissionRate);
-                }
-              } else {
-                // No commission or invalid commission, use base TP
-                tp_raw = baseTP;
-              }
-
-              // --- Round LBD/TP (Optional but good practice for currency) ---
+              
+              // --- Round LBD (Optional but good practice for currency) ---
               lbd_final = parseFloat(lbd_raw.toFixed(CURRENCY_PRECISION));
-              // TP needs higher precision (4 decimals) to avoid $0.01 discrepancy when selling at commission-adjusted TP
-              tp_final = parseFloat(tp_raw.toFixed(4)); // Use 4 decimal places for TP precision
+              // tp calculations removed - field deprecated and removed from schema
               // --- End Rounding ---
             } else { 
-                //console.log("Could not calculate LBD/TP (PDP/STP invalid or price missing)"); 
+                //console.log("Could not calculate LBD (PDP invalid or price missing)"); 
             }
 
         } catch (fetchErr: unknown) {
@@ -409,7 +389,7 @@ export default function TransactionForm({
         holdShares: (action === 'Buy') ? calculatedHoldShares_final : null, // Use FINAL rounded hold shares
         txnType: (action === 'Buy') ? buyType : undefined,
         lbd: (action === 'Buy') ? lbd_final : null, // Only Buy uses LBD
-        tp: (action === 'Buy') ? tp_final : null,   // Only Buy uses TP
+        // tp field removed - deprecated and no longer exists in schema
         completedTxnId: (action === 'Sell') ? (completedTxnId || undefined) : undefined,
         txnProfit: (action === 'Sell') ? txnProfit : null, // Only Sell uses txnProfit
         txnProfitPercent: (action === 'Sell') ? calculatedTxnProfitPercent : null, // Only Sell uses txnProfitPercent
@@ -862,8 +842,20 @@ export default function TransactionForm({
                       } else {
                           // 3b. Create new wallet (use rounded values directly)
                           //console.log(`[Wallet Logic - ${type}] No existing wallet found. Creating new...`);
+                          // Calculate tpValue for wallet (still needed even though Transaction.tp is deprecated)
+                          let walletTpValue = null;
+                          if (typeof stpValue === 'number' && stpValue > 0) {
+                              const baseTP = priceValue + (priceValue * (stpValue / 100));
+                              if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
+                                  const commissionRate = stockCommissionValue / 100;
+                                  walletTpValue = commissionRate < 1 ? baseTP / (1 - commissionRate) : baseTP;
+                              } else {
+                                  walletTpValue = baseTP;
+                              }
+                              walletTpValue = parseFloat(walletTpValue.toFixed(4));
+                          }
+                          
                           // Fetch PDP/STP (use previously fetched values)
-                          // Use rounded TP if available
                           const createPayload = {
                               portfolioStockId: portfolioStockId,
                               walletType: type,
@@ -874,7 +866,7 @@ export default function TransactionForm({
                               remainingShares: sharesToAdd, // Already rounded
                               realizedPl: 0,
                               sellTxnCount: 0,
-                              tpValue: tp_final, // Use rounded TP
+                              tpValue: walletTpValue, // Calculated TP value
                               tpPercent: /* calculate or fetch */ null, // Recalculate if needed
                               realizedPlPercent: 0,
                           };

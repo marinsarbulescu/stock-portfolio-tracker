@@ -71,7 +71,7 @@ const schema = a.schema({
       archived: a.boolean().default(false), // Soft delete flag for archived transactions
       archivedAt: a.datetime(), // Timestamp when the transaction was archived
       lbd: a.float(),             // Last Buy Dip ($). Calculated target price for a new Buy Signal. LBD = Buy Price - (Buy Price * PDP)
-      tp: a.float(),              // Take Profit ($). Calculated target price, at which we get a Sell signal. TP = Buy Price + (Buy Price * STP / 100)
+      // tp field removed - was deprecated, never used in business logic. All TP functionality uses StockWallet.tpValue
       completedTxnId: a.string(), // Link to another Txn ID (for Sell closing a Buy?)
       txnProfit: a.float(),
       txnProfitPercent: a.float(),

@@ -188,7 +188,6 @@ export default function HomePage() {
             'action',
             'price',
             'portfolioStockId',
-            'tp',
             'completedTxnId',
             'swingShares',
             'holdShares',
