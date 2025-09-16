@@ -834,7 +834,7 @@ export default function TransactionForm({
                               totalSharesQty: (Math.abs(finalTotalShares) < epsilon) ? 0 : finalTotalShares,
                               totalInvestment: (Math.abs(finalInvestment) < 0.001) ? 0 : finalInvestment, // Currency epsilon
                               remainingShares: (Math.abs(finalRemainingShares) < epsilon) ? 0 : finalRemainingShares,
-                              tpValue: updatedTpValue, // Add recalculated TP
+                              stpValue: updatedTpValue, // Add recalculated STP
                           };
                           const { errors: updateErrors } = await client.models.StockWallet.update(updatePayload);
                           if (updateErrors) throw updateErrors;
@@ -842,7 +842,7 @@ export default function TransactionForm({
                       } else {
                           // 3b. Create new wallet (use rounded values directly)
                           //console.log(`[Wallet Logic - ${type}] No existing wallet found. Creating new...`);
-                          // Calculate tpValue for wallet (still needed even though Transaction.tp is deprecated)
+                          // Calculate stpValue for wallet (still needed for new functionality)
                           let walletTpValue = null;
                           if (typeof stpValue === 'number' && stpValue > 0) {
                               const baseTP = priceValue + (priceValue * (stpValue / 100));
@@ -866,8 +866,7 @@ export default function TransactionForm({
                               remainingShares: sharesToAdd, // Already rounded
                               realizedPl: 0,
                               sellTxnCount: 0,
-                              tpValue: walletTpValue, // Calculated TP value
-                              tpPercent: /* calculate or fetch */ null, // Recalculate if needed
+                              stpValue: walletTpValue, // Calculated STP value
                               realizedPlPercent: 0,
                           };
                           const { errors: createErrors } = await client.models.StockWallet.create(createPayload as Parameters<typeof client.models.StockWallet.create>[0]);
@@ -918,7 +917,7 @@ export default function TransactionForm({
                         selectionSet: [
                             'id', 'buyPrice', 'totalSharesQty', 'remainingShares', 
                             'totalInvestment', 'sharesSold', 'realizedPl', 'sellTxnCount', 
-                            'realizedPlPercent', 'walletType', 'tpValue', 'tpPercent'
+                            'realizedPlPercent', 'walletType', 'stpValue'
                         ],
                         limit: FETCH_LIMIT_WALLETS_GENEROUS // Ensure all wallets are found for stock split
                     });
@@ -955,8 +954,8 @@ export default function TransactionForm({
                         const adjustedRemainingShares = originalRemainingShares * splitRatioValue;
                         const adjustedSharesSold = originalSharesSold * splitRatioValue;
                         
-                        // Update TP value if it exists (also needs split adjustment)
-                        const originalTpValue = wallet.tpValue || 0;
+                        // Update STP value if it exists (also needs split adjustment)
+                        const originalTpValue = wallet.stpValue || 0;
                         const adjustedTpValue = originalTpValue > 0 ? originalTpValue / splitRatioValue : 0;
                         
                         console.log(`[StockSplit] Updating wallet ${wallet.id}:`, {
@@ -964,7 +963,7 @@ export default function TransactionForm({
                             totalShares: `${originalTotalShares} → ${adjustedTotalShares}`,
                             remainingShares: `${originalRemainingShares} → ${adjustedRemainingShares}`,
                             sharesSold: `${originalSharesSold} → ${adjustedSharesSold}`,
-                            tpValue: `${originalTpValue} → ${adjustedTpValue}`
+                            stpValue: `${originalTpValue} → ${adjustedTpValue}`
                         });
                         
                         // Prepare wallet update payload
@@ -974,14 +973,13 @@ export default function TransactionForm({
                             totalSharesQty: adjustedTotalShares,
                             remainingShares: adjustedRemainingShares,
                             sharesSold: adjustedSharesSold,
-                            tpValue: adjustedTpValue,
+                            stpValue: adjustedTpValue,
                             // Keep other fields unchanged
                             totalInvestment: wallet.totalInvestment, // Investment amount stays the same
                             realizedPl: wallet.realizedPl, // P/L dollar amount stays the same
                             sellTxnCount: wallet.sellTxnCount,
                             realizedPlPercent: wallet.realizedPlPercent, // Percentage stays the same
                             walletType: wallet.walletType,
-                            tpPercent: wallet.tpPercent
                         };
                         
                         // Update the wallet in the database

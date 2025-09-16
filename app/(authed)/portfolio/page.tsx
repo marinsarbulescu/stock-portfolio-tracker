@@ -125,7 +125,7 @@ function PortfolioContent() {
     try {
       const { data, errors } = await client.models.StockWallet.list({
         limit: FETCH_LIMIT_STOCKS_STANDARD,
-        selectionSet: ['id', 'portfolioStockId', 'remainingShares', 'buyPrice', 'totalInvestment', 'totalSharesQty', 'tpValue'],
+        selectionSet: ['id', 'portfolioStockId', 'remainingShares', 'buyPrice', 'totalInvestment', 'totalSharesQty', 'stpValue'],
       });
       if (!errors && data) {
         setAllWallets(data as StockWalletDataType[]);
@@ -196,7 +196,7 @@ function PortfolioContent() {
       if (wallet.portfolioStockId) {
         const stockId = wallet.portfolioStockId;
         const remainingShares = wallet.remainingShares ?? 0;
-        const tp = wallet.tpValue;
+        const tp = wallet.stpValue;
         
         // Skip if no remaining shares
         if (remainingShares <= 0.000001) {

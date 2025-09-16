@@ -360,9 +360,11 @@ async function verifyGreenColor(page: Page, element: any, fieldName: string): Pr
                     backgroundColor.includes('rgb(144, 238, 144)') || // lightgreen
                     backgroundColor.includes('rgb(50, 205, 50)') ||   // limegreen
                     backgroundColor.includes('rgb(0, 255, 0)') ||     // lime
+                    backgroundColor.includes('rgb(1, 255, 0)') ||     // bright lime (Signals page)
                     color.includes('rgb(144, 238, 144)') ||
                     color.includes('rgb(50, 205, 50)') ||
-                    color.includes('rgb(0, 255, 0)');
+                    color.includes('rgb(0, 255, 0)') ||
+                    color.includes('rgb(1, 255, 0)');
     
     if (!isGreen) {
         console.log(`[ColorValidation] ⚠️ ${fieldName} expected to be green but found - Background: ${backgroundColor}, Color: ${color}`);
@@ -464,7 +466,7 @@ async function verifySwingWalletTab(
     await page.waitForTimeout(1000); // Small wait for tab transition
     
     // Verify STP value using the proper test ID
-    const stpValueElement = page.locator('[data-testid="wallet-tpValue-display"]');
+    const stpValueElement = page.locator('[data-testid="wallet-stpValue-display"]');
     await expect(stpValueElement).toBeVisible();
     await expect(stpValueElement).toHaveText(config.expectedWalletTabs.swing.stpValue);
     console.log(`[SwingWalletHelper] ✅ STP value verified: ${config.expectedWalletTabs.swing.stpValue}`);
@@ -552,7 +554,7 @@ async function verifyHoldWalletTab(
     await page.waitForTimeout(1000);
     
     // Verify STP value using the proper test ID (now available in Hold wallets too)
-    const stpValueElement = page.locator('[data-testid="wallet-tpValue-display"]');
+    const stpValueElement = page.locator('[data-testid="wallet-stpValue-display"]');
     await expect(stpValueElement).toBeVisible({ timeout: 10000 });
     await expect(stpValueElement).toHaveText(config.expectedWalletTabs.hold.stpValue);
     console.log(`[HoldWalletHelper] ✅ STP value verified: ${config.expectedWalletTabs.hold.stpValue}`);
@@ -818,7 +820,7 @@ async function verifySwingWalletTabAt109(
     await page.waitForTimeout(1000); // Small wait for tab transition
     
     // Verify STP value (should remain $110.00)
-    const stpValueElement = page.locator('[data-testid="wallet-tpValue-display"]');
+    const stpValueElement = page.locator('[data-testid="wallet-stpValue-display"]');
     await expect(stpValueElement).toBeVisible();
     await expect(stpValueElement).toHaveText(config.expectedValuesAt109.expectedWalletTabs.swing.stpValue);
     console.log(`[SwingWalletHelper] ✅ STP value verified: ${config.expectedValuesAt109.expectedWalletTabs.swing.stpValue}`);
@@ -883,7 +885,7 @@ async function verifyHoldWalletTabAt109(
     console.log('[HoldWalletHelper] Verifying HTP and %2HTP columns are visible by default...');
     
     // Verify STP value (should remain $110.00)
-    const stpValueElement = page.locator('[data-testid="wallet-tpValue-display"]');
+    const stpValueElement = page.locator('[data-testid="wallet-stpValue-display"]');
     await expect(stpValueElement).toBeVisible();
     await expect(stpValueElement).toHaveText(config.expectedValuesAt109.expectedWalletTabs.hold.stpValue);
     console.log(`[HoldWalletHelper] ✅ STP value verified: ${config.expectedValuesAt109.expectedWalletTabs.hold.stpValue}`);
@@ -987,7 +989,7 @@ async function verifySwingWalletTabAt115(
     await page.waitForLoadState('networkidle');
     
     // Verify STP value (should be $110.00)
-    const stpValueElement = page.locator('[data-testid="wallet-tpValue-display"]');
+    const stpValueElement = page.locator('[data-testid="wallet-stpValue-display"]');
     await expect(stpValueElement).toBeVisible();
     await expect(stpValueElement).toHaveText(config.expectedValuesAt115.expectedWalletTabs.swing.stpValue);
     console.log(`[SwingWalletHelper] ✅ STP value verified: ${config.expectedValuesAt115.expectedWalletTabs.swing.stpValue}`);
@@ -1047,7 +1049,7 @@ async function verifyHoldWalletTabAt115(
     await page.waitForLoadState('networkidle');
     
     // Verify STP value (should be $110.00)
-    const stpValueElement = page.locator('[data-testid="wallet-tpValue-display"]');
+    const stpValueElement = page.locator('[data-testid="wallet-stpValue-display"]');
     await expect(stpValueElement).toBeVisible();
     await expect(stpValueElement).toHaveText(config.expectedValuesAt115.expectedWalletTabs.hold.stpValue);
     console.log(`[HoldWalletHelper] ✅ STP value verified: ${config.expectedValuesAt115.expectedWalletTabs.hold.stpValue}`);
@@ -1151,7 +1153,7 @@ async function verifySwingWalletTabAt122(
     await page.waitForLoadState('networkidle');
     
     // Verify STP value (should be $110.00)
-    const stpValueElement = page.locator('[data-testid="wallet-tpValue-display"]');
+    const stpValueElement = page.locator('[data-testid="wallet-stpValue-display"]');
     await expect(stpValueElement).toBeVisible();
     await expect(stpValueElement).toHaveText(config.expectedValuesAt122.expectedWalletTabs.swing.stpValue);
     console.log(`[SwingWalletHelper] ✅ STP value verified: ${config.expectedValuesAt122.expectedWalletTabs.swing.stpValue}`);
@@ -1211,7 +1213,7 @@ async function verifyHoldWalletTabAt122(
     await page.waitForLoadState('networkidle');
     
     // Verify STP value (should be $110.00)
-    const stpValueElement = page.locator('[data-testid="wallet-tpValue-display"]');
+    const stpValueElement = page.locator('[data-testid="wallet-stpValue-display"]');
     await expect(stpValueElement).toBeVisible();
     await expect(stpValueElement).toHaveText(config.expectedValuesAt122.expectedWalletTabs.hold.stpValue);
     console.log(`[HoldWalletHelper] ✅ STP value verified: ${config.expectedValuesAt122.expectedWalletTabs.hold.stpValue}`);

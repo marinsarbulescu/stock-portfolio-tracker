@@ -266,7 +266,7 @@ export default function HomePage() {
                         'walletType',
                         'buyPrice',
                         'remainingShares',
-                        'tpValue', // Needed for finding lowest TP
+                        'stpValue', // Needed for finding lowest STP
                         'sellTxnCount', // Potentially useful later
                         'sharesSold', // Potentially useful later
                         'totalInvestment', // Add this for budget calculations
@@ -281,9 +281,13 @@ export default function HomePage() {
             }
             
             const visibleStocks = (stockResult.data as PortfolioStockDataType[]).filter(stock => !stock.isHidden && !stock.archived);
+            console.log('[Signals] Visible stocks after filtering:', visibleStocks.length);
+            console.log('[Signals] First few visible stocks:', visibleStocks.slice(0, 3).map(s => ({ symbol: s.symbol, id: s.id, isHidden: s.isHidden, archived: s.archived })));
+            
             setPortfolioStocks(visibleStocks);
             
             const visibleStockIds = new Set(visibleStocks.map(stock => stock.id));
+            console.log('[Signals] Visible stock IDs:', Array.from(visibleStockIds).slice(0, 5));
             
             const visibleTransactions = allTxnsData.filter(
                 (txn: unknown) => {
@@ -291,23 +295,29 @@ export default function HomePage() {
                     return visibleStockIds.has(transaction.portfolioStockId);
                 }
             );
+            console.log('[Signals] Visible transactions after filtering:', visibleTransactions.length);
+            
             setAllTransactions(visibleTransactions);
             
             const visibleWallets = (walletResult.data as StockWalletDataType[]).filter(
                 wallet => visibleStockIds.has(wallet.portfolioStockId)
             );
+            console.log('[Signals] Visible wallets after filtering:', visibleWallets.length);
+            
             setAllWallets(visibleWallets);
 
-        } catch {
-            // console.error("[app/(authed)/page.tsx] - Error fetching page data:", err);
-            // const errorMessage = Array.isArray((err as { errors?: Array<{ message: string }> })?.errors) 
-            //     ? (err as { errors: Array<{ message: string }> }).errors[0].message 
-            //     : ((err as Error)?.message || "Failed to load page data.");
+        } catch (err) {
+            console.error("[Signals] Error fetching page data:", err);
+            const errorMessage = Array.isArray((err as { errors?: Array<{ message: string }> })?.errors) 
+                ? (err as { errors: Array<{ message: string }> }).errors[0].message 
+                : ((err as Error)?.message || "Failed to load page data.");
+            console.error("[Signals] Error message:", errorMessage);
             // setError(errorMessage); // Set combined error state - Unused
             setPortfolioStocks([]);
             setAllTransactions([]);
             setAllWallets([]);
         } finally {
+            console.log('[Signals] Data fetch completed');
             setIsLoading(false); // Set combined loading state false
         }
     }, [fetchAllPaginatedTransactions]); // Add helper to dependencies
@@ -418,10 +428,10 @@ export default function HomePage() {
             }, null as StockWalletDataType | null);
 
             stockData.lowestSwingTpWallet = stockData.activeSwingWallets
-                 .filter(w => typeof w.tpValue === 'number' && w.tpValue > 0)
+                 .filter(w => typeof w.stpValue === 'number' && w.stpValue > 0)
                  .reduce((lowest, current) => {
                     if (!lowest) return current;
-                    if (current.tpValue! < lowest.tpValue!) {
+                    if (current.stpValue! < lowest.stpValue!) {
                         return current;
                     }
                     return lowest;
@@ -568,7 +578,7 @@ export default function HomePage() {
                 .filter(wallet => wallet.portfolioStockId === stockId)
                 .reduce((total, wallet) => {
                     const remainingShares = wallet.remainingShares ?? 0;
-                    const tp = wallet.tpValue;
+                    const tp = wallet.stpValue;
                     
                     // Skip if no remaining shares
                     if (remainingShares <= SHARE_EPSILON) {
@@ -676,7 +686,7 @@ export default function HomePage() {
                 percentToBe = (currentPrice / lowestSwingBuyPrice - 1) * 100;
             }
 
-            const lowestSwingTpPrice = procData.lowestSwingTpWallet?.tpValue;
+            const lowestSwingTpPrice = procData.lowestSwingTpWallet?.stpValue;
             const lowestSwingTpShares = procData.lowestSwingTpWallet?.remainingShares;
             let percentToTp: number | null = null;
             if (typeof currentPrice === 'number' && typeof lowestSwingTpPrice === 'number' && lowestSwingTpPrice > 0) {

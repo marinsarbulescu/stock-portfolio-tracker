@@ -123,7 +123,7 @@ export default function StockWalletPage() {
         buyPrice: boolean;
         totalInvestment: boolean;
         //totalSharesQty: boolean;
-        tpValue: boolean;
+        stpValue: boolean;
         percentToStp: boolean;
         htpValue: boolean;
         htp: boolean;
@@ -139,7 +139,7 @@ export default function StockWalletPage() {
         | 'buyPrice'
         | 'totalInvestment'
         //| 'totalSharesQty'
-        | 'tpValue'
+        | 'stpValue'
         | 'percentToStp'
         | 'htpValue'
         | 'htp'
@@ -154,7 +154,7 @@ export default function StockWalletPage() {
         buyPrice: true,
         totalInvestment: true,
         //totalSharesQty: true,
-        tpValue: true,
+        stpValue: true,
         percentToStp: true,
         htpValue: true,
         htp: true,
@@ -170,7 +170,7 @@ export default function StockWalletPage() {
         buyPrice: 'Buy Price',
         totalInvestment: 'Inv',
         //totalSharesQty: 'Shares',
-        tpValue: 'STP',
+        stpValue: 'STP',
         percentToStp: '%2STP',
         htpValue: 'HTP',
         htp: '%2HTP',
@@ -380,8 +380,7 @@ export default function StockWalletPage() {
                     'buyPrice',
                     'totalInvestment',
                     'totalSharesQty',
-                    'tpPercent',
-                    'tpValue',
+                    'stpValue',
                     'sharesSold',
                     'realizedPl',
                     'realizedPlPercent',
@@ -410,10 +409,10 @@ export default function StockWalletPage() {
                 
                 // +++ ADD SORTING LOGIC HERE +++
                 fetchedData.sort((a, b) => {
-                        // Handle null/undefined tpValue - place them at the end
-                        const tpA = a.tpValue ?? Infinity;
-                        const tpB = b.tpValue ?? Infinity;
-                        return tpA - tpB; // Ascending sort (lowest TP first)
+                        // Handle null/undefined stpValue - place them at the end
+                        const tpA = a.stpValue ?? Infinity;
+                        const tpB = b.stpValue ?? Infinity;
+                        return tpA - tpB; // Ascending sort (lowest STP first)
                 });
                 // +++ END SORTING LOGIC +++
 
@@ -1854,7 +1853,7 @@ const riskInvestment = useMemo(() => {
     // Calculate investment in wallets where TP has been MET
     const investmentWithMetTP = wallets.reduce((total, wallet) => {
         const remainingShares = wallet.remainingShares ?? 0;
-        const tp = wallet.tpValue;
+        const tp = wallet.stpValue;
         
         // Skip if no remaining shares
         if (remainingShares <= SHARE_EPSILON) {
@@ -2024,7 +2023,7 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
         currentStockPrice: number | null | undefined // Pass current price in
     ): React.CSSProperties => {
         const remaining = wallet.remainingShares ?? 0;
-        const tp = wallet.tpValue;
+        const tp = wallet.stpValue;
 
         // Conditions: Has shares AND TP is set AND TP >= Current Price
         if (remaining > SHARE_EPSILON &&

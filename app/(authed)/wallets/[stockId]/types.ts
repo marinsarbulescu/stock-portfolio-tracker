@@ -67,7 +67,7 @@ export interface WalletColumnVisibilityState {
   unrealizedPl: boolean;
   unrealizedPlPercent: boolean;
   tp: boolean;
-  tpPercent: boolean;
+  stpPercent: boolean;
   walletType: boolean;
   notes: boolean;
 }
@@ -91,7 +91,7 @@ export interface WalletsTableColumnVisibilityState {
   id: boolean;
   buyPrice: boolean;
   totalInvestment: boolean;
-  tpValue: boolean;
+  stpValue: boolean;
   percentToStp: boolean;
   htpValue: boolean;
   htp: boolean;
@@ -106,7 +106,7 @@ export type WalletsTableSortableKey =
   | 'id'
   | 'buyPrice'
   | 'totalInvestment'
-  | 'tpValue'
+  | 'stpValue'
   | 'percentToStp'
   | 'htpValue'
   | 'htp'

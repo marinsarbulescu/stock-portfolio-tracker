@@ -71,7 +71,7 @@ const schema = a.schema({
       archived: a.boolean().default(false), // Soft delete flag for archived transactions
       archivedAt: a.datetime(), // Timestamp when the transaction was archived
       lbd: a.float(),             // Last Buy Dip ($). Calculated target price for a new Buy Signal. LBD = Buy Price - (Buy Price * PDP)
-      // tp field removed - was deprecated, never used in business logic. All TP functionality uses StockWallet.tpValue
+      // tp field removed - was deprecated, never used in business logic. All TP functionality uses StockWallet.stpValue
       completedTxnId: a.string(), // Link to another Txn ID (for Sell closing a Buy?)
       txnProfit: a.float(),
       txnProfitPercent: a.float(),
@@ -117,8 +117,8 @@ const schema = a.schema({
       archived: a.boolean().default(false), // Soft delete flag for archived wallets
       archivedAt: a.datetime(), // Timestamp when the wallet was archived
       realizedPl: a.float().default(0), // Accumulated P/L $ from sales FROM this wallet
-      tpValue: a.float(), // Calculated TP Price ($) based on buyPrice
-      tpPercent: a.float(), // Calculated TP Percent (%) based on buyPrice
+      tpValue: a.float(), // LEGACY: Calculated TP Price ($) - TO BE REMOVED after migration
+      stpValue: a.float(), // NEW: Calculated STP Price ($) based on buyPrice
       realizedPlPercent: a.float(),
       sellTxnCount: a.integer().required().default(0),
       // Add owner field if not implicitly added by .authorization
