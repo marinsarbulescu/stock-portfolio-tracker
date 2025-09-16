@@ -3,6 +3,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import './test-manager.css';
+import { Amplify } from 'aws-amplify';
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '../../amplify/data/resource';
+import amplifyOutputs from '../../amplify_outputs.json';
 
 interface TestConfig {
   name: string;
@@ -45,6 +49,20 @@ export default function TestManager() {
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Migration state
+  const [migrationLoading, setMigrationLoading] = useState(false);
+  const [migrationLogs, setMigrationLogs] = useState<string[]>([]);
+  const [backupStatus, setBackupStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
+  const [migrationStatus, setMigrationStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
+
+  // Configure Amplify client for migrations
+  const migrationClient = useCallback(() => {
+    Amplify.configure(amplifyOutputs);
+    return generateClient<Schema>({
+      authMode: 'apiKey' // Use API key for migration operations
+    });
+  }, []);
 
   const loadTestConfig = useCallback(async () => {
     try {
@@ -267,6 +285,177 @@ export default function TestManager() {
     }
   };
 
+  // Migration Functions
+  const addMigrationLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setMigrationLogs(prev => [...prev, `[${timestamp}] ${message}`]);
+  };
+
+  const runBackup = async () => {
+    setBackupStatus('running');
+    addMigrationLog('🚀 Starting StockWallet backup...');
+    
+    try {
+      const client = migrationClient();
+      
+      addMigrationLog('📊 Fetching all StockWallet records...');
+      
+      const { data: wallets, errors } = await client.models.StockWallet.list({
+        limit: 1000 // Adjust if you have more records
+      });
+      
+      if (errors) {
+        throw new Error(`Failed to fetch wallets: ${JSON.stringify(errors)}`);
+      }
+      
+      addMigrationLog(`✅ Fetched ${wallets.length} wallet records`);
+      
+      // Create backup object
+      const backup = {
+        metadata: {
+          backupDate: new Date().toISOString(),
+          totalRecords: wallets.length,
+          purpose: 'Pre-migration backup with tpValue/stpValue fields',
+          version: '1.0',
+          schemaState: 'before-tp-to-stp-migration'
+        },
+        wallets: wallets
+      };
+      
+      // Download as JSON file
+      const backupData = JSON.stringify(backup, null, 2);
+      const blob = new Blob([backupData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `stockwallets-backup-${timestamp}.json`;
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      addMigrationLog(`✅ Backup completed successfully! Downloaded: ${filename}`);
+      addMigrationLog(`📊 Total records backed up: ${wallets.length}`);
+      setBackupStatus('success');
+      
+    } catch (error) {
+      console.error('Backup failed:', error);
+      addMigrationLog(`❌ Backup failed: ${error}`);
+      setBackupStatus('error');
+    }
+  };
+
+  const runMigration = async () => {
+    if (backupStatus !== 'success') {
+      alert('⚠️ Please run a backup first before running the migration!');
+      return;
+    }
+    
+    setMigrationStatus('running');
+    addMigrationLog('🚀 Starting tpValue → stpValue migration...');
+    
+    try {
+      const client = migrationClient();
+      
+      addMigrationLog('📊 Fetching all StockWallet records...');
+      
+      const { data: wallets, errors } = await client.models.StockWallet.list({
+        limit: 1000
+      });
+      
+      if (errors) {
+        throw new Error(`Failed to fetch wallets: ${JSON.stringify(errors)}`);
+      }
+      
+      addMigrationLog(`✅ Fetched ${wallets.length} wallet records`);
+      
+      if (wallets.length === 0) {
+        addMigrationLog('🎉 No wallets found to migrate.');
+        setMigrationStatus('success');
+        return;
+      }
+      
+      let migratedCount = 0;
+      let skippedCount = 0;
+      let errorCount = 0;
+      
+      for (const wallet of wallets) {
+        try {
+          // Check if this wallet has tpValue data
+          const hasTpData = wallet.tpValue !== null && wallet.tpValue !== undefined;
+          
+          if (!hasTpData) {
+            addMigrationLog(`⏭️  Skipping wallet ${wallet.id} - no tpValue data`);
+            skippedCount++;
+            continue;
+          }
+          
+          // Check if already has stpValue that matches
+          if (wallet.stpValue === wallet.tpValue) {
+            addMigrationLog(`⏭️  Skipping wallet ${wallet.id} - already migrated`);
+            skippedCount++;
+            continue;
+          }
+          
+          // Perform migration: Copy tpValue to stpValue
+          addMigrationLog(`📝 Migrating wallet ${wallet.id}: tpValue=${wallet.tpValue} → stpValue`);
+          
+          const updateData = {
+            id: wallet.id,
+            stpValue: wallet.tpValue,
+          };
+          
+          const updateResult = await client.models.StockWallet.update(updateData);
+          
+          if (updateResult.errors) {
+            throw new Error(`Error updating wallet: ${JSON.stringify(updateResult.errors)}`);
+          }
+          
+          migratedCount++;
+          
+          if (migratedCount % 5 === 0) {
+            addMigrationLog(`⏳ Progress: ${migratedCount}/${wallets.length} wallets migrated...`);
+          }
+          
+        } catch (error) {
+          console.error(`Error updating wallet ${wallet.id}:`, error);
+          addMigrationLog(`❌ Exception updating wallet ${wallet.id}: ${error}`);
+          errorCount++;
+        }
+      }
+      
+      // Summary
+      addMigrationLog('\n📊 Migration Summary:');
+      addMigrationLog(`✅ Successfully migrated: ${migratedCount}`);
+      addMigrationLog(`⏭️  Skipped (no data/already done): ${skippedCount}`);
+      addMigrationLog(`❌ Errors: ${errorCount}`);
+      addMigrationLog(`📊 Total processed: ${wallets.length}`);
+      
+      if (errorCount > 0) {
+        addMigrationLog('\n⚠️  Some records failed to migrate. Please check the errors above.');
+        setMigrationStatus('error');
+      } else {
+        addMigrationLog('\n🎉 Migration completed successfully!');
+        setMigrationStatus('success');
+      }
+      
+    } catch (error) {
+      console.error('Migration failed:', error);
+      addMigrationLog(`💥 Migration failed: ${error}`);
+      setMigrationStatus('error');
+    }
+  };
+
+  const clearLogs = () => {
+    setMigrationLogs([]);
+    setBackupStatus('idle');
+    setMigrationStatus('idle');
+  };
+
   if (loading) {
     return (
       <div className="container">
@@ -455,6 +644,59 @@ export default function TestManager() {
         <button className="run-btn" onClick={runTests}>
           Copy Command to Clipboard
         </button>
+      </div>
+
+      <div className="migration-section">
+        <h3>🔄 Database Migration: tpValue → stpValue</h3>
+        <div className="migration-info">
+          <p>This migration copies existing <code>tpValue</code> data to the new <code>stpValue</code> field in all StockWallet records.</p>
+          <div className="migration-warning">
+            ⚠️ <strong>Important:</strong> Always create a backup before running migrations!
+          </div>
+        </div>
+        
+        <div className="migration-controls">
+          <div className="migration-step">
+            <h4>Step 1: Create Backup</h4>
+            <button 
+              className={`migration-btn backup-btn ${backupStatus}`}
+              onClick={runBackup}
+              disabled={backupStatus === 'running'}
+            >
+              {backupStatus === 'running' ? '⏳ Creating Backup...' : 
+               backupStatus === 'success' ? '✅ Backup Complete' :
+               backupStatus === 'error' ? '❌ Backup Failed' : '💾 Create Backup'}
+            </button>
+          </div>
+          
+          <div className="migration-step">
+            <h4>Step 2: Run Migration</h4>
+            <button 
+              className={`migration-btn migrate-btn ${migrationStatus}`}
+              onClick={runMigration}
+              disabled={migrationStatus === 'running' || backupStatus !== 'success'}
+            >
+              {migrationStatus === 'running' ? '⏳ Migrating...' : 
+               migrationStatus === 'success' ? '✅ Migration Complete' :
+               migrationStatus === 'error' ? '❌ Migration Failed' : '🔄 Run Migration'}
+            </button>
+          </div>
+          
+          <button className="migration-btn clear-btn" onClick={clearLogs}>
+            🗑️ Clear Logs
+          </button>
+        </div>
+        
+        {migrationLogs.length > 0 && (
+          <div className="migration-logs">
+            <h4>Migration Logs</h4>
+            <div className="logs-container">
+              {migrationLogs.map((log, index) => (
+                <div key={index} className="log-entry">{log}</div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
