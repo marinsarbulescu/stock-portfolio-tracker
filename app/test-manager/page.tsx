@@ -2,11 +2,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import './test-manager.css';
-import { Amplify } from 'aws-amplify';
+import { useOwnerId } from '../hooks/useOwnerId';
 import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../../amplify/data/resource';
-import amplifyOutputs from '../../amplify_outputs.json';
+import type { Schema } from '@/amplify/data/resource';
+
+// Hardcoded dev owner ID for test-manager access
+const DEV_OWNER_ID = 'e10b55e0-9031-70db-23f9-cdf5d997659c::e10b55e0-9031-70db-23f9-cdf5d997659c';
 
 interface TestConfig {
   name: string;
@@ -44,25 +47,34 @@ interface TestSuiteConfig {
   presets: Record<string, Preset>;
 }
 
+interface ClearSelections {
+  portfolio: boolean;
+  transactions: boolean;
+  wallets: boolean;
+}
+
+interface ClearStatus {
+  type: 'success' | 'error' | 'info';
+  message: string;
+}
+
 export default function TestManager() {
   const [config, setConfig] = useState<TestSuiteConfig | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Migration state
-  const [migrationLoading, setMigrationLoading] = useState(false);
-  const [migrationLogs, setMigrationLogs] = useState<string[]>([]);
-  const [backupStatus, setBackupStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
-  const [migrationStatus, setMigrationStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
+  // Clear dev tables state
+  const [clearSelections, setClearSelections] = useState<ClearSelections>({
+    portfolio: false,
+    transactions: false,
+    wallets: false
+  });
+  const [clearLoading, setClearLoading] = useState(false);
+  const [clearStatus, setClearStatus] = useState<ClearStatus | null>(null);
 
-  // Configure Amplify client for migrations
-  const migrationClient = useCallback(() => {
-    Amplify.configure(amplifyOutputs);
-    return generateClient<Schema>({
-      authMode: 'apiKey' // Use API key for migration operations
-    });
-  }, []);
+  // Owner ID check for access control
+  const { ownerId, isLoading: ownerLoading } = useOwnerId();
 
   const loadTestConfig = useCallback(async () => {
     try {
@@ -285,176 +297,172 @@ export default function TestManager() {
     }
   };
 
-  // Migration Functions
-  const addMigrationLog = (message: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    setMigrationLogs(prev => [...prev, `[${timestamp}] ${message}`]);
+  // Clear dev tables functions
+  const hasAnySelection = (): boolean => {
+    return clearSelections.portfolio || clearSelections.transactions || clearSelections.wallets;
   };
 
-  const runBackup = async () => {
-    setBackupStatus('running');
-    addMigrationLog('🚀 Starting StockWallet backup...');
-    
-    try {
-      const client = migrationClient();
-      
-      addMigrationLog('📊 Fetching all StockWallet records...');
-      
-      const { data: wallets, errors } = await client.models.StockWallet.list({
-        limit: 1000 // Adjust if you have more records
-      });
-      
-      if (errors) {
-        throw new Error(`Failed to fetch wallets: ${JSON.stringify(errors)}`);
-      }
-      
-      addMigrationLog(`✅ Fetched ${wallets.length} wallet records`);
-      
-      // Create backup object
-      const backup = {
-        metadata: {
-          backupDate: new Date().toISOString(),
-          totalRecords: wallets.length,
-          purpose: 'Pre-migration backup with tpValue/stpValue fields',
-          version: '1.0',
-          schemaState: 'before-tp-to-stp-migration'
-        },
-        wallets: wallets
-      };
-      
-      // Download as JSON file
-      const backupData = JSON.stringify(backup, null, 2);
-      const blob = new Blob([backupData], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `stockwallets-backup-${timestamp}.json`;
-      
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      addMigrationLog(`✅ Backup completed successfully! Downloaded: ${filename}`);
-      addMigrationLog(`📊 Total records backed up: ${wallets.length}`);
-      setBackupStatus('success');
-      
-    } catch (error) {
-      console.error('Backup failed:', error);
-      addMigrationLog(`❌ Backup failed: ${error}`);
-      setBackupStatus('error');
-    }
-  };
-
-  const runMigration = async () => {
-    if (backupStatus !== 'success') {
-      alert('⚠️ Please run a backup first before running the migration!');
+  const clearSelectedTables = async () => {
+    if (!hasAnySelection()) {
+      setClearStatus({ type: 'error', message: 'Please select at least one table to clear' });
       return;
     }
-    
-    setMigrationStatus('running');
-    addMigrationLog('🚀 Starting tpValue → stpValue migration...');
-    
+
+    setClearLoading(true);
+    setClearStatus({ type: 'info', message: 'Clearing selected tables...' });
+
     try {
-      const client = migrationClient();
-      
-      addMigrationLog('📊 Fetching all StockWallet records...');
-      
-      const { data: wallets, errors } = await client.models.StockWallet.list({
-        limit: 1000
-      });
-      
-      if (errors) {
-        throw new Error(`Failed to fetch wallets: ${JSON.stringify(errors)}`);
-      }
-      
-      addMigrationLog(`✅ Fetched ${wallets.length} wallet records`);
-      
-      if (wallets.length === 0) {
-        addMigrationLog('🎉 No wallets found to migrate.');
-        setMigrationStatus('success');
-        return;
-      }
-      
-      let migratedCount = 0;
-      let skippedCount = 0;
-      let errorCount = 0;
-      
-      for (const wallet of wallets) {
-        try {
-          // Check if this wallet has tpValue data
-          const hasTpData = wallet.tpValue !== null && wallet.tpValue !== undefined;
+      const client = generateClient<Schema>();
+      let clearCount = 0;
+
+      // Helper function to delete all records from a table with pagination
+      const deleteAllRecords = async (modelType: 'PortfolioStock' | 'Transaction' | 'StockWallet') => {
+        let hasMoreRecords = true;
+        let deletedCount = 0;
+        
+        while (hasMoreRecords) {
+          let response;
           
-          if (!hasTpData) {
-            addMigrationLog(`⏭️  Skipping wallet ${wallet.id} - no tpValue data`);
-            skippedCount++;
-            continue;
+          // Fetch records with limit
+          switch (modelType) {
+            case 'PortfolioStock':
+              response = await client.models.PortfolioStock.list({
+                selectionSet: ['id', 'symbol'],
+                limit: 1000
+              });
+              break;
+            case 'Transaction':
+              response = await client.models.Transaction.list({
+                selectionSet: ['id'],
+                limit: 1000
+              });
+              break;
+            case 'StockWallet':
+              response = await client.models.StockWallet.list({
+                selectionSet: ['id'],
+                limit: 1000
+              });
+              break;
           }
           
-          // Check if already has stpValue that matches
-          if (wallet.stpValue === wallet.tpValue) {
-            addMigrationLog(`⏭️  Skipping wallet ${wallet.id} - already migrated`);
-            skippedCount++;
-            continue;
+          const { data: records } = response;
+          
+          if (!records || records.length === 0) {
+            hasMoreRecords = false;
+            break;
           }
           
-          // Perform migration: Copy tpValue to stpValue
-          addMigrationLog(`📝 Migrating wallet ${wallet.id}: tpValue=${wallet.tpValue} → stpValue`);
-          
-          const updateData = {
-            id: wallet.id,
-            stpValue: wallet.tpValue,
-          };
-          
-          const updateResult = await client.models.StockWallet.update(updateData);
-          
-          if (updateResult.errors) {
-            throw new Error(`Error updating wallet: ${JSON.stringify(updateResult.errors)}`);
+          // Delete all records in this batch
+          for (const record of records) {
+            switch (modelType) {
+              case 'PortfolioStock':
+                await client.models.PortfolioStock.delete({ id: record.id });
+                break;
+              case 'Transaction':
+                await client.models.Transaction.delete({ id: record.id });
+                break;
+              case 'StockWallet':
+                await client.models.StockWallet.delete({ id: record.id });
+                break;
+            }
+            deletedCount++;
           }
           
-          migratedCount++;
-          
-          if (migratedCount % 5 === 0) {
-            addMigrationLog(`⏳ Progress: ${migratedCount}/${wallets.length} wallets migrated...`);
+          // If we got fewer records than the limit, we're done
+          if (records.length < 1000) {
+            hasMoreRecords = false;
           }
-          
-        } catch (error) {
-          console.error(`Error updating wallet ${wallet.id}:`, error);
-          addMigrationLog(`❌ Exception updating wallet ${wallet.id}: ${error}`);
-          errorCount++;
         }
+        
+        return deletedCount;
+      };
+
+      // Clear portfolio stocks (will cascade to related data)
+      if (clearSelections.portfolio) {
+        const deletedCount = await deleteAllRecords('PortfolioStock');
+        clearCount += deletedCount;
       }
-      
-      // Summary
-      addMigrationLog('\n📊 Migration Summary:');
-      addMigrationLog(`✅ Successfully migrated: ${migratedCount}`);
-      addMigrationLog(`⏭️  Skipped (no data/already done): ${skippedCount}`);
-      addMigrationLog(`❌ Errors: ${errorCount}`);
-      addMigrationLog(`📊 Total processed: ${wallets.length}`);
-      
-      if (errorCount > 0) {
-        addMigrationLog('\n⚠️  Some records failed to migrate. Please check the errors above.');
-        setMigrationStatus('error');
-      } else {
-        addMigrationLog('\n🎉 Migration completed successfully!');
-        setMigrationStatus('success');
+
+      // Clear transactions (if not already cleared by portfolio cascade)
+      if (clearSelections.transactions && !clearSelections.portfolio) {
+        const deletedCount = await deleteAllRecords('Transaction');
+        clearCount += deletedCount;
       }
-      
+
+      // Clear wallets (if not already cleared by portfolio cascade)
+      if (clearSelections.wallets && !clearSelections.portfolio) {
+        const deletedCount = await deleteAllRecords('StockWallet');
+        clearCount += deletedCount;
+      }
+
+      setClearStatus({
+        type: 'success',
+        message: `Successfully cleared selected tables. Deleted ${clearCount} records.`
+      });
+
+      // Reset selections
+      setClearSelections({ portfolio: false, transactions: false, wallets: false });
     } catch (error) {
-      console.error('Migration failed:', error);
-      addMigrationLog(`💥 Migration failed: ${error}`);
-      setMigrationStatus('error');
+      console.error('Error clearing tables:', error);
+      setClearStatus({
+        type: 'error',
+        message: `Failed to clear tables: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    } finally {
+      setClearLoading(false);
     }
   };
 
-  const clearLogs = () => {
-    setMigrationLogs([]);
-    setBackupStatus('idle');
-    setMigrationStatus('idle');
-  };
+  // Owner-based access control
+  if (ownerLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        fontSize: '18px'
+      }}>
+        Loading authentication...
+      </div>
+    );
+  }
+
+  if (!ownerId || ownerId !== DEV_OWNER_ID) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        textAlign: 'center',
+        padding: '20px'
+      }}>
+        <h1 style={{ color: '#ff6b6b', marginBottom: '20px' }}>🚫 Access Denied</h1>
+        <h2 style={{ color: '#666', marginBottom: '10px' }}>Test Manager Not Available</h2>
+        <p style={{ color: '#999', maxWidth: '500px', lineHeight: '1.5' }}>
+          The Test Manager is only accessible to authorized development users. 
+          This page includes database migration tools and testing utilities that require special permissions.
+        </p>
+        <div style={{ marginTop: '30px' }}>
+          <Link 
+            href="/"
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#007cba',
+              color: 'white',
+              textDecoration: 'none',
+              borderRadius: '6px',
+              fontWeight: '500'
+            }}
+          >
+            Return to Portfolio
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -646,55 +654,47 @@ export default function TestManager() {
         </button>
       </div>
 
-      <div className="migration-section">
-        <h3>🔄 Database Migration: tpValue → stpValue</h3>
-        <div className="migration-info">
-          <p>This migration copies existing <code>tpValue</code> data to the new <code>stpValue</code> field in all StockWallet records.</p>
-          <div className="migration-warning">
-            ⚠️ <strong>Important:</strong> Always create a backup before running migrations!
+      <div className="clear-dev-section">
+        <h3>🗑️ Clear Dev Tables</h3>
+        <p className="clear-dev-warning">⚠️ This will permanently delete data from selected tables in the dev environment</p>
+        <div className="clear-dev-controls">
+          <div className="clear-checkboxes">
+            <label className="clear-checkbox">
+              <input
+                type="checkbox"
+                checked={clearSelections.portfolio}
+                onChange={(e) => setClearSelections(prev => ({...prev, portfolio: e.target.checked}))}
+              />
+              <span>Portfolio Stocks</span>
+            </label>
+            <label className="clear-checkbox">
+              <input
+                type="checkbox"
+                checked={clearSelections.transactions}
+                onChange={(e) => setClearSelections(prev => ({...prev, transactions: e.target.checked}))}
+              />
+              <span>Transactions</span>
+            </label>
+            <label className="clear-checkbox">
+              <input
+                type="checkbox"
+                checked={clearSelections.wallets}
+                onChange={(e) => setClearSelections(prev => ({...prev, wallets: e.target.checked}))}
+              />
+              <span>Wallets</span>
+            </label>
           </div>
-        </div>
-        
-        <div className="migration-controls">
-          <div className="migration-step">
-            <h4>Step 1: Create Backup</h4>
-            <button 
-              className={`migration-btn backup-btn ${backupStatus}`}
-              onClick={runBackup}
-              disabled={backupStatus === 'running'}
-            >
-              {backupStatus === 'running' ? '⏳ Creating Backup...' : 
-               backupStatus === 'success' ? '✅ Backup Complete' :
-               backupStatus === 'error' ? '❌ Backup Failed' : '💾 Create Backup'}
-            </button>
-          </div>
-          
-          <div className="migration-step">
-            <h4>Step 2: Run Migration</h4>
-            <button 
-              className={`migration-btn migrate-btn ${migrationStatus}`}
-              onClick={runMigration}
-              disabled={migrationStatus === 'running' || backupStatus !== 'success'}
-            >
-              {migrationStatus === 'running' ? '⏳ Migrating...' : 
-               migrationStatus === 'success' ? '✅ Migration Complete' :
-               migrationStatus === 'error' ? '❌ Migration Failed' : '🔄 Run Migration'}
-            </button>
-          </div>
-          
-          <button className="migration-btn clear-btn" onClick={clearLogs}>
-            🗑️ Clear Logs
+          <button 
+            className={`clear-btn ${clearLoading ? 'loading' : ''}`}
+            onClick={clearSelectedTables}
+            disabled={clearLoading || !hasAnySelection()}
+          >
+            {clearLoading ? 'Clearing...' : 'Clear Selected'}
           </button>
         </div>
-        
-        {migrationLogs.length > 0 && (
-          <div className="migration-logs">
-            <h4>Migration Logs</h4>
-            <div className="logs-container">
-              {migrationLogs.map((log, index) => (
-                <div key={index} className="log-entry">{log}</div>
-              ))}
-            </div>
+        {clearStatus && (
+          <div className={`clear-status ${clearStatus.type}`}>
+            {clearStatus.message}
           </div>
         )}
       </div>
