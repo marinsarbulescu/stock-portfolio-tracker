@@ -79,6 +79,27 @@ export default function WalletsTabs({
     );
   };
 
+  // Helper function to check if HTP is highlighted (HTP target price met)
+  const isHtpHighlighted = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
+    const remaining = wallet.remainingShares ?? 0;
+    const buyPrice = wallet.buyPrice;
+
+    if (
+      remaining <= SHARE_EPSILON ||
+      typeof buyPrice !== 'number' ||
+      typeof currentStockPrice !== 'number' ||
+      typeof stockHtp !== 'number' ||
+      stockHtp <= 0 ||
+      buyPrice <= 0
+    ) {
+      return false;
+    }
+
+    // Calculate HTP target price using same logic as %2HTP column
+    const htpTargetPrice = calculateHtpTargetPrice(buyPrice, stockHtp, stockCommission);
+    return htpTargetPrice && currentStockPrice >= htpTargetPrice;
+  };
+
   // HTP Sell Signal Logic - Apply to both Swing and Hold wallets
   const getHtpCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
     // Apply HTP logic for both Swing and Hold wallets
@@ -397,7 +418,9 @@ export default function WalletsTabs({
                           border: 'none', 
                           cursor: 'pointer', 
                           padding: '5px', 
-                          color: isTpHighlighted(wallet, currentPrice) ? 'lightgreen' : 'gray'
+                          color: activeTab === 'Hold' 
+                            ? isHtpHighlighted(wallet, currentPrice) ? 'lightgreen' : 'gray'
+                            : isTpHighlighted(wallet, currentPrice) ? 'lightgreen' : 'gray'
                         }}
                       >
                         Sell
