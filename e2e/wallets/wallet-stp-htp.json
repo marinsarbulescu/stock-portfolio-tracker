@@ -1,4 +1,9 @@
 {
+  "colorDefinitions": {
+    "default": "rgb(0, 0, 0)",
+    "green": "rgb(144, 238, 144)",
+    "yellow": "rgb(237, 255, 0)"
+  },
   "scenario": "STP-HTP-Validation",
   "testPriceUpdates": {
     "initialPrice": {
@@ -81,7 +86,7 @@
       "percentToStp": "-0.91%",
       "percentToHtp": "-9.17%",
       "colorValidation": {
-        "percentToStp": "default",
+        "percentToStp": "yellow",
         "percentToHtp": "default"
       }
     },
@@ -128,7 +133,7 @@
         "htpValue": "$120.00",
         "percentToHtp": "-4.17%",
         "colorValidation": {
-          "stpValue": "default",
+          "stpValue": "green",
           "percentToStp": "green",
           "htpValue": "default",
           "percentToHtp": "default"
@@ -140,8 +145,8 @@
         "htpValue": "$120.00",
         "percentToHtp": "-4.17%",
         "colorValidation": {
-          "stpValue": "default",
-          "percentToStp": "default",
+          "stpValue": "green",
+          "percentToStp": "green",
           "htpValue": "default",
           "percentToHtp": "default"
         }
@@ -164,10 +169,10 @@
         "htpValue": "$120.00",
         "percentToHtp": "1.67%",
         "colorValidation": {
-          "stpValue": "default",
+          "stpValue": "green",
           "percentToStp": "green",
-          "htpValue": "default",
-          "percentToHtp": "default"
+          "htpValue": "green",
+          "percentToHtp": "green"
         }
       },
       "hold": {
@@ -176,9 +181,9 @@
         "htpValue": "$120.00",
         "percentToHtp": "1.67%",
         "colorValidation": {
-          "stpValue": "default",
-          "percentToStp": "default",
-          "htpValue": "default",
+          "stpValue": "green",
+          "percentToStp": "green", 
+          "htpValue": "green",
           "percentToHtp": "green"
         }
       }

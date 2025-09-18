@@ -308,10 +308,22 @@ async function addBuyTransaction(page: Page, transaction: any): Promise<void> {
 }
 
 /**
- * Helper function to verify color styling is default (not green)
+ * Helper function to verify color matching using color definitions from JSON
  */
-async function verifyDefaultColor(page: Page, element: any, fieldName: string): Promise<void> {
+async function verifyColorFromDefinition(
+    page: Page, 
+    element: any, 
+    expectedColorLabel: string, 
+    colorDefinitions: any, 
+    fieldName: string
+): Promise<void> {
     await expect(element).toBeVisible();
+    
+    // Get the expected RGB value from color definitions
+    const expectedRgbValue = colorDefinitions[expectedColorLabel];
+    if (!expectedRgbValue) {
+        throw new Error(`Color definition not found for label: ${expectedColorLabel}`);
+    }
     
     // Get computed styles
     const backgroundColor = await element.evaluate((el: Element) => {
@@ -323,54 +335,28 @@ async function verifyDefaultColor(page: Page, element: any, fieldName: string): 
     });
     
     console.log(`[ColorValidation] ${fieldName} - Background: ${backgroundColor}, Color: ${color}`);
+    console.log(`[ColorValidation] ${fieldName} - Expected: ${expectedColorLabel} (${expectedRgbValue})`);
     
-    // Verify it's NOT green (green would typically be rgb(0, 128, 0) or similar)
-    // Default should be transparent, inherit, or standard text colors
-    expect(backgroundColor).not.toContain('rgb(0, 128, 0)');
-    expect(backgroundColor).not.toContain('green');
-    expect(color).not.toContain('rgb(0, 128, 0)');
+    // Check if either background or color matches the expected RGB value
+    const matchesBackground = backgroundColor.includes(expectedRgbValue);
+    const matchesColor = color.includes(expectedRgbValue);
     
-    console.log(`[ColorValidation] ✅ ${fieldName} has default coloring`);
+    expect(matchesBackground || matchesColor).toBe(true);
+    console.log(`[ColorValidation] ✅ ${fieldName} has expected color: ${expectedColorLabel} (${expectedRgbValue})`);
 }
 
 /**
- * Helper function to verify color styling is green (highlighted)
+ * Legacy wrapper for verifyDefaultColor - validates 'default' color
+ */
+async function verifyDefaultColor(page: Page, element: any, fieldName: string): Promise<void> {
+    await verifyColorFromDefinition(page, element, 'default', testData.colorDefinitions, fieldName);
+}
+
+/**
+ * Legacy wrapper for verifyGreenColor - validates 'green' color  
  */
 async function verifyGreenColor(page: Page, element: any, fieldName: string): Promise<void> {
-    await expect(element).toBeVisible();
-    
-    // Get computed styles
-    const backgroundColor = await element.evaluate((el: Element) => {
-        return window.getComputedStyle(el).backgroundColor;
-    });
-    
-    const color = await element.evaluate((el: Element) => {
-        return window.getComputedStyle(el).color;
-    });
-    
-    console.log(`[ColorValidation] ${fieldName} - Background: ${backgroundColor}, Color: ${color}`);
-    
-    // Verify it's green highlighting
-    // Check for common green color representations (may vary by browser/theme)
-    const isGreen = backgroundColor.includes('rgb(0, 128, 0)') || 
-                    backgroundColor.includes('green') ||
-                    color.includes('rgb(0, 128, 0)') || 
-                    color.includes('green') ||
-                    // Check for other green shades that might be used
-                    backgroundColor.includes('rgb(144, 238, 144)') || // lightgreen
-                    backgroundColor.includes('rgb(50, 205, 50)') ||   // limegreen
-                    backgroundColor.includes('rgb(0, 255, 0)') ||     // lime
-                    backgroundColor.includes('rgb(1, 255, 0)') ||     // bright lime (Signals page)
-                    color.includes('rgb(144, 238, 144)') ||
-                    color.includes('rgb(50, 205, 50)') ||
-                    color.includes('rgb(0, 255, 0)') ||
-                    color.includes('rgb(1, 255, 0)');
-    
-    if (!isGreen) {
-        console.log(`[ColorValidation] ⚠️ ${fieldName} expected to be green but found - Background: ${backgroundColor}, Color: ${color}`);
-    }
-    
-    console.log(`[ColorValidation] ✅ ${fieldName} has green coloring`);
+    await verifyColorFromDefinition(page, element, 'green', testData.colorDefinitions, fieldName);
 }
 
 /**
@@ -405,14 +391,22 @@ async function verifySignalsPageValues(
     await expect(htpCell).toHaveText(config.expectedSignalsValues.percentToHtp);
     console.log(`[SignalsHelper] ✅ %2HTP value verified: ${config.expectedSignalsValues.percentToHtp}`);
     
-    // Verify default colors for %2STP and %2HTP
-    if (config.expectedSignalsValues.colorValidation.percentToStp === 'default') {
-        await verifyDefaultColor(page, stpCell, '%2STP in Signals');
-    }
+    // Verify colors for %2STP and %2HTP using color definitions
+    await verifyColorFromDefinition(
+        page, 
+        stpCell, 
+        config.expectedSignalsValues.colorValidation.percentToStp, 
+        testData.colorDefinitions, 
+        '%2STP in Signals'
+    );
     
-    if (config.expectedSignalsValues.colorValidation.percentToHtp === 'default') {
-        await verifyDefaultColor(page, htpCell, '%2HTP in Signals');
-    }
+    await verifyColorFromDefinition(
+        page, 
+        htpCell, 
+        config.expectedSignalsValues.colorValidation.percentToHtp, 
+        testData.colorDefinitions, 
+        '%2HTP in Signals'
+    );
     
     console.log('[SignalsHelper] ✅ Signals page validation completed');
 }
@@ -489,22 +483,38 @@ async function verifySwingWalletTab(
     await expect(percentHtpElement).toHaveText(config.expectedWalletTabs.swing.percentToHtp);
     console.log(`[SwingWalletHelper] ✅ %2HTP value verified: ${config.expectedWalletTabs.swing.percentToHtp}`);
     
-    // Verify default colors if specified
-    if (config.expectedWalletTabs.swing.colorValidation.stpValue === 'default') {
-        await verifyDefaultColor(page, stpValueElement, 'STP in Swing wallet');
-    }
+    // Verify colors using color definitions
+    await verifyColorFromDefinition(
+        page, 
+        stpValueElement, 
+        config.expectedWalletTabs.swing.colorValidation.stpValue, 
+        testData.colorDefinitions, 
+        'STP in Swing wallet'
+    );
     
-    if (config.expectedWalletTabs.swing.colorValidation.percentToStp === 'default') {
-        await verifyDefaultColor(page, percentStpElement, '%2STP in Swing wallet');
-    }
+    await verifyColorFromDefinition(
+        page, 
+        percentStpElement, 
+        config.expectedWalletTabs.swing.colorValidation.percentToStp, 
+        testData.colorDefinitions, 
+        '%2STP in Swing wallet'
+    );
     
-    if (config.expectedWalletTabs.swing.colorValidation.htpValue === 'default') {
-        await verifyDefaultColor(page, htpValueElement, 'HTP in Swing wallet');
-    }
+    await verifyColorFromDefinition(
+        page, 
+        htpValueElement, 
+        config.expectedWalletTabs.swing.colorValidation.htpValue, 
+        testData.colorDefinitions, 
+        'HTP in Swing wallet'
+    );
     
-    if (config.expectedWalletTabs.swing.colorValidation.percentToHtp === 'default') {
-        await verifyDefaultColor(page, percentHtpElement, '%2HTP in Swing wallet');
-    }
+    await verifyColorFromDefinition(
+        page, 
+        percentHtpElement, 
+        config.expectedWalletTabs.swing.colorValidation.percentToHtp, 
+        testData.colorDefinitions, 
+        '%2HTP in Swing wallet'
+    );
     
     console.log('[SwingWalletHelper] ✅ Swing wallet validation completed');
 }

@@ -67,15 +67,15 @@ export default function WalletsTabs({
     return {};
   };
 
-  // Helper function to check if TP is highlighted (take profit condition met)
-  const isTpHighlighted = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
+  // Helper function to check if STP is highlighted (take profit condition met)
+  const isStpHighlighted = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
     const remaining = wallet.remainingShares ?? 0;
-    const tp = wallet.stpValue;
+    const stp = wallet.stpValue;
     return (
       remaining > SHARE_EPSILON &&
-      typeof tp === 'number' &&
+      typeof stp === 'number' &&
       typeof currentStockPrice === 'number' &&
-      tp <= currentStockPrice
+      stp <= currentStockPrice
     );
   };
 
@@ -420,7 +420,7 @@ export default function WalletsTabs({
                           padding: '5px', 
                           color: activeTab === 'Hold' 
                             ? isHtpHighlighted(wallet, currentPrice) ? 'lightgreen' : 'gray'
-                            : isTpHighlighted(wallet, currentPrice) ? 'lightgreen' : 'gray'
+                            : isStpHighlighted(wallet, currentPrice) ? 'lightgreen' : 'gray'
                         }}
                       >
                         Sell

@@ -1112,7 +1112,7 @@ export default function HomePage() {
     const getBreakEvenCellStyle = (percent: number | null): React.CSSProperties => {
         if (percent === null || percent === undefined) return {};
         if (percent >= 0) {
-            return { color: '#01ff00' };
+            return { color: 'lightgreen' };
         } else if (percent >= -1) {
             return { color: '#edff00' };
         } else {
