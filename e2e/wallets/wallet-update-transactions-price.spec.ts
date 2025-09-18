@@ -50,7 +50,7 @@ function formatShares(amount: number, precision: number = SHARE_PRECISION): stri
 async function navigateToPortfolioPage(page: Page) {
     console.log('[PageHelper] Navigating to Portfolio page...');
     await page.goto('/portfolio');
-    const portfolioLink = page.locator('nav a:has-text("Portfolio")');
+    const portfolioLink = page.locator('[data-testid="nav-portfolio-link"]');
     await expect(portfolioLink).toBeVisible({ timeout: 15000 });
     await portfolioLink.click();
     
@@ -282,7 +282,7 @@ async function editTransactionById(page: Page, transactionId: string, newPrice: 
     console.log(`[PageHelper] Editing transaction ${transactionId} to price $${newPrice}... ${description}`);
     
     // Navigate to transactions section
-    const transactionsSection = page.locator('text=Transactions').first();
+    const transactionsSection = page.locator('[data-testid="wallets-transactions-section-header"]').first();
     await transactionsSection.scrollIntoViewIfNeeded();
     
     // Find the edit button with the specific transaction ID
@@ -324,7 +324,7 @@ async function editTransactionByInvestmentInspection(page: Page, targetInvestmen
     console.log(`[PageHelper] Finding and editing transaction with investment $${targetInvestment} to price $${newPrice}... ${description}`);
     
     // Navigate to transactions section
-    const transactionsSection = page.locator('text=Transactions').first();
+    const transactionsSection = page.locator('[data-testid="wallets-transactions-section-header"]').first();
     await transactionsSection.scrollIntoViewIfNeeded();
     
     // Wait for transaction table to be visible and stable
@@ -433,7 +433,7 @@ async function editTransactionPrice(page: Page, transactionIndex: number, newPri
     console.log(`[PageHelper] Editing transaction ${transactionIndex + 1} price to $${newPrice}...`);
     
     // Navigate to transactions section
-    const transactionsSection = page.locator('text=Transactions').first();
+    const transactionsSection = page.locator('[data-testid="wallets-transactions-section-header"]').first();
     await transactionsSection.scrollIntoViewIfNeeded();
     
     // DEBUG: Log all visible transactions before editing
@@ -444,12 +444,12 @@ async function editTransactionPrice(page: Page, transactionIndex: number, newPri
     
     for (let i = 0; i < rowCount; i++) {
         const row = transactionRows.nth(i);
-        const dateCell = row.locator('td').nth(1); // Date column
-        const typeCell = row.locator('td').nth(2); // Type column
-        const signalCell = row.locator('td').nth(3); // Signal column
-        const priceCell = row.locator('td').nth(4); // Price column
-        const sharesCell = row.locator('td').nth(5); // Shares column
-        const investmentCell = row.locator('td').nth(6); // Investment column
+        const dateCell = row.locator('[data-testid="wallets-transaction-table-date-display"]');
+        const typeCell = row.locator('[data-testid="wallets-transaction-table-txnType-display"]');
+        const signalCell = row.locator('[data-testid="wallets-transaction-table-signal-display"]');
+        const priceCell = row.locator('[data-testid="wallets-transaction-table-price-display"]');
+        const sharesCell = row.locator('[data-testid="wallets-transaction-table-quantity-display"]');
+        const investmentCell = row.locator('[data-testid="wallets-transaction-table-investment-display"]');
         
         const dateText = await dateCell.textContent();
         const typeText = await typeCell.textContent();
@@ -519,7 +519,7 @@ async function verifyOverview(
     console.log(`[OverviewHelper] Verifying overview for ${stepName}...`);
     
     // Ensure overview section is expanded
-    const overviewHeader = page.locator('p').filter({ hasText: 'Overview' });
+    const overviewHeader = page.locator('[data-testid="overview-toggle"]');
     await expect(overviewHeader).toBeVisible();
     
     // Check if overview is collapsed and expand it if needed
@@ -565,7 +565,7 @@ async function verifyInitialSettings(page: Page, stockConfig: any): Promise<void
     console.log('[OverviewHelper] Verifying initial settings after stock creation...');
     
     // Ensure overview section is expanded
-    const overviewHeader = page.locator('p').filter({ hasText: 'Overview' });
+    const overviewHeader = page.locator('[data-testid="overview-toggle"]');
     await expect(overviewHeader).toBeVisible();
     
     // Check if overview is collapsed and expand it if needed

@@ -364,6 +364,7 @@ export default function EditStockModal({
             </button>
             <button 
               type="submit" 
+              data-testid="portfolio-edit-stock-update-button"
               disabled={isLoading}
               style={{
                 padding: '8px 16px',

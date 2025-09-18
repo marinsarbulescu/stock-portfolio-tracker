@@ -373,7 +373,7 @@ async function verifySignalsPageValues(
     await page.waitForLoadState('networkidle');
     
     // Wait for signals table to be visible
-    await expect(page.locator('table').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('[data-testid="signals-table"]')).toBeVisible({ timeout: 15000 });
     console.log('[SignalsHelper] Signals table is visible');
     
     // Find the row with our test stock ticker using the test ID
@@ -421,7 +421,7 @@ async function verifyWalletOverview(
     console.log('[OverviewHelper] Verifying wallet overview section...');
     
     // Expand the WalletsOverview section if not already expanded
-    const overviewToggle = page.locator('p:has-text("Overview")');
+    const overviewToggle = page.locator('[data-testid="overview-toggle"]');
     await expect(overviewToggle).toBeVisible({ timeout: 10000 });
     await overviewToggle.click();
     await page.waitForTimeout(500); // Wait for expansion animation
@@ -541,19 +541,17 @@ async function verifyHoldWalletTab(
     console.log('[HoldWalletHelper] Verifying HTP and %2HTP columns are visible by default...');
     
     // Verify HTP column is visible by default (checkbox should be checked)
-    const htpColumnLabel = page.locator('label').filter({ hasText: /^HTP$/ });
-    if (await htpColumnLabel.isVisible()) {
-        const htpCheckbox = htpColumnLabel.locator('input[type="checkbox"]');
-        const isChecked = await htpCheckbox.isChecked();
+    const htpColumnCheckbox = page.locator('[data-testid="wallet-column-checkbox-htpValue"]');
+    if (await htpColumnCheckbox.isVisible()) {
+        const isChecked = await htpColumnCheckbox.isChecked();
         if (!isChecked) {
             console.warn('[HoldWalletHelper] Warning: HTP column was not visible by default');
         }
     }
     
     // Verify %2HTP column is visible by default (checkbox should be checked)
-    const htpPercentLabel = page.locator('label').filter({ hasText: /^%2HTP$/ });
-    if (await htpPercentLabel.isVisible()) {
-        const htpPercentCheckbox = htpPercentLabel.locator('input[type="checkbox"]');
+    const htpPercentCheckbox = page.locator('[data-testid="wallet-column-checkbox-htp"]');
+    if (await htpPercentCheckbox.isVisible()) {
         const isChecked = await htpPercentCheckbox.isChecked();
         if (!isChecked) {
             console.warn('[HoldWalletHelper] Warning: %2HTP column was not visible by default');
@@ -684,7 +682,7 @@ test.describe('STP HTP Validation E2E Test', () => {
         console.log('\n📍 Step 2: Going to Signals page and clicking ticker...');
         await page.goto('/signals');
         await page.waitForLoadState('networkidle');
-        const tickerLink = page.locator(`a:has-text("${config.stock.symbol}")`);
+        const tickerLink = page.locator(`[data-testid="signals-table-ticker-${config.stock.symbol}"]`);
         await expect(tickerLink).toBeVisible();
         await tickerLink.click();
         await page.waitForLoadState('networkidle');
@@ -721,7 +719,7 @@ test.describe('STP HTP Validation E2E Test', () => {
         // Navigate back to Signals page and click on ticker to go to wallet page
         await page.goto('/signals');
         await page.waitForLoadState('networkidle');
-        const tickerLinkStep8 = page.locator('td').filter({ hasText: config.stock.symbol });
+        const tickerLinkStep8 = page.locator(`[data-testid="signals-table-ticker-${config.stock.symbol}"]`);
         await expect(tickerLinkStep8).toBeVisible();
         await tickerLinkStep8.click();
         await page.waitForLoadState('networkidle');
@@ -751,7 +749,7 @@ test.describe('STP HTP Validation E2E Test', () => {
         console.log('\n📍 Step 9: Updating test price to $115 and verifying STP green highlighting...');
         
         // Click on ticker to navigate back to wallet page (we're currently on Signals page from Step 8d)
-        const tickerLinkStep9 = page.locator('td').filter({ hasText: config.stock.symbol });
+        const tickerLinkStep9 = page.locator(`[data-testid="signals-table-ticker-${config.stock.symbol}"]`);
         await expect(tickerLinkStep9).toBeVisible();
         await tickerLinkStep9.click();
         await page.waitForLoadState('networkidle');
@@ -781,7 +779,7 @@ test.describe('STP HTP Validation E2E Test', () => {
         console.log('\n📍 Step 10: Updating test price to $122 and verifying both STP and HTP green highlighting...');
         
         // Click on ticker to navigate back to wallet page (we're currently on Signals page from Step 9d)
-        const tickerLinkStep10 = page.locator('td').filter({ hasText: config.stock.symbol });
+        const tickerLinkStep10 = page.locator(`[data-testid="signals-table-ticker-${config.stock.symbol}"]`);
         await expect(tickerLinkStep10).toBeVisible();
         await tickerLinkStep10.click();
         await page.waitForLoadState('networkidle');
@@ -952,7 +950,7 @@ async function verifySignalsPageValuesAt109(
     await page.waitForLoadState('networkidle');
     
     // Verify signals table is visible
-    const signalsTable = page.locator('table');
+    const signalsTable = page.locator('[data-testid="signals-table"]');
     await expect(signalsTable).toBeVisible();
     console.log('[SignalsHelper] Signals table is visible');
     
@@ -1116,7 +1114,7 @@ async function verifySignalsPageValuesAt115(
     await page.waitForLoadState('networkidle');
     
     // Verify signals table is visible
-    const signalsTable = page.locator('table');
+    const signalsTable = page.locator('[data-testid="signals-table"]');
     await expect(signalsTable).toBeVisible();
     console.log('[SignalsHelper] Signals table is visible');
     
@@ -1280,7 +1278,7 @@ async function verifySignalsPageValuesAt122(
     await page.waitForLoadState('networkidle');
     
     // Verify signals table is visible
-    const signalsTable = page.locator('table');
+    const signalsTable = page.locator('[data-testid="signals-table"]');
     await expect(signalsTable).toBeVisible();
     console.log('[SignalsHelper] Signals table is visible');
     

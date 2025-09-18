@@ -37,7 +37,7 @@ export default function WalletsTransactionsTable({
 
   return (
     <div style={{ marginTop: '2rem' }}>
-      <p style={{ fontSize: '1.3em' }}>Transactions</p>
+      <p style={{ fontSize: '1.3em' }} data-testid="wallets-transactions-section-header">Transactions</p>
 
       {isLoading && <p>Loading transaction history...</p>}
       {error && <p style={{ color: 'red' }}>Error loading transactions: {error}</p>}

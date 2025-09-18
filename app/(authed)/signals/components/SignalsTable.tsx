@@ -49,9 +49,10 @@ export default function SignalsTable({
             {/* Column Visibility Controls */}
             <div style={{ marginBottom: '1rem', marginTop: '1rem', padding: '10px', border: '1px solid #353535', fontSize: '0.7em', color: "gray" }}>
                 {(Object.keys(reportColumnVisibility) as Array<keyof ReportColumnVisibilityState>).map((key) => (
-                    <label key={key} style={{ marginLeft: '15px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                    <label key={key} data-testid={`signals-column-visibility-${key}`} style={{ marginLeft: '15px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
                         <input
                             type="checkbox"
+                            data-testid={`signals-column-checkbox-${key}`}
                             checked={reportColumnVisibility[key]}
                             onChange={() =>
                                 setReportColumnVisibility((prev) => ({
@@ -67,7 +68,7 @@ export default function SignalsTable({
             </div>
 
             {/* Stock Table */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
+            <table data-testid="signals-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: '0.8em' }}>
                 <thead>
                     <tr style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>
                         {reportColumnVisibility.riskInvestment && (
@@ -109,7 +110,7 @@ export default function SignalsTable({
                             </th>
                         )}
                         {reportColumnVisibility.currentPrice && (
-                            <th style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('currentPrice')}>
+                            <th data-testid="signals-table-price-header" style={{ padding: '5px', cursor: 'pointer' }} onClick={() => requestSort('currentPrice')}>
                                 Price {sortConfig?.key === 'currentPrice' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
                             </th>
                         )}
@@ -157,7 +158,9 @@ export default function SignalsTable({
                             
                             return (
                             <React.Fragment key={item.id}>
-                                <tr style={{ 
+                                <tr 
+                                    data-testid={`signals-table-row-${item.symbol.toUpperCase()}`}
+                                    style={{ 
                                     backgroundColor: index % 2 !== 0 ? '#151515' : 'transparent',
                                     color: textColor
                                 }}>
@@ -222,7 +225,9 @@ export default function SignalsTable({
                                     <td style={{ padding: '5px' }}>{item.sinceSell != null ? `${item.sinceSell} d` : '-'}</td>
                                 )}
                                 {reportColumnVisibility.currentPrice && (
-                                    <td style={{ 
+                                    <td 
+                                        data-testid={`signals-table-price-${item.symbol.toUpperCase()}`}
+                                        style={{ 
                                         padding: '5px', 
                                         textAlign: 'left', 
                                         color: item.isTestPrice ? '#9f4f96' : (shouldGrayOut ? '#9d9d9d' : 'inherit')

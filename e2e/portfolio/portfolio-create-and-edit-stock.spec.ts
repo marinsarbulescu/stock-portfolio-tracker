@@ -74,7 +74,7 @@ async function cleanupExistingTestStock(symbol: string) {
 async function navigateToPortfolioPage(page: any) {
     console.log('[PageHelper] Navigating to Portfolio page...');
     await page.goto('/');
-    const portfolioLink = page.locator('nav a:has-text("Portfolio")');
+    const portfolioLink = page.locator('[data-testid="nav-portfolio-link"]');
     await expect(portfolioLink).toBeVisible({ timeout: 15000 });
     await portfolioLink.click();
     
@@ -179,7 +179,7 @@ async function editStockValues(page: any, editData: PortfolioCreateEditTestConfi
     await page.locator('#htp').fill(editData.htp!.toString());
     
     // Submit form
-    const submitButton = page.locator('button[type="submit"]:has-text("Update")');
+    const submitButton = page.locator('[data-testid="portfolio-edit-stock-update-button"]');
     await submitButton.click();
     
     // Wait for modal to close by checking form fields are no longer visible

@@ -44,12 +44,12 @@ const testData: SignalsPriceFetchTestConfig = require('./signals-price-fetch.jso
 async function navigateToSignalsPage(page: any) {
     console.log('[PageHelper] Navigating to Signals page...');
     await page.goto('/');
-    const signalsLink = page.locator('nav a:has-text("Home")'); // "Home" link goes to signals
+    const signalsLink = page.locator('[data-testid="nav-home-link"]'); // "Home" link goes to signals
     await expect(signalsLink).toBeVisible({ timeout: 15000 });
     await signalsLink.click();
     
     // Wait for signals page to load
-    await expect(page.locator('h2:has-text("Signals")')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('[data-testid="signals-page-title"]')).toBeVisible({ timeout: 15000 });
     console.log('[PageHelper] Successfully navigated to Signals page.');
 }
 
@@ -57,11 +57,9 @@ async function navigateToSignalsPage(page: any) {
 async function togglePriceColumnVisible(page: any) {
     console.log('[PageHelper] Toggling Price column visible...');
     
-    // Look for the checkbox next to the "Price" label in the column visibility controls
-    const priceLabel = page.locator('label:has-text("Price")');
-    await expect(priceLabel).toBeVisible({ timeout: 10000 });
-    
-    const priceCheckbox = priceLabel.locator('input[type="checkbox"]');
+    // Look for the checkbox for the "Price" column using data-testid
+    const priceCheckbox = page.locator('[data-testid="signals-column-checkbox-currentPrice"]');
+    await expect(priceCheckbox).toBeVisible({ timeout: 10000 });
     
     // Check if checkbox is currently checked
     const isChecked = await priceCheckbox.isChecked();
@@ -73,7 +71,7 @@ async function togglePriceColumnVisible(page: any) {
     }
     
     // Verify Price column header is now visible in the table
-    await expect(page.locator('th:has-text("Price")')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('[data-testid="signals-table-price-header"]')).toBeVisible({ timeout: 10000 });
     console.log('[PageHelper] Price column is now visible in the table.');
 }
 
@@ -81,24 +79,9 @@ async function togglePriceColumnVisible(page: any) {
 async function verifyStockHasNoPrice(page: any, stockSymbol: string) {
     console.log(`[PageHelper] Verifying ${stockSymbol} has no price value...`);
     
-    // Find all rows for this stock symbol and use the first one
-    const stockRows = page.locator(`tr:has(td:has-text("${stockSymbol}"))`);
-    const rowCount = await stockRows.count();
-    
-    if (rowCount === 0) {
-        throw new Error(`No rows found for stock symbol: ${stockSymbol}`);
-    }
-    
-    if (rowCount > 1) {
-        console.warn(`[PageHelper] Warning: Found ${rowCount} rows for ${stockSymbol}, using the first one`);
-    }
-    
-    // Use the first row
-    const stockRow = stockRows.first();
-    await expect(stockRow).toBeVisible({ timeout: 10000 });
-    
-    // Find the price cell in this row (assuming Price is one of the columns)
-    const priceCell = stockRow.locator('td').nth(await getPriceCellIndex(page));
+    // Use specific testid for the price cell
+    const priceCell = page.locator(`[data-testid="signals-table-price-${stockSymbol.toUpperCase()}"]`);
+    await expect(priceCell).toBeVisible({ timeout: 10000 });
     
     // Verify it shows '-' or empty
     const priceCellText = await priceCell.textContent();
@@ -106,21 +89,11 @@ async function verifyStockHasNoPrice(page: any, stockSymbol: string) {
     console.log(`[PageHelper] ✅ Confirmed ${stockSymbol} has no price value (shows '${priceCellText?.trim()}')`);
 }
 
-// Helper function to get the index of the Price column
-async function getPriceCellIndex(page: any): Promise<number> {
-    const headers = await page.locator('th').allTextContents();
-    const priceIndex = headers.findIndex((header: string) => header.includes('Price'));
-    if (priceIndex === -1) {
-        throw new Error('Price column not found in table headers');
-    }
-    return priceIndex;
-}
-
 // Helper function to click Fetch Prices button and wait for completion
 async function fetchPricesAndWait(page: any) {
     console.log('[PageHelper] Clicking Fetch Prices button...');
     
-    const fetchButton = page.locator('button:has-text("Fetch Prices")');
+    const fetchButton = page.locator('[data-testid="nav-fetch-prices-button"]');
     await expect(fetchButton).toBeVisible({ timeout: 10000 });
     await expect(fetchButton).toBeEnabled();
     
@@ -154,24 +127,9 @@ async function fetchPricesAndWait(page: any) {
 async function verifyStockHasPrice(page: any, stockSymbol: string) {
     console.log(`[PageHelper] Verifying ${stockSymbol} now has a price value...`);
     
-    // Find all rows for this stock symbol and use the first one
-    const stockRows = page.locator(`tr:has(td:has-text("${stockSymbol}"))`);
-    const rowCount = await stockRows.count();
-    
-    if (rowCount === 0) {
-        throw new Error(`No rows found for stock symbol: ${stockSymbol}`);
-    }
-    
-    if (rowCount > 1) {
-        console.warn(`[PageHelper] Warning: Found ${rowCount} rows for ${stockSymbol}, using the first one`);
-    }
-    
-    // Use the first row
-    const stockRow = stockRows.first();
-    await expect(stockRow).toBeVisible({ timeout: 15000 });
-    
-    // Find the price cell in this row
-    const priceCell = stockRow.locator('td').nth(await getPriceCellIndex(page));
+    // Use specific testid for the price cell
+    const priceCell = page.locator(`[data-testid="signals-table-price-${stockSymbol.toUpperCase()}"]`);
+    await expect(priceCell).toBeVisible({ timeout: 15000 });
     
     // Wait for the price cell to update with actual price data (more generous timeout for API delays)
     await expect(priceCell).not.toHaveText('-', { timeout: 30000 }); // Wait up to 30 seconds for price to appear

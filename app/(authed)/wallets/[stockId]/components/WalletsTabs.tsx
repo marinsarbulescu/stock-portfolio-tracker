@@ -261,6 +261,7 @@ export default function WalletsTabs({
           <label key={key} style={{ marginLeft: '15px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
             <input
               type="checkbox"
+              data-testid={`wallet-column-checkbox-${key}`}
               checked={walletColumnVisibility[key]}
               onChange={() => setWalletColumnVisibility(prev => ({ ...prev, [key]: !prev[key] }))}
               style={{ marginRight: '5px', cursor: 'pointer' }}

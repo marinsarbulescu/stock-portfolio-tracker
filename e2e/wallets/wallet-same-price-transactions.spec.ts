@@ -50,7 +50,7 @@ const testConfig = loadSamePriceTransactionTestData('e2e/wallets/wallet-same-pri
 async function navigateToPortfolioPage(page: any) {
     console.log('[PageHelper] Navigating to Portfolio page...');
     await page.goto('/');
-    const portfolioLink = page.locator('nav a:has-text("Portfolio")');
+    const portfolioLink = page.locator('[data-testid="nav-portfolio-link"]');
     await expect(portfolioLink).toBeVisible({ timeout: 15000 });
     await portfolioLink.click();
     
@@ -249,7 +249,7 @@ async function verifyOverview(
     console.log(`[OverviewHelper] Verifying overview for ${stepName}...`);
     
     // Ensure overview section is expanded
-    const overviewHeader = page.locator('p').filter({ hasText: 'Overview' });
+    const overviewHeader = page.locator('[data-testid="overview-toggle"]');
     await expect(overviewHeader).toBeVisible();
     
     // Check if overview is collapsed and expand it if needed
@@ -295,7 +295,7 @@ async function verifyInitialSettings(page: any, stockConfig: any): Promise<void>
     console.log('[OverviewHelper] Verifying initial settings after stock creation...');
     
     // Ensure overview section is expanded
-    const overviewHeader = page.locator('p').filter({ hasText: 'Overview' });
+    const overviewHeader = page.locator('[data-testid="overview-toggle"]');
     await expect(overviewHeader).toBeVisible();
     
     // Check if overview is collapsed and expand it if needed

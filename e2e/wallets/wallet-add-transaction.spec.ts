@@ -104,7 +104,7 @@ async function verifyOverview(
     console.log(`[OverviewHelper] Verifying overview for ${stepName}...`);
     
     // Ensure overview section is expanded
-    const overviewHeader = page.locator('p').filter({ hasText: 'Overview' });
+    const overviewHeader = page.locator('[data-testid="overview-toggle"]');
     await expect(overviewHeader).toBeVisible();
     
     // Check if overview is collapsed and expand it if needed
@@ -177,7 +177,7 @@ async function verifyInitialSettings(
     console.log(`[OverviewHelper] Verifying initial settings after stock creation...`);
     
     // Ensure overview section is expanded
-    const overviewHeader = page.locator('p').filter({ hasText: 'Overview' });
+    const overviewHeader = page.locator('[data-testid="overview-toggle"]');
     await expect(overviewHeader).toBeVisible();
     
     // Check if overview is collapsed and expand it if needed
