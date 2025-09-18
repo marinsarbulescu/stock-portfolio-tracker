@@ -32,16 +32,18 @@ try {
 // Load test configuration
 const testConfig: FiveDDValidationConfig = loadFiveDDTestData('e2e/signals/signals-5dd-validation.json');
 
-// Helper function to navigate to signals page (reused from signals-price-fetch pattern)
+// Helper function to navigate to signals page using proper testids
 async function navigateToSignalsPage(page: any) {
     console.log('[PageHelper] Navigating to Signals page...');
     await page.goto('/');
-    const signalsLink = page.locator('nav a:has-text("Home")'); // "Home" link goes to signals
+    
+    // Use proper testid for navigation
+    const signalsLink = page.locator('[data-testid="nav-home-link"]');
     await expect(signalsLink).toBeVisible({ timeout: 15000 });
     await signalsLink.click();
     
-    // Wait for signals page to load
-    await expect(page.locator('h2:has-text("Signals")')).toBeVisible({ timeout: 15000 });
+    // Wait for signals page to load using testid
+    await expect(page.locator('[data-testid="signals-page-title"]')).toBeVisible({ timeout: 15000 });
     console.log('[PageHelper] Successfully navigated to Signals page.');
 }
 
@@ -103,38 +105,38 @@ async function addTransaction(stockId: string, testCase: FiveDDTestCase) {
     return transaction;
 }
 
-// Helper function to navigate to Signals page and verify columns
+// Helper function to navigate to Signals page and verify columns using testids
 async function navigateToSignalsAndVerify(page: any, testCase: FiveDDTestCase, stockId: string) {
     console.log('[Signals Helper] Navigating to Signals page...');
     
     // Navigate to signals page using the established pattern
     await navigateToSignalsPage(page);
     
-    console.log('[Signals Helper] Ensuring column visibility...');
+    console.log('[Signals Helper] Verifying stock data...');
     
-    // Find our test stock row using ticker testid
-    const stockRow = page.locator(`[data-testid="signals-table-ticker-${testCase.stock.symbol.toUpperCase()}"]`).locator('xpath=ancestor::tr[1]');
-    await expect(stockRow).toBeVisible({ timeout: 10000 });
+    // Use proper testids to locate table cells for verification
+    const stockSymbol = testCase.stock.symbol.toUpperCase();
     
-    console.log(`[Signals Helper] Found stock row for ${testCase.stock.symbol}`);
+    // Verify the stock row exists using ticker testid
+    const tickerCell = page.locator(`[data-testid="signals-table-ticker-${stockSymbol}"]`);
+    await expect(tickerCell).toBeVisible({ timeout: 10000 });
+    console.log(`[Signals Helper] Found ticker cell for ${stockSymbol}`);
     
-    // Verify the expected L Buy value and 5DD column
+    // Verify Last Buy (L Buy) column using specific testid
     console.log(`[Signals Helper] Expected L Buy Days: ${testCase.expected.lastBuyDays} d`);
-    console.log(`[Signals Helper] Expected 5DD: ${testCase.expected.shouldShow5DD ? testCase.expected.fiveDayDip : 'Hidden'}`);
+    const lastBuyCell = page.locator(`[data-testid="signals-table-last-buy-${stockSymbol}"]`);
+    await expect(lastBuyCell).toBeVisible({ timeout: 10000 });
     
-    // Get all cells in the row for comprehensive validation
-    const allCells = await stockRow.locator('td').allTextContents();
-    console.log(`[Signals Helper] All table cells: [${allCells.map((cell, idx) => `${idx}: "${cell?.trim()}"`).join(', ')}]`);
-    
-    // Verify L Buy column - look for the value with " d" suffix
-    const expectedLBuyText = `${testCase.expected.lastBuyDays} d`;
-    const lastBuyCell = stockRow.locator('td').nth(6); // Column 6 has the L Buy data
     const lastBuyText = await lastBuyCell.textContent();
+    const expectedLBuyText = `${testCase.expected.lastBuyDays} d`;
     expect(lastBuyText?.trim()).toBe(expectedLBuyText);
     console.log(`[Signals Helper] ✅ L Buy verified: ${expectedLBuyText}`);
 
-    // Verify 5DD column (Column 3)
-    const fiveDDCell = stockRow.locator('td').nth(3); // Column 3 has the 5DD data
+    // Verify 5DD column using specific testid
+    console.log(`[Signals Helper] Expected 5DD: ${testCase.expected.shouldShow5DD ? testCase.expected.fiveDayDip : 'Hidden (-)'}`);
+    const fiveDDCell = page.locator(`[data-testid="signals-table-5dd-${stockSymbol}"]`);
+    await expect(fiveDDCell).toBeVisible({ timeout: 10000 });
+    
     const fiveDDText = await fiveDDCell.textContent();
     
     if (testCase.expected.shouldShow5DD) {

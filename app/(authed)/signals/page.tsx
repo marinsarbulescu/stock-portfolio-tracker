@@ -1197,7 +1197,7 @@ export default function HomePage() {
 
     return (
         <div>
-            <h2>Signals</h2>
+            <h2 data-testid="signals-page-title">Signals</h2>
             <div style={{ fontSize: '0.7em', color: "gray" }}>
                 {pricesLoading
                 ? progressMessage || 'Prices are refreshing...' // Display progressMessage if available

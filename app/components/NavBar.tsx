@@ -56,9 +56,9 @@ export default function NavBar({ accessStatus }: NavBarProps) {
                 {/* Show navigation links only if approved */}
                 {isApproved && (
                     <>
-                        <Link href="/signals" style={linkStyles}>Home</Link>
-                        <Link href="/portfolio" style={linkStyles}>Portfolio</Link>
-                        <Link href="/goals" style={linkStyles}>Goals</Link>
+                        <Link href="/signals" style={linkStyles} data-testid="nav-home-link">Home</Link>
+                        <Link href="/portfolio" style={linkStyles} data-testid="nav-portfolio-link">Portfolio</Link>
+                        <Link href="/goals" style={linkStyles} data-testid="nav-goals-link">Goals</Link>
                     </>
                 )}
                 {/* Optional: Show something minimal if not approved */}

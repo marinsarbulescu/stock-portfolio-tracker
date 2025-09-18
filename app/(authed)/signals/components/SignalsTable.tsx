@@ -188,7 +188,10 @@ export default function SignalsTable({
                                         </Link>                                        
                                     </td>                                
                                 {reportColumnVisibility.fiveDayDip && (
-                                    <td style={{ padding: '5px' }}>
+                                    <td 
+                                        style={{ padding: '5px' }}
+                                        data-testid={`signals-table-5dd-${item.symbol.toUpperCase()}`}
+                                    >
                                         {typeof item.fiveDayDip === 'number' && Math.abs(item.fiveDayDip) > 0.0001 ? `${item.fiveDayDip.toFixed(2)}%` : '-'}
                                     </td>
                                 )}
@@ -205,10 +208,13 @@ export default function SignalsTable({
                                     </td>
                                 )}
                                 {reportColumnVisibility.sinceBuy && (
-                                    <td style={{
-                                        padding: '5px',
-                                        ...getSinceBuyCellStyle(item.sinceBuy, item.swingWalletCount)
-                                        }}>
+                                    <td 
+                                        style={{
+                                            padding: '5px',
+                                            ...getSinceBuyCellStyle(item.sinceBuy, item.swingWalletCount)
+                                        }}
+                                        data-testid={`signals-table-last-buy-${item.symbol.toUpperCase()}`}
+                                    >
                                         {item.sinceBuy != null ? `${item.sinceBuy} d` : '-'}
                                     </td>
                                 )}
