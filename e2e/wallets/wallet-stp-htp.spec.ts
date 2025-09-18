@@ -451,7 +451,7 @@ async function verifySwingWalletTab(
     console.log('[SwingWalletHelper] Verifying Swing wallet tab...');
     
     // Click on Swing wallet tab
-    const swingTab = page.locator('[data-testid="wallet-tab-Swing"]');
+    const swingTab = page.locator('[data-testid="wallet-tab-swing"]');
     await expect(swingTab).toBeVisible({ timeout: 10000 });
     await swingTab.click();
     await page.waitForLoadState('networkidle');
@@ -529,7 +529,7 @@ async function verifyHoldWalletTab(
     console.log('[HoldWalletHelper] Verifying Hold wallet tab...');
     
     // Click on Hold wallet tab
-    const holdTab = page.locator('[data-testid="wallet-tab-Hold"]');
+    const holdTab = page.locator('[data-testid="wallet-tab-hold"]');
     await expect(holdTab).toBeVisible({ timeout: 10000 });
     await holdTab.click();
     await page.waitForLoadState('networkidle');
@@ -819,7 +819,7 @@ async function verifySwingWalletTabAt109(
     console.log('[SwingWalletHelper] Verifying Swing wallet tab at $109...');
     
     // Click on Swing wallet tab
-    const swingTab = page.locator('[data-testid="wallet-tab-Swing"]');
+    const swingTab = page.locator('[data-testid="wallet-tab-swing"]');
     await expect(swingTab).toBeVisible({ timeout: 10000 });
     await swingTab.click();
     await page.waitForLoadState('networkidle');
@@ -881,7 +881,7 @@ async function verifyHoldWalletTabAt109(
     console.log('[HoldWalletHelper] Verifying Hold wallet tab at $109...');
     
     // Click on Hold wallet tab
-    const holdTab = page.locator('[data-testid="wallet-tab-Hold"]');
+    const holdTab = page.locator('[data-testid="wallet-tab-hold"]');
     await expect(holdTab).toBeVisible({ timeout: 10000 });
     await holdTab.click();
     await page.waitForLoadState('networkidle');
@@ -991,7 +991,7 @@ async function verifySwingWalletTabAt115(
     console.log('[SwingWalletHelper] Verifying Swing wallet tab at $115...');
     
     // Ensure we're on the Swing wallet tab
-    const swingTab = page.locator('[data-testid="wallet-tab-Swing"]');
+    const swingTab = page.locator('[data-testid="wallet-tab-swing"]');
     await expect(swingTab).toBeVisible({ timeout: 30000 });
     await swingTab.click();
     await page.waitForLoadState('networkidle');
@@ -1051,7 +1051,7 @@ async function verifyHoldWalletTabAt115(
     console.log('[HoldWalletHelper] Verifying HTP and %2HTP columns are visible by default...');
     
     // Switch to Hold wallet tab
-    const holdTab = page.locator('[data-testid="wallet-tab-Hold"]');
+    const holdTab = page.locator('[data-testid="wallet-tab-hold"]');
     await expect(holdTab).toBeVisible();
     await holdTab.click();
     await page.waitForLoadState('networkidle');
@@ -1155,7 +1155,7 @@ async function verifySwingWalletTabAt122(
     console.log('[SwingWalletHelper] Verifying Swing wallet tab at $122...');
     
     // Ensure we're on the Swing wallet tab
-    const swingTab = page.locator('[data-testid="wallet-tab-Swing"]');
+    const swingTab = page.locator('[data-testid="wallet-tab-swing"]');
     await expect(swingTab).toBeVisible();
     await swingTab.click();
     await page.waitForLoadState('networkidle');
@@ -1215,7 +1215,7 @@ async function verifyHoldWalletTabAt122(
     console.log('[HoldWalletHelper] Verifying HTP and %2HTP columns are visible by default...');
     
     // Switch to Hold wallet tab
-    const holdTab = page.locator('[data-testid="wallet-tab-Hold"]');
+    const holdTab = page.locator('[data-testid="wallet-tab-hold"]');
     await expect(holdTab).toBeVisible();
     await holdTab.click();
     await page.waitForLoadState('networkidle');

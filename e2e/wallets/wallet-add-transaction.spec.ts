@@ -225,7 +225,7 @@ async function verifyWalletDetails(
     console.log(`[PageHelper] Expected: Buy Price=${formatCurrency(expectedDetails.buyPrice)}, Investment=${formatCurrency(expectedDetails.investment)}, Shares=${formatShares(expectedDetails.sharesLeft)}`);
 
     // Navigate to the appropriate wallet tab
-    const tabButton = page.locator(`[data-testid="wallet-tab-${walletType}"]`);
+    const tabButton = page.locator(`[data-testid="wallet-tab-${walletType.toLowerCase()}"]`);
     await tabButton.click();
     
     // Wait for page to settle after tab click
@@ -285,7 +285,7 @@ async function verifyWalletCounts(
     console.log(`[PageHelper] Verifying ${walletType} wallet count for ${stepName}...`);
     
     // Navigate to the appropriate wallet tab
-    const tabButton = page.locator(`[data-testid="wallet-tab-${walletType}"]`);
+    const tabButton = page.locator(`[data-testid="wallet-tab-${walletType.toLowerCase()}"]`);
     await tabButton.click();
     
     // Wait for page to settle after tab click

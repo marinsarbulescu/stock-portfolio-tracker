@@ -88,7 +88,7 @@ async function verifyNoWalletsExist(page: any) {
     console.log('[PageHelper] Verifying no wallets exist...');
     
     // Check Swing tab
-    const swingTab = page.locator('[data-testid="wallet-tab-Swing"]');
+    const swingTab = page.locator('[data-testid="wallet-tab-swing"]');
     await expect(swingTab).toBeVisible({ timeout: 5000 });
     await swingTab.click();
     
@@ -97,7 +97,7 @@ async function verifyNoWalletsExist(page: any) {
     await expect(swingNotFound).toContainText('No Swing wallets with shares found for this stock.');
     
     // Check Hold tab
-    const holdTab = page.locator('[data-testid="wallet-tab-Hold"]');
+    const holdTab = page.locator('[data-testid="wallet-tab-hold"]');
     await expect(holdTab).toBeVisible({ timeout: 5000 });
     await holdTab.click();
     
@@ -126,7 +126,7 @@ async function verifyTransactionCount(page: any, expectedCount: number) {
 async function countWalletRows(page: any, walletType: 'Swing' | 'Hold'): Promise<number> {
     console.log(`[PageHelper] Counting ${walletType} wallet rows...`);
     
-    const tab = page.locator(`[data-testid="wallet-tab-${walletType}"]`);
+    const tab = page.locator(`[data-testid="wallet-tab-${walletType.toLowerCase()}"]`);
     await expect(tab).toBeVisible({ timeout: 5000 });
     await tab.click();
     
@@ -167,7 +167,7 @@ async function countWalletRows(page: any, walletType: 'Swing' | 'Hold'): Promise
 async function verifyWalletDetails(page: any, walletType: 'Swing' | 'Hold', expectedWallets: Record<string, WalletExpectation>) {
     console.log(`[PageHelper] Verifying ${walletType} wallet details...`);
     
-    const tab = page.locator(`[data-testid="wallet-tab-${walletType}"]`);
+    const tab = page.locator(`[data-testid="wallet-tab-${walletType.toLowerCase()}"]`);
     await expect(tab).toBeVisible({ timeout: 5000 });
     await tab.click();
     

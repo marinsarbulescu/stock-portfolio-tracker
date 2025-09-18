@@ -272,7 +272,7 @@ export default function WalletsTabs({
       </div>      <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <button
-            data-testid="wallet-tab-Swing"
+            data-testid="wallet-tab-swing"
             onClick={() => setActiveTab('Swing')}
             style={{
               padding: '8px 15px',
@@ -288,7 +288,7 @@ export default function WalletsTabs({
             Swing ({showEmptyWallets ? swingCounts.total : swingCounts.withShares})
           </button>
           <button
-            data-testid="wallet-tab-Hold"
+            data-testid="wallet-tab-hold"
             onClick={() => setActiveTab('Hold')}
             style={{
               padding: '8px 15px',

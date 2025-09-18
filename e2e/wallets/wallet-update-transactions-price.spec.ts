@@ -87,7 +87,7 @@ async function verifyWalletDetails(
     console.log(`[PageHelper] Verifying ${walletType} wallet details${description ? ' ' + description : ''}...`);
     console.log(`[PageHelper] Expected: Buy Price=${formatCurrency(expectedDetails.buyPrice)}, Investment=${formatCurrency(expectedDetails.investment)}, Shares=${formatShares(expectedDetails.sharesLeft)}`);
     
-    const tab = page.locator(`[data-testid="wallet-tab-${walletType}"]`);
+    const tab = page.locator(`[data-testid="wallet-tab-${walletType.toLowerCase()}"]`);
     await expect(tab).toBeVisible({ timeout: 5000 });
     await tab.click();
     
@@ -170,7 +170,7 @@ async function verifyWalletDetails(
 async function verifyWalletCount(page: Page, walletType: 'Swing' | 'Hold', expectedCount: number, description: string = '') {
     console.log(`[PageHelper] Verifying ${walletType} wallet count${description ? ' ' + description : ''}...`);
     
-    const tab = page.locator(`[data-testid="wallet-tab-${walletType}"]`);
+    const tab = page.locator(`[data-testid="wallet-tab-${walletType.toLowerCase()}"]`);
     await expect(tab).toBeVisible({ timeout: 5000 });
     await tab.click();
     
@@ -197,7 +197,7 @@ async function verifyWalletCount(page: Page, walletType: 'Swing' | 'Hold', expec
 async function verifyWalletDoesNotExistWithPrice(page: Page, walletType: 'Swing' | 'Hold', price: number, description: string = '') {
     console.log(`[PageHelper] Verifying ${walletType} wallet with price ${formatCurrency(price)} does not exist${description ? ' ' + description : ''}...`);
     
-    const tab = page.locator(`[data-testid="wallet-tab-${walletType}"]`);
+    const tab = page.locator(`[data-testid="wallet-tab-${walletType.toLowerCase()}"]`);
     await expect(tab).toBeVisible({ timeout: 5000 });
     await tab.click();
     

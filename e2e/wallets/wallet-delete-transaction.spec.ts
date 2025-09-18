@@ -72,7 +72,7 @@ async function verifyWalletDetails(page: any, walletType: 'swing' | 'hold', wall
     console.log(`[PageHelper] Verifying ${walletType} wallet details ${walletKey} for ${stepName}...`);
     console.log(`[PageHelper] Expected: Buy Price=$${expected.buyPrice.toFixed(2)}, Investment=$${expected.investment.toFixed(2)}, Shares=${expected.sharesLeft.toFixed(5)}`);
     
-    const tabSelector = `[data-testid="wallet-tab-${walletType === 'swing' ? 'Swing' : 'Hold'}"]`;
+    const tabSelector = `[data-testid="wallet-tab-${walletType}"]`;
     const tab = page.locator(tabSelector);
     await expect(tab).toBeVisible({ timeout: 5000 });
     await tab.click();
@@ -123,7 +123,7 @@ async function verifyWalletDetails(page: any, walletType: 'swing' | 'hold', wall
 async function verifyWalletCounts(page: any, walletType: 'swing' | 'hold', expectedCount: number, stepName: string) {
     console.log(`[PageHelper] Verifying ${walletType} wallet count for ${stepName}...`);
     
-    const tabSelector = `[data-testid="wallet-tab-${walletType === 'swing' ? 'Swing' : 'Hold'}"]`;
+    const tabSelector = `[data-testid="wallet-tab-${walletType}"]`;
     const tab = page.locator(tabSelector);
     await expect(tab).toBeVisible({ timeout: 5000 });
     await tab.click();
