@@ -40,18 +40,41 @@ export function mergeTestPricesWithRealPrices(
     }
   });
 
-  // Apply test price overrides
+  // Apply test price and/or test historical data overrides
   stocksData.forEach(stock => {
-    if (stock.symbol && typeof stock.testPrice === 'number' && stock.testPrice > 0) {
-      const realPriceData = mergedPrices[stock.symbol];
+    if (stock.symbol) {
+      const hasTestPrice = typeof stock.testPrice === 'number' && stock.testPrice > 0;
       
-      // Create or update price data with test price override
-      mergedPrices[stock.symbol] = {
-        symbol: stock.symbol,
-        currentPrice: stock.testPrice,
-        historicalCloses: realPriceData?.historicalCloses || [],
-        isTestPrice: true
-      };
+      // Parse testHistoricalCloses - it could be a JSON string from database or array from direct usage
+      let parsedTestHistoricalCloses: { date: string; close: number; }[] | null = null;
+      if (stock.testHistoricalCloses) {
+        if (Array.isArray(stock.testHistoricalCloses)) {
+          parsedTestHistoricalCloses = stock.testHistoricalCloses;
+        } else if (typeof stock.testHistoricalCloses === 'string') {
+          try {
+            const parsed = JSON.parse(stock.testHistoricalCloses);
+            if (Array.isArray(parsed)) {
+              parsedTestHistoricalCloses = parsed;
+            }
+          } catch (error) {
+            console.warn(`[priceUtils] Failed to parse testHistoricalCloses JSON for ${stock.symbol}:`, error);
+          }
+        }
+      }
+      
+      const hasTestHistorical = parsedTestHistoricalCloses && parsedTestHistoricalCloses.length > 0;
+      
+      if (hasTestPrice || hasTestHistorical) {
+        const realPriceData = mergedPrices[stock.symbol];
+        
+        // Create or update price data with test overrides
+        mergedPrices[stock.symbol] = {
+          symbol: stock.symbol,
+          currentPrice: hasTestPrice ? stock.testPrice : realPriceData?.currentPrice || null,
+          historicalCloses: hasTestHistorical ? (parsedTestHistoricalCloses || []) : realPriceData?.historicalCloses || [],
+          isTestPrice: Boolean(hasTestPrice || hasTestHistorical)
+        };
+      }
     }
   });
 
@@ -71,14 +94,59 @@ export function getStockDisplayPrice(
 ): PriceData | null {
   if (!stock.symbol) return null;
 
-  // If stock has a test price, use it
-  if (typeof stock.testPrice === 'number' && stock.testPrice > 0) {
+  const hasTestPrice = typeof stock.testPrice === 'number' && stock.testPrice > 0;
+  
+  // Parse testHistoricalCloses - it could be a JSON string from database or array from direct usage
+  let parsedTestHistoricalCloses: { date: string; close: number; }[] | null = null;
+  if (stock.testHistoricalCloses) {
+    if (Array.isArray(stock.testHistoricalCloses)) {
+      // Already an array
+      parsedTestHistoricalCloses = stock.testHistoricalCloses;
+      if (stock.symbol.startsWith('E2E5DD')) {
+        console.log(`[priceUtils] ${stock.symbol}: testHistoricalCloses is array, length=${stock.testHistoricalCloses.length}`);
+      }
+    } else if (typeof stock.testHistoricalCloses === 'string') {
+      // JSON string from database - parse it
+      if (stock.symbol.startsWith('E2E5DD')) {
+        console.log(`[priceUtils] ${stock.symbol}: testHistoricalCloses is string: ${stock.testHistoricalCloses.substring(0, 100)}...`);
+      }
+      try {
+        const parsed = JSON.parse(stock.testHistoricalCloses);
+        if (Array.isArray(parsed)) {
+          parsedTestHistoricalCloses = parsed;
+          if (stock.symbol.startsWith('E2E5DD')) {
+            console.log(`[priceUtils] ${stock.symbol}: Parsed JSON successfully, length=${parsed.length}`);
+          }
+        } else {
+          if (stock.symbol.startsWith('E2E5DD')) {
+            console.log(`[priceUtils] ${stock.symbol}: Parsed JSON but not an array:`, typeof parsed);
+          }
+        }
+      } catch (error) {
+        console.warn(`[priceUtils] Failed to parse testHistoricalCloses JSON for ${stock.symbol}:`, error);
+        parsedTestHistoricalCloses = null;
+      }
+    } else {
+      if (stock.symbol.startsWith('E2E5DD')) {
+        console.log(`[priceUtils] ${stock.symbol}: testHistoricalCloses is neither array nor string:`, typeof stock.testHistoricalCloses);
+      }
+    }
+  } else {
+    if (stock.symbol.startsWith('E2E5DD')) {
+      console.log(`[priceUtils] ${stock.symbol}: testHistoricalCloses is null/undefined`);
+    }
+  }
+  
+  const hasTestHistorical = parsedTestHistoricalCloses && parsedTestHistoricalCloses.length > 0;
+
+  // If stock has test price and/or test historical data, use them
+  if (hasTestPrice || hasTestHistorical) {
     const realPriceData = realPrices[stock.symbol];
     return {
       symbol: stock.symbol,
-      currentPrice: stock.testPrice,
-      historicalCloses: realPriceData?.historicalCloses || [],
-      isTestPrice: true
+      currentPrice: hasTestPrice ? stock.testPrice : realPriceData?.currentPrice || null,
+      historicalCloses: hasTestHistorical ? (parsedTestHistoricalCloses || []) : realPriceData?.historicalCloses || [],
+      isTestPrice: Boolean(hasTestPrice || hasTestHistorical)
     };
   }
 

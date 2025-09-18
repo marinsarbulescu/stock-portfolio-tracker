@@ -93,6 +93,7 @@ export default function HomePage() {
         const stocksWithTestPrices = portfolioStocks.map(stock => ({
             symbol: stock.symbol,
             testPrice: stock.testPrice, // Now properly typed
+            testHistoricalCloses: stock.testHistoricalCloses, // Add test historical data
             // Add other required fields with default values
             id: stock.id,
             name: stock.name || '',
@@ -248,7 +249,7 @@ export default function HomePage() {
         try {
             const [stockResult, allTxnsData, walletResult] = await Promise.all([
                 client.models.PortfolioStock.list({
-                    selectionSet: ['id', 'symbol', 'pdp', 'name', 'budget', 'testPrice', 'isHidden', 'archived', 'region', 'htp', 'stockCommission', 'stockTrend', 'totalOutOfPocket', 'currentCashBalance'], // Added cash flow fields
+                    selectionSet: ['id', 'symbol', 'pdp', 'name', 'budget', 'testPrice', 'testHistoricalCloses', 'isHidden', 'archived', 'region', 'htp', 'stockCommission', 'stockTrend', 'totalOutOfPocket', 'currentCashBalance'], // Added testHistoricalCloses and cash flow fields
                     filter: {
                         and: [
                             { isHidden: { ne: true } }, // not hidden
@@ -651,16 +652,24 @@ export default function HomePage() {
                 totalCurrentSwingShares: 0, totalCurrentHoldShares: 0,
             };
 
+            const sinceBuyDays = calculateDaysAgo(procData.lastBuy?.date);
+
             let fiveDayDipPercent: number | null = null;
-            if (typeof currentPrice === 'number' && typeof pdp === 'number' && priceData?.historicalCloses) {
+            // Only calculate 5DD if last buy is more than 5 days ago or there's no last buy
+            const shouldCalculate5DD = sinceBuyDays === null || sinceBuyDays > 5;
+            
+            if (shouldCalculate5DD && typeof currentPrice === 'number' && typeof pdp === 'number' && priceData?.historicalCloses) {
                  const historicalCloses = priceData.historicalCloses ?? [];
                  const last5Closes = historicalCloses.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+                 
                  if (last5Closes.length > 0) {
                      let minDipMeetingCondition: number | null = null;
                      last5Closes.forEach(pastClose => {
                          if (pastClose.close > 0) {
                             const diffPercent = (currentPrice / pastClose.close - 1) * 100;
-                            if (diffPercent <= (pdp * -1)) {
+                            const meetsPDP = diffPercent <= (pdp * -1);
+                            
+                            if (meetsPDP) {
                                 if (minDipMeetingCondition === null || diffPercent < minDipMeetingCondition) {
                                     minDipMeetingCondition = diffPercent;
                                 }
@@ -717,7 +726,6 @@ export default function HomePage() {
                 }
             }
 
-            const sinceBuyDays = calculateDaysAgo(procData.lastBuy?.date); // Changed from procData.lastSwingBuy?.date
             const sinceSellDays = calculateDaysAgo(procData.lastSell?.date); 
             const swingBuyCountValue = procData.swingBuyCount;
             const totalShares = procData.totalCurrentSwingShares + procData.totalCurrentHoldShares;

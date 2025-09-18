@@ -86,7 +86,7 @@ export default function TestManager() {
       
       // Calculate optimal worker count based on total tests
       const totalTests = calculateTotalTests(data.testSuites);
-      const optimalWorkers = Math.min(totalTests, 8); // Cap at 8 workers
+      const optimalWorkers = totalTests; // No cap, match test count
       
       // Update the config with optimal settings
       const updatedConfig = {
@@ -173,7 +173,7 @@ export default function TestManager() {
     
     // Auto-adjust workers based on enabled tests
     const enabledTestCount = getEnabledTestCount(newConfig.testSuites);
-    newConfig.globalSettings.workers = Math.min(Math.max(enabledTestCount, 1), 8);
+    newConfig.globalSettings.workers = Math.max(enabledTestCount, 1);
     
     updateTestConfig(newConfig);
   };
@@ -199,7 +199,7 @@ export default function TestManager() {
     
     // Auto-adjust workers based on enabled tests
     const enabledTestCount = getEnabledTestCount(newConfig.testSuites);
-    newConfig.globalSettings.workers = Math.min(Math.max(enabledTestCount, 1), 8);
+    newConfig.globalSettings.workers = Math.max(enabledTestCount, 1);
     
     updateTestConfig(newConfig);
   };
@@ -535,18 +535,18 @@ export default function TestManager() {
           
           <div className="setting-group">
             <label>
-              <span>Workers ({config.globalSettings.workers}) {config ? `(Auto: ${Math.min(Math.max(getEnabledTestCount(config.testSuites), 1), 8)})` : ''}</span>
+              <span>Workers ({config.globalSettings.workers}) {config ? `(Auto: ${Math.max(getEnabledTestCount(config.testSuites), 1)})` : ''}</span>
               <div className="workers-control">
                 <input
                   type="range"
                   min="1"
-                  max="8"
+                  max={stats.totalTests}
                   value={config.globalSettings.workers}
                   onChange={(e) => updateGlobalSetting('workers', parseInt(e.target.value))}
                   className="workers-slider"
                 />
                 <button
-                  onClick={() => updateGlobalSetting('workers', Math.min(Math.max(getEnabledTestCount(config.testSuites), 1), 8))}
+                  onClick={() => updateGlobalSetting('workers', Math.max(getEnabledTestCount(config.testSuites), 1))}
                   className="auto-workers-btn"
                   title="Reset to auto-calculated value"
                 >

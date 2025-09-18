@@ -35,6 +35,7 @@ const schema = a.schema({
       stp: a.float().required(), // Swing Take Profit percentage (e.g., 9 = 9% profit target)
       budget: a.float(), // Annual budget, optional number
       testPrice: a.float(), // Test/override price for experimental purposes, optional
+      testHistoricalCloses: a.json(), // Test historical price data for E2E testing, optional
       isHidden: a.boolean().default(false), // Hide the stock from the reporting table
       archived: a.boolean().default(false), // Soft delete flag for archived stocks
       archivedAt: a.datetime(), // Timestamp when the stock was archived

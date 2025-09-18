@@ -125,6 +125,21 @@
           ],
           "priority": "high",
           "estimatedDuration": "1-2 minutes"
+        },
+        {
+          "name": "signals-5dd-validation",
+          "enabled": true,
+          "file": "e2e/signals/signals-5dd-validation.spec.ts",
+          "description": "Test 5DD (Five Day Dip) calculation and display logic with test historical data",
+          "tags": [
+            "signals",
+            "5dd",
+            "calculations",
+            "historical-data",
+            "business-logic"
+          ],
+          "priority": "high",
+          "estimatedDuration": "1-2 minutes"
         }
       ]
     }
@@ -132,12 +147,12 @@
   "globalSettings": {
     "runOnlyEnabledSuites": true,
     "runOnlyEnabledTests": true,
-    "parallelExecution": false,
+    "parallelExecution": true,
     "headless": true,
     "retries": 0,
     "timeout": 60000,
     "browser": "chromium",
-    "workers": 8
+    "workers": 9
   },
   "presets": {
     "smoke": {
@@ -146,7 +161,8 @@
         "portfolio-create-and-edit-stock",
         "wallet-add-transaction",
         "wallet-add-split-transaction",
-        "signals-price-fetch"
+        "signals-price-fetch",
+        "signals-5dd-validation"
       ]
     },
     "full": {

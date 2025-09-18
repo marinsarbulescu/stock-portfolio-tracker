@@ -84,9 +84,13 @@ function generatePlaywrightCommand(config, preset = null) {
     command += ' --headed';
   }
 
-  // Add parallel execution
+  // Add parallel execution and workers
   if (!settings.parallelExecution) {
     command += ' --workers=1';
+  } else {
+    // Use the number of test files, but cap it at the configured max workers
+    const optimalWorkers = Math.min(testFiles.length, settings.workers || 1);
+    command += ` --workers=${optimalWorkers}`;
   }
 
   // Add retries

@@ -1,0 +1,116 @@
+{
+  "scenario": "5DD Column Validation - Two Test Cases",
+  "description": "Tests 5DD display logic: shows percentage when no recent buys, hides when recent buy exists",
+  "testCases": [
+    {
+      "name": "5DD Shows - No Recent Buys",
+      "description": "5DD shows -8.16% when last buy is 17 days ago (> 5 days)",
+      "stock": {
+        "symbol": "E2E5DD1",
+        "name": "E2E 5DD Test Case 1 Corp",
+        "stockType": "Stock",
+        "region": "US",
+        "pdp": 5,
+        "stp": 10,
+        "htp": 20,
+        "budget": 1000,
+        "swingHoldRatio": 50,
+        "stockCommission": 0,
+        "testPrice": 90,
+        "testHistoricalCloses": [
+          { "date": "2025-09-17", "close": 95 },
+          { "date": "2025-09-16", "close": 92 },
+          { "date": "2025-09-13", "close": 98 },
+          { "date": "2025-09-12", "close": 94 },
+          { "date": "2025-09-11", "close": 96 }
+        ]
+      },
+      "transaction": {
+        "action": "Buy",
+        "txnType": "Split",
+        "signal": "Initial",
+        "price": 100,
+        "investment": 200,
+        "date": "2025-09-01"
+      },
+      "expected": {
+        "fiveDayDip": "-8.16%",
+        "lastBuyDays": 17,
+        "lbd": "-10.00%",
+        "shouldShow5DD": true,
+        "calculations": {
+          "currentPrice": 90,
+          "historicalAnalysis": [
+            { "date": "2025-09-17", "close": 95, "drop": -5.26, "meetsPDP": true },
+            { "date": "2025-09-16", "close": 92, "drop": -2.17, "meetsPDP": false },
+            { "date": "2025-09-13", "close": 98, "drop": -8.16, "meetsPDP": true },
+            { "date": "2025-09-12", "close": 94, "drop": -4.26, "meetsPDP": false },
+            { "date": "2025-09-11", "close": 96, "drop": -6.25, "meetsPDP": true }
+          ],
+          "largestQualifyingDrop": -8.16
+        }
+      }
+    },
+    {
+      "name": "5DD Hidden - Recent Buy",
+      "description": "5DD is hidden despite meeting threshold when last buy is 3 days ago (≤ 5 days)",
+      "stock": {
+        "symbol": "E2E5DD2",
+        "name": "E2E 5DD Test Case 2 Corp",
+        "stockType": "Stock",
+        "region": "US",
+        "pdp": 5,
+        "stp": 10,
+        "htp": 20,
+        "budget": 1000,
+        "swingHoldRatio": 50,
+        "stockCommission": 0,
+        "testPrice": 90,
+        "testHistoricalCloses": [
+          { "date": "2025-09-17", "close": 95 },
+          { "date": "2025-09-16", "close": 92 },
+          { "date": "2025-09-13", "close": 98 },
+          { "date": "2025-09-12", "close": 94 },
+          { "date": "2025-09-11", "close": 96 }
+        ]
+      },
+      "transaction": {
+        "action": "Buy",
+        "txnType": "Split",
+        "signal": "_5DD",
+        "price": 91,
+        "investment": 200,
+        "date": "2025-09-15"
+      },
+      "expected": {
+        "fiveDayDip": null,
+        "lastBuyDays": 3,
+        "lbd": "-1.10%",
+        "shouldShow5DD": false,
+        "calculations": {
+          "currentPrice": 90,
+          "recentBuyPrice": 91,
+          "lbdCalculation": "90/91 - 1 = -1.10%",
+          "note": "Same historical data but 5DD hidden due to recent buy"
+        }
+      }
+    }
+  ],
+  "columnVisibility": {
+    "fiveDayDip": true,
+    "lbd": true,
+    "sinceBuy": true
+  },
+  "validationPoints": {
+    "case1": [
+      "Verify L Buy column shows '17'",
+      "Verify 5DD column shows '-8.16%' (default color)",
+      "Verify LBD column shows '-10.00%' (default color)"
+    ],
+    "case2": [
+      "Verify L Buy column shows '3'",
+      "Verify 5DD column shows '-' (hidden despite threshold met)",
+      "Verify LBD column shows '-1.10%' (default color)"
+    ]
+  }
+}

@@ -12,6 +12,7 @@ export interface PortfolioStockDataType {
   name?: string | null | undefined;
   budget?: number | null | undefined;
   testPrice?: number | null | undefined; // Add testPrice field that's already being fetched
+  testHistoricalCloses?: Array<{ date: string; close: number; }> | null | undefined; // Test historical data for E2E testing
   isHidden?: boolean | null | undefined;
   archived?: boolean | null | undefined;
   region?: string | null | undefined;

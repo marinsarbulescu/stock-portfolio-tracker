@@ -92,6 +92,8 @@ export interface StockConfig {
     swingHoldRatio: number;
     stockCommission: number;
     htp?: number;
+    testPrice?: number;
+    testHistoricalCloses?: Array<{ date: string; close: number; }>;
 }
 
 export interface TestConfig {
@@ -231,5 +233,60 @@ export function loadPortfolioCreateEditTestData(fileName: string): PortfolioCrea
         return data;
     } catch (error) {
         throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
+    }
+}
+
+// 5DD Test Configuration Interfaces
+export interface FiveDDTestCase {
+    name: string;
+    description: string;
+    stock: StockConfig;
+    transaction: {
+        action: 'Buy' | 'Sell';
+        txnType: 'Split' | 'Swing' | 'Hold';
+        signal: string;
+        price: number;
+        investment: number;
+        date: string;
+    };
+    expected: {
+        fiveDayDip: string | null;
+        lastBuyDays: number;
+        lbd: string;
+        shouldShow5DD: boolean;
+        calculations?: any;
+    };
+}
+
+export interface FiveDDValidationConfig {
+    scenario: string;
+    description: string;
+    testCases: FiveDDTestCase[];
+    columnVisibility: {
+        fiveDayDip: boolean;
+        lbd: boolean;
+        sinceBuy: boolean;
+    };
+    validationPoints: {
+        case1: string[];
+        case2: string[];
+    };
+}
+
+// Function to load 5DD test configuration
+export function loadFiveDDTestData(filePath: string): FiveDDValidationConfig {
+    if (!fs.existsSync(filePath)) {
+        throw new Error(`Test configuration file not found: ${filePath}`);
+    }
+    
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    console.log(`[jsonHelper.ts] 5DD test file content read successfully. Length: ${fileContent.length}`);
+    
+    try {
+        const data = JSON.parse(fileContent) as FiveDDValidationConfig;
+        console.log(`[jsonHelper.ts] Successfully parsed 5DD JSON for scenario: ${data.scenario}`);
+        return data;
+    } catch (error) {
+        throw new Error(`Failed to parse 5DD JSON file ${filePath}: ${error}`);
     }
 }
