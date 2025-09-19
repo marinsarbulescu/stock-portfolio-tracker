@@ -52,7 +52,7 @@ export const schema: Schema = {
                     "type": {
                         "enum": "MarketCategory"
                     },
-                    "isRequired": true,
+                    "isRequired": false,
                     "attributes": []
                 },
                 "riskGrowthProfile": {
@@ -61,7 +61,7 @@ export const schema: Schema = {
                     "type": {
                         "enum": "RiskGrowthProfile"
                     },
-                    "isRequired": true,
+                    "isRequired": false,
                     "attributes": []
                 },
                 "name": {
