@@ -35,7 +35,9 @@
     "stp": 10,
     "budget": 600,
     "swingHoldRatio": 70,
-    "stockCommission": 0.1
+    "stockCommission": 0.1,
+    "marketCategory": "US_Index",
+    "riskGrowthProfile": "Hare"
   },
   "transactions": {
     "SplitBuyInitial": {

@@ -46,6 +46,24 @@ export const schema: Schema = {
                     "isRequired": false,
                     "attributes": []
                 },
+                "marketCategory": {
+                    "name": "marketCategory",
+                    "isArray": false,
+                    "type": {
+                        "enum": "MarketCategory"
+                    },
+                    "isRequired": true,
+                    "attributes": []
+                },
+                "riskGrowthProfile": {
+                    "name": "riskGrowthProfile",
+                    "isArray": false,
+                    "type": {
+                        "enum": "RiskGrowthProfile"
+                    },
+                    "isRequired": true,
+                    "attributes": []
+                },
                 "name": {
                     "name": "name",
                     "isArray": false,
@@ -67,10 +85,31 @@ export const schema: Schema = {
                     "isRequired": false,
                     "attributes": []
                 },
+                "stp": {
+                    "name": "stp",
+                    "isArray": false,
+                    "type": "Float",
+                    "isRequired": true,
+                    "attributes": []
+                },
                 "budget": {
                     "name": "budget",
                     "isArray": false,
                     "type": "Float",
+                    "isRequired": false,
+                    "attributes": []
+                },
+                "testPrice": {
+                    "name": "testPrice",
+                    "isArray": false,
+                    "type": "Float",
+                    "isRequired": false,
+                    "attributes": []
+                },
+                "testHistoricalCloses": {
+                    "name": "testHistoricalCloses",
+                    "isArray": false,
+                    "type": "AWSJSON",
                     "isRequired": false,
                     "attributes": []
                 },
@@ -111,6 +150,20 @@ export const schema: Schema = {
                 },
                 "htp": {
                     "name": "htp",
+                    "isArray": false,
+                    "type": "Float",
+                    "isRequired": false,
+                    "attributes": []
+                },
+                "totalOutOfPocket": {
+                    "name": "totalOutOfPocket",
+                    "isArray": false,
+                    "type": "Float",
+                    "isRequired": false,
+                    "attributes": []
+                },
+                "currentCashBalance": {
+                    "name": "currentCashBalance",
                     "isArray": false,
                     "type": "Float",
                     "isRequired": false,
@@ -273,6 +326,13 @@ export const schema: Schema = {
                     "isRequired": false,
                     "attributes": []
                 },
+                "splitRatio": {
+                    "name": "splitRatio",
+                    "isArray": false,
+                    "type": "Float",
+                    "isRequired": false,
+                    "attributes": []
+                },
                 "swingShares": {
                     "name": "swingShares",
                     "isArray": false,
@@ -310,13 +370,6 @@ export const schema: Schema = {
                 },
                 "lbd": {
                     "name": "lbd",
-                    "isArray": false,
-                    "type": "Float",
-                    "isRequired": false,
-                    "attributes": []
-                },
-                "tp": {
-                    "name": "tp",
                     "isArray": false,
                     "type": "Float",
                     "isRequired": false,
@@ -645,8 +698,8 @@ export const schema: Schema = {
                     "isRequired": false,
                     "attributes": []
                 },
-                "tpPercent": {
-                    "name": "tpPercent",
+                "stpValue": {
+                    "name": "stpValue",
                     "isArray": false,
                     "type": "Float",
                     "isRequired": false,
@@ -755,13 +808,36 @@ export const schema: Schema = {
                 "Sideways"
             ]
         },
+        "MarketCategory": {
+            "name": "MarketCategory",
+            "values": [
+                "APAC_Index",
+                "China_Index",
+                "Crypto",
+                "Emerging_Index",
+                "Europe_Index",
+                "International_Index",
+                "Metals",
+                "Oil",
+                "Opportunity",
+                "US_Index"
+            ]
+        },
+        "RiskGrowthProfile": {
+            "name": "RiskGrowthProfile",
+            "values": [
+                "Hare",
+                "Tortoise"
+            ]
+        },
         "TxnAction": {
             "name": "TxnAction",
             "values": [
                 "Buy",
                 "Sell",
                 "Div",
-                "SLP"
+                "SLP",
+                "StockSplit"
             ]
         },
         "TxnSignal": {
@@ -837,5 +913,5 @@ export const schema: Schema = {
         }
     },
     "codegenVersion": "3.4.4",
-    "version": "58394f83c48d79aef0d5a5725b80aaa9"
+    "version": "ab361d86a8dd11d3cc9c3c9da6c1391e"
 };

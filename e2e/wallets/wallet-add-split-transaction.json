@@ -23,7 +23,9 @@
     "stp": 10,
     "budget": 1000,
     "swingHoldRatio": 60,
-    "stockCommission": 0
+    "stockCommission": 0,
+    "marketCategory": "US_Index",
+    "riskGrowthProfile": "Hare"
   },
   "transactions": {
     "InitialBuy": {

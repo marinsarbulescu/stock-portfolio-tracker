@@ -1,15 +1,18 @@
 {
   "scenario": "SamePriceTransactions",
   "stock": {
-    "symbol": "E2ESPT",
+    "symbol": "E2ESPT2",
     "name": "E2E Same Price Test",
     "stockType": "ETF",
     "region": "US",
     "pdp": 5,
     "stp": 10,
+    "htp": 20,
     "budget": 600,
     "swingHoldRatio": 30,
-    "stockCommission": 0
+    "stockCommission": 0,
+    "marketCategory": "US_Index",
+    "riskGrowthProfile": "Tortoise"
   },
   "transactions": {
     "TransactionA": {
@@ -44,7 +47,7 @@
             "pdp": "5",
             "shr": "30",
             "stp": "10%",
-            "htp": "-"
+            "htp": "20%"
           },
           "txnsAndShares": {
             "buys": 1,
@@ -98,7 +101,7 @@
             "pdp": "5",
             "shr": "30",
             "stp": "10%",
-            "htp": "-"
+            "htp": "20%"
           },
           "txnsAndShares": {
             "buys": 2,
@@ -152,7 +155,7 @@
             "pdp": "5",
             "shr": "30",
             "stp": "10%",
-            "htp": "-"
+            "htp": "20%"
           },
           "txnsAndShares": {
             "buys": 3,
@@ -206,7 +209,7 @@
             "pdp": "5",
             "shr": "30",
             "stp": "10%",
-            "htp": "-"
+            "htp": "20%"
           },
           "txnsAndShares": {
             "buys": 4,

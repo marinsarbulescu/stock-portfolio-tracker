@@ -12,7 +12,9 @@
       "budget": 1000,
       "swingHoldRatio": 30,
       "stockCommission": 1,
-      "htp": 10
+      "htp": 10,
+      "marketCategory": "US_Index",
+      "riskGrowthProfile": "Hare"
     },
     {
       "symbol": "BTC-USD",
@@ -25,7 +27,9 @@
       "budget": 2000,
       "swingHoldRatio": 50,
       "stockCommission": 0,
-      "htp": 15
+      "htp": 15,
+      "marketCategory": "Crypto",
+      "riskGrowthProfile": "Tortoise"
     }
   ]
 }

@@ -15,7 +15,7 @@ import WalletsHeader from './components/WalletsHeader';
 import WalletsOverview from './components/WalletsOverview';
 import WalletsTabs from './components/WalletsTabs';
 import WalletsTransactionsTable from './components/WalletsTransactionsTable';
-import EditStockModal from '../../portfolio/components/PortfolioEditStockModal';
+import PortfolioAddEditStockModal from '../../portfolio/components/PortfolioAddEditStockModal';
 import type { TransactionTableColumnVisibilityState, SortableTxnKey, SortConfig } from './types';
 
 // --- IMPORT THE CORRECT formatCurrency ---
@@ -222,13 +222,7 @@ export default function StockWalletPage() {
         
         try {
             const { data: stock, errors } = await client.models.PortfolioStock.get(
-                { id: stockId },
-                { 
-                    selectionSet: [
-                        'id', 'name', 'symbol', 'budget', 'pdp', 'swingHoldRatio', 
-                        'stp', 'stockCommission', 'htp', 'totalOutOfPocket', 'currentCashBalance', 'testPrice'
-                    ] 
-                }
+                { id: stockId }
             );
 
             if (errors) {
@@ -2284,15 +2278,9 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
         if (!stockData) {
             console.log('Current stock data not available, fetching fresh data...');
             try {
+                // Fetch all fields by not specifying selectionSet
                 const { data: freshStockData, errors } = await client.models.PortfolioStock.get({
                     id: stockId
-                }, {
-                    selectionSet: [
-                        'id', 'symbol', 'name', 'stockType', 'region', 'stockTrend',
-                        'budget', 'pdp', 'stp', 'swingHoldRatio', 'stockCommission', 'htp',
-                        'testPrice', 'owner', 'isHidden', 'archived', 'archivedAt',
-                        'createdAt', 'updatedAt'
-                    ]
                 });
 
                 if (errors) {
@@ -2322,6 +2310,8 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
                 stockCommission: stockData.stockCommission ?? stockCommission,
                 htp: stockData.htp ?? stockHtp,
                 testPrice: stockData.testPrice ?? null,
+                marketCategory: stockData.marketCategory ?? null,
+                riskGrowthProfile: stockData.riskGrowthProfile ?? null,
                 owner: stockData.owner || ownerId || '',
                 isHidden: stockData.isHidden,
                 archived: stockData.archived,
@@ -2365,6 +2355,14 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
             console.error('Unexpected error updating stock:', err);
             setError((err as Error).message || 'An error occurred during update.');
         }
+    };
+
+    // New unified modal success handler
+    const handleEditStockSuccess = async (updatedStock?: PortfolioStockDataType) => {
+        console.log('Stock updated successfully:', updatedStock);
+        // Refresh all stock data from database to ensure we have the latest values
+        await fetchCurrentStockData();
+        handleCancelEditStock();
     };
     // --- END Edit Stock Modal Handlers ---
     
@@ -2528,10 +2526,11 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
             {/* --- END: Edit modal --- */}        
 
             {/* --- START: Edit Stock Modal --- */}
-            <EditStockModal
+            <PortfolioAddEditStockModal
+                mode="edit"
                 isOpen={isEditStockModalOpen}
-                stockToEditData={stockToEditData}
-                onUpdate={handleUpdateStock}
+                initialData={stockToEditData}
+                onSuccess={handleEditStockSuccess}
                 onCancel={handleCancelEditStock}
             />
             {/* --- END: Edit Stock Modal --- */}

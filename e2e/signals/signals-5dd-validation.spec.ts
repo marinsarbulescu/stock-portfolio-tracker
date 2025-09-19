@@ -63,6 +63,8 @@ async function createStockWithTestData(page: any, testCase: FiveDDTestCase) {
         budget: testCase.stock.budget,
         swingHoldRatio: testCase.stock.swingHoldRatio,
         stockCommission: testCase.stock.stockCommission,
+        marketCategory: testCase.stock.marketCategory as any,
+        riskGrowthProfile: testCase.stock.riskGrowthProfile as any,
         owner: E2E_TEST_USER_OWNER_ID,
         testPrice: testCase.stock.testPrice,
         // Try converting the array to JSON string

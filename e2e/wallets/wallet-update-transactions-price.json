@@ -10,7 +10,9 @@
     "budget": 600,
     "swingHoldRatio": 30,
     "commission": 0,
-    "htp": 12
+    "htp": 12,
+    "marketCategory": "US_Index",
+    "riskGrowthProfile": "Tortoise"
   },
   "transactions": {
     "AddTransactionA": {

@@ -447,9 +447,9 @@ export default function HomePage() {
     function calculateDaysAgo(dateString: string | null | undefined): number | null {
         if (!dateString) return null;
         try {
-          const pastDate = new Date(dateString + 'T00:00:00Z');
+          const pastDate = new Date(dateString + 'T00:00:00');
           const today = new Date();
-          today.setUTCHours(0, 0, 0, 0);
+          today.setHours(0, 0, 0, 0);
           const diffTime = today.getTime() - pastDate.getTime();
           if (diffTime < 0) return 0;
           const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));

@@ -17,8 +17,7 @@ import {
 // Import the new components
 import PortfolioOverview from './components/PortfolioOverview';
 import PortfolioTable from './components/PortfolioTable';
-import AddStockModal from './components/PortfolioAddStockModal';
-import EditStockModal from './components/PortfolioEditStockModal';
+import PortfolioAddEditStockModal from './components/PortfolioAddEditStockModal';
 
 // Import types from the types file
 import type {
@@ -53,10 +52,9 @@ function PortfolioContent() {
     setStockSortConfig({ key, direction });
   };
 
-  // --- State for editing and modal ---
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false); // For Add Stock modal
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // For Edit Stock modal
-  const [editingStockId, setEditingStockId] = useState<string | null>(null);
+  // --- State for unified modal ---
+  const [isModalOpen, setIsModalOpen] = useState(false); // Unified modal state
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add'); // Modal mode
   const [stockToEditData, setStockToEditData] = useState<PortfolioStockDataType | null>(null);
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false); // For collapsible overview
 
@@ -76,6 +74,8 @@ function PortfolioContent() {
     name: false,
     stockType: false,
     region: false,
+    marketCategory: false,
+    riskGrowthProfile: false,
     stockTrend: false,
     currentPrice: false,
     pdp: true,
@@ -278,6 +278,14 @@ function PortfolioContent() {
             valA = a.stockTrend?.toLowerCase() ?? '';
             valB = b.stockTrend?.toLowerCase() ?? '';
             break;
+          case 'marketCategory':
+            valA = a.marketCategory?.toLowerCase() ?? '';
+            valB = b.marketCategory?.toLowerCase() ?? '';
+            break;
+          case 'riskGrowthProfile':
+            valA = a.riskGrowthProfile?.toLowerCase() ?? '';
+            valB = b.riskGrowthProfile?.toLowerCase() ?? '';
+            break;
           case 'currentPrice':
             valA = mergedPrices[a.symbol ?? '']?.currentPrice ?? null;
             valB = mergedPrices[b.symbol ?? '']?.currentPrice ?? null;
@@ -357,6 +365,8 @@ function PortfolioContent() {
           'symbol',
           'name',
           'region',
+          'marketCategory',
+          'riskGrowthProfile',
           'stockType',
           'stockTrend',
           'budget',
@@ -414,54 +424,55 @@ function PortfolioContent() {
 
   // Modal Handlers
   const openAddModal = () => {
-    setIsAddModalOpen(true);
+    setModalMode('add');
+    setStockToEditData(null);
+    setIsModalOpen(true);
   };
 
-  const closeAddModal = () => {
-    setIsAddModalOpen(false);
+  const openEditModal = async (stockData: PortfolioStockDataType) => {
+    try {
+      // Fetch complete stock data including marketCategory and riskGrowthProfile
+      const { data: completeStock, errors } = await client.models.PortfolioStock.get({
+        id: stockData.id
+      });
+
+      if (errors) {
+        console.error('Error fetching complete stock data for edit:', errors);
+        // Fallback to using the existing data if fetch fails
+        setStockToEditData(stockData);
+      } else if (completeStock) {
+        // Use the complete data with all fields
+        setStockToEditData(completeStock as unknown as PortfolioStockDataType);
+      } else {
+        // Fallback to existing data if no data returned
+        setStockToEditData(stockData);
+      }
+    } catch (error) {
+      console.error('Error fetching complete stock data:', error);
+      // Fallback to using the existing data if fetch fails
+      setStockToEditData(stockData);
+    }
+
+    setModalMode('edit');
+    setIsModalOpen(true);
   };
 
-  const handleAddSuccess = () => {
-    fetchPortfolio(); // Refresh the list
-    closeAddModal(); // Close the modal
-  };
-
-  // Edit Click Handler (sets up edit modal)
-  const handleEditClick = (stockData: PortfolioStockDataType) => {
-    console.log('Editing stock data:', stockData);
-    setEditingStockId(stockData.id);
-    setStockToEditData(stockData);
-    setIsEditModalOpen(true);
-  };
-
-  // Cancel Edit Handler
-  const handleCancelEdit = () => {
-    setIsEditModalOpen(false);
-    setEditingStockId(null);
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setModalMode('add');
     setStockToEditData(null);
   };
 
-  // Update Stock Handler (receives plain object from form, uses ID from state)
-  const handleUpdateStock = async (updatePayload: PortfolioStockUpdateInput) => {
-    if (!editingStockId) return;
-    console.log('Attempting to update stock:', editingStockId, updatePayload);
-    setError(null);
+  const handleModalSuccess = (data?: PortfolioStockDataType) => {
+    console.log(`Stock ${modalMode === 'add' ? 'created' : 'updated'} successfully:`, data);
+    fetchPortfolio(); // Refresh the list
+    closeModal(); // Close the modal
+  };
 
-    try {
-      const { data: updatedStock, errors } = await client.models.PortfolioStock.update(updatePayload);
-      if (errors) throw errors;
-
-      console.log('Stock updated successfully:', updatedStock);
-      fetchPortfolio(); // Refresh the list
-      handleCancelEdit(); // Close edit modal
-
-    } catch (err: unknown) {
-      console.error('Error updating stock:', err);
-      const message = Array.isArray(err) 
-        ? (err as Array<{ message: string }>)[0].message 
-        : (err as Error).message;
-      setError(message || 'Failed to update stock.');
-    }
+  // Edit Click Handler (sets up edit modal)
+  const handleEditClick = async (stockData: PortfolioStockDataType) => {
+    console.log('Editing stock data:', stockData);
+    await openEditModal(stockData);
   };
 
   const handleToggleHidden = async (stock: PortfolioStockDataType) => {
@@ -1143,20 +1154,13 @@ function PortfolioContent() {
         handleArchiveStock={handleArchiveStock}
         handleMigrateCashFlow={handleMigrateStock}
       />
-
-      {/* Add Stock Modal */}
-      <AddStockModal
-        isOpen={isAddModalOpen}
-        onStockAdded={handleAddSuccess}
-        onCancel={closeAddModal}
-      />
-
-      {/* Edit Stock Modal */}
-      <EditStockModal
-        isOpen={isEditModalOpen}
-        stockToEditData={stockToEditData}
-        onUpdate={handleUpdateStock}
-        onCancel={handleCancelEdit}
+      {/* Unified Add/Edit Stock Modal */}
+      <PortfolioAddEditStockModal
+        mode={modalMode}
+        isOpen={isModalOpen}
+        initialData={modalMode === 'edit' ? stockToEditData : null}
+        onSuccess={handleModalSuccess}
+        onCancel={closeModal}
       />
     </div>
   );

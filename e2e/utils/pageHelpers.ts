@@ -67,6 +67,8 @@ export async function loginUser(page: Page, username = E2E_TEST_USERNAME, passwo
  */
 export async function createStockViaUI(page: Page, stockData: PortfolioStockCreateData) {
     console.log(`[PageHelper] Creating stock ${stockData.symbol} via UI...`);
+    console.log(`[PageHelper] DEBUG - marketCategory: ${stockData.marketCategory}`);
+    console.log(`[PageHelper] DEBUG - riskGrowthProfile: ${stockData.riskGrowthProfile}`);
     
     // Navigate to portfolio first
     await page.goto('/portfolio');
@@ -78,46 +80,60 @@ export async function createStockViaUI(page: Page, stockData: PortfolioStockCrea
     await addButton.click();
     
     // Wait for symbol field to be visible (indicating modal is ready)
-    const symbolField = page.locator('#symbol');
+    const symbolField = page.locator('[data-testid="portfolio-add-stock-symbol"]');
     await expect(symbolField).toBeVisible({ timeout: 10000 });
     
-    // Fill the form using ID selectors
-    await page.locator('#symbol').fill(stockData.symbol);
-    await page.locator('#name').fill(stockData.name || '');
-    await page.locator('#type').selectOption(stockData.stockType);
-    await page.locator('#region').selectOption(stockData.region);
+    // Fill the form using data-testid selectors
+    await page.locator('[data-testid="portfolio-add-stock-symbol"]').fill(stockData.symbol);
+    await page.locator('[data-testid="portfolio-add-stock-name"]').fill(stockData.name || '');
+    await page.locator('[data-testid="portfolio-add-stock-type"]').selectOption(stockData.stockType);
+    await page.locator('[data-testid="portfolio-add-stock-region"]').selectOption(stockData.region);
+    
+    // Handle required marketCategory and riskGrowthProfile fields
+    if (stockData.marketCategory) {
+        const marketCategoryField = page.locator('[data-testid="portfolio-add-stock-market-category"]');
+        await expect(marketCategoryField).toBeVisible();
+        await marketCategoryField.selectOption(stockData.marketCategory);
+        console.log(`[PageHelper] Selected marketCategory: ${stockData.marketCategory}`);
+    }
+    if (stockData.riskGrowthProfile) {
+        const riskProfileField = page.locator('[data-testid="portfolio-add-stock-risk-growth-profile"]');
+        await expect(riskProfileField).toBeVisible();
+        await riskProfileField.selectOption(stockData.riskGrowthProfile);
+        console.log(`[PageHelper] Selected riskGrowthProfile: ${stockData.riskGrowthProfile}`);
+    }
     
     // Handle optional stockTrend field
     if (stockData.stockTrend) {
-        await page.locator('#stockTrend').selectOption(stockData.stockTrend);
+        await page.locator('[data-testid="portfolio-add-stock-trend"]').selectOption(stockData.stockTrend);
     }
     
     // Handle required STP field
-    await page.locator('#stp').fill((stockData.stp ?? 9).toString());
+    await page.locator('[data-testid="portfolio-add-stock-stp"]').fill((stockData.stp ?? 9).toString());
     
     // Fill other required fields
-    await page.locator('#pdp').fill((stockData.pdp ?? 3).toString());
-    await page.locator('#budget').fill((stockData.budget ?? 1000).toString());
-    await page.locator('#shr').fill((stockData.swingHoldRatio ?? 30).toString());
-    await page.locator('#commission').fill((stockData.stockCommission ?? 1).toString());
+    await page.locator('[data-testid="portfolio-add-stock-pdp"]').fill((stockData.pdp ?? 3).toString());
+    await page.locator('[data-testid="portfolio-add-stock-budget"]').fill((stockData.budget ?? 1000).toString());
+    await page.locator('[data-testid="portfolio-add-stock-shr"]').fill((stockData.swingHoldRatio ?? 30).toString());
+    await page.locator('[data-testid="portfolio-add-stock-commission"]').fill((stockData.stockCommission ?? 1).toString());
     
     // Handle optional HTP field
     if (stockData.htp !== undefined && stockData.htp !== null) {
-        await page.locator('#htp').fill(stockData.htp.toString());
+        await page.locator('[data-testid="portfolio-add-stock-htp"]').fill(stockData.htp.toString());
     }
     
     // Handle optional testPrice field
     if (stockData.testPrice !== undefined && stockData.testPrice !== null) {
-        await page.locator('#testPrice').fill(stockData.testPrice.toString());
+        await page.locator('[data-testid="portfolio-add-stock-test-price"]').fill(stockData.testPrice.toString());
     }
     
     // Submit the form
-    const submitButton = page.locator('button[type="submit"]:has-text("Add Stock")');
+    const submitButton = page.locator('[data-testid="portfolio-add-stock-submit-button"]');
     await expect(submitButton).toBeVisible();
     await submitButton.click();
     
     // Wait for modal to close (indicating stock was created successfully)
-    const modal = page.locator('[role="dialog"]').first();
+    const modal = page.locator('[data-testid="portfolio-add-stock-modal"]');
     try {
         await expect(modal).not.toBeVisible({ timeout: 10000 });
         console.log(`[PageHelper] Modal closed successfully after stock creation.`);

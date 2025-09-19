@@ -309,6 +309,8 @@ test.describe('Wallet Page - Delete Transactions and Verify Wallets (JSON-driven
                     swingHoldRatio: stockConfig.swingHoldRatio,
                     stockCommission: stockConfig.stockCommission,
                     htp: stockConfig.htp || null,
+                    marketCategory: stockConfig.marketCategory,
+                    riskGrowthProfile: stockConfig.riskGrowthProfile,
                     owner: E2E_TEST_USER_OWNER_ID
                 } as any);
                 

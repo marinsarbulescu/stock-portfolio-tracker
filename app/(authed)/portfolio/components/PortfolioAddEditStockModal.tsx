@@ -1,4 +1,4 @@
-// app/(authed)/portfolio/components/PortfolioAddStockModal.tsx
+// app/(authed)/portfolio/components/PortfolioAddEditStockModal.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -9,12 +9,13 @@ import { generateClient } from 'aws-amplify/data';
 import type {
   PortfolioStockDataType,
   PortfolioStockCreateInput,
+  PortfolioStockUpdateInput,
   StockTypeValue,
   RegionValue,
   StockTrendValue,
   MarketCategoryValue,
   RiskGrowthProfileValue,
-  AddStockModalProps,
+  PortfolioAddEditStockModalProps,
 } from '../types';
 
 import { modalOverlayStyle, modalContentStyle } from '../types';
@@ -22,11 +23,13 @@ import { ALL_FIELDS, FORM_STRUCTURE } from '../constants/fieldDefinitions';
 
 const client = generateClient<Schema>();
 
-export default function AddStockModal({
+export default function PortfolioAddEditStockModal({
+  mode,
   isOpen,
-  onStockAdded,
+  initialData,
+  onSuccess,
   onCancel,
-}: AddStockModalProps) {
+}: PortfolioAddEditStockModalProps) {
   // --- State for each form field ---
   const [symbol, setSymbol] = useState('');
   const [stockType, setStockType] = useState<StockTypeValue | ''>('');
@@ -46,26 +49,46 @@ export default function AddStockModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Reset form when modal opens
+  // Reset form when modal opens or mode changes
   React.useEffect(() => {
     if (isOpen) {
-      setSymbol('');
-      setStockType('');
-      setRegion('');
-      setStockTrend(null);
-      setMarketCategory('');
-      setRiskGrowthProfile('');
-      setName('');
-      setPdp('');
-      setStp(''); // Reset to empty - no default value
-      setBudget('');
-      setTestPrice('');
-      setSwingHoldRatio('');
-      setStockCommission('');
-      setHtp(''); // Reset to empty
       setError(null);
+      
+      if (mode === 'edit' && initialData) {
+        // Populate form fields from initialData for edit mode
+        setSymbol(initialData.symbol || '');
+        setStockType(initialData.stockType || '');
+        setRegion(initialData.region || '');
+        setStockTrend(initialData.stockTrend || null);
+        setMarketCategory(initialData.marketCategory || '');
+        setRiskGrowthProfile(initialData.riskGrowthProfile || '');
+        setName(initialData.name || '');
+        setPdp(initialData.pdp?.toString() || '');
+        setStp(initialData.stp?.toString() || '');
+        setBudget(initialData.budget?.toString() || '');
+        setTestPrice(initialData.testPrice?.toString() || '');
+        setSwingHoldRatio(initialData.swingHoldRatio?.toString() || '');
+        setStockCommission(initialData.stockCommission?.toString() || '');
+        setHtp(initialData.htp?.toString() || '');
+      } else {
+        // Reset form for add mode
+        setSymbol('');
+        setStockType('');
+        setRegion('');
+        setStockTrend(null);
+        setMarketCategory('');
+        setRiskGrowthProfile('');
+        setName('');
+        setPdp('');
+        setStp(''); // Reset to empty - no default value
+        setBudget('');
+        setTestPrice('');
+        setSwingHoldRatio('');
+        setStockCommission('');
+        setHtp('');
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, mode, initialData]);
 
   // Handle form submission
   const handleSubmit = async (event: React.FormEvent) => {
@@ -75,94 +98,90 @@ export default function AddStockModal({
 
     // --- Basic Validation ---
     if (!symbol || !stockType || !region || !marketCategory || !riskGrowthProfile) {
-      setError('Symbol, Security Type, Region, Market Sector, and Risk Profile are required.');
+      setError('Please fill in all required fields (Symbol, Type, Region, Market Sector, Risk Profile).');
       setIsLoading(false);
       return;
     }
 
-    // Validate SHR (required, must be between 0 and 100)
-    if (!swingHoldRatio || swingHoldRatio.trim() === '') {
-      setError('Swing-Hold Ratio (SHR) is required.');
+    if (!stp || parseFloat(stp) <= 0) {
+      setError('Swing Take Profit (STP) % is required and must be greater than 0.');
       setIsLoading(false);
       return;
     }
-    const shrValue = parseFloat(swingHoldRatio);
-    if (isNaN(shrValue) || shrValue < 0 || shrValue > 100) {
-      setError('Swing-Hold Ratio must be a number between 0 and 100.');
-      setIsLoading(false);
-      return;
-    }
-
-    // Validate PDP (required, must be >= 0)
-    if (!pdp || pdp.trim() === '') {
-      setError('Price Drop Percentage (PDP) is required.');
-      setIsLoading(false);
-      return;
-    }
-    const pdpValue = parseFloat(pdp);
-    if (isNaN(pdpValue) || pdpValue < 0) {
-      setError('Price Drop Percentage must be a number >= 0.');
-      setIsLoading(false);
-      return;
-    }
-
-    // Validate STP (required, must be > 0)
-    if (!stp || stp.trim() === '') {
-      setError('Swing Take Profit (STP) is required.');
-      setIsLoading(false);
-      return;
-    }
-    const stpValue = parseFloat(stp);
-    if (isNaN(stpValue) || stpValue <= 0) {
-      setError('Swing Take Profit must be a number > 0.');
-      setIsLoading(false);
-      return;
-    }
-
-    // Validate HTP (must be >= 0 if provided)
-    const htpValue = htp ? parseFloat(htp) : null;
-    if (htpValue !== null && (isNaN(htpValue) || htpValue < 0)) {
-      setError('HTP must be a number >= 0.');
-      setIsLoading(false);
-      return;
-    }
-
-    // Validate testPrice (must be positive if provided)
-    const testPriceValue = testPrice ? parseFloat(testPrice) : null;
-    if (testPriceValue !== null && (isNaN(testPriceValue) || testPriceValue <= 0)) {
-      setError('Test Price must be a positive number.');
-      setIsLoading(false);
-      return;
-    }
-
-    // --- Prepare data payload ---
-    const stockDataPayload = {
-      symbol: symbol.toUpperCase(),
-      stockType: stockType as StockTypeValue,
-      region: region as RegionValue,
-      stockTrend: stockTrend as StockTrendValue,
-      marketCategory: marketCategory as MarketCategoryValue,
-      riskGrowthProfile: riskGrowthProfile as RiskGrowthProfileValue,
-      name: name || undefined,
-      pdp: pdpValue, // PDP is now required
-      stp: stpValue, // STP is now required
-      budget: budget ? parseFloat(budget) : null,
-      testPrice: testPriceValue,
-      swingHoldRatio: shrValue, // SHR is now required
-      stockCommission: stockCommission ? parseFloat(stockCommission) : null,
-      htp: htpValue, // Include HTP value or null if not provided
-    };
 
     try {
-      console.log('Creating stock input:', stockDataPayload);
-      const { errors } = await client.models.PortfolioStock.create(stockDataPayload);
-      if (errors) throw errors;
+      // Parse numeric values with validation
+      const pdpValue = pdp ? parseFloat(pdp) : undefined;
+      const stpValue = parseFloat(stp);
+      const budgetValue = budget ? parseFloat(budget) : undefined;
+      const testPriceValue = testPrice ? parseFloat(testPrice) : undefined;
+      const swingHoldRatioValue = swingHoldRatio ? parseFloat(swingHoldRatio) : undefined;
+      const stockCommissionValue = stockCommission ? parseFloat(stockCommission) : undefined;
+      const htpValue = htp ? parseFloat(htp) : undefined;
 
-      console.log('Stock added successfully!');
-      onStockAdded(); // Notify parent
+      if (mode === 'add') {
+        // Create new stock
+        const stockData: PortfolioStockCreateInput = {
+          symbol: symbol.toUpperCase().trim(),
+          stockType: stockType as StockTypeValue,
+          region: region as RegionValue,
+          stockTrend: stockTrend,
+          marketCategory: marketCategory || undefined,
+          riskGrowthProfile: riskGrowthProfile || undefined,
+          name: name.trim() || undefined,
+          pdp: pdpValue,
+          stp: stpValue,
+          budget: budgetValue,
+          testPrice: testPriceValue,
+          swingHoldRatio: swingHoldRatioValue,
+          stockCommission: stockCommissionValue,
+          htp: htpValue,
+          isHidden: false,
+          archived: false,
+        };
+
+        const { data: createdStock, errors } = await client.models.PortfolioStock.create(stockData);
+        if (errors) throw errors;
+        
+        console.log('Stock created successfully:', createdStock);
+        onSuccess(createdStock);
+        
+      } else {
+        // Update existing stock
+        if (!initialData?.id) {
+          throw new Error('Stock ID is required for update');
+        }
+
+        const updateData: PortfolioStockUpdateInput = {
+          id: initialData.id,
+          symbol: symbol.toUpperCase().trim(),
+          stockType: stockType as StockTypeValue,
+          region: region as RegionValue,
+          stockTrend: stockTrend,
+          marketCategory: marketCategory || undefined,
+          riskGrowthProfile: riskGrowthProfile || undefined,
+          name: name.trim() || undefined,
+          pdp: pdpValue,
+          stp: stpValue,
+          budget: budgetValue,
+          testPrice: testPriceValue,
+          swingHoldRatio: swingHoldRatioValue,
+          stockCommission: stockCommissionValue,
+          htp: htpValue,
+        };
+
+        const { data: updatedStock, errors } = await client.models.PortfolioStock.update(updateData);
+        if (errors) throw errors;
+        
+        console.log('Stock updated successfully:', updatedStock);
+        onSuccess(updatedStock);
+      }
+
     } catch (err: unknown) {
-      console.error("Error saving stock:", err);
-      const errorMessage = Array.isArray(err) ? (err as Array<{message: string}>)[0].message : ((err as Error).message || "An unexpected error occurred.");
+      console.error(`Error ${mode === 'add' ? 'creating' : 'updating'} stock:`, err);
+      const errorMessage = Array.isArray(err) 
+        ? (err as Array<{message: string}>)[0].message 
+        : ((err as Error).message || `An unexpected error occurred while ${mode === 'add' ? 'creating' : 'updating'} the stock.`);
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -173,13 +192,22 @@ export default function AddStockModal({
     return null;
   }
 
+  // Mode-specific content
+  const modalTitle = mode === 'add' 
+    ? 'Add New Stock to Portfolio' 
+    : `Edit ${initialData?.symbol || 'Stock'}`;
+  
+  const submitButtonText = mode === 'add' ? 'Add Stock' : 'Update Stock';
+  
+  const dataTestidPrefix = mode === 'add' ? 'portfolio-add-stock' : 'portfolio-edit-stock';
+
   return (
     <div style={modalOverlayStyle}>
-      <div style={modalContentStyle} data-testid="portfolio-add-stock-modal">
+      <div style={modalContentStyle} data-testid={`${dataTestidPrefix}-modal`}>
         <form onSubmit={handleSubmit} style={{ 
           padding: '1.5rem'
         }}>
-          <h2 style={{ margin: '0 0 20px 0', textAlign: 'center' }}>Add New Stock to Portfolio</h2>
+          <h2 style={{ margin: '0 0 20px 0', textAlign: 'center' }}>{modalTitle}</h2>
           
           {error && (
             <p style={{ 
@@ -212,23 +240,23 @@ export default function AddStockModal({
                 </label>
                 <input 
                   id="symbol" 
-                  data-testid="portfolio-add-stock-symbol"
+                  data-testid={`${dataTestidPrefix}-symbol`}
                   value={symbol} 
                   onChange={(e) => setSymbol(e.target.value)} 
                   placeholder={ALL_FIELDS.symbol.placeholder}
                   required={ALL_FIELDS.symbol.required}
-                  disabled={isLoading} 
+                  disabled={isLoading}
                   style={{width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #555', backgroundColor: '#2a2a2a', color: 'white'}}
                 />
               </div>
-
+              
               <div>
                 <label htmlFor="name" style={{display: 'block', marginBottom: '3px', fontWeight: 'normal'}}>
                   {ALL_FIELDS.name.label}
                 </label>
                 <input 
                   id="name" 
-                  data-testid="portfolio-add-stock-name"
+                  data-testid={`${dataTestidPrefix}-name`}
                   value={name} 
                   onChange={(e) => setName(e.target.value)} 
                   placeholder={ALL_FIELDS.name.placeholder}
@@ -236,14 +264,14 @@ export default function AddStockModal({
                   style={{width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #555', backgroundColor: '#2a2a2a', color: 'white'}}
                 />
               </div>
-              
+
               <div>
-                <label htmlFor="type" style={{display: 'block', marginBottom: '3px', fontWeight: 'normal'}}>
+                <label htmlFor="stockType" style={{display: 'block', marginBottom: '3px', fontWeight: 'normal'}}>
                   {ALL_FIELDS.stockType.label} {ALL_FIELDS.stockType.required && <span style={{color: 'red', fontSize: '0.8em'}}>*</span>}
                 </label>
                 <select 
-                  id="type" 
-                  data-testid="portfolio-add-stock-type"
+                  id="stockType" 
+                  data-testid={`${dataTestidPrefix}-type`}
                   value={stockType} 
                   onChange={(e) => setStockType(e.target.value as StockTypeValue)} 
                   required={ALL_FIELDS.stockType.required}
@@ -256,14 +284,14 @@ export default function AddStockModal({
                   ))}
                 </select>
               </div>
-              
+
               <div>
                 <label htmlFor="region" style={{display: 'block', marginBottom: '3px', fontWeight: 'normal'}}>
                   {ALL_FIELDS.region.label} {ALL_FIELDS.region.required && <span style={{color: 'red', fontSize: '0.8em'}}>*</span>}
                 </label>
                 <select 
                   id="region" 
-                  data-testid="portfolio-add-stock-region"
+                  data-testid={`${dataTestidPrefix}-region`}
                   value={region} 
                   onChange={(e) => setRegion(e.target.value as RegionValue)} 
                   required={ALL_FIELDS.region.required}
@@ -279,11 +307,11 @@ export default function AddStockModal({
 
               <div>
                 <label htmlFor="marketCategory" style={{display: 'block', marginBottom: '3px', fontWeight: 'normal'}}>
-                  {ALL_FIELDS.marketCategory.label} {ALL_FIELDS.marketCategory.required && <span style={{color: 'red', fontSize: '0.8em'}}>*</span>}
+                  {ALL_FIELDS.marketCategory.label}
                 </label>
                 <select 
                   id="marketCategory" 
-                  data-testid="portfolio-add-stock-market-category"
+                  data-testid={`${dataTestidPrefix}-market-category`}
                   value={marketCategory} 
                   onChange={(e) => setMarketCategory(e.target.value as MarketCategoryValue)} 
                   required={ALL_FIELDS.marketCategory.required}
@@ -299,11 +327,11 @@ export default function AddStockModal({
 
               <div>
                 <label htmlFor="riskGrowthProfile" style={{display: 'block', marginBottom: '3px', fontWeight: 'normal'}}>
-                  {ALL_FIELDS.riskGrowthProfile.label} {ALL_FIELDS.riskGrowthProfile.required && <span style={{color: 'red', fontSize: '0.8em'}}>*</span>}
+                  {ALL_FIELDS.riskGrowthProfile.label}
                 </label>
                 <select 
                   id="riskGrowthProfile" 
-                  data-testid="portfolio-add-stock-risk-profile"
+                  data-testid={`${dataTestidPrefix}-risk-growth-profile`}
                   value={riskGrowthProfile} 
                   onChange={(e) => setRiskGrowthProfile(e.target.value as RiskGrowthProfileValue)} 
                   required={ALL_FIELDS.riskGrowthProfile.required}
@@ -328,10 +356,9 @@ export default function AddStockModal({
                 </label>
                 <input 
                   id="testPrice" 
-                  data-testid="portfolio-add-stock-test-price"
+                  data-testid={`${dataTestidPrefix}-test-price`}
                   type="number" 
                   step="any" 
-                  min="0.01"
                   value={testPrice} 
                   onChange={(e) => setTestPrice(e.target.value)}
                   placeholder={ALL_FIELDS.testPrice.placeholder}
@@ -357,7 +384,7 @@ export default function AddStockModal({
                 </label>
                 <input 
                   id="budget" 
-                  data-testid="portfolio-add-stock-budget"
+                  data-testid={`${dataTestidPrefix}-budget`}
                   type="number" 
                   step="any" 
                   value={budget} 
@@ -385,7 +412,7 @@ export default function AddStockModal({
                 </label>
                 <select 
                   id="stockTrend" 
-                  data-testid="portfolio-add-stock-trend"
+                  data-testid={`${dataTestidPrefix}-trend`}
                   value={stockTrend || ''} 
                   onChange={(e) => setStockTrend(e.target.value as StockTrendValue || null)} 
                   disabled={isLoading}
@@ -396,28 +423,19 @@ export default function AddStockModal({
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
-                {ALL_FIELDS.stockTrend.helpText && (
-                  <small style={{
-                    color: '#aaa', 
-                    fontSize: '0.8em', 
-                    lineHeight: '1.3',
-                    display: 'block',
-                    marginTop: '5px'
-                  }}>
-                    {ALL_FIELDS.stockTrend.helpText}
-                  </small>
-                )}
               </div>
 
               <div>
-                <label htmlFor="commission" style={{display: 'block', marginBottom: '3px', fontWeight: 'normal'}}>
+                <label htmlFor="stockCommission" style={{display: 'block', marginBottom: '3px', fontWeight: 'normal'}}>
                   {ALL_FIELDS.stockCommission.label}
                 </label>
                 <input 
-                  id="commission" 
-                  data-testid="portfolio-add-stock-commission"
+                  id="stockCommission" 
+                  data-testid={`${dataTestidPrefix}-commission`}
                   type="number" 
                   step="any" 
+                  min="0"
+                  max="100"
                   value={stockCommission} 
                   onChange={(e) => setStockCommission(e.target.value)}
                   placeholder={ALL_FIELDS.stockCommission.placeholder}
@@ -438,7 +456,7 @@ export default function AddStockModal({
               </div>
             </div>
 
-            {/* Column 3: Trading Strategy */}
+            {/* Column 3: Strategy */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               <h3 style={{ margin: '0 0 10px 0', borderBottom: '1px solid #333', paddingBottom: '5px' }}>Strategy</h3>
               
@@ -448,7 +466,7 @@ export default function AddStockModal({
                 </label>
                 <input
                   id="shr"
-                  data-testid="portfolio-add-stock-shr"
+                  data-testid={`${dataTestidPrefix}-shr`}
                   type="number"
                   step="any" 
                   min="0"   
@@ -457,7 +475,6 @@ export default function AddStockModal({
                   onChange={(e) => setSwingHoldRatio(e.target.value)}
                   placeholder={ALL_FIELDS.swingHoldRatio.placeholder}
                   disabled={isLoading}
-                  required={ALL_FIELDS.swingHoldRatio.required}
                   style={{width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #555', backgroundColor: '#2a2a2a', color: 'white'}}
                 />
                 {ALL_FIELDS.swingHoldRatio.helpText && (
@@ -475,20 +492,18 @@ export default function AddStockModal({
 
               <div>
                 <label htmlFor="pdp" style={{display: 'block', marginBottom: '3px', fontWeight: 'normal'}}>
-                  Price Drop Percentage (PDP) <span style={{color: 'red', fontSize: '0.8em'}}>*</span>
+                  Price Drop Percentage (PDP) %
                 </label>
                 <input 
                   id="pdp" 
-                  data-testid="portfolio-add-stock-pdp"
+                  data-testid={`${dataTestidPrefix}-pdp`}
                   type="number" 
-                  step="any"
-                  min="0" 
+                  step="any" 
                   value={pdp} 
                   onChange={(e) => setPdp(e.target.value)}
                   placeholder={ALL_FIELDS.pdp.placeholder}
                   disabled={isLoading}
-                  required={ALL_FIELDS.pdp.required}
-                  style={{width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #555', backgroundColor: '#2a2a2a', color: 'white'}} 
+                  style={{width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #555', backgroundColor: '#2a2a2a', color: 'white'}}
                 />
                 {ALL_FIELDS.pdp.helpText && (
                   <small style={{
@@ -509,7 +524,7 @@ export default function AddStockModal({
                 </label>
                 <input 
                   id="stp" 
-                  data-testid="portfolio-add-stock-stp"
+                  data-testid={`${dataTestidPrefix}-stp`}
                   type="number" 
                   step="any" 
                   value={stp} 
@@ -517,8 +532,6 @@ export default function AddStockModal({
                   placeholder={ALL_FIELDS.stp.placeholder}
                   disabled={isLoading}
                   style={{width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #555', backgroundColor: '#2a2a2a', color: 'white'}}
-                  min="0"
-                  required={ALL_FIELDS.stp.required}
                 />
                 {ALL_FIELDS.stp.helpText && (
                   <small style={{
@@ -534,13 +547,14 @@ export default function AddStockModal({
               </div>
 
               <div>
-                <label htmlFor="htp" style={{display: 'block', marginBottom: '3px', fontWeight: 'normal'}}>Hold Take Profit (HTP) %</label>
+                <label htmlFor="htp" style={{display: 'block', marginBottom: '3px', fontWeight: 'normal'}}>
+                  Hold Take Profit (HTP) %
+                </label>
                 <input 
                   id="htp" 
-                  data-testid="portfolio-add-stock-htp"
+                  data-testid={`${dataTestidPrefix}-htp`}
                   type="number" 
                   step="any" 
-                  min="0"
                   value={htp} 
                   onChange={(e) => setHtp(e.target.value)}
                   placeholder={ALL_FIELDS.htp.placeholder}
@@ -568,6 +582,7 @@ export default function AddStockModal({
               type="button" 
               onClick={onCancel} 
               disabled={isLoading}
+              data-testid={`${dataTestidPrefix}-cancel-button`}
               style={{
                 padding: '10px 20px',
                 backgroundColor: '#555555',
@@ -582,6 +597,7 @@ export default function AddStockModal({
             <button 
               type="submit" 
               disabled={isLoading}
+              data-testid={`${dataTestidPrefix}-submit-button`}
               style={{
                 padding: '10px 20px',
                 backgroundColor: '#557100',
@@ -591,7 +607,7 @@ export default function AddStockModal({
                 cursor: isLoading ? 'not-allowed' : 'pointer'
               }}
             >
-              {isLoading ? 'Saving...' : 'Add Stock'}
+              {isLoading ? (mode === 'add' ? 'Adding...' : 'Updating...') : submitButtonText}
             </button>
           </div>
         </form>

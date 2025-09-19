@@ -86,6 +86,8 @@ export interface StockConfig {
     name: string;
     stockType: 'Stock' | 'ETF' | 'Crypto';
     region: 'APAC' | 'EU' | 'Intl' | 'US';
+    marketCategory: 'APAC_Index' | 'China_Index' | 'Crypto' | 'Emerging_Index' | 'Europe_Index' | 'International_Index' | 'Metals' | 'Oil' | 'Opportunity' | 'US_Index';
+    riskGrowthProfile: 'Hare' | 'Tortoise';
     pdp: number;
     stp: number;
     budget: number;

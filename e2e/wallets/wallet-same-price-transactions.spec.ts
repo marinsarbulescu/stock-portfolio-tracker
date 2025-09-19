@@ -344,6 +344,8 @@ test.describe('Wallet Same Price Transactions (JSON-driven)', () => {
             swingHoldRatio: testConfig.stock.swingHoldRatio,
             stockCommission: testConfig.stock.stockCommission,
             htp: testConfig.stock.htp,
+            marketCategory: testConfig.stock.marketCategory,
+            riskGrowthProfile: testConfig.stock.riskGrowthProfile,
             owner: E2E_TEST_USER_OWNER_ID
         } as any);
         

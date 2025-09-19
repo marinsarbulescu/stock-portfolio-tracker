@@ -34,6 +34,9 @@ import {
     PortfolioCreateEditTestConfig
 } from '../utils/jsonHelper';
 
+// Import label mapping functions
+import { getMarketCategoryLabel, getRiskGrowthProfileLabel } from '../../app/(authed)/portfolio/types';
+
 import {
     SHARE_PRECISION,
     CURRENCY_PRECISION,
@@ -94,6 +97,8 @@ async function toggleAllColumnsVisible(page: any) {
         'name',
         'stockType', 
         'region',
+        'marketCategory',
+        'riskGrowthProfile',
         'stockTrend',
         'currentPrice',
         'pdp',
@@ -141,22 +146,28 @@ async function openEditModalAndVerifyValues(page: any, stockData: PortfolioCreat
     await editButton.click();
     
     // Wait for form fields to be visible (indicating modal is ready)
-    await expect(page.locator('#symbol')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('[data-testid="portfolio-edit-stock-symbol"]')).toBeVisible({ timeout: 10000 });
     
     // Verify prefilled values
-    await expect(page.locator('#symbol')).toHaveValue(stockData.symbol.toUpperCase());
-    await expect(page.locator('#type')).toHaveValue(stockData.stockType);
-    await expect(page.locator('#region')).toHaveValue(stockData.region);
-    if (stockData.stockTrend) {
-        await expect(page.locator('#stockTrend')).toHaveValue(stockData.stockTrend);
+    await expect(page.locator('[data-testid="portfolio-edit-stock-symbol"]')).toHaveValue(stockData.symbol.toUpperCase());
+    await expect(page.locator('[data-testid="portfolio-edit-stock-type"]')).toHaveValue(stockData.stockType);
+    await expect(page.locator('[data-testid="portfolio-edit-stock-region"]')).toHaveValue(stockData.region);
+    if (stockData.marketCategory) {
+        await expect(page.locator('[data-testid="portfolio-edit-stock-market-category"]')).toHaveValue(stockData.marketCategory);
     }
-    await expect(page.locator('#name')).toHaveValue(stockData.name);
-    await expect(page.locator('#pdp')).toHaveValue(stockData.pdp.toString());
-    await expect(page.locator('#stp')).toHaveValue(stockData.stp.toString());
-    await expect(page.locator('#shr')).toHaveValue(stockData.swingHoldRatio.toString());
-    await expect(page.locator('#budget')).toHaveValue(stockData.budget.toString());
-    await expect(page.locator('#commission')).toHaveValue(stockData.stockCommission.toString());
-    await expect(page.locator('#htp')).toHaveValue(stockData.htp!.toString());
+    if (stockData.riskGrowthProfile) {
+        await expect(page.locator('[data-testid="portfolio-edit-stock-risk-growth-profile"]')).toHaveValue(stockData.riskGrowthProfile);
+    }
+    if (stockData.stockTrend) {
+        await expect(page.locator('[data-testid="portfolio-edit-stock-trend"]')).toHaveValue(stockData.stockTrend);
+    }
+    await expect(page.locator('[data-testid="portfolio-edit-stock-name"]')).toHaveValue(stockData.name);
+    await expect(page.locator('[data-testid="portfolio-edit-stock-pdp"]')).toHaveValue(stockData.pdp.toString());
+    await expect(page.locator('[data-testid="portfolio-edit-stock-stp"]')).toHaveValue(stockData.stp.toString());
+    await expect(page.locator('[data-testid="portfolio-edit-stock-shr"]')).toHaveValue(stockData.swingHoldRatio.toString());
+    await expect(page.locator('[data-testid="portfolio-edit-stock-budget"]')).toHaveValue(stockData.budget.toString());
+    await expect(page.locator('[data-testid="portfolio-edit-stock-commission"]')).toHaveValue(stockData.stockCommission.toString());
+    await expect(page.locator('[data-testid="portfolio-edit-stock-htp"]')).toHaveValue(stockData.htp!.toString());
     
     console.log('[PageHelper] Edit modal prefilled values verified.');
 }
@@ -166,24 +177,30 @@ async function editStockValues(page: any, editData: PortfolioCreateEditTestConfi
     console.log('[PageHelper] Editing stock values...');
     
     // Update form fields with new values
-    await page.locator('#type').selectOption(editData.stockType);
-    await page.locator('#region').selectOption(editData.region);
-    if (editData.stockTrend) {
-        await page.locator('#stockTrend').selectOption(editData.stockTrend);
+    await page.locator('[data-testid="portfolio-edit-stock-type"]').selectOption(editData.stockType);
+    await page.locator('[data-testid="portfolio-edit-stock-region"]').selectOption(editData.region);
+    if (editData.marketCategory) {
+        await page.locator('[data-testid="portfolio-edit-stock-market-category"]').selectOption(editData.marketCategory);
     }
-    await page.locator('#pdp').fill(editData.pdp.toString());
-    await page.locator('#stp').fill(editData.stp.toString());
-    await page.locator('#shr').fill(editData.swingHoldRatio.toString());
-    await page.locator('#budget').fill(editData.budget.toString());
-    await page.locator('#commission').fill(editData.stockCommission.toString());
-    await page.locator('#htp').fill(editData.htp!.toString());
+    if (editData.riskGrowthProfile) {
+        await page.locator('[data-testid="portfolio-edit-stock-risk-growth-profile"]').selectOption(editData.riskGrowthProfile);
+    }
+    if (editData.stockTrend) {
+        await page.locator('[data-testid="portfolio-edit-stock-trend"]').selectOption(editData.stockTrend);
+    }
+    await page.locator('[data-testid="portfolio-edit-stock-pdp"]').fill(editData.pdp.toString());
+    await page.locator('[data-testid="portfolio-edit-stock-stp"]').fill(editData.stp.toString());
+    await page.locator('[data-testid="portfolio-edit-stock-shr"]').fill(editData.swingHoldRatio.toString());
+    await page.locator('[data-testid="portfolio-edit-stock-budget"]').fill(editData.budget.toString());
+    await page.locator('[data-testid="portfolio-edit-stock-commission"]').fill(editData.stockCommission.toString());
+    await page.locator('[data-testid="portfolio-edit-stock-htp"]').fill(editData.htp!.toString());
     
     // Submit form
-    const submitButton = page.locator('[data-testid="portfolio-edit-stock-update-button"]');
+    const submitButton = page.locator('[data-testid="portfolio-edit-stock-submit-button"]');
     await submitButton.click();
     
     // Wait for modal to close by checking form fields are no longer visible
-    await expect(page.locator('#symbol')).not.toBeVisible({ timeout: 15000 });
+    await expect(page.locator('[data-testid="portfolio-edit-stock-symbol"]')).not.toBeVisible({ timeout: 15000 });
     
     console.log('[PageHelper] Stock values updated.');
 }
@@ -233,6 +250,18 @@ async function verifyUpdatedStockInTable(page: any, editData: PortfolioCreateEdi
     const budgetCell = page.locator(`[data-testid="portfolio-page-table-budget-${symbol}"]`).first();
     await expect(budgetCell).toBeVisible();
     await expect(budgetCell).toHaveText(formatCurrency(editData.budget));
+    
+    // Verify market category if visible (column might be hidden by default)
+    const marketCategoryCell = page.locator(`[data-testid="portfolio-page-table-marketCategory-${symbol}"]`).first();
+    if (await marketCategoryCell.isVisible()) {
+        await expect(marketCategoryCell).toHaveText(getMarketCategoryLabel(editData.marketCategory!));
+    }
+    
+    // Verify risk growth profile if visible (column might be hidden by default)
+    const riskProfileCell = page.locator(`[data-testid="portfolio-page-table-riskGrowthProfile-${symbol}"]`).first();
+    if (await riskProfileCell.isVisible()) {
+        await expect(riskProfileCell).toHaveText(getRiskGrowthProfileLabel(editData.riskGrowthProfile!));
+    }
     
     console.log('[PageHelper] Updated stock values verified in table.');
 }

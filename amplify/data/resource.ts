@@ -7,6 +7,8 @@ import { getHistoricalData } from '../functions/getHistoricalData/resource.js';
 const stockTypeEnum = a.enum(['Stock', 'ETF', 'Crypto']); // Changed order to match default in form example
 const regionEnum = a.enum(['APAC', 'EU', 'Intl', 'US']); // Intl = International, EU = Europe, APAC = Asia-Pacific
 const stockTrendEnum = a.enum(['Down', 'Up', 'Sideways']); // Stock trend direction
+const marketCategoryEnum = a.enum(['APAC_Index', 'China_Index', 'Crypto', 'Emerging_Index', 'Europe_Index', 'International_Index', 'Metals', 'Oil', 'Opportunity', 'US_Index']); // Market categorization
+const riskGrowthProfileEnum = a.enum(['Hare', 'Tortoise']); // Risk/Growth profile - Hare (aggressive), Tortoise (conservative)
 
 const txnActionEnum = a.enum(['Buy', 'Sell', 'Div', 'SLP', 'StockSplit']); // Div = Dividend, SLP = Stock Lending Payment, StockSplit = Corporate Stock Split
 const txnSignalEnum = a.enum(['_5DD', 'Cust', 'Initial', 'EOM', 'LBD', 'TPH', 'TPP', 'TP', 'Div']);
@@ -18,6 +20,8 @@ const schema = a.schema({
   StockType: stockTypeEnum,
   Region: regionEnum,
   StockTrend: stockTrendEnum,
+  MarketCategory: marketCategoryEnum,
+  RiskGrowthProfile: riskGrowthProfileEnum,
   TxnAction: txnActionEnum,
   TxnSignal: txnSignalEnum,
   WalletType: walletTypeEnum,
@@ -29,6 +33,8 @@ const schema = a.schema({
       stockType: a.ref('StockType').required(), // Reference the StockType enum, required
       region: a.ref('Region').required(),   // Reference the Region enum, required
       stockTrend: a.ref('StockTrend'), // Reference the StockTrend enum, optional
+      marketCategory: a.ref('MarketCategory').required(), // Reference the MarketCategory enum, required
+      riskGrowthProfile: a.ref('RiskGrowthProfile').required(), // Reference the RiskGrowthProfile enum, required
       name: a.string(), // Stock name, optional
       pdp: a.float(),   // Price Drop Percent
       plr: a.float(),   // Profit Loss Ratio (DEPRECATED - kept for historical data)

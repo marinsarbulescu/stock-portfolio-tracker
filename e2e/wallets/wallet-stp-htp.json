@@ -29,7 +29,9 @@
     "htp": 20,
     "budget": 1000,
     "swingHoldRatio": 50,
-    "stockCommission": 0
+    "stockCommission": 0,
+    "marketCategory": "US_Index",
+    "riskGrowthProfile": "Hare"
   },
   "transaction": {
     "action": "Buy",
