@@ -33,8 +33,8 @@ const schema = a.schema({
       stockType: a.ref('StockType').required(), // Reference the StockType enum, required
       region: a.ref('Region').required(),   // Reference the Region enum, required
       stockTrend: a.ref('StockTrend'), // Reference the StockTrend enum, optional
-      marketCategory: a.ref('MarketCategory'), // Reference the MarketCategory enum, temporarily optional
-      riskGrowthProfile: a.ref('RiskGrowthProfile'), // Reference the RiskGrowthProfile enum, temporarily optional
+      marketCategory: a.ref('MarketCategory').required(), // Reference the MarketCategory enum, required
+      riskGrowthProfile: a.ref('RiskGrowthProfile').required(), // Reference the RiskGrowthProfile enum, required
       name: a.string(), // Stock name, optional
       pdp: a.float(),   // Price Drop Percent
       plr: a.float(),   // Profit Loss Ratio (DEPRECATED - kept for historical data)
