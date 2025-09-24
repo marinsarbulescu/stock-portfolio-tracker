@@ -9,7 +9,7 @@ import { usePrices } from '@/app/contexts/PriceContext'; // Import context hook
 import { mergeTestPricesWithRealPrices } from '@/app/utils/priceUtils'; // Import test price utility
 import { applySplitAdjustments, extractStockSplits } from '@/app/utils/splitUtils'; // Import split adjustment utilities
 import { fetchAuthSession } from 'aws-amplify/auth';
-import { calculateTotalRealizedSwingPL, calculateSingleSalePL, calculatePercentToStp, calculatePercentToHtp, calculateHtpTargetPrice, type TransactionForCalculation, type WalletForCalculation } from '@/app/utils/financialCalculations';
+import { calculateTotalRealizedSwingPL, calculateSingleSalePL, calculatePercentToStp, calculatePercentToHtp, type TransactionForCalculation, type WalletForCalculation } from '@/app/utils/financialCalculations';
 import SignalsOverview from './components/SignalsOverview';
 import SignalsTable from './components/SignalsTable';
 // import { useAuthStatus } from '@/app/contexts/AuthStatusContext'; // Import useAuthStatus - Unused
@@ -118,20 +118,20 @@ export default function HomePage() {
         return mergeTestPricesWithRealPrices(latestPrices, stocksWithTestPrices as PortfolioPageStockDataType[]);
     }, [latestPrices, portfolioStocks]);
 
-    // Compute total invested amount per stock by summing remainingShares × buyPrice for all wallets
-    const stockInvestments = useMemo(() => {
-        const invMap: Record<string, number> = {};
-        
-        // Group wallets by stock ID and calculate investment
-        allWallets.forEach(wallet => {
-            if (wallet.portfolioStockId) {
-                const investment = (wallet.remainingShares ?? 0) * (wallet.buyPrice ?? 0);
-                invMap[wallet.portfolioStockId] = (invMap[wallet.portfolioStockId] ?? 0) + investment;
-            }
-        });
-        
-        return invMap;
-    }, [allWallets]);
+    // Compute total invested amount per stock by summing remainingShares × buyPrice for all wallets - currently unused
+    // const stockInvestments = useMemo(() => {
+    //     const invMap: Record<string, number> = {};
+    //
+    //     // Group wallets by stock ID and calculate investment
+    //     allWallets.forEach(wallet => {
+    //         if (wallet.portfolioStockId) {
+    //             const investment = (wallet.remainingShares ?? 0) * (wallet.buyPrice ?? 0);
+    //             invMap[wallet.portfolioStockId] = (invMap[wallet.portfolioStockId] ?? 0) + investment;
+    //         }
+    //     });
+    //
+    //     return invMap;
+    // }, [allWallets]);
 
     const formatTimestamp = (date: Date | null): string => {
         if (!date) return "N/A";
@@ -761,7 +761,7 @@ export default function HomePage() {
                 htpValues: htpValues,
             };
         });
-    }, [portfolioStocks, mergedPrices, processedData, checkHtpSignalForStock, getHtpValuesForStock, stockBudgetAvailable, stockRiskInvestments]);
+    }, [portfolioStocks, mergedPrices, processedData, checkHtpSignalForStock, getHtpValuesForStock, stockBudgetAvailable, stockRiskInvestments, allWallets]);
 
     const portfolioBudgetStats = useMemo(() => {
         const totalBudget = portfolioStocks.reduce((sum, stock) => sum + (stock.budget ?? 0), 0);

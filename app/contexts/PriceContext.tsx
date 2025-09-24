@@ -56,7 +56,7 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
           const storedData: StoredPriceInfo = JSON.parse(storedDataString);
           return storedData.prices || {};
         }
-      } catch (error) {
+      } catch {
         // console.error("[PriceContext.tsx] - Error reading/parsing stored prices state:", error);
       }
     }
@@ -71,7 +71,7 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
           const storedData: StoredPriceInfo = JSON.parse(storedDataString);
           return storedData.timestamp ? new Date(storedData.timestamp) : null;
         }
-      } catch (error) {
+      } catch {
         // console.error("[PriceContext.tsx] - Error reading/parsing stored timestamp state:", error);
         window.localStorage.removeItem(PRICES_STORAGE_KEY);
       }
@@ -91,7 +91,7 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
                 timestamp: lastPriceFetchTimestamp?.toISOString() ?? null
             };
             window.localStorage.setItem(PRICES_STORAGE_KEY, JSON.stringify(dataToStore));
-        } catch (error) {
+        } catch {
             // console.error("[PriceContext.tsx] - Error saving state to localStorage:", error);
         }
     }
@@ -176,7 +176,7 @@ export const PriceProvider = ({ children }: { children: ReactNode }) => {
 
             if (batchPriceResults) {
               // console.log(`[PriceContext.tsx] - Batch ${currentBatchNumber} results:`, batchPriceResults);
-              batchPriceResults.forEach((result: unknown, index: number) => {
+              batchPriceResults.forEach((result: unknown) => {
                 // console.log(`[PriceContext.tsx] - Processing result ${index + 1}:`, result);
                 const typedResult = result as { symbol?: string; historicalCloses?: unknown[]; currentPrice?: number };
                 if (typedResult && typedResult.symbol) {

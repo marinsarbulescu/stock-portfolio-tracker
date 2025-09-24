@@ -1,23 +1,23 @@
 // app/utils/financialCalculations.ts
 import { CURRENCY_PRECISION, PERCENT_PRECISION } from '@/app/config/constants'; // Assuming you have these constants
-import { extractStockSplits, calculateSplitAdjustedPL, type StockSplitInfo, type SplitDetectionTransaction } from './splitUtils';
+import { extractStockSplits, calculateSplitAdjustedPL, type StockSplitInfo } from './splitUtils';
 
 // Define simplified types for mock data used in tests (can also be shared or defined in test file)
-interface MockTransaction {
-    id: string;
-    action: 'Buy' | 'Sell' | 'Div' | 'SLP';
-    txnType?: 'Swing' | 'Hold' | 'Split' | string | null;
-    completedTxnId?: string | null;
-    quantity?: number | null;
-    price?: number | null;
-    date?: string;
-    txnProfit?: number | null; // Add txnProfit for commission-adjusted calculations
-}
+// interface MockTransaction {
+//     id: string;
+//     action: 'Buy' | 'Sell' | 'Div' | 'SLP';
+//     txnType?: 'Swing' | 'Hold' | 'Split' | string | null;
+//     completedTxnId?: string | null;
+//     quantity?: number | null;
+//     price?: number | null;
+//     date?: string;
+//     txnProfit?: number | null; // Add txnProfit for commission-adjusted calculations
+// }
 
-interface MockWallet {
-    id: string;
-    buyPrice?: number | null;
-}
+// interface MockWallet {
+//     id: string;
+//     buyPrice?: number | null;
+// }
 
 // Define a flexible transaction interface that can handle both Mock and Schema types
 export interface TransactionForCalculation {

@@ -1,8 +1,8 @@
 // app/components/AddStockForm.test.tsx
-import React from 'react';
-import { act } from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+// import React from 'react';
+// import { act } from 'react';
+// import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+// import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom'; // For extra matchers like .toBeInTheDocument()
 // import AddStockForm from './AddStockForm'; // Adjust path if needed
 

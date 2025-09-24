@@ -37,7 +37,7 @@ export const AuthStatusProvider: React.FC<AuthStatusProviderProps> = ({ children
          // User is authenticated but not in the group
         setAccessStatus('denied');
       }
-    } catch (error) {
+    } catch {
       // Error likely means user is not authenticated
       //console.log('[AuthStatusContext] User not authenticated or error fetching session:', error);
       setAccessStatus('denied'); // Treat non-authenticated as denied for protected routes

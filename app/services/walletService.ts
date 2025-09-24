@@ -5,7 +5,6 @@ import type { Schema } from '@/amplify/data/resource'; // Adjust path if needed
 import {
     SHARE_PRECISION,
     CURRENCY_PRECISION,
-    PERCENT_PRECISION,
     SHARE_EPSILON,
     CURRENCY_EPSILON,
     FETCH_LIMIT_FOR_UNIQUE_WALLET

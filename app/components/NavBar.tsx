@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import React from 'react';
 import { usePrices } from '@/app/contexts/PriceContext';
-import SignOutButton from './SignOutButton'; // Import SignOutButton if you have it
+// import SignOutButton from './SignOutButton'; // unused import
 
 // Define the type for the prop
 type AccessStatus = 'loading' | 'approved' | 'denied';
@@ -32,11 +32,11 @@ const linkStyles: React.CSSProperties = {
     textDecoration: 'none',
 };
 
-const buttonStyles: React.CSSProperties = {
-    marginLeft: '20px',
-    cursor: 'pointer',
-    padding: '8px 16px', // Example padding
-};
+// const buttonStyles: React.CSSProperties = {
+//     marginLeft: '20px',
+//     cursor: 'pointer',
+//     padding: '8px 16px', // Example padding
+// };
 
 
 // Accept accessStatus prop

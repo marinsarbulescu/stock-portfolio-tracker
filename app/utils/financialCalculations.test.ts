@@ -1,6 +1,6 @@
 // In: app/utils/financialCalculations.test.ts
 
-import { calculateTotalRealizedSwingPL, calculateSingleSalePL /* if you want to mock it or just rely on its own tests */ } from './financialCalculations';
+import { calculateTotalRealizedSwingPL } from './financialCalculations';
 // Mock constants if they are not available in the test environment or set them up
 // For simplicity here, let's assume CURRENCY_PRECISION is 2 for toFixed(2)
 

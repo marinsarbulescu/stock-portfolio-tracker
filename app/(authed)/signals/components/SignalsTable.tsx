@@ -5,27 +5,25 @@ import React from 'react';
 import Link from 'next/link';
 import { formatCurrency } from '@/app/utils/financialCalculations';
 import type { 
-  ReportColumnVisibilityState, 
-  ReportDataItem, 
-  ReportColumnKey, 
+  ReportColumnVisibilityState,
   SignalsTableProps 
 } from '../types';
 
-// Helper component for stock trend visual indicator
-const StockTrendIndicator: React.FC<{ stockTrend?: string | null }> = ({ stockTrend }) => {
-    if (!stockTrend || stockTrend === 'Sideways') return null;
-    
-    const dotStyle: React.CSSProperties = {
-        display: 'inline-block',
-        width: '8px',
-        height: '8px',
-        borderRadius: '50%',
-        marginLeft: '6px',
-        backgroundColor: stockTrend === 'Up' ? '#22c55e' : stockTrend === 'Down' ? '#ef4444' : 'transparent'
-    };
-    
-    return <span style={dotStyle} title={`Stock trend: ${stockTrend}`}></span>;
-};
+// Helper component for stock trend visual indicator - currently unused
+// const StockTrendIndicator: React.FC<{ stockTrend?: string | null }> = ({ stockTrend }) => {
+//     if (!stockTrend || stockTrend === 'Sideways') return null;
+//
+//     const dotStyle: React.CSSProperties = {
+//         display: 'inline-block',
+//         width: '8px',
+//         height: '8px',
+//         borderRadius: '50%',
+//         marginLeft: '6px',
+//         backgroundColor: stockTrend === 'Up' ? '#22c55e' : stockTrend === 'Down' ? '#ef4444' : 'transparent'
+//     };
+//
+//     return <span style={dotStyle} title={`Stock trend: ${stockTrend}`}></span>;
+// };
 
 export default function SignalsTable({
     isLoading,
@@ -39,7 +37,7 @@ export default function SignalsTable({
     formatters,
     cellStyles
 }: SignalsTableProps) {
-    const { formatPercent } = formatters;
+    // const { formatPercent } = formatters; // unused
     const { getBreakEvenCellStyle, getSinceBuyCellStyle } = cellStyles;
 
     if (isLoading) return <p>Loading...</p>;

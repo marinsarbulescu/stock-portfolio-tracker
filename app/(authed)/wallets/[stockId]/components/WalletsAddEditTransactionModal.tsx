@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { type Schema } from '@/amplify/data/resource'; // Adjust path if needed
 import { generateClient } from 'aws-amplify/data';
-import { calculateSingleSalePL, calculateSingleSalePLWithCommission } from '@/app/utils/financialCalculations';
+import { calculateSingleSalePLWithCommission } from '@/app/utils/financialCalculations';
 import { processTransactionCashFlow } from '@/app/utils/stockCashFlowManager';
 import { FETCH_LIMIT_WALLETS_GENEROUS } from '@/app/config/constants';
 
@@ -145,7 +145,7 @@ export default function TransactionForm({
       console.log('[DEBUG StockSplit] Additional useEffect - updating split ratio:', { from: splitRatio, to: initialData.splitRatio.toString() });
       setSplitRatio(initialData.splitRatio.toString());
     }
-  }, [isEditMode, initialData?.splitRatio, initialData?.action]);
+  }, [isEditMode, initialData?.splitRatio, initialData?.action, initialData, splitRatio]);
 
 
   // Handle form submission
@@ -365,8 +365,8 @@ export default function TransactionForm({
     // --- End TxnProfit ---
 
     // --- Cash flow is now handled at stock level, not per transaction ---
-    const outOfPocketValue = null;  // No longer calculated per transaction
-    const cashBalanceValue = null;  // No longer calculated per transaction
+    // const outOfPocketValue = null;  // No longer calculated per transaction - unused
+    // const cashBalanceValue = null;  // No longer calculated per transaction - unused
 
     // --- Prepare Final Payload for Transaction (using FINAL rounded values) ---
     const finalPayload: Partial<Omit<TransactionDataType, 'id' | 'portfolioStock' | 'createdAt' | 'updatedAt' | 'owner'>> = {
