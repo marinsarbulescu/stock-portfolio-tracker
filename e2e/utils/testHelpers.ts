@@ -323,6 +323,7 @@ export async function executeTestStep<T>(
     } catch (error) {
         if (handleFailure) {
             await handleTestFailure(page, stepName, error);
+            throw error; // This line will never execute but satisfies TypeScript
         } else {
             console.error(`[TestHelper] ❌ Failed: ${stepName} - ${error}`);
             throw error;

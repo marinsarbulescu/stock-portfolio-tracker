@@ -122,7 +122,8 @@ export async function createMultipleStocksViaAPI(
         console.log(`[PortfolioHelper] Creating ${stockDataList.length} stocks via API...`);
     }
 
-    for (const [index, stockData] of stockDataList.entries()) {
+    for (let index = 0; index < stockDataList.length; index++) {
+        const stockData = stockDataList[index];
         try {
             const stock = await createStockViaAPI(stockData, {
                 logCreation: logProgress,
@@ -166,7 +167,8 @@ export async function deleteMultipleStocks(
         console.log(`[PortfolioHelper] Deleting ${stockIds.length} stocks...`);
     }
 
-    for (const [index, stockId] of stockIds.entries()) {
+    for (let index = 0; index < stockIds.length; index++) {
+        const stockId = stockIds[index];
         try {
             await deletePortfolioStock(stockId);
 

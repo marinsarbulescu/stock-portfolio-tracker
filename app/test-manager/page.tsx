@@ -19,6 +19,7 @@ interface TestConfig {
   tags: string[];
   priority: 'high' | 'medium' | 'low';
   estimatedDuration: string;
+  requiresIsolation?: boolean;
 }
 
 interface TestSuite {
@@ -327,6 +328,8 @@ export default function TestManager() {
     const parallelFiles: string[] = [];
     const isolatedFiles: string[] = [];
 
+    if (!config) return;
+
     for (const [, suite] of Object.entries(config.testSuites)) {
       if (suite.enabled) {
         for (const test of suite.tests) {
@@ -343,11 +346,15 @@ export default function TestManager() {
 
     // Determine which command to use (prefer PowerShell on Windows)
     const isWindows = navigator.platform.toLowerCase().includes('win');
-    const preferredCommand = isWindows ? commands.powershell : commands.bash;
+    const preferredCommand = typeof commands === 'string'
+      ? commands
+      : isWindows ? commands.powershell : commands.bash;
 
     let message = '';
     if (parallelFiles.length > 0 && isolatedFiles.length > 0) {
-      message = `✅ Two-phase command copied to clipboard!\n\nPhase 1: ${parallelFiles.length} parallel tests\nPhase 2: ${isolatedFiles.length} isolated tests\n\n--- PowerShell (Windows) ---\n${commands.powershell}\n\n--- Bash/Git Bash ---\n${commands.bash}\n\nThis will run parallel tests first, then isolated tests only if parallel tests pass.`;
+      const powershellCmd = typeof commands === 'string' ? commands : commands.powershell;
+      const bashCmd = typeof commands === 'string' ? commands : commands.bash;
+      message = `✅ Two-phase command copied to clipboard!\n\nPhase 1: ${parallelFiles.length} parallel tests\nPhase 2: ${isolatedFiles.length} isolated tests\n\n--- PowerShell (Windows) ---\n${powershellCmd}\n\n--- Bash/Git Bash ---\n${bashCmd}\n\nThis will run parallel tests first, then isolated tests only if parallel tests pass.`;
 
       // Copy the preferred command
       try {
@@ -733,6 +740,12 @@ export default function TestManager() {
         <div className="command-display">
           {(() => {
             const commands = generateCommand();
+
+            // Handle both string and object command formats
+            if (typeof commands === 'string') {
+              return <code>{commands}</code>;
+            }
+
             const isWindows = navigator.platform.toLowerCase().includes('win');
             const preferredCommand = isWindows ? commands.powershell : commands.bash;
 

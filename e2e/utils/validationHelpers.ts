@@ -138,7 +138,7 @@ export async function validateFormData(
             await expect(field).toBeVisible({ timeout });
 
             // Handle different input types
-            const tagName = await field.evaluate((el) => el.tagName.toLowerCase());
+            const tagName = await field.evaluate((el: HTMLElement) => el.tagName.toLowerCase());
 
             if (tagName === 'input' || tagName === 'textarea') {
                 await expect(field).toHaveValue(expectedValue);
