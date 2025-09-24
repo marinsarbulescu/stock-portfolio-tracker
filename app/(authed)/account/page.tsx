@@ -3,8 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 // Removed signOut from here, kept others
-import { getCurrentUser, fetchUserAttributes } from 'aws-amplify/auth';
-import { useRouter } from 'next/navigation';
+import { fetchUserAttributes } from 'aws-amplify/auth';
 // --- Import the new button ---
 import SignOutButton from '@/app/components/SignOutButton'; // Adjust path if needed
 

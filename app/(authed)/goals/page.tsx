@@ -15,7 +15,6 @@ const client = generateClient<Schema>();
 
 export default function GoalsPage() {
   // State for the existing goals record (if found)
-  const [existingGoalsData, setExistingGoalsData] = useState<GoalsDataType | null>(null);
   const [existingGoalsId, setExistingGoalsId] = useState<string | null>(null); // Store ID separately
 
   // State for individual form fields (bound to inputs)
@@ -57,10 +56,9 @@ export default function GoalsPage() {
       if (currentGoals) {
           setExistingGoalsId(currentGoals.id); // Store ID
           // --- Store data using simpler type (with cast) ---
-          setExistingGoalsData(currentGoals as GoalsDataType);
           populateForm(currentGoals as GoalsDataType);
       } else { /* ... handle no goals found ... */ }
-    } catch (err: unknown) { /* ... error handling ... */ }
+    } catch { /* ... error handling ... */ }
     finally { setIsLoading(false); }
   }, []);
 

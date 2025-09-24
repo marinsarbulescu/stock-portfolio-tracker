@@ -7,7 +7,6 @@ import { generateClient } from 'aws-amplify/data';
 
 // Import types from the portfolio types file
 import type {
-  PortfolioStockDataType,
   PortfolioStockCreateInput,
   PortfolioStockUpdateInput,
   StockTypeValue,
@@ -19,7 +18,7 @@ import type {
 } from '../types';
 
 import { modalOverlayStyle, modalContentStyle } from '../types';
-import { ALL_FIELDS, FORM_STRUCTURE } from '../constants/fieldDefinitions';
+import { ALL_FIELDS } from '../constants/fieldDefinitions';
 
 const client = generateClient<Schema>();
 

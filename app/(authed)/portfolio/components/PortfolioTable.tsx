@@ -8,13 +8,8 @@ import { formatCurrency } from '@/app/utils/financialCalculations';
 
 // Import types from the portfolio types file
 import type {
-  PortfolioStockDataType,
-  SortableStockKey,
-  StockSortConfig,
-  LatestPrices,
   PortfolioTableProps,
   PortfolioColumnVisibilityState,
-  PortfolioColumnKey,
 } from '../types';
 
 import { STOCK_COLUMN_LABELS, PORTFOLIO_COLUMN_LABELS, getMarketCategoryLabel, getRiskGrowthProfileLabel } from '../types';
@@ -30,7 +25,6 @@ export default function PortfolioTable({
   latestPrices,
   pricesLoading,
   showArchived,
-  archivedCount,
   columnVisibility,
   setColumnVisibility,
   visibleColumnCount,

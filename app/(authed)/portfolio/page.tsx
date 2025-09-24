@@ -6,7 +6,7 @@ import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
 import { usePrices } from '@/app/contexts/PriceContext';
 import { mergeTestPricesWithRealPrices } from '@/app/utils/priceUtils';
-import { migrateStockCashFlow, type MigrationResult } from '@/app/utils/cashFlowMigration';
+import { migrateStockCashFlow } from '@/app/utils/cashFlowMigration';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import {
@@ -23,7 +23,6 @@ import PortfolioAddEditStockModal from './components/PortfolioAddEditStockModal'
 import type {
   PortfolioStockDataType,
   StockWalletDataType,
-  PortfolioStockUpdateInput,
   SortableStockKey,
   StockSortConfig,
   PortfolioColumnVisibilityState,
@@ -577,44 +576,45 @@ function PortfolioContent() {
     }
   };
 
-  // Migration Handler for retroactive cash flow calculation
-  const handleMigrateCashFlow = async (stock: PortfolioStockDataType) => {
-    const confirmMessage = `This will retroactively calculate and update OOP, $ Balance, and ROIC for ${stock.symbol?.toUpperCase()}. This cannot be undone. Continue?`;
-    
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
+  // Migration Handler for retroactive cash flow calculation - currently unused
+  // Keeping for future migration needs
+  // const handleMigrateCashFlow = async (stock: PortfolioStockDataType) => {
+  //   const confirmMessage = `This will retroactively calculate and update OOP, $ Balance, and ROIC for ${stock.symbol?.toUpperCase()}. This cannot be undone. Continue?`;
+  //
+  //   if (!window.confirm(confirmMessage)) {
+  //     return;
+  //   }
 
-    console.log(`Starting cash flow migration for stock: ${stock.id} (${stock.symbol})`);
-    setError(null);
+  //   console.log(`Starting cash flow migration for stock: ${stock.id} (${stock.symbol})`);
+  //   setError(null);
 
-    try {
-      // Show loading state (you could add a loading indicator here)
-      const result: MigrationResult = await migrateStockCashFlow(client, stock.id);
+  //   try {
+  //     // Show loading state (you could add a loading indicator here)
+  //     const result: MigrationResult = await migrateStockCashFlow(client, stock.id);
 
-      if (result.success) {
-        const message = `Migration completed for ${result.stockSymbol}:\n` +
-          `- Total OOP: $${result.calculatedOOP.toFixed(2)}\n` +
-          `- $ Balance: $${result.calculatedCashBalance.toFixed(2)}\n` +
-          `- Transactions processed: ${result.transactionsProcessed}`;
-        
-        alert(message);
-        
-        // Refresh the portfolio to show updated values
-        fetchPortfolio();
-      } else {
-        const errorMessage = `Migration failed for ${result.stockSymbol}: ${result.error}`;
-        console.error(errorMessage);
-        setError(errorMessage);
-        alert(errorMessage);
-      }
-    } catch (err: unknown) {
-      const errorMessage = `Unexpected error during migration: ${(err as Error).message}`;
-      console.error('Migration error:', err);
-      setError(errorMessage);
-      alert(errorMessage);
-    }
-  };
+  //     if (result.success) {
+  //       const message = `Migration completed for ${result.stockSymbol}:\n` +
+  //         `- Total OOP: $${result.calculatedOOP.toFixed(2)}\n` +
+  //         `- $ Balance: $${result.calculatedCashBalance.toFixed(2)}\n` +
+  //         `- Transactions processed: ${result.transactionsProcessed}`;
+  //
+  //       alert(message);
+  //
+  //       // Refresh the portfolio to show updated values
+  //       fetchPortfolio();
+  //     } else {
+  //       const errorMessage = `Migration failed for ${result.stockSymbol}: ${result.error}`;
+  //       console.error(errorMessage);
+  //       setError(errorMessage);
+  //       alert(errorMessage);
+  //     }
+  //   } catch (err: unknown) {
+  //     const errorMessage = `Unexpected error during migration: ${(err as Error).message}`;
+  //     console.error('Migration error:', err);
+  //     setError(errorMessage);
+  //     alert(errorMessage);
+  //   }
+  // };
 
   // Calculate region distribution
   const regionDistribution = useMemo(() => {
