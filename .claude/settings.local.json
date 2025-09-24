@@ -21,7 +21,8 @@
       "Bash(python:*)",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": []
   }

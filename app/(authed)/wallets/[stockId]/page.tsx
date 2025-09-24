@@ -7,7 +7,7 @@ import { useParams } from 'next/navigation';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource'; // Adjust path if needed
 import TransactionForm from './components/WalletsAddEditTransactionModal';
-import { FaEdit, FaTrashAlt, FaDollarSign } from 'react-icons/fa';
+// import { FaEdit, FaTrashAlt, FaDollarSign } from 'react-icons/fa'; // unused icons
 import { usePrices } from '@/app/contexts/PriceContext';
 import { useOwnerId } from '@/app/hooks/useOwnerId';
 //import { formatToMDYYYY } from '@/app/utils/dateFormatter';
@@ -16,11 +16,11 @@ import WalletsOverview from './components/WalletsOverview';
 import WalletsTabs from './components/WalletsTabs';
 import WalletsTransactionsTable from './components/WalletsTransactionsTable';
 import PortfolioAddEditStockModal from '../../portfolio/components/PortfolioAddEditStockModal';
-import type { TransactionTableColumnVisibilityState, SortableTxnKey, SortConfig } from './types';
+import type { TransactionTableColumnVisibilityState, SortableTxnKey } from './types';
 
 // --- IMPORT THE CORRECT formatCurrency ---
-import { calculateSingleSalePL, calculateSingleSalePLWithCommission, calculateTotalRealizedSwingPL, calculateSingleSalePLWithSplits, formatCurrency } from '@/app/utils/financialCalculations';
-import { applySplitAdjustments, extractStockSplits, applySplitAdjustmentsToWallet } from '@/app/utils/splitUtils';
+import { calculateSingleSalePLWithCommission, calculateTotalRealizedSwingPL, calculateSingleSalePLWithSplits, formatCurrency } from '@/app/utils/financialCalculations';
+import { extractStockSplits } from '@/app/utils/splitUtils';
 import { mergeTestPricesWithRealPrices } from '@/app/utils/priceUtils';
 
 // Needed for the handleUpdateTransaction to update the wallet
