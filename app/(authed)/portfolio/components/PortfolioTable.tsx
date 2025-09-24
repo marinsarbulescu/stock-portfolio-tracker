@@ -152,15 +152,6 @@ export default function PortfolioTable({
               {STOCK_COLUMN_LABELS.pdp} {stockSortConfig?.key === 'pdp' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
             </th>
           )}
-          {columnVisibility.htp && (
-            <th
-              data-testid="portfolio-page-table-htp-header"
-              style={{ padding: '5px', cursor: 'pointer' }}
-              onClick={() => requestStockSort('htp')}
-            >
-              {STOCK_COLUMN_LABELS.htp} {stockSortConfig?.key === 'htp' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
-            </th>
-          )}
           {columnVisibility.stp && (
             <th
               data-testid="portfolio-page-table-stp-header"
@@ -168,6 +159,15 @@ export default function PortfolioTable({
               onClick={() => requestStockSort('stp')}
             >
               {STOCK_COLUMN_LABELS.stp} {stockSortConfig?.key === 'stp' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+            </th>
+          )}
+          {columnVisibility.htp && (
+            <th
+              data-testid="portfolio-page-table-htp-header"
+              style={{ padding: '5px', cursor: 'pointer' }}
+              onClick={() => requestStockSort('htp')}
+            >
+              {STOCK_COLUMN_LABELS.htp} {stockSortConfig?.key === 'htp' ? (stockSortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
             </th>
           )}
           {columnVisibility.stockCommission && (
@@ -302,15 +302,15 @@ export default function PortfolioTable({
                   data-testid={`portfolio-page-table-pdp-${stock.symbol?.toUpperCase()}`}
                   style={cellStyle}>{stock.pdp ?? '-'}</td>
               )}
-              {columnVisibility.htp && (
-                <td
-                  data-testid={`portfolio-page-table-htp-${stock.symbol?.toUpperCase()}`}
-                  style={cellStyle}>{stock.htp != null && stock.htp > 0 ? stock.htp : '-'}</td>
-              )}
               {columnVisibility.stp && (
                 <td
                   data-testid={`portfolio-page-table-stp-${stock.symbol?.toUpperCase()}`}
                   style={cellStyle}>{stock.stp ?? '-'}</td>
+              )}
+              {columnVisibility.htp && (
+                <td
+                  data-testid={`portfolio-page-table-htp-${stock.symbol?.toUpperCase()}`}
+                  style={cellStyle}>{stock.htp != null && stock.htp > 0 ? stock.htp : '-'}</td>
               )}
               {columnVisibility.stockCommission && (
                 <td

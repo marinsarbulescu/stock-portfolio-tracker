@@ -3,49 +3,139 @@
 
 import React, { useMemo } from 'react';
 import type { PortfolioOverviewProps } from '../types';
+import { calculateGroupedInvestmentData, formatGroupName, type GroupedInvestmentData } from '@/app/utils/portfolioGroupedCalculations';
+import { getMarketCategoryLabel } from '../types';
 
 export default function PortfolioOverview({
   isOverviewExpanded,
   setIsOverviewExpanded,
-  usRegionStats,
-  euRegionStats,
-  intlRegionStats,
-  apacRegionStats,
   stockInvestments,
-  stockRiskInvestments,
+  stockOOPInvestments,
   visibleStocks,
+  wallets,
+  latestPrices,
 }: PortfolioOverviewProps) {
-  // Calculate regional investment totals
-  const regionalInvestmentData = useMemo(() => {
-    // Group stocks by region and calculate actual investments
-    const regionGroups = {
-      US: visibleStocks.filter(stock => stock.region === 'US'),
-      EU: visibleStocks.filter(stock => stock.region === 'EU'),
-      Intl: visibleStocks.filter(stock => stock.region === 'Intl'),
-      APAC: visibleStocks.filter(stock => stock.region === 'APAC'),
-    };
-
-    const investmentData = Object.entries(regionGroups).map(([region, stocks]) => {
-      const investment = stocks.reduce((sum, stock) => sum + (stockInvestments[stock.id] ?? 0), 0);
-      const riskInvestment = stocks.reduce((sum, stock) => sum + (stockRiskInvestments[stock.id] ?? 0), 0);
-      
-      return {
-        region,
-        investment,
-        riskInvestment,
-      };
+  // Calculate grouped investment data for all three tables
+  const regionInvestmentData = useMemo(() => {
+    return calculateGroupedInvestmentData({
+      groupBy: 'region',
+      stocks: visibleStocks,
+      stockOOPInvestments,
+      stockInvestments,
+      wallets,
+      latestPrices,
     });
+  }, [visibleStocks, stockOOPInvestments, stockInvestments, wallets, latestPrices]);
 
-    // Calculate total investment for percentage calculations
-    const totalInvestment = investmentData.reduce((sum, item) => sum + item.investment, 0);
-    const totalRiskInvestment = investmentData.reduce((sum, item) => sum + item.riskInvestment, 0);
+  const marketSectorInvestmentData = useMemo(() => {
+    return calculateGroupedInvestmentData({
+      groupBy: 'marketCategory',
+      stocks: visibleStocks,
+      stockOOPInvestments,
+      stockInvestments,
+      wallets,
+      latestPrices,
+    });
+  }, [visibleStocks, stockOOPInvestments, stockInvestments, wallets, latestPrices]);
 
-    return investmentData.map(item => ({
-      ...item,
-      investmentPct: totalInvestment > 0 ? Math.round((item.investment / totalInvestment) * 100) : 0,
-      riskInvestmentPct: totalRiskInvestment > 0 ? Math.round((item.riskInvestment / totalRiskInvestment) * 100) : 0,
-    }));
-  }, [visibleStocks, stockInvestments, stockRiskInvestments]);
+  const riskProfileInvestmentData = useMemo(() => {
+    return calculateGroupedInvestmentData({
+      groupBy: 'riskGrowthProfile',
+      stocks: visibleStocks,
+      stockOOPInvestments,
+      stockInvestments,
+      wallets,
+      latestPrices,
+    });
+  }, [visibleStocks, stockOOPInvestments, stockInvestments, wallets, latestPrices]);
+
+  // Shared table styles
+  const tableStyles = {
+    table: {
+      width: '100%',
+      borderCollapse: 'collapse' as const,
+      fontSize: '0.9em',
+    },
+    headerRow: {
+      backgroundColor: '#333',
+      color: '#fff',
+    },
+    headerCell: {
+      padding: '8px',
+      textAlign: 'left' as const,
+      border: '1px solid #555',
+    },
+    headerCellRight: {
+      padding: '8px',
+      textAlign: 'right' as const,
+      border: '1px solid #555',
+    },
+    bodyRow: {
+      backgroundColor: '#222',
+      color: '#fff',
+    },
+    bodyCell: {
+      padding: '8px',
+      border: '1px solid #555',
+    },
+    bodyCellRight: {
+      padding: '8px',
+      textAlign: 'right' as const,
+      border: '1px solid #555',
+    },
+  };
+
+  const renderInvestmentTable = (
+    title: string,
+    data: GroupedInvestmentData[],
+    groupColumnName: string,
+    groupBy: 'region' | 'marketCategory' | 'riskGrowthProfile'
+  ) => (
+    <div style={{ marginBottom: '1rem' }}>
+      <h4 style={{ marginBottom: '0.5rem', marginTop: '0' }}>{title}</h4>
+      <table style={tableStyles.table}>
+        <thead>
+          <tr style={tableStyles.headerRow}>
+            <th style={tableStyles.headerCell}>{groupColumnName}</th>
+            <th style={tableStyles.headerCellRight}>Max Risk</th>
+            <th style={tableStyles.headerCellRight}>OOP</th>
+            <th style={tableStyles.headerCellRight}>Tied-up</th>
+            <th style={tableStyles.headerCellRight}>Market Value +inv</th>
+            <th style={tableStyles.headerCellRight}>ROIC</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row) => (
+            <tr key={row.groupName} style={tableStyles.bodyRow}>
+              <td style={tableStyles.bodyCell}>
+                {groupBy === 'marketCategory' 
+                  ? getMarketCategoryLabel(row.groupName)
+                  : formatGroupName(row.groupName, groupBy)}
+              </td>
+              <td
+                style={tableStyles.bodyCellRight}
+                data-testid={`portfolio-overview-${groupBy}-${row.groupName.replace(/[_\s]/g, '')}-maxrisk`}
+              >
+                ${row.maxRisk.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+              <td style={tableStyles.bodyCellRight}>
+                ${row.oop.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+              <td style={tableStyles.bodyCellRight}>
+                ${row.tiedUp.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+              <td style={tableStyles.bodyCellRight}>
+                ${row.marketValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+              <td style={tableStyles.bodyCellRight}>
+                {row.roic.toFixed(2)}%
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 
   return (
     <div
@@ -79,44 +169,14 @@ export default function PortfolioOverview({
           data-testid="portfolio-page-overview-expanded"
           style={{ padding: '15px', borderTop: '1px solid #444', fontSize: '0.8em' }}
         >
-          {/* Investment by Region Table */}
-          <div style={{ marginBottom: '1rem' }}>
-            <h4 style={{ marginBottom: '0.5rem', marginTop: '0' }}>Investment by Region</h4>
-            <table style={{ 
-              width: '100%', 
-              borderCollapse: 'collapse',
-              fontSize: '0.9em',
-            }}>
-              <thead>
-                <tr style={{ backgroundColor: '#333', color: '#fff' }}>
-                  <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #555' }}>Region</th>
-                  <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #555' }}>Investment</th>
-                  <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #555' }}>%</th>
-                  <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #555' }}>r-Investment</th>
-                  <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #555' }}>%</th>
-                </tr>
-              </thead>
-              <tbody>
-                {regionalInvestmentData.map((row) => (
-                  <tr key={row.region} style={{ backgroundColor: '#222', color: '#fff' }}>
-                    <td style={{ padding: '8px', border: '1px solid #555' }}>{row.region}</td>
-                    <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #555' }}>
-                      ${row.investment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #555' }}>
-                      {row.investmentPct}%
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #555' }}>
-                      ${row.riskInvestment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #555' }}>
-                      {row.riskInvestmentPct}%
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* Region Investment Table */}
+          {renderInvestmentTable('Region', regionInvestmentData, 'Region', 'region')}
+          
+          {/* Market Sector Investment Table */}
+          {renderInvestmentTable('Market Sector', marketSectorInvestmentData, 'Market Sector', 'marketCategory')}
+          
+          {/* Risk Profile Investment Table */}
+          {renderInvestmentTable('Risk Profile', riskProfileInvestmentData, 'Risk Profile', 'riskGrowthProfile')}
         </div>
       )}
     </div>

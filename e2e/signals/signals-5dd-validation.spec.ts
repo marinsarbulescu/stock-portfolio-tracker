@@ -32,6 +32,20 @@ try {
 // Load test configuration
 const testConfig: FiveDDValidationConfig = loadFiveDDTestData('e2e/signals/signals-5dd-validation.json');
 
+// Helper function to calculate dynamic transaction date based on days ago
+function calculateTransactionDate(daysAgo: number): string {
+    const today = new Date();
+    const transactionDate = new Date(today);
+    transactionDate.setDate(today.getDate() - daysAgo);
+
+    // Use local date to avoid timezone issues with frontend calculation
+    const year = transactionDate.getFullYear();
+    const month = String(transactionDate.getMonth() + 1).padStart(2, '0');
+    const day = String(transactionDate.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`; // Return YYYY-MM-DD format in local timezone
+}
+
 // Helper function to navigate to signals page using proper testids
 async function navigateToSignalsPage(page: any) {
     console.log('[PageHelper] Navigating to Signals page...');
@@ -87,7 +101,10 @@ async function createStockWithTestData(page: any, testCase: FiveDDTestCase) {
 // Helper function to add transaction (using API for simplicity)
 async function addTransaction(stockId: string, testCase: FiveDDTestCase) {
     console.log(`[Transaction Helper] Adding transaction for ${testCase.stock.symbol}...`);
-    
+
+    // Calculate dynamic transaction date based on expected days ago
+    const dynamicDate = calculateTransactionDate(testCase.expected.lastBuyDays);
+
     const transactionData: TransactionCreateData = {
         portfolioStockId: stockId,
         owner: E2E_TEST_USER_OWNER_ID,
@@ -96,14 +113,14 @@ async function addTransaction(stockId: string, testCase: FiveDDTestCase) {
         signal: testCase.transaction.signal || '',
         price: testCase.transaction.price,
         investment: testCase.transaction.investment,
-        date: testCase.transaction.date
+        date: dynamicDate // Use dynamically calculated date instead of hardcoded JSON date
     };
-    
+
     const transaction = await createTransaction(transactionData);
     console.log(`[Transaction Helper] ✅ Transaction added: ${transaction.action} $${transaction.investment} at $${transaction.price}`);
-    console.log(`[Transaction Helper] Transaction date: ${transaction.date} (${testCase.expected.lastBuyDays} days ago)`);
+    console.log(`[Transaction Helper] Transaction date: ${dynamicDate} (${testCase.expected.lastBuyDays} days ago)`);
     console.log(`[Transaction Helper] Expected 5DD visibility: ${testCase.expected.shouldShow5DD ? 'SHOW' : 'HIDE'}`);
-    
+
     return transaction;
 }
 

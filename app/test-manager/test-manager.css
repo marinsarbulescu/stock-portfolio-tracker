@@ -341,6 +341,19 @@ input:checked + .slider:before {
   color: #8b949e;
 }
 
+.isolation-badge {
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 0.7em;
+  font-weight: 600;
+  background: #7c2d12;
+  color: #fed7aa;
+  border: 1px solid #ea580c;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .preset-section {
   margin-top: 30px;
   padding-top: 30px;
@@ -403,6 +416,31 @@ input:checked + .slider:before {
   color: #f0f6fc;
   text-align: left;
   word-break: break-all;
+}
+
+.command-section {
+  margin-bottom: 15px;
+}
+
+.command-section:last-child {
+  margin-bottom: 0;
+}
+
+.command-section strong {
+  display: block;
+  color: #58a6ff;
+  margin-bottom: 5px;
+  font-size: 0.9em;
+}
+
+.command-section code {
+  display: block;
+  color: #79c0ff;
+  background: #0d1117;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #30363d;
+  font-family: 'SFMono-Regular', Consolas, monospace;
 }
 
 .run-btn {

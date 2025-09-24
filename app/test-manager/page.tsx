@@ -220,46 +220,81 @@ export default function TestManager() {
 
   const generateCommand = () => {
     if (!config) return 'npm run e2e:run';
-    
-    const enabledFiles: string[] = [];
+
+    const parallelFiles: string[] = [];
+    const isolatedFiles: string[] = [];
+
     for (const [, suite] of Object.entries(config.testSuites)) {
       if (suite.enabled) {
         for (const test of suite.tests) {
           if (test.enabled) {
-            enabledFiles.push(test.file);
+            // Check if test requires isolation
+            if (test.requiresIsolation) {
+              isolatedFiles.push(test.file);
+            } else {
+              parallelFiles.push(test.file);
+            }
           }
         }
       }
     }
 
-    let command = 'npx playwright test';
-    
-    // Add headed/headless flag
-    if (!config.globalSettings.headless) {
-      command += ' --headed';
-    }
-    
-    // Add workers setting
-    if (config.globalSettings.workers && config.globalSettings.workers > 0) {
-      command += ` --workers=${config.globalSettings.workers}`;
-    }
-    
-    // Add browser setting
-    if (config.globalSettings.browser && config.globalSettings.browser !== 'chromium') {
-      command += ` --project=${config.globalSettings.browser}`;
-    }
-    
-    // Add retries setting
-    if (config.globalSettings.retries && config.globalSettings.retries > 0) {
-      command += ` --retries=${config.globalSettings.retries}`;
-    }
-    
-    // Add file list
-    if (enabledFiles.length > 0) {
-      command += ' ' + enabledFiles.join(' ');
-    }
+    // Helper function to build command with flags
+    const buildCommand = (files: string[], workers?: number) => {
+      let cmd = 'npx playwright test';
 
-    return command;
+      // Add headed/headless flag
+      if (!config.globalSettings.headless) {
+        cmd += ' --headed';
+      }
+
+      // Add workers setting (override if specified)
+      const workerCount = workers !== undefined ? workers : config.globalSettings.workers;
+      if (workerCount && workerCount > 0) {
+        cmd += ` --workers=${workerCount}`;
+      }
+
+      // Add browser setting
+      if (config.globalSettings.browser && config.globalSettings.browser !== 'chromium') {
+        cmd += ` --project=${config.globalSettings.browser}`;
+      }
+
+      // Add retries setting
+      if (config.globalSettings.retries && config.globalSettings.retries > 0) {
+        cmd += ` --retries=${config.globalSettings.retries}`;
+      }
+
+      // Add file list
+      if (files.length > 0) {
+        cmd += ' ' + files.join(' ');
+      }
+
+      return cmd;
+    };
+
+    // Generate appropriate command based on enabled tests
+    if (parallelFiles.length > 0 && isolatedFiles.length > 0) {
+      // Both parallel and isolated tests - create two-phase command
+      const parallelCmd = buildCommand(parallelFiles);
+      const isolatedCmd = buildCommand(isolatedFiles, 1); // Force workers=1 for isolated
+
+      // Return both bash and PowerShell versions
+      return {
+        bash: `${parallelCmd} && ${isolatedCmd}`,
+        powershell: `${parallelCmd}; if ($?) { ${isolatedCmd} }`
+      };
+    } else if (isolatedFiles.length > 0) {
+      // Only isolated tests - use workers=1
+      const cmd = buildCommand(isolatedFiles, 1);
+      return { bash: cmd, powershell: cmd };
+    } else if (parallelFiles.length > 0) {
+      // Only parallel tests - use configured workers
+      const cmd = buildCommand(parallelFiles);
+      return { bash: cmd, powershell: cmd };
+    } else {
+      // No tests enabled
+      return { bash: 'echo "No tests selected"', powershell: 'echo "No tests selected"' };
+    }
   };
 
   const getStats = () => {
@@ -286,15 +321,59 @@ export default function TestManager() {
   };
 
   const runTests = async () => {
-    const command = generateCommand();
-    
-    try {
-      await navigator.clipboard.writeText(command);
-      alert(`✅ Command copied to clipboard!\n\n${command}\n\nPaste this command in your terminal to run the tests.`);
-    } catch (err) {
-      console.error('Failed to copy to clipboard:', err);
-      alert(`Command:\n${command}\n\nCopy this command manually and run it in your terminal.`);
+    const commands = generateCommand();
+
+    // Check if we have both parallel and isolated tests for better messaging
+    const parallelFiles: string[] = [];
+    const isolatedFiles: string[] = [];
+
+    for (const [, suite] of Object.entries(config.testSuites)) {
+      if (suite.enabled) {
+        for (const test of suite.tests) {
+          if (test.enabled) {
+            if (test.requiresIsolation) {
+              isolatedFiles.push(test.file);
+            } else {
+              parallelFiles.push(test.file);
+            }
+          }
+        }
+      }
     }
+
+    // Determine which command to use (prefer PowerShell on Windows)
+    const isWindows = navigator.platform.toLowerCase().includes('win');
+    const preferredCommand = isWindows ? commands.powershell : commands.bash;
+
+    let message = '';
+    if (parallelFiles.length > 0 && isolatedFiles.length > 0) {
+      message = `✅ Two-phase command copied to clipboard!\n\nPhase 1: ${parallelFiles.length} parallel tests\nPhase 2: ${isolatedFiles.length} isolated tests\n\n--- PowerShell (Windows) ---\n${commands.powershell}\n\n--- Bash/Git Bash ---\n${commands.bash}\n\nThis will run parallel tests first, then isolated tests only if parallel tests pass.`;
+
+      // Copy the preferred command
+      try {
+        await navigator.clipboard.writeText(preferredCommand);
+      } catch (err) {
+        console.error('Failed to copy to clipboard:', err);
+      }
+    } else if (isolatedFiles.length > 0) {
+      message = `✅ Isolated execution command copied!\n\n${isolatedFiles.length} tests will run with workers=1\n\n${preferredCommand}\n\nPaste this command in your terminal.`;
+
+      try {
+        await navigator.clipboard.writeText(preferredCommand);
+      } catch (err) {
+        console.error('Failed to copy to clipboard:', err);
+      }
+    } else {
+      message = `✅ Command copied to clipboard!\n\n${preferredCommand}\n\nPaste this command in your terminal to run the tests.`;
+
+      try {
+        await navigator.clipboard.writeText(preferredCommand);
+      } catch (err) {
+        console.error('Failed to copy to clipboard:', err);
+      }
+    }
+
+    alert(message);
   };
 
   // Clear dev tables functions
@@ -612,6 +691,11 @@ export default function TestManager() {
                     <span className={`priority-badge priority-${test.priority}`}>
                       {test.priority.toUpperCase()}
                     </span>
+                    {test.requiresIsolation && (
+                      <span className="isolation-badge" title="Requires isolated execution">
+                        🔒 ISOLATED
+                      </span>
+                    )}
                     <span className="duration">{test.estimatedDuration}</span>
                   </div>
                   <label className="toggle">
@@ -647,7 +731,29 @@ export default function TestManager() {
       <div className="run-section">
         <h3>🚀 Run Tests</h3>
         <div className="command-display">
-          {generateCommand()}
+          {(() => {
+            const commands = generateCommand();
+            const isWindows = navigator.platform.toLowerCase().includes('win');
+            const preferredCommand = isWindows ? commands.powershell : commands.bash;
+
+            // Show both versions if they differ (for two-phase commands)
+            if (commands.bash !== commands.powershell) {
+              return (
+                <div>
+                  <div className="command-section">
+                    <strong>PowerShell (Windows):</strong>
+                    <code>{commands.powershell}</code>
+                  </div>
+                  <div className="command-section">
+                    <strong>Bash/Git Bash:</strong>
+                    <code>{commands.bash}</code>
+                  </div>
+                </div>
+              );
+            } else {
+              return <code>{preferredCommand}</code>;
+            }
+          })()}
         </div>
         <button className="run-btn" onClick={runTests}>
           Copy Command to Clipboard

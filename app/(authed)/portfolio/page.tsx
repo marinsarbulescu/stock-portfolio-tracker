@@ -79,8 +79,8 @@ function PortfolioContent() {
     stockTrend: false,
     currentPrice: false,
     pdp: true,
-    htp: true,
     stp: true,
+    htp: true,
     stockCommission: true,
     budget: false,
     oop: true,
@@ -1081,7 +1081,10 @@ function PortfolioContent() {
         apacRegionStats={apacRegionStats}
         stockInvestments={stockInvestments}
         stockRiskInvestments={stockRiskInvestments}
+        stockOOPInvestments={stockOOPInvestments}
         visibleStocks={visibleStocks}
+        wallets={allWallets}
+        latestPrices={mergedPrices}
       />
       
       {/* Action buttons row */}

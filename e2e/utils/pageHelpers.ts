@@ -988,6 +988,90 @@ export async function getTransactionDetails(page: Page): Promise<TransactionRowD
  * Placeholder for a logout function.
  * @param page - The Playwright Page object.
  */
+/**
+ * Generic navigation helper for any page in the application
+ * Provides consistent navigation patterns with error handling
+ *
+ * @param page - The Playwright Page object
+ * @param targetPath - The path to navigate to (e.g., '/portfolio', '/signals')
+ * @param options - Optional configuration
+ */
+export async function navigateToPage(
+    page: Page,
+    targetPath: string,
+    options: {
+        timeout?: number;
+        waitForLoad?: boolean;
+        expectedTitle?: string;
+        expectedTitleTestId?: string;
+    } = {}
+): Promise<void> {
+    const {
+        timeout = 15000,
+        waitForLoad = true,
+        expectedTitle,
+        expectedTitleTestId
+    } = options;
+
+    console.log(`[PageHelper] Navigating to ${targetPath}...`);
+
+    try {
+        await page.goto(targetPath, { timeout });
+
+        if (waitForLoad) {
+            await page.waitForLoadState('networkidle', { timeout });
+        }
+
+        // Optional: Verify we're on the expected page
+        if (expectedTitle && expectedTitleTestId) {
+            const titleElement = page.locator(`[data-testid="${expectedTitleTestId}"]`);
+            await expect(titleElement).toBeVisible({ timeout });
+            await expect(titleElement).toHaveText(expectedTitle);
+        }
+
+        console.log(`[PageHelper] ✅ Successfully navigated to ${targetPath}`);
+    } catch (error) {
+        console.error(`[PageHelper] ❌ Failed to navigate to ${targetPath}:`, error);
+        throw new Error(`Navigation to ${targetPath} failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+/**
+ * Navigation helper specifically for Portfolio page
+ * Uses the nav link pattern commonly used across tests
+ *
+ * @param page - The Playwright Page object
+ * @param options - Optional configuration
+ */
+export async function navigateToPortfolioViaNav(
+    page: Page,
+    options: {
+        timeout?: number;
+    } = {}
+): Promise<void> {
+    const { timeout = 15000 } = options;
+
+    console.log(`[PageHelper] Navigating to Portfolio via navigation link...`);
+
+    try {
+        await page.goto('/');
+
+        const portfolioLink = page.locator('[data-testid="nav-portfolio-link"]');
+        await expect(portfolioLink).toBeVisible({ timeout });
+        await portfolioLink.click();
+
+        // Wait for Portfolio page to load
+        const pageTitle = page.locator('[data-testid="portfolio-page-title"]');
+        await expect(pageTitle).toBeVisible({ timeout });
+        await expect(pageTitle).toHaveText('Portfolio');
+
+        console.log(`[PageHelper] ✅ Successfully navigated to Portfolio page`);
+    } catch (error) {
+        console.error(`[PageHelper] ❌ Failed to navigate to Portfolio page:`, error);
+        throw new Error(`Navigation to Portfolio page failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
 export async function logoutUser(page: Page) {
     // This is a placeholder. Actual implementation will depend on your app's logout mechanism.
     // Example:

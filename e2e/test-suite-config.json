@@ -16,6 +16,24 @@
           ],
           "priority": "high",
           "estimatedDuration": "2-3 minutes"
+        },
+        {
+          "name": "portfolio-overview",
+          "enabled": true,
+          "file": "e2e/portfolio/portfolio-overview.spec.ts",
+          "description": "Test Portfolio Overview calculations with comprehensive stock data validation across regions, market categories, and risk profiles. ⚠️ REQUIRES ISOLATED EXECUTION - validates portfolio-level aggregates",
+          "tags": [
+            "portfolio",
+            "overview",
+            "calculations",
+            "validation",
+            "comprehensive",
+            "json-driven",
+            "isolated-execution"
+          ],
+          "priority": "high",
+          "estimatedDuration": "18-20 seconds",
+          "requiresIsolation": true
         }
       ]
     },
@@ -152,13 +170,14 @@
     "retries": 0,
     "timeout": 60000,
     "browser": "chromium",
-    "workers": 9
+    "workers": 10
   },
   "presets": {
     "smoke": {
       "description": "Quick smoke test suite",
       "enabledTests": [
         "portfolio-create-and-edit-stock",
+        "portfolio-overview",
         "wallet-add-transaction",
         "wallet-add-split-transaction",
         "signals-price-fetch",
@@ -180,6 +199,18 @@
       "filter": {
         "priority": "high"
       }
+    },
+    "parallel-safe": {
+      "description": "All tests except those requiring isolated execution",
+      "excludeTests": [
+        "portfolio-overview"
+      ]
+    },
+    "isolated-only": {
+      "description": "Tests that require isolated execution",
+      "enabledTests": [
+        "portfolio-overview"
+      ]
     }
   }
 }

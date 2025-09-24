@@ -3,5 +3,6 @@
   "files.restoreUndoStack": false,
   "workbench.editor.restoreViewState": false,
   "extensions.autoUpdate": false,
-  "typescript.preferences.includePackageJsonAutoImports": "off"
+  "typescript.preferences.includePackageJsonAutoImports": "off",
+  "chatgpt.openOnStartup": true
 }

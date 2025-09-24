@@ -52,6 +52,78 @@ export async function cleanupTestStocks(symbols: string[] = ['AAPL', 'BTC-USD', 
 }
 
 /**
+ * Complete database cleanup - deletes ALL portfolio stocks, transactions, and wallets
+ * Use with caution - this will remove all data for the user
+ */
+export async function cleanupAllData(): Promise<void> {
+    const client = generateClient<Schema>({
+        authMode: 'apiKey',
+        apiKey: process.env.AMPLIFY_API_KEY
+    });
+    console.log('[cleanupHelper] Starting COMPLETE database cleanup...');
+
+    try {
+        // 1. Delete all transactions first (due to foreign key constraints)
+        console.log('[cleanupHelper] Step 1: Deleting all transactions...');
+        const { data: allTransactions, errors: txnErrors } = await client.models.Transaction.list({} as any);
+
+        if (txnErrors) {
+            console.error('[cleanupHelper] Error listing transactions:', txnErrors);
+        } else {
+            console.log(`[cleanupHelper] Found ${allTransactions.length} transactions to delete`);
+            for (const txn of allTransactions) {
+                try {
+                    await client.models.Transaction.delete({ id: txn.id });
+                    console.log(`[cleanupHelper] ✅ Deleted transaction: ${txn.id}`);
+                } catch (error) {
+                    console.warn(`[cleanupHelper] Warning deleting transaction ${txn.id}:`, error);
+                }
+            }
+        }
+
+        // 2. Delete all stock wallets
+        console.log('[cleanupHelper] Step 2: Deleting all stock wallets...');
+        const { data: allWallets, errors: walletErrors } = await client.models.StockWallet.list({} as any);
+
+        if (walletErrors) {
+            console.error('[cleanupHelper] Error listing wallets:', walletErrors);
+        } else {
+            console.log(`[cleanupHelper] Found ${allWallets.length} wallets to delete`);
+            for (const wallet of allWallets) {
+                try {
+                    await client.models.StockWallet.delete({ id: wallet.id });
+                    console.log(`[cleanupHelper] ✅ Deleted wallet: ${wallet.id}`);
+                } catch (error) {
+                    console.warn(`[cleanupHelper] Warning deleting wallet ${wallet.id}:`, error);
+                }
+            }
+        }
+
+        // 3. Delete all portfolio stocks
+        console.log('[cleanupHelper] Step 3: Deleting all portfolio stocks...');
+        const { data: allStocks, errors: stockErrors } = await client.models.PortfolioStock.list({} as any);
+
+        if (stockErrors) {
+            console.error('[cleanupHelper] Error listing stocks:', stockErrors);
+        } else {
+            console.log(`[cleanupHelper] Found ${allStocks.length} stocks to delete`);
+            for (const stock of allStocks) {
+                try {
+                    await client.models.PortfolioStock.delete({ id: stock.id });
+                    console.log(`[cleanupHelper] ✅ Deleted stock: ${stock.symbol} (${stock.id})`);
+                } catch (error) {
+                    console.warn(`[cleanupHelper] Warning deleting stock ${stock.symbol}:`, error);
+                }
+            }
+        }
+
+        console.log('[cleanupHelper] ✅ COMPLETE database cleanup completed');
+    } catch (error) {
+        console.error('[cleanupHelper] Error during complete cleanup:', error);
+    }
+}
+
+/**
  * Enhanced cleanup that also waits for UI to reflect changes
  */
 export async function cleanupTestStocksWithWait(page: any, symbols: string[] = ['AAPL', 'BTC-USD']): Promise<void> {

@@ -38,8 +38,8 @@ export interface PortfolioColumnVisibilityState {
   riskGrowthProfile: boolean;
   currentPrice: boolean;
   pdp: boolean;
-  htp: boolean;
   stp: boolean;
+  htp: boolean;
   stockCommission: boolean;
   budget: boolean;
   oop: boolean;
@@ -60,8 +60,8 @@ export type SortableStockKey =
   | 'riskGrowthProfile'
   | 'currentPrice'
   | 'pdp'
-  | 'htp'
   | 'stp'
+  | 'htp'
   | 'stockCommission'
   | 'budget'
   | 'oop'
@@ -142,7 +142,10 @@ export interface PortfolioOverviewProps {
   apacRegionStats: RegionStats;
   stockInvestments: Record<string, number>;
   stockRiskInvestments: Record<string, number>;
+  stockOOPInvestments: Record<string, number>;
   visibleStocks: PortfolioStockDataType[];
+  wallets: StockWalletDataType[];
+  latestPrices: LatestPrices;
 }
 
 export interface AddStockModalProps {
@@ -177,10 +180,10 @@ export const STOCK_COLUMN_LABELS: Record<SortableStockKey, string> = {
   riskGrowthProfile: 'Risk Profile',
   currentPrice: 'Last Price',
   pdp: 'PDP (%)',
-  htp: 'HTP (%)',
   stp: 'STP (%)',
+  htp: 'HTP (%)',
   stockCommission: 'Comm (%)',
-  budget: 'Budget',
+  budget: 'Max Risk',
   oop: 'OOP',
   investment: 'Tied-Up',
   riskInvestment: 'r-Inv',
@@ -195,10 +198,10 @@ export const PORTFOLIO_COLUMN_LABELS: Record<PortfolioColumnKey, string> = {
   riskGrowthProfile: 'Risk Profile',
   currentPrice: 'Last Price',
   pdp: 'PDP (%)',
-  htp: 'HTP (%)',
   stp: 'STP (%)',
+  htp: 'HTP (%)',
   stockCommission: 'Comm (%)',
-  budget: 'Budget',
+  budget: 'Max Risk',
   oop: 'OOP',
   investment: 'Tied-Up',
   riskInvestment: 'r-Inv',
