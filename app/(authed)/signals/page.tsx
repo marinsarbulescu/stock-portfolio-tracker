@@ -282,7 +282,7 @@ export default function HomePage() {
             }
             
             const visibleStocks = (stockResult.data as PortfolioStockDataType[]).filter(stock => !stock.isHidden && !stock.archived);
-            console.log('[Signals] Visible stocks after filtering:', visibleStocks.length);
+            console.log('[Signals] Visible stocks after filtering (excludes hidden and archived):', visibleStocks.length);
             console.log('[Signals] First few visible stocks:', visibleStocks.slice(0, 3).map(s => ({ symbol: s.symbol, id: s.id, isHidden: s.isHidden, archived: s.archived })));
             
             setPortfolioStocks(visibleStocks);

@@ -81,9 +81,11 @@ export function calculateGroupedInvestmentData({
     let totalMarketValue = 0;
 
     stocksInGroup.forEach(stock => {
-      // Max Risk - sum of all budgets in the group
-      const stockBudget = stock.budget ?? 0;
-      maxRisk += stockBudget;
+      // Max Risk - sum of budgets only for active (non-hidden) stocks
+      if (!stock.isHidden) {
+        const stockBudget = stock.budget ?? 0;
+        maxRisk += stockBudget;
+      }
 
       // OOP - total out-of-pocket investment
       totalOOP += stockOOPInvestments[stock.id] || 0;
