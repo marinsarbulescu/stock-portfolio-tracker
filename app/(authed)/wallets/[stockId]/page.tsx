@@ -19,7 +19,7 @@ import PortfolioAddEditStockModal from '../../portfolio/components/PortfolioAddE
 import type { TransactionTableColumnVisibilityState, SortableTxnKey } from './types';
 
 // --- IMPORT THE CORRECT formatCurrency ---
-import { calculateSingleSalePLWithCommission, calculateTotalRealizedSwingPL, calculateSingleSalePLWithSplits, formatCurrency } from '@/app/utils/financialCalculations';
+import { calculateSingleSalePL, calculateSingleSalePLWithCommission, calculateTotalRealizedSwingPL, calculateSingleSalePLWithSplits, formatCurrency } from '@/app/utils/financialCalculations';
 import { extractStockSplits } from '@/app/utils/splitUtils';
 import { mergeTestPricesWithRealPrices } from '@/app/utils/priceUtils';
 

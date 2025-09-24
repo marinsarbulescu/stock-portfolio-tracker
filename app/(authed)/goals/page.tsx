@@ -103,7 +103,6 @@ export default function GoalsPage() {
           // Update state if needed
           if (savedGoals) {
               setExistingGoalsId(savedGoals.id);
-              setExistingGoalsData(savedGoals as GoalsDataType);
               populateForm(savedGoals as GoalsDataType);
           }
       }
@@ -116,7 +115,6 @@ export default function GoalsPage() {
       if (savedGoals) {
         setExistingGoalsId(savedGoals.id); // Update ID
         // Ensure we cast the potentially full ClientModel to GoalsDataType for state
-        setExistingGoalsData(savedGoals as GoalsDataType);
         populateForm(savedGoals as GoalsDataType);
       }
 
