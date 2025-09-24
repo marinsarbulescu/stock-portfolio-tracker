@@ -19,8 +19,8 @@ import PortfolioAddEditStockModal from '../../portfolio/components/PortfolioAddE
 import type { TransactionTableColumnVisibilityState, SortableTxnKey } from './types';
 
 // --- IMPORT THE CORRECT formatCurrency ---
-import { calculateSingleSalePL, calculateSingleSalePLWithCommission, calculateTotalRealizedSwingPL, calculateSingleSalePLWithSplits, formatCurrency } from '@/app/utils/financialCalculations';
-import { extractStockSplits } from '@/app/utils/splitUtils';
+import { calculateSingleSalePL, calculateSingleSalePLWithCommission, calculateTotalRealizedSwingPL, /* calculateSingleSalePLWithSplits, */ formatCurrency } from '@/app/utils/financialCalculations';
+// import { extractStockSplits } from '@/app/utils/splitUtils'; // UNUSED
 import { mergeTestPricesWithRealPrices } from '@/app/utils/priceUtils';
 
 // Needed for the handleUpdateTransaction to update the wallet
@@ -41,7 +41,7 @@ import WalletsSellTransactionModal from './components/WalletsSellTransactionModa
 
 type StockWalletDataType = Schema['StockWallet']['type'];
 type PortfolioStockDataType = Schema["PortfolioStock"]["type"];
-type PortfolioStockUpdateInput = Partial<PortfolioStockDataType> & { id: string };
+// type PortfolioStockUpdateInput = Partial<PortfolioStockDataType> & { id: string }; // Unused - available in /portfolio/types.ts
 
 interface StockInfoForWalletService {
     owner: string; // Cognito User Sub ID
@@ -262,7 +262,7 @@ export default function StockWalletPage() {
             }
     }, [ownerId, isLoading, error]);
 
-    const { latestPrices, pricesLoading, pricesError, lastPriceFetchTimestamp } = usePrices(); // <<< Ensure lastPriceFetchTimestamp is included
+    const { latestPrices, pricesLoading /*, pricesError, lastPriceFetchTimestamp*/ } = usePrices(); // unused variables commented out
 
     // --- ADD STATE for Transaction List ---
     const [transactions, setTransactions] = useState<TransactionDataType[]>([]);
@@ -423,43 +423,6 @@ export default function StockWalletPage() {
             }
     }, [stockId]); // <<< ADD stockId dependency
 
-    // --- ADD Function to Fetch Current Stock Data (including test price) ---
-    const fetchCurrentStock = useCallback(async () => {
-        if (!stockId) return;
-        
-        try {
-            const { data: stockData, errors } = await client.models.PortfolioStock.get({
-                id: stockId
-            }, {
-                selectionSet: [
-                    'id', 'symbol', 'name', 'stockType', 'region', 'stockTrend',
-                    'budget', 'pdp', 'stp', 'swingHoldRatio', 'stockCommission', 'htp',
-                    'testPrice', 'owner', 'isHidden', 'archived', 'archivedAt',
-                    'createdAt', 'updatedAt'
-                ]
-            });
-
-            if (errors) {
-                console.error('Error fetching stock data:', errors);
-                return;
-            }
-
-            if (stockData) {
-                const stock = stockData as unknown as PortfolioStockDataType;
-                setCurrentStockData(stock);
-                setStockSymbol(stock.symbol || 'Unknown');
-                setStockName(stock.name || 'Unknown');
-                setStockBudget(stock.budget);
-                setStockPdp(stock.pdp);
-                setStockStp(stock.stp);
-                setStockShr(stock.swingHoldRatio);
-                setStockCommission(stock.stockCommission);
-                setStockHtp(stock.htp);
-            }
-        } catch (err: unknown) {
-            console.error('Error fetching current stock:', err);
-        }
-    }, [stockId]);
 
     // --- ADD Function to Fetch Transactions ---
     const fetchTransactions = useCallback(async () => {
@@ -657,8 +620,8 @@ export default function StockWalletPage() {
                     }
 
                     // Store the IDs of what was actually fetched to compare with what gets passed to adjustWalletContribution
-                    const fetchedSwingId = originalSwingWallet?.id;
-                    const fetchedHoldId = originalHoldWallet?.id;
+                    // const fetchedSwingId = originalSwingWallet?.id; // unused - only for debug logs
+                    // const fetchedHoldId = originalHoldWallet?.id; // unused - only for debug logs
 
                     if (originalSwingWallet && ((originalSwingWallet.sharesSold ?? 0) > SHARE_EPSILON || (originalSwingWallet.sellTxnCount ?? 0) > 0)) {
                         originalWalletsHaveSales = true;
@@ -729,7 +692,7 @@ export default function StockWalletPage() {
             // --- Update the Transaction Record itself (if allowed) ---
             if (proceedWithTransactionRecordUpdate) {
                 // console.log("[StockWalletPage] - Updating transaction record in database:", updatedTxnDataFromForm);
-                const { data: updatedTxn, errors } = await client.models.Transaction.update(updatedTxnDataFromForm as Parameters<typeof client.models.Transaction.update>[0]); // Use type assertion carefully
+                const { /*data: updatedTxn,*/ errors } = await client.models.Transaction.update(updatedTxnDataFromForm as Parameters<typeof client.models.Transaction.update>[0]); // Use type assertion carefully
 
                 if (errors) throw errors;
                 // console.log('[StockWalletPage] - Transaction record updated successfully:', updatedTxn);
@@ -1155,7 +1118,7 @@ const handleDeleteTransaction = async (txnToDelete: TransactionDataType) => {
                         setStockCommission(null);
                         setStockHtp(null);
                     }
-                }).catch(err => {
+                }).catch(() => {
                     //console.error("[StockWalletPage] - Error fetching stock symbol:", err);
                     setError(prev => prev ? `${prev} | Failed to fetch symbol.` : 'Failed to fetch symbol.');
                     setStockSymbol("Error");
@@ -1473,116 +1436,116 @@ const sortedWallets = useMemo(() => {
         return mergedRealPrices;
     }, [latestPrices, currentStockData]);
 
-    
-// --- UPDATED Memo for Total SWING YTD P/L ($ and %) ---
-const totalSwingYtdPL = useMemo(() => {
-    //console.log("[Memo] Calculating totalSwingYtdPL ($ and %)");
-    // Depends on transactions, wallets, price data
-    if (!transactions || !wallets || !stockSymbol) {
-        return { dollars: null, percent: null }; // Return object for consistency
-    }
 
-    // --- Create Wallet Map INSIDE this hook ---
-    //console.log("[Memo] Creating internal wallet buy price map for YTD calc");
-    const walletBuyPriceMap = new Map<string, number>(); // Map<walletId, buyPrice>
-    wallets.forEach(w => {
-        // Ensure wallet has an ID and a valid buy price number
-        if (w.id && typeof w.buyPrice === 'number') {
-            walletBuyPriceMap.set(w.id, w.buyPrice);
-        }
-    });
-    //console.log(`[Memo] Internal map created with ${walletBuyPriceMap.size} entries.`);
-    // --- End Wallet Map ---
-
-    const currentYear = new Date().getFullYear();
-    const startOfYear = `${currentYear}-01-01`;
-    const currentPrice = mergedPrices[stockSymbol]?.currentPrice ?? null;
-
-    let ytdRealizedSwingPL = 0;
-    let currentUnrealizedSwingPL = 0;
-    let currentSwingCostBasis = 0; // <<< ADDED: Accumulator for cost basis
-    let warnings = 0;
-
-    // --- Calculate YTD Realized P/L for SWING Sells ---
-    const swingSplits = extractStockSplits(transactions);
-    transactions.forEach(txn => {
-        if (txn.action === 'Sell' && txn.txnType === 'Swing' &&
-            txn.date && txn.date >= startOfYear && txn.completedTxnId &&
-            typeof txn.quantity === 'number' && typeof txn.price === 'number') {
-            const walletBuyPrice = walletBuyPriceMap.get(txn.completedTxnId);
-            const buyTxn = transactions.find(t => t.id === txn.completedTxnId);
-            const buyDate = buyTxn?.date || '';
-            if (typeof walletBuyPrice === 'number' && buyDate) {
-                // Use stored txnProfit if available, otherwise calculate with splits
-                const profitForThisOneSale = txn.txnProfit ?? calculateSingleSalePLWithSplits(
-                    txn.price!,
-                    walletBuyPrice,
-                    txn.quantity!,
-                    txn.date!,
-                    buyDate,
-                    swingSplits
-                );
-                ytdRealizedSwingPL += profitForThisOneSale;
-            } else {
-                // Wallet link or buy price was missing for a YTD Swing Sell
-                warnings++;
-                console.warn(`[StockWalletPage] - [Swing YTD P/L] Could not find wallet buy price or buy date for YTD Swing Sell Txn ${txn.id}`);
-            }
-        }
-    });
-
-    // --- Calculate Current Unrealized P/L AND Cost Basis for SWING Wallets ---
-    if (typeof currentPrice === 'number') {
-        wallets.forEach(wallet => {
-            if (wallet.walletType === 'Swing' &&
-                (wallet.remainingShares ?? 0) > SHARE_EPSILON &&
-                typeof wallet.buyPrice === 'number') // Make sure buyPrice exists
-            {
-                 // Unrealized P/L calculation
-                 currentUnrealizedSwingPL += (currentPrice - wallet.buyPrice) * wallet.remainingShares!;
-                 // Accumulate Cost Basis for current holdings
-                 currentSwingCostBasis += wallet.buyPrice * wallet.remainingShares!; // <<< ADDED
-            }
-        });
-   } else {
-       //console.warn("[StockWalletPage] - [Swing YTD P/L] Cannot calculate P/L: Current price unavailable.");
-       return { dollars: null, percent: null }; // Return nulls if price missing
-   }
-
-   // Sum the dollar components
-   const totalPL_dollars = ytdRealizedSwingPL + currentUnrealizedSwingPL;
-   const roundedTotalPL_dollars = parseFloat(totalPL_dollars.toFixed(CURRENCY_PRECISION));
-
-   // --- Calculate Percentage ---
-   let calculatedPercent: number | null = null;
-   // Only calculate if the cost basis is positive to avoid division by zero/weird results
-   if (currentSwingCostBasis > SHARE_EPSILON) {
-        calculatedPercent = (totalPL_dollars / currentSwingCostBasis) * 100;
-   } else if (Math.abs(totalPL_dollars) < 0.001) {
-        // If cost basis is zero (or near zero) and P/L is also zero, return 0%
-        calculatedPercent = 0;
-   } // Otherwise, percent remains null (e.g., profit/loss with zero cost basis is undefined)
-
-   const roundedPercent = typeof calculatedPercent === 'number'
-       ? parseFloat(calculatedPercent.toFixed(PERCENT_PRECISION)) // Use PERCENT_PRECISION
-       : null;
-   // --- End Percentage Calculation ---
-
-   if (warnings > 0) {
-         console.warn(`[StockWalletPage] - [Swing YTD P/L] Calculation finished with ${warnings} warnings (missing data). Realized P/L part might be incomplete.`);
-    }
-
-    //console.log(`[StockWalletPage] - [Swing YTD P/L] $,%: ${roundedTotalPL_dollars}, ${roundedPercent}% (Basis: ${currentSwingCostBasis.toFixed(2)})`);
-
-    // Return object with both values
-    return {
-        dollars: roundedTotalPL_dollars,
-        percent: roundedPercent
-    };
-
-// Correct dependencies for this specific calculation
-}, [transactions, wallets, mergedPrices, stockSymbol]); // Updated to use mergedPrices
-// --- End Total Swing YTD P/L Calc Memo ---
+// --- UPDATED Memo for Total SWING YTD P/L ($ and %) --- UNUSED
+// const totalSwingYtdPL = useMemo(() => {
+//     //console.log("[Memo] Calculating totalSwingYtdPL ($ and %)");
+//     // Depends on transactions, wallets, price data
+//     if (!transactions || !wallets || !stockSymbol) {
+//         return { dollars: null, percent: null }; // Return object for consistency
+//     }
+//
+//     // --- Create Wallet Map INSIDE this hook ---
+//     //console.log("[Memo] Creating internal wallet buy price map for YTD calc");
+//     const walletBuyPriceMap = new Map<string, number>(); // Map<walletId, buyPrice>
+//     wallets.forEach(w => {
+//         // Ensure wallet has an ID and a valid buy price number
+//         if (w.id && typeof w.buyPrice === 'number') {
+//             walletBuyPriceMap.set(w.id, w.buyPrice);
+//         }
+//     });
+//     //console.log(`[Memo] Internal map created with ${walletBuyPriceMap.size} entries.`);
+//     // --- End Wallet Map ---
+//
+//     const currentYear = new Date().getFullYear();
+//     const startOfYear = `${currentYear}-01-01`;
+//     const currentPrice = mergedPrices[stockSymbol]?.currentPrice ?? null;
+//
+//     let ytdRealizedSwingPL = 0;
+//     let currentUnrealizedSwingPL = 0;
+//     let currentSwingCostBasis = 0; // <<< ADDED: Accumulator for cost basis
+//     let warnings = 0;
+//
+//     // --- Calculate YTD Realized P/L for SWING Sells ---
+//     const swingSplits = extractStockSplits(transactions);
+//     transactions.forEach(txn => {
+//         if (txn.action === 'Sell' && txn.txnType === 'Swing' &&
+//             txn.date && txn.date >= startOfYear && txn.completedTxnId &&
+//             typeof txn.quantity === 'number' && typeof txn.price === 'number') {
+//             const walletBuyPrice = walletBuyPriceMap.get(txn.completedTxnId);
+//             const buyTxn = transactions.find(t => t.id === txn.completedTxnId);
+//             const buyDate = buyTxn?.date || '';
+//             if (typeof walletBuyPrice === 'number' && buyDate) {
+//                 // Use stored txnProfit if available, otherwise calculate with splits
+//                 const profitForThisOneSale = txn.txnProfit ?? calculateSingleSalePLWithSplits(
+//                     txn.price!,
+//                     walletBuyPrice,
+//                     txn.quantity!,
+//                     txn.date!,
+//                     buyDate,
+//                     swingSplits
+//                 );
+//                 ytdRealizedSwingPL += profitForThisOneSale;
+//             } else {
+//                 // Wallet link or buy price was missing for a YTD Swing Sell
+//                 warnings++;
+//                 console.warn(`[StockWalletPage] - [Swing YTD P/L] Could not find wallet buy price or buy date for YTD Swing Sell Txn ${txn.id}`);
+//             }
+//         }
+//     });
+//
+//     // --- Calculate Current Unrealized P/L AND Cost Basis for SWING Wallets ---
+//     if (typeof currentPrice === 'number') {
+//         wallets.forEach(wallet => {
+//             if (wallet.walletType === 'Swing' &&
+//                 (wallet.remainingShares ?? 0) > SHARE_EPSILON &&
+//                 typeof wallet.buyPrice === 'number') // Make sure buyPrice exists
+//             {
+//                  // Unrealized P/L calculation
+//                  currentUnrealizedSwingPL += (currentPrice - wallet.buyPrice) * wallet.remainingShares!;
+//                  // Accumulate Cost Basis for current holdings
+//                  currentSwingCostBasis += wallet.buyPrice * wallet.remainingShares!; // <<< ADDED
+//             }
+//         });
+//    } else {
+//        //console.warn("[StockWalletPage] - [Swing YTD P/L] Cannot calculate P/L: Current price unavailable.");
+//        return { dollars: null, percent: null }; // Return nulls if price missing
+//    }
+//
+//    // Sum the dollar components
+//    const totalPL_dollars = ytdRealizedSwingPL + currentUnrealizedSwingPL;
+//    const roundedTotalPL_dollars = parseFloat(totalPL_dollars.toFixed(CURRENCY_PRECISION));
+//
+//    // --- Calculate Percentage ---
+//    let calculatedPercent: number | null = null;
+//    // Only calculate if the cost basis is positive to avoid division by zero/weird results
+//    if (currentSwingCostBasis > SHARE_EPSILON) {
+//         calculatedPercent = (totalPL_dollars / currentSwingCostBasis) * 100;
+//    } else if (Math.abs(totalPL_dollars) < 0.001) {
+//         // If cost basis is zero (or near zero) and P/L is also zero, return 0%
+//         calculatedPercent = 0;
+//    } // Otherwise, percent remains null (e.g., profit/loss with zero cost basis is undefined)
+//
+//    const roundedPercent = typeof calculatedPercent === 'number'
+//        ? parseFloat(calculatedPercent.toFixed(PERCENT_PRECISION)) // Use PERCENT_PRECISION
+//        : null;
+//    // --- End Percentage Calculation ---
+//
+//    if (warnings > 0) {
+//          console.warn(`[StockWalletPage] - [Swing YTD P/L] Calculation finished with ${warnings} warnings (missing data). Realized P/L part might be incomplete.`);
+//     }
+//
+//     //console.log(`[StockWalletPage] - [Swing YTD P/L] $,%: ${roundedTotalPL_dollars}, ${roundedPercent}% (Basis: ${currentSwingCostBasis.toFixed(2)})`);
+//
+//     // Return object with both values
+//     return {
+//         dollars: roundedTotalPL_dollars,
+//         percent: roundedPercent
+//     };
+//
+// // Correct dependencies for this specific calculation
+// }, [transactions, wallets, mergedPrices, stockSymbol]); // Updated to use mergedPrices
+// --- End Total Swing YTD P/L Calc Memo --- UNUSED
 
 
 // --- START: Memo for All-Time UNREALIZED P/L Calculation ---
@@ -1610,7 +1573,7 @@ const unrealizedPlStats = useMemo(() => {
     }
 
     // Extract stock splits from transactions for split adjustments
-    const stockSplits = extractStockSplits(transactions || []);
+    // const stockSplits = extractStockSplits(transactions || []); // unused - wallets now permanently updated during splits
 
     let totalUnrealizedSwingPL = 0;
     let totalSwingCostBasis = 0; // Cost basis of CURRENTLY HELD swing shares
@@ -1674,7 +1637,7 @@ const unrealizedPlStats = useMemo(() => {
         unrealizedStockCostBasis: totalCostBasis // Return calculated basis
     };
 
-  }, [wallets, mergedPrices, stockSymbol, transactions]); // Updated to include transactions for split extraction
+  }, [wallets, mergedPrices, stockSymbol]); // transactions removed - wallets are now permanently updated during splits
   // --- END: Memo for All-Time UNREALIZED P/L Calculation ---
 
 // --- START: Memo for All-Time COMBINED P/L (Realized + Unrealized) ---
@@ -1872,165 +1835,165 @@ const riskInvestment = useMemo(() => {
     return totalTiedUpInvestment - investmentWithMetTP;
 }, [wallets, mergedPrices, stockSymbol, totalTiedUpInvestment]);
 
-// --- ADD Memo for Total HOLD YTD P/L Calculation ---
-const totalHoldYtdPL = useMemo(() => {
-    //console.log("[Memo] Calculating totalHoldYtdPL ($ and %)");
-    // Depends on transactions, wallets, price data
-    if (!transactions || !wallets || !stockSymbol) {
-        return { dollars: null, percent: null }; // Return object for consistency
-    }
+// --- ADD Memo for Total HOLD YTD P/L Calculation --- UNUSED
+// const totalHoldYtdPL = useMemo(() => {
+//     //console.log("[Memo] Calculating totalHoldYtdPL ($ and %)");
+//     // Depends on transactions, wallets, price data
+//     if (!transactions || !wallets || !stockSymbol) {
+//         return { dollars: null, percent: null }; // Return object for consistency
+//     }
+//
+//     // --- Create Wallet Map INSIDE this hook ---
+//     //console.log("[Memo] Creating internal wallet buy price map for YTD calc");
+//     const walletBuyPriceMap = new Map<string, number>(); // Map<walletId, buyPrice>
+//     wallets.forEach(w => {
+//         // Ensure wallet has an ID and a valid buy price number
+//         if (w.id && typeof w.buyPrice === 'number') {
+//             walletBuyPriceMap.set(w.id, w.buyPrice);
+//         }
+//     });
+//     //console.log(`[Memo] Internal map created with ${walletBuyPriceMap.size} entries.`);
+//     // --- End Wallet Map ---
+//
+//     const currentYear = new Date().getFullYear();
+//     const startOfYear = `${currentYear}-01-01`;
+//     const currentPrice = mergedPrices[stockSymbol]?.currentPrice ?? null;
+//
+//     let ytdRealizedHoldPL = 0;
+//     let currentUnrealizedHoldPL = 0;
+//     let currentHoldCostBasis = 0; // <<< ADDED: Accumulator for cost basis
+//     let warnings = 0;
+//
+//     // --- Calculate YTD Realized P/L for HOLD Sells ---
+//     const holdSplits = extractStockSplits(transactions);
+//     transactions.forEach(txn => {
+//         if (txn.action === 'Sell' && txn.txnType === 'Hold' &&
+//             txn.date && txn.date >= startOfYear && txn.completedTxnId &&
+//             typeof txn.quantity === 'number' && typeof txn.price === 'number') {
+//             const walletBuyPrice = walletBuyPriceMap.get(txn.completedTxnId);
+//             const buyTxn = transactions.find(t => t.id === txn.completedTxnId);
+//             const buyDate = buyTxn?.date || '';
+//             if (typeof walletBuyPrice === 'number' && buyDate) {
+//                 // Use stored txnProfit if available, otherwise calculate with splits
+//                 const profitForThisOneSale = txn.txnProfit ?? calculateSingleSalePLWithSplits(
+//                     txn.price!,
+//                     walletBuyPrice,
+//                     txn.quantity!,
+//                     txn.date!,
+//                     buyDate,
+//                     holdSplits
+//                 );
+//                 ytdRealizedHoldPL += profitForThisOneSale;
+//             } else {
+//                 // Wallet link or buy price was missing for a YTD Hold Sell
+//                 warnings++;
+//                 console.warn(`[StockWalletPage] - [Hold YTD P/L] Could not find wallet buy price or buy date for YTD Hold Sell Txn ${txn.id}`);
+//             }
+//         }
+//     });
+//
+//     // --- Calculate Current Unrealized P/L AND Cost Basis for HOLD Wallets ---
+//     if (typeof currentPrice === 'number') {
+//         wallets.forEach(wallet => {
+//             if (wallet.walletType === 'Hold' &&
+//                 (wallet.remainingShares ?? 0) > SHARE_EPSILON &&
+//                 typeof wallet.buyPrice === 'number') // Make sure buyPrice exists
+//             {
+//                  // Unrealized P/L calculation
+//                  currentUnrealizedHoldPL += (currentPrice - wallet.buyPrice) * wallet.remainingShares!;
+//                  // Accumulate Cost Basis for current holdings
+//                  currentHoldCostBasis += wallet.buyPrice * wallet.remainingShares!; // <<< ADDED
+//             }
+//         });
+//    } else {
+//        //console.warn("[StockWalletPage] - [Hold YTD P/L] Cannot calculate P/L: Current price unavailable.");
+//        return { dollars: null, percent: null }; // Return nulls if price missing
+//    }
+//
+//    // Sum the dollar components
+//    const totalPL_dollars = ytdRealizedHoldPL + currentUnrealizedHoldPL;
+//    const roundedTotalPL_dollars = parseFloat(totalPL_dollars.toFixed(CURRENCY_PRECISION));
+//
+//    // --- Calculate Percentage ---
+//    let calculatedPercent: number | null = null;
+//    // Only calculate if the cost basis is positive to avoid division by zero/weird results
+//    if (currentHoldCostBasis > SHARE_EPSILON) {
+//         calculatedPercent = (totalPL_dollars / currentHoldCostBasis) * 100;
+//    } else if (Math.abs(totalPL_dollars) < 0.001) {
+//         // If cost basis is zero (or near zero) and P/L is also zero, return 0%
+//         calculatedPercent = 0;
+//    } // Otherwise, percent remains null (e.g., profit/loss with zero cost basis is undefined)
+//
+//    const roundedPercent = typeof calculatedPercent === 'number'
+//        ? parseFloat(calculatedPercent.toFixed(PERCENT_PRECISION)) // Use PERCENT_PRECISION
+//        : null;
+//    // --- End Percentage Calculation ---
+//
+//    if (warnings > 0) {
+//          console.warn(`[StockWalletPage] - [Hold YTD P/L] Calculation finished with ${warnings} warnings (missing data). Realized P/L part might be incomplete.`);
+//     }
+//
+//     //console.log(`[StockWalletPage] - [Hold YTD P/L] $,%: ${roundedTotalPL_dollars}, ${roundedPercent}% (Basis: ${currentHoldCostBasis.toFixed(2)})`);
+//
+//     // Return object with both values
+//     return {
+//         dollars: roundedTotalPL_dollars,
+//         percent: roundedPercent
+//     };
+//
+// }, [transactions, wallets, mergedPrices, stockSymbol]); // Updated to use mergedPrices
+// --- End Total Hold YTD P/L Calc Memo --- UNUSED
 
-    // --- Create Wallet Map INSIDE this hook ---
-    //console.log("[Memo] Creating internal wallet buy price map for YTD calc");
-    const walletBuyPriceMap = new Map<string, number>(); // Map<walletId, buyPrice>
-    wallets.forEach(w => {
-        // Ensure wallet has an ID and a valid buy price number
-        if (w.id && typeof w.buyPrice === 'number') {
-            walletBuyPriceMap.set(w.id, w.buyPrice);
-        }
-    });
-    //console.log(`[Memo] Internal map created with ${walletBuyPriceMap.size} entries.`);
-    // --- End Wallet Map ---
+// Helper to truncate long IDs for display - unused
+// const truncateId = (id: string | null | undefined, length = 8): string => {
+//     // If no ID, return a dash
+//     if (!id) return '-';
+//     // If ID is already short enough, return it as is
+//     if (id.length <= length) return id;
+//     // Otherwise, show the first few chars, ellipsis, and last few chars
+//     const startLength = Math.floor(length / 2);
+//     const endLength = length - startLength;
+//     //return `${id.substring(0, startLength)}...${id.substring(id.length - endLength)}`;
+//     return `${id.substring(0, startLength)}...`;
+// };
 
-    const currentYear = new Date().getFullYear();
-    const startOfYear = `${currentYear}-01-01`;
-    const currentPrice = mergedPrices[stockSymbol]?.currentPrice ?? null;
+// const formatPercent = (value: number | null | undefined): string => { // unused - available in utils
+//         if (typeof value !== 'number' || isNaN(value)) { // Added isNaN check for robustness
+//             return '-';
+//         }
+//         // Use the imported PERCENT_PRECISION constant
+//         return `${value.toFixed(PERCENT_PRECISION)}%`;
+//     };
 
-    let ytdRealizedHoldPL = 0;
-    let currentUnrealizedHoldPL = 0;
-    let currentHoldCostBasis = 0; // <<< ADDED: Accumulator for cost basis
-    let warnings = 0;
-
-    // --- Calculate YTD Realized P/L for HOLD Sells ---
-    const holdSplits = extractStockSplits(transactions);
-    transactions.forEach(txn => {
-        if (txn.action === 'Sell' && txn.txnType === 'Hold' &&
-            txn.date && txn.date >= startOfYear && txn.completedTxnId &&
-            typeof txn.quantity === 'number' && typeof txn.price === 'number') {
-            const walletBuyPrice = walletBuyPriceMap.get(txn.completedTxnId);
-            const buyTxn = transactions.find(t => t.id === txn.completedTxnId);
-            const buyDate = buyTxn?.date || '';
-            if (typeof walletBuyPrice === 'number' && buyDate) {
-                // Use stored txnProfit if available, otherwise calculate with splits
-                const profitForThisOneSale = txn.txnProfit ?? calculateSingleSalePLWithSplits(
-                    txn.price!,
-                    walletBuyPrice,
-                    txn.quantity!,
-                    txn.date!,
-                    buyDate,
-                    holdSplits
-                );
-                ytdRealizedHoldPL += profitForThisOneSale;
-            } else {
-                // Wallet link or buy price was missing for a YTD Hold Sell
-                warnings++;
-                console.warn(`[StockWalletPage] - [Hold YTD P/L] Could not find wallet buy price or buy date for YTD Hold Sell Txn ${txn.id}`);
-            }
-        }
-    });
-
-    // --- Calculate Current Unrealized P/L AND Cost Basis for HOLD Wallets ---
-    if (typeof currentPrice === 'number') {
-        wallets.forEach(wallet => {
-            if (wallet.walletType === 'Hold' &&
-                (wallet.remainingShares ?? 0) > SHARE_EPSILON &&
-                typeof wallet.buyPrice === 'number') // Make sure buyPrice exists
-            {
-                 // Unrealized P/L calculation
-                 currentUnrealizedHoldPL += (currentPrice - wallet.buyPrice) * wallet.remainingShares!;
-                 // Accumulate Cost Basis for current holdings
-                 currentHoldCostBasis += wallet.buyPrice * wallet.remainingShares!; // <<< ADDED
-            }
-        });
-   } else {
-       //console.warn("[StockWalletPage] - [Hold YTD P/L] Cannot calculate P/L: Current price unavailable.");
-       return { dollars: null, percent: null }; // Return nulls if price missing
-   }
-
-   // Sum the dollar components
-   const totalPL_dollars = ytdRealizedHoldPL + currentUnrealizedHoldPL;
-   const roundedTotalPL_dollars = parseFloat(totalPL_dollars.toFixed(CURRENCY_PRECISION));
-
-   // --- Calculate Percentage ---
-   let calculatedPercent: number | null = null;
-   // Only calculate if the cost basis is positive to avoid division by zero/weird results
-   if (currentHoldCostBasis > SHARE_EPSILON) {
-        calculatedPercent = (totalPL_dollars / currentHoldCostBasis) * 100;
-   } else if (Math.abs(totalPL_dollars) < 0.001) {
-        // If cost basis is zero (or near zero) and P/L is also zero, return 0%
-        calculatedPercent = 0;
-   } // Otherwise, percent remains null (e.g., profit/loss with zero cost basis is undefined)
-
-   const roundedPercent = typeof calculatedPercent === 'number'
-       ? parseFloat(calculatedPercent.toFixed(PERCENT_PRECISION)) // Use PERCENT_PRECISION
-       : null;
-   // --- End Percentage Calculation ---
-
-   if (warnings > 0) {
-         console.warn(`[StockWalletPage] - [Hold YTD P/L] Calculation finished with ${warnings} warnings (missing data). Realized P/L part might be incomplete.`);
-    }
-
-    //console.log(`[StockWalletPage] - [Hold YTD P/L] $,%: ${roundedTotalPL_dollars}, ${roundedPercent}% (Basis: ${currentHoldCostBasis.toFixed(2)})`);
-
-    // Return object with both values
-    return {
-        dollars: roundedTotalPL_dollars,
-        percent: roundedPercent
-    };
-
-}, [transactions, wallets, mergedPrices, stockSymbol]); // Updated to use mergedPrices
-// --- End Total Hold YTD P/L Calc Memo ---
-
-// Helper to truncate long IDs for display
-const truncateId = (id: string | null | undefined, length = 8): string => {
-    // If no ID, return a dash
-    if (!id) return '-';
-    // If ID is already short enough, return it as is
-    if (id.length <= length) return id;
-    // Otherwise, show the first few chars, ellipsis, and last few chars
-    const startLength = Math.floor(length / 2);
-    const endLength = length - startLength;
-    //return `${id.substring(0, startLength)}...${id.substring(id.length - endLength)}`;
-    return `${id.substring(0, startLength)}...`;
-};
-
-const formatPercent = (value: number | null | undefined): string => {
-        if (typeof value !== 'number' || isNaN(value)) { // Added isNaN check for robustness
-            return '-';
-        }
-        // Use the imported PERCENT_PRECISION constant
-        return `${value.toFixed(PERCENT_PRECISION)}%`;
-    };
-
-const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISION): string => {
-        if (typeof value !== 'number' || isNaN(value) || Math.abs(value) < SHARE_EPSILON) {
-            return '-'; // Returns '-' only for non-numbers
-        }
-        // Returns formatted string with fixed decimals
-        return value.toFixed(decimals);
-    };
+// const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISION): string => { // unused - available in utils
+//         if (typeof value !== 'number' || isNaN(value) || Math.abs(value) < SHARE_EPSILON) {
+//             return '-'; // Returns '-' only for non-numbers
+//         }
+//         // Returns formatted string with fixed decimals
+//         return value.toFixed(decimals);
+//     };
     // --- END: Formatting Helpers ---
 
-    // +++ Add TP Cell Styling Function +++
-    const getTpCellStyle = (
-        wallet: StockWalletDataType,
-        currentStockPrice: number | null | undefined // Pass current price in
-    ): React.CSSProperties => {
-        const remaining = wallet.remainingShares ?? 0;
-        const tp = wallet.stpValue;
+    // +++ Add TP Cell Styling Function +++ - unused (functionality moved to WalletsTabs component)
+    // const getTpCellStyle = (
+    //     wallet: StockWalletDataType,
+    //     currentStockPrice: number | null | undefined // Pass current price in
+    // ): React.CSSProperties => {
+    //     const remaining = wallet.remainingShares ?? 0;
+    //     const tp = wallet.stpValue;
 
-        // Conditions: Has shares AND TP is set AND TP >= Current Price
-        if (remaining > SHARE_EPSILON &&
-            typeof tp === 'number' &&
-            typeof currentStockPrice === 'number' &&
-            tp <= currentStockPrice
-           ) {
-             // Condition met: return green text style
-             return { color: 'lightgreen' };
-        }
-        // Condition not met: return default empty style object
-        return {};
-    };
+    //     // Conditions: Has shares AND TP is set AND TP >= Current Price
+    //     if (remaining > SHARE_EPSILON &&
+    //         typeof tp === 'number' &&
+    //         typeof currentStockPrice === 'number' &&
+    //         tp <= currentStockPrice
+    //        ) {
+    //          // Condition met: return green text style
+    //          return { color: 'lightgreen' };
+    //     }
+    //     // Condition not met: return default empty style object
+    //     return {};
+    // };
     // ++++++++++++++++++++++++++++++++
 
     // --- ADD FUNCTION to handle opening the modal ---
@@ -2332,30 +2295,30 @@ const formatShares = (value: number | null | undefined, decimals = SHARE_PRECISI
         setStockToEditData(null);
     };
 
-    const handleUpdateStock = async (updatePayload: PortfolioStockUpdateInput) => {
-        if (!stockId) return;
-        console.log('Attempting to update stock:', stockId, updatePayload);
-
-        try {
-            const { data: updatedStock, errors } = await client.models.PortfolioStock.update({
-                ...updatePayload,
-                id: stockId, // Ensure id is this specific stockId
-            });
-
-            if (errors) {
-                console.error('Error updating stock:', errors);
-                setError(errors[0].message || 'Failed to update stock.');
-            } else {
-                console.log('Stock updated successfully:', updatedStock);
-                // Refresh all stock data from database to ensure we have the latest values
-                await fetchCurrentStockData();
-                handleCancelEditStock();
-            }
-        } catch (err: unknown) {
-            console.error('Unexpected error updating stock:', err);
-            setError((err as Error).message || 'An error occurred during update.');
-        }
-    };
+    // const handleUpdateStock = async (updatePayload: PortfolioStockUpdateInput) => {
+    //     if (!stockId) return;
+    //     console.log('Attempting to update stock:', stockId, updatePayload);
+    //
+    //     try {
+    //         const { data: updatedStock, errors } = await client.models.PortfolioStock.update({
+    //             ...updatePayload,
+    //             id: stockId, // Ensure id is this specific stockId
+    //         });
+    //
+    //         if (errors) {
+    //             console.error('Error updating stock:', errors);
+    //             setError(errors[0].message || 'Failed to update stock.');
+    //         } else {
+    //             console.log('Stock updated successfully:', updatedStock);
+    //             // Refresh all stock data from database to ensure we have the latest values
+    //             await fetchCurrentStockData();
+    //             handleCancelEditStock();
+    //         }
+    //     } catch (err: unknown) {
+    //         console.error('Unexpected error updating stock:', err);
+    //         setError((err as Error).message || 'An error occurred during update.');
+    //     }
+    // }; // Unused - replaced by handleEditStockSuccess
 
     // New unified modal success handler
     const handleEditStockSuccess = async (updatedStock?: PortfolioStockDataType) => {
@@ -2548,14 +2511,14 @@ const modalContentStyle: React.CSSProperties = {
     background: '#151515', padding: '25px', borderRadius: '8px',
     minWidth: '350px', maxWidth: '500px', boxShadow: '0 5px 15px rgba(0,0,0,0.3)',
 };
-const formGroupStyle: React.CSSProperties = {
-    marginBottom: '15px',
-};
-const labelStyle: React.CSSProperties = {
-    display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9em',
-};
-const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '8px 10px', border: '1px solid #ccc',
-    borderRadius: '4px', boxSizing: 'border-box', fontSize: '1em',
-};
+// const formGroupStyle: React.CSSProperties = {
+//     marginBottom: '15px',
+// };
+// const labelStyle: React.CSSProperties = {
+//     display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9em',
+// };
+// const inputStyle: React.CSSProperties = {
+//     width: '100%', padding: '8px 10px', border: '1px solid #ccc',
+//     borderRadius: '4px', boxSizing: 'border-box', fontSize: '1em',
+// }; // UNUSED style objects
 // --- End Styles ---

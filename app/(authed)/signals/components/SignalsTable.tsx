@@ -34,7 +34,7 @@ export default function SignalsTable({
     visibleColumnCount,
     requestSort,
     sortConfig,
-    formatters,
+    // formatters, // unused - imported directly instead
     cellStyles
 }: SignalsTableProps) {
     // const { formatPercent } = formatters; // unused

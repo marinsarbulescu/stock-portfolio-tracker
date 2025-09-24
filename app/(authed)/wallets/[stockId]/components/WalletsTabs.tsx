@@ -1,7 +1,7 @@
 //app/(authed)/wallets/[stockId]/components/WalletsTabs.tsx
 import React from 'react';
 import { StockWalletDataType, WalletsTableColumnVisibilityState, WalletsTableSortableKey } from '../types';
-import { isHtpSignalActive, getHtpDisplayValue } from '@/app/utils/htpCalculations';
+// import { isHtpSignalActive, getHtpDisplayValue } from '@/app/utils/htpCalculations'; // UNUSED
 import type { Dispatch, SetStateAction } from 'react';
 import { formatCurrency, formatShares, formatPercent, calculatePercentToStp, calculateHtpTargetPrice, calculatePercentToHtp } from '@/app/utils/financialCalculations';
 import { SHARE_EPSILON, SHARE_PRECISION } from '@/app/config/constants';
@@ -101,52 +101,52 @@ export default function WalletsTabs({
   };
 
   // HTP Sell Signal Logic - Apply to both Swing and Hold wallets
-  const getHtpCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
-    // Apply HTP logic for both Swing and Hold wallets
-    const remaining = wallet.remainingShares ?? 0;
-    const buyPrice = wallet.buyPrice;
-
-    // Must have remaining shares, valid buy price, valid current price, and valid HTP
-    if (
-      remaining <= SHARE_EPSILON ||
-      typeof buyPrice !== 'number' ||
-      typeof currentStockPrice !== 'number' ||
-      typeof stockHtp !== 'number' ||
-      stockHtp <= 0 ||
-      buyPrice <= 0
-    ) {
-      return {};
-    }
-
-    // Use shared utility to check if HTP signal is active
-    if (isHtpSignalActive(buyPrice, stockHtp, currentStockPrice, stockCommission)) {
-      return { color: 'lightgreen' };
-    }
-
-    return {};
-  };
+  // const getHtpCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
+  //   // Apply HTP logic for both Swing and Hold wallets
+  //   const remaining = wallet.remainingShares ?? 0;
+  //   const buyPrice = wallet.buyPrice;
+  //
+  //   // Must have remaining shares, valid buy price, valid current price, and valid HTP
+  //   if (
+  //     remaining <= SHARE_EPSILON ||
+  //     typeof buyPrice !== 'number' ||
+  //     typeof currentStockPrice !== 'number' ||
+  //     typeof stockHtp !== 'number' ||
+  //     stockHtp <= 0 ||
+  //     buyPrice <= 0
+  //   ) {
+  //     return {};
+  //   }
+  //
+  //   // Use shared utility to check if HTP signal is active
+  //   if (isHtpSignalActive(buyPrice, stockHtp, currentStockPrice, stockCommission)) {
+  //     return { color: 'lightgreen' };
+  //   }
+  //
+  //   return {};
+  // }; // UNUSED
 
   // HTP Display Value function - calculates percentage from buy price to current price for HTP signals
-  const getHtpDisplayValueForWallet = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
-    // Show HTP value for both Swing and Hold wallets with HTP signal
-    const remaining = wallet.remainingShares ?? 0;
-    const buyPrice = wallet.buyPrice;
-
-    // Must have remaining shares, valid buy price, valid current price, and valid HTP
-    if (
-      remaining <= SHARE_EPSILON ||
-      typeof buyPrice !== 'number' ||
-      typeof currentStockPrice !== 'number' ||
-      typeof stockHtp !== 'number' ||
-      stockHtp <= 0 ||
-      buyPrice <= 0
-    ) {
-      return '-';
-    }
-
-    // Use shared utility to get HTP display value
-    return getHtpDisplayValue(buyPrice, stockHtp, currentStockPrice, stockCommission);
-  };
+  // const getHtpDisplayValueForWallet = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
+  //   // Show HTP value for both Swing and Hold wallets with HTP signal
+  //   const remaining = wallet.remainingShares ?? 0;
+  //   const buyPrice = wallet.buyPrice;
+  //
+  //   // Must have remaining shares, valid buy price, valid current price, and valid HTP
+  //   if (
+  //     remaining <= SHARE_EPSILON ||
+  //     typeof buyPrice !== 'number' ||
+  //     typeof currentStockPrice !== 'number' ||
+  //     typeof stockHtp !== 'number' ||
+  //     stockHtp <= 0 ||
+  //     buyPrice <= 0
+  //   ) {
+  //     return '-';
+  //   }
+  //
+  //   // Use shared utility to get HTP display value
+  //   return getHtpDisplayValue(buyPrice, stockHtp, currentStockPrice, stockCommission);
+  // }; // UNUSED
 
   // %2STP Cell Style - highlights when current price meets or exceeds STP target (both Swing and Hold wallets)
   const getPercentToStpCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
