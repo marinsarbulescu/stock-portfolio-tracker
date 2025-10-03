@@ -1,92 +1,69 @@
-# Claude Development Guidelines - Project Context
+# Copilot Instructions
 
-> **Note**: Core development principles and build verification sequences are in `.github/copilot-instructions.md` and automatically applied to all conversations. This file contains project-specific context and advanced guidelines.
+## Core Principles
+- **Verify before accepting**: Always examine the codebase to verify user claims rather than accepting them at face value
+- **Use critical thinking**: If a proposed solution doesn't align with best practices or seems suboptimal, suggest better alternatives
+- **Be proactive but measured**: Take initiative to complete tasks thoroughly, but avoid making changes beyond what was requested
+- **Fact-check with code**: Always read relevant files to understand how the code actually works before making changes
+- **Be transparent**: If you're unsure about something, say so clearly rather than guessing
+- **No assumptions**: Always check the codebase for facts instead of making assumptions
+- **Reuse existing patterns**: Study existing components and patterns in the codebase before creating new ones
 
-## Project Architecture Overview
+## Communication Style
+- **Be concise**: Provide clear, direct responses without unnecessary explanation
+- **Focus on essentials**: Only include information directly relevant to the task at hand
+- **Ask for clarification**: When requirements are ambiguous, ask specific questions to clarify
 
-### Stock Portfolio Tracker Structure
-- **Frontend**: Next.js 14 with TypeScript, React components
-- **Backend**: AWS Amplify Gen 2 with GraphQL, DynamoDB
-- **Key Entities**: Portfolios → Stocks → Wallets → Transactions
-- **Financial Calculations**: Real-time P&L, ROIC, budget tracking
-- **Price Data**: Yahoo Finance integration via AWS Lambda
+## Task Management
+- **Use TodoWrite tool**: For multi-step tasks, use the TodoWrite tool to track progress and give visibility to the user
+- **Mark progress accurately**: Update todo items to 'in_progress' when starting and 'completed' immediately after finishing
+- **Break down complex tasks**: Divide large tasks into smaller, manageable todos
 
-### Critical Business Logic
-- **Wallet Types**: Swing (short-term) vs Hold (long-term) strategies
-- **Transaction Flow**: Buy → Hold/Swing Wallets → Sell → P&L Calculation
-- **Cash Flow**: Out-of-Pocket (OOP) vs Cash Balance tracking
-- **Split Handling**: Stock splits require proportional adjustments across wallets/transactions
+## Code Quality & Build Verification
+- **Fix errors immediately**: Build errors must be resolved before continuing; restart sequence if needed
+- **Amplify sandbox**: After making backend/schema changes, run `npx ampx sandbox --once`
+- **Check lint regularly**: Use `npm run lint` to maintain code quality standards
+- **When to verify**:
+  - After modifying TypeScript types or interfaces
+  - After changing component props or function signatures
+  - After refactoring or moving files
+  - Before completing complex tasks
+  - After adding new imports or dependencies
 
-## Advanced Development Patterns
+## GraphQL & Data Operations
+- **Selection sets**: Always specify exact fields needed to minimize data transfer and improve performance
+- **Error handling**: Check for both `errors` array and `data` null in GraphQL responses
+- **Client generation**: Use `generateClient<Schema>()` pattern, not deprecated client methods
+- **Optimistic updates**: Consider optimistic UI updates for better UX on mutations
+- **Batch operations**: Group related mutations when possible to reduce round trips
+- **Type assertions**: Use `as unknown as Type` pattern for Amplify responses when needed
 
-### Component Organization
-- **Page Level**: `/app/(authed)/[feature]/page.tsx` - Main orchestration
-- **Components**: `/components/` - Reusable UI components  
-- **Feature Components**: `/[feature]/components/` - Feature-specific components
-- **Types**: Centralized in `/types.ts` or feature-specific type files
+## Testing & E2E Guidelines
+- **Always use data-testid selectors**: Prefer `data-testid` selectors over CSS selectors, text content, or DOM structure for E2E tests
+- **Create testids when missing**: If an element lacks a `data-testid`, add one following the existing naming convention from the same page
+- **Testid naming convention**: Use descriptive, kebab-case names like `signals-table-ticker-${symbol}` or `wallet-page-title`
+- **Update E2E tests**: Check if E2E tests need updates after making UI or functionality changes
+- **Follow existing patterns**: Use established patterns from files like wallet-add-transaction.spec.ts
+- **Add testids when creating new code**: Include `data-testid` attributes on new UI elements for E2E test accessibility
+- **Run tests headless by default**: Use `npx playwright test` without `--headed` unless specifically needed
+- **Correct E2E syntax**: `npx playwright test e2e/portfolio/portfolio-create-and-edit-stock.spec.ts` (not `npm run e2e:file`)
+- **Test price overrides**: E2E tests use mock price data; ensure price context is properly mocked
+- **Price data source**: Production uses Yahoo Finance via Lambda; tests use deterministic values
 
-### State Management Patterns
-- **useMemo Dependencies**: Always include all dependencies, especially for financial calculations
-- **Error Boundaries**: Handle GraphQL errors gracefully with user-friendly messages
-- **Loading States**: Provide clear feedback during data fetching operations
+## Domain-Specific Standards
+- **Follow stock market conventions**: Use standard financial terminology and calculations
+- **Maintain consistency**: Follow existing naming patterns for financial entities (stocks, wallets, transactions)
 
-### Testing Strategy
-- **E2E Tests**: Playwright tests in `/e2e/` directory
-- **Test Data**: Use deterministic test data for reliable E2E runs
-- **Test IDs**: Always add `data-testid` attributes for new UI elements
+## Git & Version Control
+- **Never commit unless asked**: Only create commits when explicitly requested by the user
+- **Use git rm for deletions**: Use `git rm "filename"` instead of file system commands to properly track deletions
+- **Atomic commits**: When asked to commit, include all related changes in a single, well-described commit
 
-## Financial Domain Expertise
+## File Operations
+- **Prefer editing over creating**: Always modify existing files when possible rather than creating new ones
+- **Check before writing**: Always use Read tool before Edit/Write to understand current file state
 
-### Key Calculations
-- **ROIC**: `(Cash Balance + Market Value - Total OOP) / Total OOP * 100`
-- **Tied-Up Investment**: Proportional investment in remaining shares
-- **P&L**: Realized (from sales) vs Unrealized (current positions)
-- **Budget Management**: Risk Budget vs Budget Used vs Budget Available
-
-### Price Data Integration
-- **Real-time Prices**: Yahoo Finance via AWS Lambda functions
-- **Test Prices**: Override mechanism for E2E testing
-- **Price Context**: Centralized price management with React Context
-
-## Amplify Gen 2 Patterns
-
-### GraphQL Operations
-- **Client Generation**: `generateClient<Schema>()` pattern
-- **Selection Sets**: Specify exact fields needed to optimize queries
-- **Error Handling**: Always check for `errors` in responses
-- **Pagination**: Use appropriate limits for data fetching
-
-### Schema Relationships
-- **Portfolios**: Top-level container
-- **Stocks**: Belong to portfolios, contain metadata (STP, HTP, budgets)
-- **Wallets**: Contain shares and track cost basis
-- **Transactions**: Historical records of all actions
-
-## Common Pitfalls & Solutions
-
-### TypeScript Issues
-- **Type Assertions**: Use `as unknown as Type` pattern for Amplify responses
-- **Optional Chaining**: Always use `?.` for potentially undefined properties
-- **Number Precision**: Use `parseFloat().toFixed()` for currency/percentage values
-
-### Performance Considerations
-- **useMemo Optimization**: Expensive calculations should be memoized
-- **Re-render Prevention**: Proper dependency arrays prevent unnecessary calculations
-- **Data Fetching**: Minimize GraphQL requests with proper selection sets
-
-### Financial Accuracy
-- **Epsilon Comparisons**: Use `SHARE_EPSILON` for floating-point share comparisons
-- **Currency Precision**: Round to 2 decimal places for currency values
-- **Split Adjustments**: Always verify split ratios before applying adjustments
-
-## Deployment & Environment
-
-### Build Process
-- **TypeScript Compilation**: Must pass before deployment
-- **Lint Checks**: Address warnings contextually
-- **Environment Variables**: Use Amplify environment configuration
-
-### Testing Requirements
-- **E2E Coverage**: Critical user flows must have E2E tests
-- **Cross-browser**: Test in modern browsers (Chrome, Firefox, Safari, Edge)
-- **Mobile Responsiveness**: Ensure functionality on mobile devices
+## Error Handling
+- **Provide actionable solutions**: When encountering errors, suggest specific fixes
+- **Check logs when needed**: Request browser console screenshots for client-side debugging when appropriate
+- **Handle failures gracefully**: If a tool operation fails, explain why and provide alternatives

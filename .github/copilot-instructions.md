@@ -20,11 +20,8 @@
 - **Break down complex tasks**: Divide large tasks into smaller, manageable todos
 
 ## Code Quality & Build Verification
-- **Build verification sequence**: Follow this exact sequence for reliable TypeScript error detection:
-  1. **Stop dev server**: Run `taskkill /f /im node.exe` to ensure all Node processes are terminated regardless of current state
-  2. **Run build**: Execute `npm run build` to catch TypeScript errors
-  3. **Restart dev server**: Only if build was successful, run `npm run dev` (use background=true)
-  4. **Fix errors immediately**: Build errors must be resolved before continuing; restart sequence if needed
+- **Fix errors immediately**: Build errors must be resolved before continuing; restart sequence if needed
+- **Amplify sandbox**: After making backend/schema changes, run `npx ampx sandbox --once`
 - **Check lint regularly**: Use `npm run lint` to maintain code quality standards
 - **When to verify**:
   - After modifying TypeScript types or interfaces
@@ -33,15 +30,25 @@
   - Before completing complex tasks
   - After adding new imports or dependencies
 
+## GraphQL & Data Operations
+- **Selection sets**: Always specify exact fields needed to minimize data transfer and improve performance
+- **Error handling**: Check for both `errors` array and `data` null in GraphQL responses
+- **Client generation**: Use `generateClient<Schema>()` pattern, not deprecated client methods
+- **Optimistic updates**: Consider optimistic UI updates for better UX on mutations
+- **Batch operations**: Group related mutations when possible to reduce round trips
+- **Type assertions**: Use `as unknown as Type` pattern for Amplify responses when needed
+
 ## Testing & E2E Guidelines
 - **Always use data-testid selectors**: Prefer `data-testid` selectors over CSS selectors, text content, or DOM structure for E2E tests
 - **Create testids when missing**: If an element lacks a `data-testid`, add one following the existing naming convention from the same page
 - **Testid naming convention**: Use descriptive, kebab-case names like `signals-table-ticker-${symbol}` or `wallet-page-title`
 - **Update E2E tests**: Check if E2E tests need updates after making UI or functionality changes
 - **Follow existing patterns**: Use established patterns from files like wallet-add-transaction.spec.ts
-- **Add test IDs**: Include `data-testid` attributes on new UI elements for E2E test accessibility
+- **Add testids when creating new code**: Include `data-testid` attributes on new UI elements for E2E test accessibility
 - **Run tests headless by default**: Use `npx playwright test` without `--headed` unless specifically needed
-- **Correct E2E syntax**: `npx playwright test e2e/portfolio/portfolio-create-and-edit-stock.spec.ts`
+- **Correct E2E syntax**: `npx playwright test e2e/portfolio/portfolio-create-and-edit-stock.spec.ts` (not `npm run e2e:file`)
+- **Test price overrides**: E2E tests use mock price data; ensure price context is properly mocked
+- **Price data source**: Production uses Yahoo Finance via Lambda; tests use deterministic values
 
 ## Domain-Specific Standards
 - **Follow stock market conventions**: Use standard financial terminology and calculations
@@ -52,14 +59,8 @@
 - **Use git rm for deletions**: Use `git rm "filename"` instead of file system commands to properly track deletions
 - **Atomic commits**: When asked to commit, include all related changes in a single, well-described commit
 
-## Development Workflow
-- **Assume dev server is running**: The user typically has the development server running for real-time testing
-- **Test in browser**: Suggest testing changes directly in the browser rather than asking to start the server
-- **Use parallel tool calls**: When multiple independent operations are needed, execute them in parallel for efficiency
-
 ## File Operations
 - **Prefer editing over creating**: Always modify existing files when possible rather than creating new ones
-- **No unsolicited documentation**: Don't create README or documentation files unless explicitly requested
 - **Check before writing**: Always use Read tool before Edit/Write to understand current file state
 
 ## Error Handling
