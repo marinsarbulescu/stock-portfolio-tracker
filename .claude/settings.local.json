@@ -22,7 +22,10 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(tasklist:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(git mv:*)",
+      "Read(//c/Users/marin/Downloads/**)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

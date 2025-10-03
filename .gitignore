@@ -65,3 +65,6 @@ dist/
 e2e/~$e2e-tests-formulas.xlsx
 screenshots/Screenshot (5).png
 screenshots/Screenshot (6).png
+# Test failure screenshots
+test-failure-*.png
+screenshot-*.png

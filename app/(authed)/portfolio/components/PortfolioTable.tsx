@@ -355,7 +355,7 @@ export default function PortfolioTable({
                       data-testid="portfolio-page-table-action-hide-button"
                       onClick={() => handleToggleHidden(stock)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'gray', marginRight: '5px' }}
-                      title={stock.isHidden ? "Show in Reports" : "Hide from Reports"}>
+                      title={stock.isHidden ? "Show in Signals" : "Hide from Signals"}>
                         {stock.isHidden ? <FaEyeSlash /> : <FaEye />}
                     </button>
                   </>

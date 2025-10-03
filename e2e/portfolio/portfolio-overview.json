@@ -1,6 +1,6 @@
 
 {
-  "scenario": "Portfolio Overview",
+  "test": "Portfolio Overview",
   "path": "e2e/portfolio/portfolio-overview.json",
   "description": "End-to-end test scenario for validating portfolio overview calculations with multiple transaction types and price updates.",
   "steps": [

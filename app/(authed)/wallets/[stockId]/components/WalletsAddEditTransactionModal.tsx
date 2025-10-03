@@ -229,33 +229,17 @@ export default function TransactionForm({
             if (typeof pdpValue === 'number' && typeof stpValue === 'number' && priceValue) {
               // Calculate target LBD (without commission adjustment)
               const targetLBD = priceValue - (priceValue * (pdpValue / 100));
-              
-              // Apply commission adjustment to LBD if commission is available and > 0
-              if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
-                const commissionRate = stockCommissionValue / 100;
-                
-                // Prevent division by zero or extreme values
-                if (commissionRate >= 1) {
-                  console.warn(`Commission rate (${stockCommissionValue}%) is too high, using target LBD without adjustment`);
-                  lbd_raw = targetLBD;
-                } else {
-                  // Commission-adjusted LBD: targetLBD / (1 + commissionRate)
-                  // This ensures that LBD + commission = target LBD
-                  lbd_raw = targetLBD / (1 + commissionRate);
-                  console.log(`[LBD Debug] Target LBD: ${targetLBD}, Commission: ${stockCommissionValue}%, Commission-adjusted LBD: ${lbd_raw}`);
-                }
-              } else {
-                // No commission or invalid commission, use target LBD
-                lbd_raw = targetLBD;
-              }
-              
-              
+
+              // LBD does not include commission adjustment
+              // This ensures consistency with LBD Signal (%) which also doesn't consider commission
+              lbd_raw = targetLBD;
+
               // --- Round LBD (Optional but good practice for currency) ---
               lbd_final = parseFloat(lbd_raw.toFixed(CURRENCY_PRECISION));
               // tp calculations removed - field deprecated and removed from schema
               // --- End Rounding ---
-            } else { 
-                //console.log("Could not calculate LBD (PDP invalid or price missing)"); 
+            } else {
+                //console.log("Could not calculate LBD (PDP invalid or price missing)");
             }
 
         } catch (fetchErr: unknown) {

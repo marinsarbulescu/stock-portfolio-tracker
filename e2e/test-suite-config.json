@@ -145,13 +145,14 @@
           "estimatedDuration": "1-2 minutes"
         },
         {
-          "name": "signals-5dd-validation",
+          "name": "signals-5dd-lbd-validation",
           "enabled": true,
-          "file": "e2e/signals/signals-5dd-validation.spec.ts",
-          "description": "Test 5DD (Five Day Dip) calculation and display logic with test historical data",
+          "file": "e2e/signals/signals-5dd-lbd-validation.spec.ts",
+          "description": "Test 5DD (Five Day Dip) and LBD (Last Buy Dip) calculation and display logic with comprehensive scenarios",
           "tags": [
             "signals",
             "5dd",
+            "lbd",
             "calculations",
             "historical-data",
             "business-logic"

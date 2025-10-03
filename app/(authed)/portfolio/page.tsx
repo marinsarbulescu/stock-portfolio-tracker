@@ -478,8 +478,8 @@ function PortfolioContent() {
     const newHiddenState = !stock.isHidden; // Calculate the new state
     // Updated confirmation message with specific details about what happens
     const confirmMessage = newHiddenState 
-      ? `This action will hide ${stock.symbol} from the Signals table and stop fetching the latest price.`
-      : `This action will show ${stock.symbol} in the Signals table and start fetching the latest price.`;
+      ? `This action will: 1) Hide ${stock.symbol} from the Signals table; 2) Stop fetching the latest price; 3) Exclude the stock from the portfolio's Max Risk (Budget) calculation.`
+      : `This action will: 1) Show ${stock.symbol} in the Signals table; 2) Start fetching the latest price; 3) Include the stock in the portfolio's Max Risk (Budget) calculation.`;
     
     if (!window.confirm(confirmMessage)) {
         return;

@@ -1,0 +1,224 @@
+{
+  "test": "5DD and LBD Validation",
+  "path": "e2e/signals/signals-5dd-lbd-validation.json",
+  "description": "End-to-end test for validating 5DD (Five Day Dip) and LBD (Last Buy Dip) calculations",
+  "testData": {
+    "stocks": {
+      "5DD_TEST_STOCK": {
+        "symbol": "E2E5DDLBD1",
+        "name": "E2E 5DD LBD Test Stock 1",
+        "stockType": "Stock",
+        "region": "US",
+        "marketCategory": "Opportunity",
+        "riskGrowthProfile": "Hare",
+        "budget": 1000,
+        "swingHoldRatio": 50,
+        "pdp": 5,
+        "stp": 10,
+        "htp": 20,
+        "testPrice": 100,
+        "testHistoricalCloses": [
+          {"date": "2025-09-24", "close": 106},
+          {"date": "2025-09-23", "close": 105},
+          {"date": "2025-09-22", "close": 108},
+          {"date": "2025-09-21", "close": 107},
+          {"date": "2025-09-20", "close": 104}
+        ]
+      },
+      "LBD_MULTI_BUY_STOCK": {
+        "symbol": "E2E5DDLBD2",
+        "name": "E2E 5DD LBD Test Stock 2",
+        "stockType": "Stock",
+        "region": "US",
+        "marketCategory": "Opportunity",
+        "riskGrowthProfile": "Hare",
+        "budget": 2000,
+        "swingHoldRatio": 50,
+        "pdp": 8,
+        "stp": 10,
+        "htp": 20,
+        "stockCommission": 0.5,
+        "testPrice": 50
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "id": "5dd_shows_with_old_buy",
+      "name": "5DD displays when last buy > 5 days ago",
+      "description": "Verifies 5DD calculation shows worst dip meeting PDP when no recent buys exist",
+      "setup": {
+        "stock": "5DD_TEST_STOCK",
+        "transactions": [
+          {
+            "action": "Buy",
+            "txnType": "Swing",
+            "signal": "LBD",
+            "price": 110,
+            "investment": 500,
+            "daysAgo": 10
+          }
+        ]
+      },
+      "validations": {
+        "signalsTable": {
+          "5dd": "-7.41%",
+          "lbd": null,
+          "lastBuy": "10 d",
+          "explanation": "5DD shows because buy is >5 days old; displays worst historical dip (-7.41% from $108)"
+        }
+      }
+    },
+    {
+      "id": "5dd_hidden_with_recent_buy",
+      "name": "5DD hidden when last buy ≤ 5 days ago",
+      "description": "Verifies 5DD is suppressed when recent buy exists",
+      "setup": {
+        "stock": "5DD_TEST_STOCK",
+        "transactions": [
+          {
+            "action": "Buy",
+            "txnType": "Swing",
+            "signal": "Cust",
+            "price": 102,
+            "investment": 200,
+            "daysAgo": 3
+          }
+        ]
+      },
+      "validations": {
+        "signalsTable": {
+          "5dd": null,
+          "lbd": null,
+          "lastBuy": "3 d",
+          "explanation": "5DD hidden because buy is ≤5 days old (even though -7.41% dip exists in historical data)"
+        }
+      }
+    },
+    {
+      "id": "lbd_uses_most_recent_buy",
+      "name": "LBD calculated from most recent buy with multiple transactions",
+      "description": "Verifies LBD uses the latest buy date, not best percentage",
+      "setup": {
+        "stock": "LBD_MULTI_BUY_STOCK",
+        "transactions": [
+          {
+            "id": "buy1",
+            "action": "Buy",
+            "txnType": "Swing",
+            "signal": "LBD",
+            "price": 60,
+            "investment": 600,
+            "daysAgo": 10
+          },
+          {
+            "id": "buy2",
+            "action": "Buy",
+            "txnType": "Swing",
+            "signal": "Cust",
+            "price": 52,
+            "investment": 520,
+            "daysAgo": 5
+          },
+          {
+            "id": "buy3",
+            "action": "Buy",
+            "txnType": "Swing",
+            "signal": "LBD",
+            "price": 70,
+            "investment": 700,
+            "daysAgo": 2
+          }
+        ]
+      },
+      "validations": {
+        "signalsTable": {
+          "lbd": "-28.57%",
+          "lastBuy": "2 d",
+          "explanation": "LBD calculated from most recent buy at $70 (2 days ago), not $60"
+        },
+        "walletsTransactionsTable": {
+          "expectedTransactions": 3,
+          "buy3": {
+            "price": "$70.00",
+            "lbd": "$64.40",
+            "signal": "LBD"
+          },
+          "buy2": {
+            "price": "$52.00",
+            "lbd": "$47.84",
+            "signal": "Cust"
+          },
+          "buy1": {
+            "price": "$60.00",
+            "lbd": "$55.20",
+            "signal": "LBD"
+          }
+        }
+      }
+    },
+    {
+      "id": "lbd_hidden_when_threshold_not_met",
+      "name": "LBD hidden when most recent buy doesn't meet PDP threshold",
+      "description": "Edge case: adding a 4th buy that doesn't trigger LBD",
+      "dependsOn": "lbd_uses_most_recent_buy",
+      "setup": {
+        "stock": "LBD_MULTI_BUY_STOCK",
+        "reuseFromScenario": "lbd_uses_most_recent_buy",
+        "additionalTransactions": [
+          {
+            "id": "buy4",
+            "action": "Buy",
+            "txnType": "Swing",
+            "signal": "Cust",
+            "price": 51,
+            "investment": 255,
+            "daysAgo": 1
+          }
+        ]
+      },
+      "validations": {
+        "signalsTable": {
+          "lbd": null,
+          "lastBuy": "1 d",
+          "explanation": "LBD hidden: -1.96% drop from $51 doesn't meet 8% PDP threshold"
+        },
+        "walletsTransactionsTable": {
+          "expectedTransactions": 4,
+          "buy4": {
+            "price": "$51.00",
+            "lbd": "$46.92",
+            "signal": "Cust"
+          }
+        }
+      }
+    },
+    {
+      "id": "combined_5dd_and_lbd",
+      "name": "Combined 5DD and LBD validation",
+      "description": "Tests both features work correctly together",
+      "setup": {
+        "stock": "5DD_TEST_STOCK",
+        "transactions": [
+          {
+            "action": "Buy",
+            "txnType": "Swing",
+            "signal": "LBD",
+            "price": 110,
+            "investment": 1100,
+            "daysAgo": 7
+          }
+        ]
+      },
+      "validations": {
+        "signalsTable": {
+          "5dd": "-7.41%",
+          "lbd": "-9.09%",
+          "lastBuy": "7 d",
+          "explanation": "Both signals show: 5DD (buy >5 days) and LBD (-9.09% from $110 meets 5% threshold)"
+        }
+      }
+    }
+  ],
+  "cleanupSymbols": ["E2E5DDLBD1", "E2E5DDLBD2"]
+}
