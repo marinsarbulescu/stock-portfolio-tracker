@@ -326,14 +326,15 @@ export function calculatePercentToStp(
 
 /**
  * Calculates the HTP target price from buy price and HTP percentage.
- * Formula: buyPrice × (1 + htpPercentage/100) + commission
+ * Formula: buyPrice × (1 + htpPercentage/100) / (1 - commission/100)
+ * This ensures you net exactly the target profit percentage after commission is deducted.
  * @param buyPrice - The original buy price
  * @param htpPercentage - The HTP percentage (e.g., 18 for 18%)
  * @param commissionPercentage - Optional commission percentage
  * @returns The HTP target price, or null if invalid inputs
- * 
+ *
  * @example
- * calculateHtpTargetPrice(100, 18, 3) // Returns 121 (18% gain + 3% commission)
+ * calculateHtpTargetPrice(100, 18, 1) // Returns ~119.19 (nets 18% after 1% commission)
  * calculateHtpTargetPrice(240, 18) // Returns 283.20 (18% gain, no commission)
  */
 export function calculateHtpTargetPrice(
@@ -343,25 +344,34 @@ export function calculateHtpTargetPrice(
 ): number | null {
     // Validate inputs
     if (
-        typeof buyPrice !== 'number' || 
-        typeof htpPercentage !== 'number' || 
-        isNaN(buyPrice) || 
-        isNaN(htpPercentage) || 
-        buyPrice <= 0 || 
+        typeof buyPrice !== 'number' ||
+        typeof htpPercentage !== 'number' ||
+        isNaN(buyPrice) ||
+        isNaN(htpPercentage) ||
+        buyPrice <= 0 ||
         htpPercentage <= 0
     ) {
         return null;
     }
 
-    // Calculate HTP target price from buy price
+    // Calculate HTP target price from buy price (before commission adjustment)
     const htpTargetBeforeCommission = buyPrice * (1 + htpPercentage / 100);
-    
-    // Add commission if provided
-    const commissionAmount = (typeof commissionPercentage === 'number' && commissionPercentage > 0) 
-        ? (htpTargetBeforeCommission * (commissionPercentage / 100))
-        : 0;
-    
-    return htpTargetBeforeCommission + commissionAmount;
+
+    // Adjust for commission if provided (using division method to ensure net profit)
+    if (typeof commissionPercentage === 'number' && commissionPercentage > 0) {
+        const commissionRate = commissionPercentage / 100;
+
+        // Prevent division by zero or negative values
+        if (commissionRate >= 1) {
+            console.warn(`Commission rate (${commissionPercentage}%) is too high for HTP calculation, using base target`);
+            return htpTargetBeforeCommission;
+        }
+
+        // Commission-adjusted target: ensures you net exactly htpPercentage profit after commission
+        return htpTargetBeforeCommission / (1 - commissionRate);
+    }
+
+    return htpTargetBeforeCommission;
 }
 
 /**

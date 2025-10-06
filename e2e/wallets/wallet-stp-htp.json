@@ -1,194 +1,367 @@
 {
+  "test": "STP and HTP Commission Validation",
+  "path": "e2e/wallets/wallet-stp-htp.json",
+  "description": "End-to-end test validating STP and HTP calculations with and without commission using division method",
   "colorDefinitions": {
     "default": "rgb(0, 0, 0)",
     "green": "rgb(144, 238, 144)",
     "yellow": "rgb(237, 255, 0)"
   },
-  "scenario": "STP-HTP-Validation",
-  "testPriceUpdates": {
-    "initialPrice": {
-      "step": "Step 1",
-      "description": "Set test price to $100 for baseline calculations",
-      "price": 100,
-      "timing": "Before any transactions"
-    },
-    "nearStpPrice": {
-      "step": "Step 8",
-      "description": "Update test price to $109 to test near-STP behavior",
-      "price": 109,
-      "timing": "After initial validation, before cleanup"
-    }
-  },
-  "stock": {
-    "symbol": "E2ESTPHTP",
-    "name": "E2E STP HTP Test Corp",
-    "stockType": "Stock",
-    "region": "US",
-    "pdp": 5,
-    "stp": 10,
-    "htp": 20,
-    "budget": 1000,
-    "swingHoldRatio": 50,
-    "stockCommission": 0,
-    "marketCategory": "US_Index",
-    "riskGrowthProfile": "Hare"
-  },
-  "transaction": {
-    "action": "Buy",
-    "txnType": "Split",
-    "signal": "Initial",
-    "price": 100,
-    "investment": 200,
-    "date": "2025-09-11"
-  },
-  "expectedOverviewSettings": {
-    "stp": "10%",
-    "htp": "20%"
-  },
-  "expectedSignalsValues": {
-    "percentToStp": "-9.09%",
-    "percentToHtp": "-16.67%",
-    "colorValidation": {
-      "percentToStp": "default",
-      "percentToHtp": "default"
-    }
-  },
-  "expectedWalletOverview": {
-    "stpValue": "$110.00",
-    "htpValue": "$120.00"
-  },
-  "expectedWalletTabs": {
-    "swing": {
-      "stpValue": "$110.00",
-      "percentToStp": "-9.09%",
-      "htpValue": "$120.00",
-      "percentToHtp": "-16.67%",
-      "colorValidation": {
-        "stpValue": "default",
-        "percentToStp": "default",
-        "htpValue": "default",
-        "percentToHtp": "default"
-      }
-    },
-    "hold": {
-      "stpValue": "$110.00",
-      "percentToStp": "-9.09%",
-      "htpValue": "$120.00",
-      "percentToHtp": "-16.67%",
-      "colorValidation": {
-        "stpValue": "default",
-        "percentToStp": "default",
-        "htpValue": "default",
-        "percentToHtp": "default"
-      }
-    }
-  },
-  "expectedValuesAt109": {
-    "expectedSignalsValues": {
-      "percentToStp": "-0.91%",
-      "percentToHtp": "-9.17%",
-      "colorValidation": {
-        "percentToStp": "yellow",
-        "percentToHtp": "default"
-      }
-    },
-    "expectedWalletTabs": {
-      "swing": {
-        "stpValue": "$110.00",
-        "percentToStp": "-0.91%",
-        "htpValue": "$120.00",
-        "percentToHtp": "-9.17%",
-        "colorValidation": {
-          "stpValue": "default",
-          "percentToStp": "default",
-          "htpValue": "default",
-          "percentToHtp": "default"
-        }
+  "testData": {
+    "stocks": {
+      "NO_COMMISSION_STOCK": {
+        "symbol": "E2ESTPHTP",
+        "name": "E2E STP HTP No Commission",
+        "stockType": "Stock",
+        "region": "US",
+        "marketCategory": "US_Index",
+        "riskGrowthProfile": "Hare",
+        "budget": 1000,
+        "swingHoldRatio": 50,
+        "pdp": 5,
+        "stp": 10,
+        "htp": 20,
+        "stockCommission": 0,
+        "testPrice": 100
       },
-      "hold": {
-        "stpValue": "$110.00",
-        "percentToStp": "-0.91%",
-        "htpValue": "$120.00",
-        "percentToHtp": "-9.17%",
-        "colorValidation": {
-          "stpValue": "default",
-          "percentToStp": "default",
-          "htpValue": "default",
-          "percentToHtp": "default"
-        }
+      "WITH_COMMISSION_STOCK": {
+        "symbol": "E2ESTPHTPCOM",
+        "name": "E2E STP HTP With Commission",
+        "stockType": "Stock",
+        "region": "US",
+        "marketCategory": "US_Index",
+        "riskGrowthProfile": "Hare",
+        "budget": 1000,
+        "swingHoldRatio": 50,
+        "pdp": 5,
+        "stp": 10,
+        "htp": 20,
+        "stockCommission": 0.5,
+        "testPrice": 100
       }
     }
   },
-  "expectedValuesAt115": {
-    "expectedSignalsValues": {
-      "percentToStp": "4.55%",
-      "percentToHtp": "-4.17%",
-      "colorValidation": {
-        "percentToStp": "green",
-        "percentToHtp": "default"
-      }
-    },
-    "expectedWalletTabs": {
-      "swing": {
-        "stpValue": "$110.00",
-        "percentToStp": "4.55%",
-        "htpValue": "$120.00",
-        "percentToHtp": "-4.17%",
-        "colorValidation": {
-          "stpValue": "green",
-          "percentToStp": "green",
-          "htpValue": "default",
-          "percentToHtp": "default"
-        }
+  "scenarios": [
+    {
+      "id": "no_commission_progression",
+      "name": "No Commission Stock - Price Progression",
+      "description": "Tests STP/HTP at multiple price points for stock without commission",
+      "setup": {
+        "stock": "NO_COMMISSION_STOCK",
+        "transactions": [
+          {
+            "action": "Buy",
+            "txnType": "Split",
+            "signal": "Initial",
+            "price": 100,
+            "investment": 200,
+            "date": "2025-09-11"
+          }
+        ]
       },
-      "hold": {
-        "stpValue": "$110.00",
-        "percentToStp": "4.55%",
-        "htpValue": "$120.00",
-        "percentToHtp": "-4.17%",
-        "colorValidation": {
-          "stpValue": "green",
-          "percentToStp": "green",
-          "htpValue": "default",
-          "percentToHtp": "default"
+      "priceProgression": [
+        {
+          "price": 100,
+          "label": "$100 - Baseline",
+          "validations": {
+            "walletsOverview": {
+              "stpSetting": "10%",
+              "htpSetting": "20%"
+            },
+            "signalsTable": {
+              "percentToStp": "-9.09%",
+              "percentToHtp": "-16.67%",
+              "stpColor": "default",
+              "htpColor": "default"
+            },
+            "walletTabs": {
+              "swing": {
+                "stpValue": "$110.00",
+                "percentToStp": "-9.09%",
+                "htpValue": "$120.00",
+                "percentToHtp": "-16.67%",
+                "stpValueColor": "default",
+                "percentToStpColor": "default",
+                "htpValueColor": "default",
+                "percentToHtpColor": "default"
+              },
+              "hold": {
+                "stpValue": "$110.00",
+                "percentToStp": "-9.09%",
+                "htpValue": "$120.00",
+                "percentToHtp": "-16.67%",
+                "stpValueColor": "default",
+                "percentToStpColor": "default",
+                "htpValueColor": "default",
+                "percentToHtpColor": "default"
+              }
+            }
+          }
+        },
+        {
+          "price": 109,
+          "label": "$109 - Near STP",
+          "validations": {
+            "signalsTable": {
+              "percentToStp": "-0.91%",
+              "percentToHtp": "-9.17%",
+              "stpColor": "yellow",
+              "htpColor": "default"
+            },
+            "walletTabs": {
+              "swing": {
+                "stpValue": "$110.00",
+                "percentToStp": "-0.91%",
+                "htpValue": "$120.00",
+                "percentToHtp": "-9.17%",
+                "stpValueColor": "default",
+                "percentToStpColor": "default",
+                "htpValueColor": "default",
+                "percentToHtpColor": "default"
+              },
+              "hold": {
+                "stpValue": "$110.00",
+                "percentToStp": "-0.91%",
+                "htpValue": "$120.00",
+                "percentToHtp": "-9.17%",
+                "stpValueColor": "default",
+                "percentToStpColor": "default",
+                "htpValueColor": "default",
+                "percentToHtpColor": "default"
+              }
+            }
+          }
+        },
+        {
+          "price": 115,
+          "label": "$115 - STP Met",
+          "validations": {
+            "signalsTable": {
+              "percentToStp": "4.55%",
+              "percentToHtp": "-4.17%",
+              "stpColor": "green",
+              "htpColor": "default"
+            },
+            "walletTabs": {
+              "swing": {
+                "stpValue": "$110.00",
+                "percentToStp": "4.55%",
+                "htpValue": "$120.00",
+                "percentToHtp": "-4.17%",
+                "stpValueColor": "green",
+                "percentToStpColor": "green",
+                "htpValueColor": "default",
+                "percentToHtpColor": "default"
+              },
+              "hold": {
+                "stpValue": "$110.00",
+                "percentToStp": "4.55%",
+                "htpValue": "$120.00",
+                "percentToHtp": "-4.17%",
+                "stpValueColor": "green",
+                "percentToStpColor": "green",
+                "htpValueColor": "default",
+                "percentToHtpColor": "default"
+              }
+            }
+          }
+        },
+        {
+          "price": 122,
+          "label": "$122 - Both Met",
+          "validations": {
+            "signalsTable": {
+              "percentToStp": "10.91%",
+              "percentToHtp": "1.67%",
+              "stpColor": "green",
+              "htpColor": "green"
+            },
+            "walletTabs": {
+              "swing": {
+                "stpValue": "$110.00",
+                "percentToStp": "10.91%",
+                "htpValue": "$120.00",
+                "percentToHtp": "1.67%",
+                "stpValueColor": "green",
+                "percentToStpColor": "green",
+                "htpValueColor": "green",
+                "percentToHtpColor": "green"
+              },
+              "hold": {
+                "stpValue": "$110.00",
+                "percentToStp": "10.91%",
+                "htpValue": "$120.00",
+                "percentToHtp": "1.67%",
+                "stpValueColor": "green",
+                "percentToStpColor": "green",
+                "htpValueColor": "green",
+                "percentToHtpColor": "green"
+              }
+            }
+          }
         }
-      }
-    }
-  },
-  "expectedValuesAt122": {
-    "expectedSignalsValues": {
-      "percentToStp": "10.91%",
-      "percentToHtp": "1.67%",
-      "colorValidation": {
-        "percentToStp": "green",
-        "percentToHtp": "green"
-      }
+      ]
     },
-    "expectedWalletTabs": {
-      "swing": {
-        "stpValue": "$110.00",
-        "percentToStp": "10.91%",
-        "htpValue": "$120.00",
-        "percentToHtp": "1.67%",
-        "colorValidation": {
-          "stpValue": "green",
-          "percentToStp": "green",
-          "htpValue": "green",
-          "percentToHtp": "green"
-        }
+    {
+      "id": "with_commission_progression",
+      "name": "With 0.5% Commission - Price Progression",
+      "description": "Tests STP/HTP at multiple price points for stock with 0.5% commission",
+      "setup": {
+        "stock": "WITH_COMMISSION_STOCK",
+        "transactions": [
+          {
+            "action": "Buy",
+            "txnType": "Split",
+            "signal": "Initial",
+            "price": 100,
+            "investment": 200,
+            "date": "2025-09-11"
+          }
+        ]
       },
-      "hold": {
-        "stpValue": "$110.00",
-        "percentToStp": "10.91%",
-        "htpValue": "$120.00",
-        "percentToHtp": "1.67%",
-        "colorValidation": {
-          "stpValue": "green",
-          "percentToStp": "green", 
-          "htpValue": "green",
-          "percentToHtp": "green"
+      "priceProgression": [
+        {
+          "price": 100,
+          "label": "$100 - Baseline",
+          "validations": {
+            "walletsOverview": {
+              "stpSetting": "10%",
+              "htpSetting": "20%"
+            },
+            "signalsTable": {
+              "percentToStp": "-9.55%",
+              "percentToHtp": "-17.08%",
+              "stpColor": "default",
+              "htpColor": "default"
+            },
+            "walletTabs": {
+              "swing": {
+                "stpValue": "$110.55",
+                "percentToStp": "-9.55%",
+                "htpValue": "$120.60",
+                "percentToHtp": "-17.08%",
+                "stpValueColor": "default",
+                "percentToStpColor": "default",
+                "htpValueColor": "default",
+                "percentToHtpColor": "default"
+              },
+              "hold": {
+                "stpValue": "$110.55",
+                "percentToStp": "-9.55%",
+                "htpValue": "$120.60",
+                "percentToHtp": "-17.08%",
+                "stpValueColor": "default",
+                "percentToStpColor": "default",
+                "htpValueColor": "default",
+                "percentToHtpColor": "default"
+              }
+            }
+          }
+        },
+        {
+          "price": 109,
+          "label": "$109 - Near STP",
+          "validations": {
+            "signalsTable": {
+              "percentToStp": "-1.40%",
+              "percentToHtp": "-9.62%",
+              "stpColor": "default",
+              "htpColor": "default"
+            },
+            "walletTabs": {
+              "swing": {
+                "stpValue": "$110.55",
+                "percentToStp": "-1.40%",
+                "htpValue": "$120.60",
+                "percentToHtp": "-9.62%",
+                "stpValueColor": "default",
+                "percentToStpColor": "default",
+                "htpValueColor": "default",
+                "percentToHtpColor": "default"
+              },
+              "hold": {
+                "stpValue": "$110.55",
+                "percentToStp": "-1.40%",
+                "htpValue": "$120.60",
+                "percentToHtp": "-9.62%",
+                "stpValueColor": "default",
+                "percentToStpColor": "default",
+                "htpValueColor": "default",
+                "percentToHtpColor": "default"
+              }
+            }
+          }
+        },
+        {
+          "price": 115,
+          "label": "$115 - STP Met",
+          "validations": {
+            "signalsTable": {
+              "percentToStp": "4.02%",
+              "percentToHtp": "-4.65%",
+              "stpColor": "green",
+              "htpColor": "default"
+            },
+            "walletTabs": {
+              "swing": {
+                "stpValue": "$110.55",
+                "percentToStp": "4.02%",
+                "htpValue": "$120.60",
+                "percentToHtp": "-4.65%",
+                "stpValueColor": "green",
+                "percentToStpColor": "green",
+                "htpValueColor": "default",
+                "percentToHtpColor": "default"
+              },
+              "hold": {
+                "stpValue": "$110.55",
+                "percentToStp": "4.02%",
+                "htpValue": "$120.60",
+                "percentToHtp": "-4.65%",
+                "stpValueColor": "green",
+                "percentToStpColor": "green",
+                "htpValueColor": "default",
+                "percentToHtpColor": "default"
+              }
+            }
+          }
+        },
+        {
+          "price": 122,
+          "label": "$122 - Both Met",
+          "validations": {
+            "signalsTable": {
+              "percentToStp": "10.35%",
+              "percentToHtp": "1.16%",
+              "stpColor": "green",
+              "htpColor": "green"
+            },
+            "walletTabs": {
+              "swing": {
+                "stpValue": "$110.55",
+                "percentToStp": "10.35%",
+                "htpValue": "$120.60",
+                "percentToHtp": "1.16%",
+                "stpValueColor": "green",
+                "percentToStpColor": "green",
+                "htpValueColor": "green",
+                "percentToHtpColor": "green"
+              },
+              "hold": {
+                "stpValue": "$110.55",
+                "percentToStp": "10.35%",
+                "htpValue": "$120.60",
+                "percentToHtp": "1.16%",
+                "stpValueColor": "green",
+                "percentToStpColor": "green",
+                "htpValueColor": "green",
+                "percentToHtpColor": "green"
+              }
+            }
+          }
         }
-      }
+      ]
     }
-  }
+  ],
+  "cleanupSymbols": ["E2ESTPHTP", "E2ESTPHTPCOM"]
 }

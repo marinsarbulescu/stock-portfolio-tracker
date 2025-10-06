@@ -1,1310 +1,379 @@
-// e2e/wallets/wallet-stp-htp.spec.ts
-import { test, expect, Page } from '@playwright/test';
+// e2e/wallets/wallet-stp-htp-new.spec.ts
+
+// Comprehensive E2E test for STP and HTP validation with commission calculations
+// Tests division method formula for both STP and HTP
+// Validates Signals page and Wallets page across different price points
+
 import { Amplify } from 'aws-amplify';
+import { test, expect } from '@playwright/test';
 import amplifyOutputs from '../../amplify_outputs.json';
 
-import { 
-    clearBrowserState, 
-    loginUser, 
-    navigateToStockWalletPage,
-    updateStockTestPrice,
-    verifyStockTestPrice,
-    createStockViaUI
-} from '../utils/pageHelpers';
-import { 
-    deleteStockWalletsForStockByStockId, 
-    deletePortfolioStock, 
-    deleteTransactionsForStockByStockId,
-    getPortfolioStockBySymbol,
-    type PortfolioStockCreateData
+import {
+    createPortfolioStock,
+    deletePortfolioStock,
+    createTransaction,
+    type PortfolioStockCreateData,
+    type TransactionCreateData,
 } from '../utils/dataHelpers';
-import { E2E_TEST_USERNAME, E2E_TEST_USER_OWNER_ID } from '../utils/testCredentials';
-
-// Configuration
-const TEST_EMAIL = E2E_TEST_USERNAME;
+import { E2E_TEST_USER_OWNER_ID, E2E_TEST_USERNAME } from '../utils/testCredentials';
+import { clearBrowserState, loginUser } from '../utils/pageHelpers';
+import { cleanupTestStocks } from '../utils/cleanupHelper';
 
 // Configure Amplify
-Amplify.configure(amplifyOutputs);
-
-// Set test timeout to 120 seconds for reliable execution with inspection time
-test.setTimeout(120000);
-
-// Load test data from JSON
-import testData from './wallet-stp-htp.json';
-
-// Type definitions for test data
-interface StpHtpTestConfig {
-  scenario: string;
-  testPriceUpdates: {
-    initialPrice: {
-      step: string;
-      description: string;
-      price: number;
-      timing: string;
-    };
-    nearStpPrice: {
-      step: string;
-      description: string;
-      price: number;
-      timing: string;
-    };
-  };
-  stock: {
-    symbol: string;
-    name: string;
-    stockType: string;
-    region: string;
-    pdp: number;
-    stp: number;
-    htp: number;
-    budget: number;
-    swingHoldRatio: number;
-    stockCommission: number;
-  };
-  transaction: {
-    action: string;
-    txnType: string;
-    signal: string;
-    price: number;
-    investment: number;
-    date: string;
-  };
-  expectedOverviewSettings: {
-    stp: string;
-    htp: string;
-  };
-  expectedSignalsValues: {
-    percentToStp: string;
-    percentToHtp: string;
-    colorValidation: {
-      percentToStp: string;
-      percentToHtp: string;
-    };
-  };
-  expectedWalletOverview: {
-    stpValue: string;
-    htpValue: string;
-  };
-  expectedWalletTabs: {
-    swing: {
-      stpValue: string;
-      percentToStp: string;
-      htpValue: string;
-      percentToHtp: string;
-      colorValidation: {
-        stpValue: string;
-        percentToStp: string;
-        htpValue: string;
-        percentToHtp: string;
-      };
-    };
-    hold: {
-      stpValue: string;
-      percentToStp: string;
-      htpValue: string;
-      percentToHtp: string;
-      colorValidation: {
-        stpValue: string;
-        percentToStp: string;
-        htpValue: string;
-        percentToHtp: string;
-      };
-    };
-  };
-  expectedValuesAt109: {
-    expectedSignalsValues: {
-      percentToStp: string;
-      percentToHtp: string;
-      colorValidation: {
-        percentToStp: string;
-        percentToHtp: string;
-      };
-    };
-    expectedWalletTabs: {
-      swing: {
-        stpValue: string;
-        percentToStp: string;
-        htpValue: string;
-        percentToHtp: string;
-        colorValidation: {
-          stpValue: string;
-          percentToStp: string;
-          htpValue: string;
-          percentToHtp: string;
-        };
-      };
-      hold: {
-        stpValue: string;
-        percentToStp: string;
-        htpValue: string;
-        percentToHtp: string;
-        colorValidation: {
-          stpValue: string;
-          percentToStp: string;
-          htpValue: string;
-          percentToHtp: string;
-        };
-      };
-    };
-  };
-  expectedValuesAt115: {
-    expectedSignalsValues: {
-      percentToStp: string;
-      percentToHtp: string;
-      colorValidation: {
-        percentToStp: string;
-        percentToHtp: string;
-      };
-    };
-    expectedWalletTabs: {
-      swing: {
-        stpValue: string;
-        percentToStp: string;
-        htpValue: string;
-        percentToHtp: string;
-        colorValidation: {
-          stpValue: string;
-          percentToStp: string;
-          htpValue: string;
-          percentToHtp: string;
-        };
-      };
-      hold: {
-        stpValue: string;
-        percentToStp: string;
-        htpValue: string;
-        percentToHtp: string;
-        colorValidation: {
-          stpValue: string;
-          percentToStp: string;
-          htpValue: string;
-          percentToHtp: string;
-        };
-      };
-    };
-  };
-  expectedValuesAt122: {
-    expectedSignalsValues: {
-      percentToStp: string;
-      percentToHtp: string;
-      colorValidation: {
-        percentToStp: string;
-        percentToHtp: string;
-      };
-    };
-    expectedWalletTabs: {
-      swing: {
-        stpValue: string;
-        percentToStp: string;
-        htpValue: string;
-        percentToHtp: string;
-        colorValidation: {
-          stpValue: string;
-          percentToStp: string;
-          htpValue: string;
-          percentToHtp: string;
-        };
-      };
-      hold: {
-        stpValue: string;
-        percentToStp: string;
-        htpValue: string;
-        percentToHtp: string;
-        colorValidation: {
-          stpValue: string;
-          percentToStp: string;
-          htpValue: string;
-          percentToHtp: string;
-        };
-      };
-    };
-  };
+try {
+    Amplify.configure(amplifyOutputs);
+    console.log('[STP-HTP-New] Amplify configured successfully.');
+} catch (error) {
+    console.error('[STP-HTP-New] CRITICAL: Error configuring Amplify:', error);
 }
 
-/**
- * Helper function to verify wallet overview settings (STP/HTP percentages)
- */
-async function verifyWalletOverviewSettings(
-    page: Page, 
-    config: StpHtpTestConfig
-): Promise<void> {
-    console.log('[WalletOverviewHelper] Expanding overview section...');
-    
-    // Use specific test ID for the overview toggle
-    const overviewToggle = page.locator('[data-testid="overview-toggle"]');
-    await expect(overviewToggle).toBeVisible();
-    
-    // Check if overview is collapsed by testing visibility of inner elements
-    // Use EXACT same approach as working test - check for budget element first
-    const overviewExpanded = await page.locator('[data-testid="overview-settings-budget"]').isVisible().catch(() => false);
-    if (!overviewExpanded) {
-        console.log('[WalletOverviewHelper] Overview is collapsed, clicking to expand...');
-        await overviewToggle.click();
-        await page.waitForLoadState('networkidle');
-    } else {
-        console.log('[WalletOverviewHelper] Overview is already expanded');
-    }    console.log('[WalletOverviewHelper] Verifying STP and HTP settings...');
-    
-    // Verify STP setting using the test ID
-    const stpSetting = page.locator('[data-testid="overview-settings-stp"]');
-    await expect(stpSetting).toBeVisible({ timeout: 10000 });
-    await expect(stpSetting).toHaveText(config.expectedOverviewSettings.stp);
-    console.log(`[WalletOverviewHelper] ✅ STP setting verified: ${config.expectedOverviewSettings.stp}`);
-    
-    // Verify HTP setting using the test ID
-    const htpSetting = page.locator('[data-testid="overview-settings-htp"]');
-    await expect(htpSetting).toBeVisible({ timeout: 10000 });
-    await expect(htpSetting).toHaveText(config.expectedOverviewSettings.htp);
-    console.log(`[WalletOverviewHelper] ✅ HTP setting verified: ${config.expectedOverviewSettings.htp}`);
+// Load test configuration
+const testConfig = require('./wallet-stp-htp.json');
+
+// Set test timeout
+test.setTimeout(180000); // 3 minutes for comprehensive validation
+
+// Helper function to navigate to signals page
+async function navigateToSignalsPage(page: any) {
+    console.log('[NavigationHelper] Navigating to Signals page...');
+    await page.goto('/signals');
+    await expect(page.locator('[data-testid="signals-page-title"]')).toBeVisible({ timeout: 15000 });
+    console.log('[NavigationHelper] Successfully navigated to Signals page.');
 }
 
-/**
- * Helper function to add a Buy transaction
- */
-async function addBuyTransaction(page: Page, transaction: any): Promise<void> {
-    console.log('[TransactionHelper] Opening Add Transaction modal...');
-    
-    // Use the same approach as existing addTransaction helper
-    const addTransactionButton = page.locator('[data-testid="add-transaction-button"]');
-    await expect(addTransactionButton).toBeVisible({ timeout: 10000 });
-    await addTransactionButton.click();
-    
-    const transactionModal = page.locator('[data-testid="transaction-form-modal"]');
-    await expect(transactionModal).toBeVisible({ timeout: 10000 });
-    console.log('[TransactionHelper] Add Transaction modal opened');
-    
-    console.log('[TransactionHelper] Filling transaction form...');
-    
-    // Fill form fields using the same test IDs as existing helper
-    const date = transaction.date || new Date().toISOString().split('T')[0];
-    await page.locator('[data-testid="txn-form-date"]').fill(date);
-    await page.locator('[data-testid="txn-form-price"]').fill(transaction.price.toString());
-    await page.locator('[data-testid="txn-form-investment"]').fill(transaction.investment.toString());
-    
-    // Select transaction type using radio buttons (same as existing helper)
-    console.log(`[TransactionHelper] Selecting transaction type: Split`);
-    const splitRadio = page.locator('[data-testid="txn-form-txnType-split"]');
-    await expect(splitRadio).toBeVisible({ timeout: 5000 });
-    await splitRadio.click();
-    
+// Helper function to navigate to wallets page
+async function navigateToWalletsPage(page: any, stockId: string) {
+    console.log(`[NavigationHelper] Navigating to Wallets page for stock ${stockId}...`);
+    await page.goto(`/wallets/${stockId}`);
+    await page.waitForLoadState('networkidle');
+    console.log('[NavigationHelper] Successfully navigated to Wallets page.');
+}
+
+// Helper function to create stock from config
+async function createStockFromConfig(stockKey: string) {
+    const stockConfig = testConfig.testData.stocks[stockKey];
+    console.log(`[StockHelper] Creating stock ${stockConfig.symbol} with test data...`);
+
+    const stockData: PortfolioStockCreateData = {
+        symbol: stockConfig.symbol,
+        name: stockConfig.name,
+        stockType: stockConfig.stockType as any,
+        region: stockConfig.region as any,
+        marketCategory: stockConfig.marketCategory as any,
+        riskGrowthProfile: stockConfig.riskGrowthProfile as any,
+        budget: stockConfig.budget,
+        swingHoldRatio: stockConfig.swingHoldRatio,
+        pdp: stockConfig.pdp,
+        stp: stockConfig.stp,
+        htp: stockConfig.htp,
+        stockCommission: stockConfig.stockCommission,
+        owner: E2E_TEST_USER_OWNER_ID,
+        testPrice: stockConfig.testPrice,
+        isHidden: false,
+        archived: false
+    };
+
+    const createdStock = await createPortfolioStock(stockData);
+    console.log(`[StockHelper] ✅ Stock ${stockConfig.symbol} created with ID: ${createdStock.id}`);
+    console.log(`[StockHelper] Test price: $${stockConfig.testPrice}`);
+    console.log(`[StockHelper] STP: ${stockConfig.stp}%, HTP: ${stockConfig.htp}%, Commission: ${stockConfig.stockCommission}%`);
+
+    return createdStock;
+}
+
+// Helper function to create transaction via UI
+async function createTransactionViaUI(page: any, transactionConfig: any) {
+    console.log(`[TransactionHelper] Creating transaction via UI: ${transactionConfig.action} at $${transactionConfig.price}...`);
+
+    // Click Add Transaction button
+    const addButton = page.locator('[data-testid="add-transaction-button"]');
+    await expect(addButton).toBeVisible({ timeout: 10000 });
+    await addButton.click();
+
+    // Wait for modal
+    const modal = page.locator('[data-testid="transaction-form-modal"]');
+    await expect(modal).toBeVisible({ timeout: 10000 });
+
+    // Fill form fields
+    await page.locator('[data-testid="txn-form-date"]').fill(transactionConfig.date);
+    await page.locator('[data-testid="txn-form-price"]').fill(transactionConfig.price.toString());
+    await page.locator('[data-testid="txn-form-investment"]').fill(transactionConfig.investment.toString());
+
+    // Select transaction type
+    const txnTypeRadio = page.locator(`[data-testid="txn-form-txnType-${transactionConfig.txnType.toLowerCase()}"]`);
+    await expect(txnTypeRadio).toBeVisible({ timeout: 5000 });
+    await txnTypeRadio.click();
+
     // Select signal
-    await page.locator('[data-testid="txn-form-signal"]').selectOption('Initial');
-    
-    console.log(`[TransactionHelper] Form filled: Date=${date}, Type=Split, Signal=Initial, Price=${transaction.price}, Investment=${transaction.investment}`);
-    
-    // Submit the form
+    await page.locator('[data-testid="txn-form-signal"]').selectOption(transactionConfig.signal);
+
+    // Submit
     const submitButton = page.locator('[data-testid="txn-form-submit-button"]');
     await submitButton.click();
-    
-    // Wait for modal to close
-    await expect(transactionModal).not.toBeVisible({ timeout: 15000 });
-    console.log('[TransactionHelper] Transaction created successfully');
-    
-    // Wait for transaction table to update
-    const transactionTable = page.locator('[data-testid*="wallets-transaction-table"], table').first();
-    await expect(transactionTable).toBeVisible({ timeout: 10000 });
-    
-    console.log('[TransactionHelper] ✅ Transaction added successfully');
+    await expect(modal).not.toBeVisible({ timeout: 15000 });
+
+    console.log(`[TransactionHelper] ✅ Transaction created via UI: ${transactionConfig.action} $${transactionConfig.investment} at $${transactionConfig.price}`);
 }
 
-/**
- * Helper function to verify color matching using color definitions from JSON
- */
-async function verifyColorFromDefinition(
-    page: Page, 
-    element: any, 
-    expectedColorLabel: string, 
-    colorDefinitions: any, 
-    fieldName: string
-): Promise<void> {
-    await expect(element).toBeVisible();
-    
-    // Get the expected RGB value from color definitions
-    const expectedRgbValue = colorDefinitions[expectedColorLabel];
-    if (!expectedRgbValue) {
-        throw new Error(`Color definition not found for label: ${expectedColorLabel}`);
-    }
-    
-    // Get computed styles
+// Helper function to update test price from Wallets page
+async function updateTestPrice(page: any, stockSymbol: string, newPrice: number, stockId: string) {
+    console.log(`[PriceHelper] Updating test price for ${stockSymbol} to $${newPrice}...`);
+
+    // Navigate to wallets page for this stock
+    await navigateToWalletsPage(page, stockId);
+
+    // Click the edit button in the wallets header
+    const editButton = page.locator('[data-testid="wallet-page-title"]');
+    await expect(editButton).toBeVisible({ timeout: 10000 });
+    await editButton.click();
+
+    // Wait for modal (PortfolioAddEditStockModal in edit mode)
+    const modal = page.locator('[data-testid="portfolio-edit-stock-modal"]');
+    await expect(modal).toBeVisible({ timeout: 10000 });
+
+    // Update test price
+    const testPriceInput = page.locator('[data-testid="portfolio-edit-stock-test-price"]');
+    await testPriceInput.fill(newPrice.toString());
+
+    // Submit
+    const submitButton = page.locator('[data-testid="portfolio-edit-stock-submit-button"]');
+    await submitButton.click();
+    await expect(modal).not.toBeVisible({ timeout: 10000 });
+
+    console.log(`[PriceHelper] ✅ Test price updated to $${newPrice}`);
+}
+
+// Helper function to verify color
+async function verifyColor(page: any, element: any, expectedColor: string, fieldName: string) {
+    const colorDefinitions = testConfig.colorDefinitions;
+    const expectedRgb = colorDefinitions[expectedColor];
+
     const backgroundColor = await element.evaluate((el: Element) => {
         return window.getComputedStyle(el).backgroundColor;
     });
-    
+
     const color = await element.evaluate((el: Element) => {
         return window.getComputedStyle(el).color;
     });
-    
-    console.log(`[ColorValidation] ${fieldName} - Background: ${backgroundColor}, Color: ${color}`);
-    console.log(`[ColorValidation] ${fieldName} - Expected: ${expectedColorLabel} (${expectedRgbValue})`);
-    
-    // Check if either background or color matches the expected RGB value
-    const matchesBackground = backgroundColor.includes(expectedRgbValue);
-    const matchesColor = color.includes(expectedRgbValue);
-    
+
+    console.log(`[ColorValidation] ${fieldName} - Expected: ${expectedColor} (${expectedRgb})`);
+    console.log(`[ColorValidation] ${fieldName} - Actual BG: ${backgroundColor}, Color: ${color}`);
+
+    const matchesBackground = backgroundColor.includes(expectedRgb);
+    const matchesColor = color.includes(expectedRgb);
+
     expect(matchesBackground || matchesColor).toBe(true);
-    console.log(`[ColorValidation] ✅ ${fieldName} has expected color: ${expectedColorLabel} (${expectedRgbValue})`);
+    console.log(`[ColorValidation] ✅ ${fieldName} has correct color: ${expectedColor}`);
 }
 
-/**
- * Legacy wrapper for verifyDefaultColor - validates 'default' color
- */
-async function verifyDefaultColor(page: Page, element: any, fieldName: string): Promise<void> {
-    await verifyColorFromDefinition(page, element, 'default', testData.colorDefinitions, fieldName);
-}
+// Helper function to verify wallets overview
+async function verifyWalletsOverview(page: any, validations: any, stockSymbol: string) {
+    console.log('[OverviewHelper] Verifying wallets overview...');
 
-/**
- * Legacy wrapper for verifyGreenColor - validates 'green' color  
- */
-async function verifyGreenColor(page: Page, element: any, fieldName: string): Promise<void> {
-    await verifyColorFromDefinition(page, element, 'green', testData.colorDefinitions, fieldName);
-}
-
-/**
- * Helper function to navigate to Signals page and verify values
- */
-async function verifySignalsPageValues(
-    page: Page, 
-    config: StpHtpTestConfig
-): Promise<void> {
-    console.log('[SignalsHelper] Navigating to Signals page...');
-    
-    // Navigate to signals page
-    await page.goto('/signals');
-    await page.waitForLoadState('networkidle');
-    
-    // Wait for signals table to be visible
-    await expect(page.locator('[data-testid="signals-table"]')).toBeVisible({ timeout: 15000 });
-    console.log('[SignalsHelper] Signals table is visible');
-    
-    // Find the row with our test stock ticker using the test ID
-    const tickerCell = page.locator(`[data-testid="signals-table-ticker-${config.stock.symbol}"]`);
-    await expect(tickerCell).toBeVisible({ timeout: 10000 });
-    console.log(`[SignalsHelper] Found ticker ${config.stock.symbol} in table`);
-    
-    // Verify %2STP value using the test ID
-    const stpCell = page.locator(`[data-testid="signals-table-percent-stp-${config.stock.symbol}"]`);
-    await expect(stpCell).toHaveText(config.expectedSignalsValues.percentToStp);
-    console.log(`[SignalsHelper] ✅ %2STP value verified: ${config.expectedSignalsValues.percentToStp}`);
-    
-    // Verify %2HTP value using the test ID  
-    const htpCell = page.locator(`[data-testid="signals-table-percent-htp-${config.stock.symbol}"]`);
-    await expect(htpCell).toHaveText(config.expectedSignalsValues.percentToHtp);
-    console.log(`[SignalsHelper] ✅ %2HTP value verified: ${config.expectedSignalsValues.percentToHtp}`);
-    
-    // Verify colors for %2STP and %2HTP using color definitions
-    await verifyColorFromDefinition(
-        page, 
-        stpCell, 
-        config.expectedSignalsValues.colorValidation.percentToStp, 
-        testData.colorDefinitions, 
-        '%2STP in Signals'
-    );
-    
-    await verifyColorFromDefinition(
-        page, 
-        htpCell, 
-        config.expectedSignalsValues.colorValidation.percentToHtp, 
-        testData.colorDefinitions, 
-        '%2HTP in Signals'
-    );
-    
-    console.log('[SignalsHelper] ✅ Signals page validation completed');
-}
-
-/**
- * Helper function to verify wallet overview section
- */
-async function verifyWalletOverview(
-    page: Page, 
-    config: StpHtpTestConfig
-): Promise<void> {
-    console.log('[OverviewHelper] Verifying wallet overview section...');
-    
-    // Expand the WalletsOverview section if not already expanded
+    // Expand overview if needed
     const overviewToggle = page.locator('[data-testid="overview-toggle"]');
     await expect(overviewToggle).toBeVisible({ timeout: 10000 });
-    await overviewToggle.click();
-    await page.waitForTimeout(500); // Wait for expansion animation
-    
-    // Verify STP value using the test ID we added
-    const stpValueElement = page.locator('[data-testid="overview-stp-value"]');
-    await expect(stpValueElement).toBeVisible();
-    await expect(stpValueElement).toHaveText(config.expectedWalletOverview.stpValue);
-    console.log(`[OverviewHelper] ✅ STP value verified: ${config.expectedWalletOverview.stpValue}`);
-    
-    // Verify HTP value using the test ID we added
-    const htpValueElement = page.locator('[data-testid="overview-htp-value"]');
-    await expect(htpValueElement).toBeVisible();
-    await expect(htpValueElement).toHaveText(config.expectedWalletOverview.htpValue);
-    console.log(`[OverviewHelper] ✅ HTP value verified: ${config.expectedWalletOverview.htpValue}`);
-    
-    console.log('[OverviewHelper] ✅ Wallet overview validation completed');
+
+    const isExpanded = await page.locator('[data-testid="overview-settings-stp"]').isVisible().catch(() => false);
+    if (!isExpanded) {
+        await overviewToggle.click();
+        await page.waitForTimeout(500);
+    }
+
+    // Verify STP setting percentage
+    const stpSetting = page.locator('[data-testid="overview-settings-stp"]');
+    await expect(stpSetting).toHaveText(validations.stpSetting);
+    console.log(`[OverviewHelper] ✅ STP Setting: ${validations.stpSetting}`);
+
+    // Verify HTP setting percentage
+    const htpSetting = page.locator('[data-testid="overview-settings-htp"]');
+    await expect(htpSetting).toHaveText(validations.htpSetting);
+    console.log(`[OverviewHelper] ✅ HTP Setting: ${validations.htpSetting}`);
+
+    console.log(`[OverviewHelper] ✅ Overview validation completed`);
 }
 
-/**
- * Helper function to verify Swing wallet tab
- */
-async function verifySwingWalletTab(
-    page: Page, 
-    config: StpHtpTestConfig
-): Promise<void> {
-    console.log('[SwingWalletHelper] Verifying Swing wallet tab...');
-    
-    // Click on Swing wallet tab
+// Helper function to verify signals table
+async function verifySignalsTable(page: any, validations: any, stockSymbol: string) {
+    console.log('[SignalsHelper] Verifying signals table...');
+
+    await navigateToSignalsPage(page);
+
+    const stpCell = page.locator(`[data-testid="signals-table-percent-stp-${stockSymbol}"]`);
+    await expect(stpCell).toHaveText(validations.percentToStp);
+    console.log(`[SignalsHelper] ✅ %2STP: ${validations.percentToStp}`);
+
+    const htpCell = page.locator(`[data-testid="signals-table-percent-htp-${stockSymbol}"]`);
+    await expect(htpCell).toHaveText(validations.percentToHtp);
+    console.log(`[SignalsHelper] ✅ %2HTP: ${validations.percentToHtp}`);
+
+    // Verify colors
+    await verifyColor(page, stpCell, validations.stpColor, '%2STP in Signals');
+    await verifyColor(page, htpCell, validations.htpColor, '%2HTP in Signals');
+}
+
+// Helper function to verify wallet tabs
+async function verifyWalletTabs(page: any, validations: any, stockId: string) {
+    console.log('[WalletTabsHelper] Verifying wallet tabs...');
+
+    await navigateToWalletsPage(page, stockId);
+
+    // Verify Swing tab
     const swingTab = page.locator('[data-testid="wallet-tab-swing"]');
-    await expect(swingTab).toBeVisible({ timeout: 10000 });
     await swingTab.click();
-    await page.waitForLoadState('networkidle');
-    
-    // Wait for swing wallet content to be visible
-    await page.waitForTimeout(1000); // Small wait for tab transition
-    
-    // Verify STP value using the proper test ID
-    const stpValueElement = page.locator('[data-testid="wallet-stpValue-display"]');
-    await expect(stpValueElement).toBeVisible();
-    await expect(stpValueElement).toHaveText(config.expectedWalletTabs.swing.stpValue);
-    console.log(`[SwingWalletHelper] ✅ STP value verified: ${config.expectedWalletTabs.swing.stpValue}`);
-    
-    // Verify %2STP value using the proper test ID
-    const percentStpElement = page.locator('[data-testid="wallet-percentToStp-display"]');
-    await expect(percentStpElement).toBeVisible();
-    await expect(percentStpElement).toHaveText(config.expectedWalletTabs.swing.percentToStp);
-    console.log(`[SwingWalletHelper] ✅ %2STP value verified: ${config.expectedWalletTabs.swing.percentToStp}`);
-    
-    // Verify HTP value using the proper test ID (now available in Swing wallets too)
-    const htpValueElement = page.locator('[data-testid="wallet-htpValue-display"]');
-    await expect(htpValueElement).toBeVisible();
-    await expect(htpValueElement).toHaveText(config.expectedWalletTabs.swing.htpValue);
-    console.log(`[SwingWalletHelper] ✅ HTP value verified: ${config.expectedWalletTabs.swing.htpValue}`);
-    
-    // Verify %2HTP value using the proper test ID (now available in Swing wallets too)
-    const percentHtpElement = page.locator('[data-testid="wallet-htp-display"]');
-    await expect(percentHtpElement).toBeVisible();
-    await expect(percentHtpElement).toHaveText(config.expectedWalletTabs.swing.percentToHtp);
-    console.log(`[SwingWalletHelper] ✅ %2HTP value verified: ${config.expectedWalletTabs.swing.percentToHtp}`);
-    
-    // Verify colors using color definitions
-    await verifyColorFromDefinition(
-        page, 
-        stpValueElement, 
-        config.expectedWalletTabs.swing.colorValidation.stpValue, 
-        testData.colorDefinitions, 
-        'STP in Swing wallet'
-    );
-    
-    await verifyColorFromDefinition(
-        page, 
-        percentStpElement, 
-        config.expectedWalletTabs.swing.colorValidation.percentToStp, 
-        testData.colorDefinitions, 
-        '%2STP in Swing wallet'
-    );
-    
-    await verifyColorFromDefinition(
-        page, 
-        htpValueElement, 
-        config.expectedWalletTabs.swing.colorValidation.htpValue, 
-        testData.colorDefinitions, 
-        'HTP in Swing wallet'
-    );
-    
-    await verifyColorFromDefinition(
-        page, 
-        percentHtpElement, 
-        config.expectedWalletTabs.swing.colorValidation.percentToHtp, 
-        testData.colorDefinitions, 
-        '%2HTP in Swing wallet'
-    );
-    
-    console.log('[SwingWalletHelper] ✅ Swing wallet validation completed');
-}
+    await page.waitForTimeout(500);
 
-/**
- * Helper function to verify Hold wallet tab
- */
-async function verifyHoldWalletTab(
-    page: Page, 
-    config: StpHtpTestConfig
-): Promise<void> {
-    console.log('[HoldWalletHelper] Verifying Hold wallet tab...');
-    
-    // Click on Hold wallet tab
+    await verifyWalletTabValues(page, validations.swing, 'Swing');
+
+    // Verify Hold tab
     const holdTab = page.locator('[data-testid="wallet-tab-hold"]');
-    await expect(holdTab).toBeVisible({ timeout: 10000 });
     await holdTab.click();
-    await page.waitForLoadState('networkidle');
-    
-    // Wait for hold wallet content to be visible
-    await page.waitForTimeout(1000); // Small wait for tab transition
-    
-    // Verify HTP and %2HTP columns are visible by default
-    console.log('[HoldWalletHelper] Verifying HTP and %2HTP columns are visible by default...');
-    
-    // Verify HTP column is visible by default (checkbox should be checked)
-    const htpColumnCheckbox = page.locator('[data-testid="wallet-column-checkbox-htpValue"]');
-    if (await htpColumnCheckbox.isVisible()) {
-        const isChecked = await htpColumnCheckbox.isChecked();
-        if (!isChecked) {
-            console.warn('[HoldWalletHelper] Warning: HTP column was not visible by default');
-        }
-    }
-    
-    // Verify %2HTP column is visible by default (checkbox should be checked)
-    const htpPercentCheckbox = page.locator('[data-testid="wallet-column-checkbox-htp"]');
-    if (await htpPercentCheckbox.isVisible()) {
-        const isChecked = await htpPercentCheckbox.isChecked();
-        if (!isChecked) {
-            console.warn('[HoldWalletHelper] Warning: %2HTP column was not visible by default');
-        }
-    }
-    
-    // Wait for table to be properly rendered
-    await page.waitForTimeout(1000);
-    
-    // Verify STP value using the proper test ID (now available in Hold wallets too)
-    const stpValueElement = page.locator('[data-testid="wallet-stpValue-display"]');
-    await expect(stpValueElement).toBeVisible({ timeout: 10000 });
-    await expect(stpValueElement).toHaveText(config.expectedWalletTabs.hold.stpValue);
-    console.log(`[HoldWalletHelper] ✅ STP value verified: ${config.expectedWalletTabs.hold.stpValue}`);
-    
-    // Verify %2STP value using the proper test ID (now available in Hold wallets too)
-    const percentStpElement = page.locator('[data-testid="wallet-percentToStp-display"]');
-    await expect(percentStpElement).toBeVisible();
-    await expect(percentStpElement).toHaveText(config.expectedWalletTabs.hold.percentToStp);
-    console.log(`[HoldWalletHelper] ✅ %2STP value verified: ${config.expectedWalletTabs.hold.percentToStp}`);
-    
-    // Verify HTP value using the proper test ID
-    const htpValueElement = page.locator('[data-testid="wallet-htpValue-display"]');
-    await expect(htpValueElement).toBeVisible({ timeout: 10000 });
-    await expect(htpValueElement).toHaveText(config.expectedWalletTabs.hold.htpValue);
-    console.log(`[HoldWalletHelper] ✅ HTP value verified: ${config.expectedWalletTabs.hold.htpValue}`);
-    
-    // Verify %2HTP value using the proper test ID
-    const percentHtpElement = page.locator('[data-testid="wallet-htp-display"]');
-    await expect(percentHtpElement).toBeVisible();
-    await expect(percentHtpElement).toHaveText(config.expectedWalletTabs.hold.percentToHtp);
-    console.log(`[HoldWalletHelper] ✅ %2HTP value verified: ${config.expectedWalletTabs.hold.percentToHtp}`);
-    
-    // Verify default colors for STP values if specified
-    if (config.expectedWalletTabs.hold.colorValidation.stpValue === 'default') {
-        await verifyDefaultColor(page, stpValueElement, 'STP in Hold wallet');
-    }
-    
-    if (config.expectedWalletTabs.hold.colorValidation.percentToStp === 'default') {
-        await verifyDefaultColor(page, percentStpElement, '%2STP in Hold wallet');
-    }
-    
-    // Verify default colors for HTP values if specified
-    if (config.expectedWalletTabs.hold.colorValidation.htpValue === 'default') {
-        await verifyDefaultColor(page, htpValueElement, 'HTP in Hold wallet');
-    }
-    
-    if (config.expectedWalletTabs.hold.colorValidation.percentToHtp === 'default') {
-        await verifyDefaultColor(page, percentHtpElement, '%2HTP in Hold wallet');
-    }
-    
-    console.log('[HoldWalletHelper] ✅ Hold wallet validation completed');
+    await page.waitForTimeout(500);
+
+    await verifyWalletTabValues(page, validations.hold, 'Hold');
 }
 
-test.describe('STP HTP Validation E2E Test', () => {
-    const config = testData as any as StpHtpTestConfig;
-    let stockId: string;
-    let page: Page;
+// Helper function to verify wallet tab values
+async function verifyWalletTabValues(page: any, validations: any, tabName: string) {
+    console.log(`[WalletTabHelper] Verifying ${tabName} tab values...`);
 
-    test.beforeEach(async ({ page: testPage }) => {
-        page = testPage;
-        console.log('🧹 Clearing browser state...');
+    const stpValue = page.locator('[data-testid="wallet-stpValue-display"]');
+    await expect(stpValue).toHaveText(validations.stpValue);
+    console.log(`[WalletTabHelper] ✅ ${tabName} STP Value: ${validations.stpValue}`);
+
+    const percentToStp = page.locator('[data-testid="wallet-percentToStp-display"]');
+    await expect(percentToStp).toHaveText(validations.percentToStp);
+    console.log(`[WalletTabHelper] ✅ ${tabName} %2STP: ${validations.percentToStp}`);
+
+    const htpValue = page.locator('[data-testid="wallet-htpValue-display"]');
+    await expect(htpValue).toHaveText(validations.htpValue);
+    console.log(`[WalletTabHelper] ✅ ${tabName} HTP Value: ${validations.htpValue}`);
+
+    const percentToHtp = page.locator('[data-testid="wallet-htp-display"]');
+    await expect(percentToHtp).toHaveText(validations.percentToHtp);
+    console.log(`[WalletTabHelper] ✅ ${tabName} %2HTP: ${validations.percentToHtp}`);
+
+    // Verify colors
+    await verifyColor(page, stpValue, validations.stpValueColor, `${tabName} STP Value`);
+    await verifyColor(page, percentToStp, validations.percentToStpColor, `${tabName} %2STP`);
+    await verifyColor(page, htpValue, validations.htpValueColor, `${tabName} HTP Value`);
+    await verifyColor(page, percentToHtp, validations.percentToHtpColor, `${tabName} %2HTP`);
+}
+
+// Test Suite
+test.describe.configure({ mode: 'serial' });
+test.describe('STP and HTP Commission Validation', () => {
+    let createdStockIds: string[] = [];
+    let stockMap: Map<string, any> = new Map();
+
+    test.beforeAll(async () => {
+        // Clean up any existing test stocks
+        await cleanupTestStocks(testConfig.cleanupSymbols || []);
+    });
+
+    test.beforeEach(async ({ page }) => {
         await clearBrowserState(page);
-        
-        console.log('🔐 Logging in user...');
-        await loginUser(page, TEST_EMAIL);
-        
-        // Clean up any existing test stock first
-        try {
-            const existingStock = await getPortfolioStockBySymbol(config.stock.symbol.toUpperCase());
-            if (existingStock) {
-                console.log(`🧹 Cleaning up existing stock ${config.stock.symbol}...`);
-                await deleteStockWalletsForStockByStockId(existingStock.id);
-                await deleteTransactionsForStockByStockId(existingStock.id);
-                await deletePortfolioStock(existingStock.id);
-                console.log(`✅ Existing stock cleaned up.`);
-            }
-        } catch (error) {
-            console.log(`ℹ️ No existing stock to clean up.`);
-        }
-        
-        console.log('📈 Creating test stock via UI...');
-        
-        // Navigate to portfolio page first
-        await page.goto('/portfolio');
-        await page.waitForLoadState('networkidle');
-        
-        // Create stock using UI method
-        await createStockViaUI(page, { 
-            ...config.stock, 
-            owner: E2E_TEST_USER_OWNER_ID 
-        } as any);
-        
-        // Get the created stock ID for use in the test
-        const createdStock = await getPortfolioStockBySymbol(config.stock.symbol.toUpperCase());
-        if (!createdStock) {
-            throw new Error(`❌ Failed to find created stock ${config.stock.symbol}`);
-        }
-        stockId = createdStock.id;
-        console.log(`✅ Test stock created via UI with ID: ${stockId}`);
+        await loginUser(page, E2E_TEST_USERNAME);
     });
 
-    test.afterEach(async () => {
-        if (stockId) {
-            console.log('🧹 Cleaning up test data...');
+    test.afterAll(async () => {
+        // Clean up all created stocks
+        for (const stockId of createdStockIds) {
             try {
-                await deleteTransactionsForStockByStockId(stockId);
-                await deleteStockWalletsForStockByStockId(stockId);
                 await deletePortfolioStock(stockId);
-                console.log('✅ Test data cleaned up successfully');
+                console.log(`[Cleanup] ✅ Deleted stock ${stockId}`);
             } catch (error) {
-                console.error('⚠️ Error during cleanup:', error);
+                console.error(`[Cleanup] ⚠️ Error deleting stock ${stockId}:`, error);
             }
         }
     });
 
-    test('should validate STP and HTP values and colors across Signals page and Wallet tabs', async () => {
-        console.log('🚀 Starting STP HTP validation test...');
-        
-        // Step 1: Set initial test price to $100 and navigate to wallet page
-        console.log('\n📍 Step 1: Setting initial test price to $100...');
-        await navigateToStockWalletPage(page, stockId, config.stock.symbol);
-        await updateStockTestPrice(page, config.stock.symbol, config.testPriceUpdates.initialPrice.price);
-        await verifyStockTestPrice(page, config.stock.symbol, config.testPriceUpdates.initialPrice.price);
-        console.log('✅ Step 1 completed');
+    // Single combined test for all scenarios with price progression
+    test('STP and HTP Commission Validation - Combined', async ({ page }) => {
+        console.log('\n🧪 Running combined STP/HTP validation test');
 
-        // Step 2: Go to Signals page and click ticker to return to wallet page
-        console.log('\n📍 Step 2: Going to Signals page and clicking ticker...');
-        await page.goto('/signals');
-        await page.waitForLoadState('networkidle');
-        const tickerLink = page.locator(`[data-testid="signals-table-ticker-${config.stock.symbol}"]`);
-        await expect(tickerLink).toBeVisible();
-        await tickerLink.click();
-        await page.waitForLoadState('networkidle');
-        console.log('✅ Step 2 completed');
+        for (const scenario of testConfig.scenarios) {
+            console.log(`\n📝 Scenario: ${scenario.name}`);
+            console.log(`   Description: ${scenario.description}`);
 
-        // Step 3: Verify WalletsOverview section shows STP and HTP settings
-        console.log('\n📍 Step 3: Verifying WalletsOverview settings...');
-        await verifyWalletOverviewSettings(page, config);
-        console.log('✅ Step 3 completed');
+            try {
+                // Setup: Create stock
+                let stock: any;
+                const stockKey = scenario.setup.stock;
 
-        // Step 4: Add Buy transaction (Split, Initial, $100 price, $200 investment)
-        console.log('\n📍 Step 4: Adding Buy transaction...');
-        await addBuyTransaction(page, config.transaction);
-        console.log('✅ Step 4 completed');
+                // Create new stock
+                stock = await createStockFromConfig(stockKey);
+                createdStockIds.push(stock.id);
+                stockMap.set(stockKey, stock);
 
-        // Step 5: Verify Swing wallet tab STP and %2STP values and colors
-        console.log('\n📍 Step 5: Verifying Swing wallet tab...');
-        await verifySwingWalletTab(page, config);
-        console.log('✅ Step 5 completed');
+                // Create initial transactions if provided
+                if (scenario.setup.transactions) {
+                    // Navigate to wallets page first
+                    await navigateToWalletsPage(page, stock.id);
 
-        // Step 6: Verify Hold wallet tab HTP and %2HTP values and colors
-        console.log('\n📍 Step 6: Verifying Hold wallet tab...');
-        await verifyHoldWalletTab(page, config);
-        console.log('✅ Step 6 completed');
+                    // Create transactions via UI
+                    for (const txnConfig of scenario.setup.transactions) {
+                        await createTransactionViaUI(page, txnConfig);
+                    }
 
-        // Step 7: Go to Signals page and verify %2STP and %2HTP values and colors
-        console.log('\n📍 Step 7: Verifying Signals page values...');
-        await verifySignalsPageValues(page, config);
-        console.log('✅ Step 7 completed');
+                    // Wait for wallets to be created
+                    await page.waitForTimeout(2000);
+                }
 
-        // Step 8: Update test price to $109 and re-verify all values with new calculations
-        console.log('\n📍 Step 8: Updating test price to $109 and re-verifying values...');
-        
-        // Navigate back to Signals page and click on ticker to go to wallet page
-        await page.goto('/signals');
-        await page.waitForLoadState('networkidle');
-        const tickerLinkStep8 = page.locator(`[data-testid="signals-table-ticker-${config.stock.symbol}"]`);
-        await expect(tickerLinkStep8).toBeVisible();
-        await tickerLinkStep8.click();
-        await page.waitForLoadState('networkidle');
-        
-        // Update test price to $109 using the helper function
-        await updateStockTestPrice(page, config.stock.symbol, 109);
-        await verifyStockTestPrice(page, config.stock.symbol, 109);
-        
-        console.log('✅ Step 8a: Updated test price to $109');
+                // If this scenario has price progression, test each price point
+                if (scenario.priceProgression) {
+                    for (const priceStep of scenario.priceProgression) {
+                        console.log(`\n   💰 Testing at ${priceStep.label}`);
 
-        // Step 8b: Verify Swing wallet tab with new values
-        console.log('\n📍 Step 8b: Verifying Swing wallet tab with updated price...');
-        await verifySwingWalletTabAt109(page, config);
-        console.log('✅ Step 8b completed');
+                        // Update price if not the first one (first one should already be set)
+                        if (priceStep.price !== testConfig.testData.stocks[stockKey].testPrice) {
+                            await updateTestPrice(page, stock.symbol, priceStep.price, stock.id);
+                        }
 
-        // Step 8c: Verify Hold wallet tab with new values
-        console.log('\n📍 Step 8c: Verifying Hold wallet tab with updated price...');
-        await verifyHoldWalletTabAt109(page, config);
-        console.log('✅ Step 8c completed');
+                        // Run validations for this price point
+                        const validations = priceStep.validations;
 
-        // Step 8d: Verify Signals page values with updated price
-        console.log('\n📍 Step 8d: Verifying Signals page values with updated price...');
-        await verifySignalsPageValuesAt109(page, config);
-        console.log('✅ Step 8d completed');
+                        if (validations.walletsOverview) {
+                            await navigateToWalletsPage(page, stock.id);
+                            await verifyWalletsOverview(page, validations.walletsOverview, stock.symbol);
+                        }
 
-        // Step 9: Update test price to $115 and verify green highlighting for STP
-        console.log('\n📍 Step 9: Updating test price to $115 and verifying STP green highlighting...');
-        
-        // Click on ticker to navigate back to wallet page (we're currently on Signals page from Step 8d)
-        const tickerLinkStep9 = page.locator(`[data-testid="signals-table-ticker-${config.stock.symbol}"]`);
-        await expect(tickerLinkStep9).toBeVisible();
-        await tickerLinkStep9.click();
-        await page.waitForLoadState('networkidle');
-        
-        // Update test price to $115 using the helper function
-        await updateStockTestPrice(page, config.stock.symbol, 115);
-        await verifyStockTestPrice(page, config.stock.symbol, 115);
-        
-        console.log('✅ Step 9a: Updated test price to $115');
+                        if (validations.signalsTable) {
+                            await verifySignalsTable(page, validations.signalsTable, stock.symbol);
+                        }
 
-        // Step 9b: Verify Swing wallet tab with new values (STP should be green)
-        console.log('\n📍 Step 9b: Verifying Swing wallet tab with $115 price...');
-        await verifySwingWalletTabAt115(page, config);
-        console.log('✅ Step 9b completed');
+                        if (validations.walletTabs) {
+                            await verifyWalletTabs(page, validations.walletTabs, stock.id);
+                        }
 
-        // Step 9c: Verify Hold wallet tab with new values (all default colors)
-        console.log('\n📍 Step 9c: Verifying Hold wallet tab with $115 price...');
-        await verifyHoldWalletTabAt115(page, config);
-        console.log('✅ Step 9c completed');
+                        console.log(`      ✅ Price point ${priceStep.label} validated`);
+                    }
+                } else {
+                    // Old structure - single validation
+                    const validations = scenario.validations;
 
-        // Step 9d: Verify Signals page values with updated price (%2STP green, %2HTP default)
-        console.log('\n📍 Step 9d: Verifying Signals page values with $115 price...');
-        await verifySignalsPageValuesAt115(page, config);
-        console.log('✅ Step 9d completed');
+                    if (validations.walletsOverview) {
+                        await navigateToWalletsPage(page, stock.id);
+                        await verifyWalletsOverview(page, validations.walletsOverview, stock.symbol);
+                    }
 
-        // Step 10: Update test price to $122 and verify green highlighting for both STP and HTP
-        console.log('\n📍 Step 10: Updating test price to $122 and verifying both STP and HTP green highlighting...');
-        
-        // Click on ticker to navigate back to wallet page (we're currently on Signals page from Step 9d)
-        const tickerLinkStep10 = page.locator(`[data-testid="signals-table-ticker-${config.stock.symbol}"]`);
-        await expect(tickerLinkStep10).toBeVisible();
-        await tickerLinkStep10.click();
-        await page.waitForLoadState('networkidle');
-        
-        // Update test price to $122 using the helper function
-        await updateStockTestPrice(page, config.stock.symbol, 122);
-        await verifyStockTestPrice(page, config.stock.symbol, 122);
-        
-        console.log('✅ Step 10a: Updated test price to $122');
+                    if (validations.signalsTable) {
+                        await verifySignalsTable(page, validations.signalsTable, stock.symbol);
+                    }
 
-        // Step 10b: Verify Swing wallet tab with new values (STP should be green)
-        console.log('\n📍 Step 10b: Verifying Swing wallet tab with $122 price...');
-        await verifySwingWalletTabAt122(page, config);
-        console.log('✅ Step 10b completed');
+                    if (validations.walletTabs) {
+                        await verifyWalletTabs(page, validations.walletTabs, stock.id);
+                    }
+                }
 
-        // Step 10c: Verify Hold wallet tab with new values (HTP should be green)
-        console.log('\n📍 Step 10c: Verifying Hold wallet tab with $122 price...');
-        await verifyHoldWalletTabAt122(page, config);
-        console.log('✅ Step 10c completed');
+                console.log(`   ✅ Scenario completed successfully`);
 
-        // Step 10d: Verify Signals page values with updated price (both %2STP and %2HTP green)
-        console.log('\n📍 Step 10d: Verifying Signals page values with $122 price...');
-        await verifySignalsPageValuesAt122(page, config);
-        console.log('✅ Step 10d completed');
+            } catch (error) {
+                console.error(`   ❌ Scenario "${scenario.name}" failed:`, error);
+                throw error;
+            }
+        }
 
-        console.log('\n🎉 STP HTP validation test completed successfully!');
+        console.log('\n🎉 All scenarios completed successfully!\n');
     });
 });
-
-/**
- * Helper function to verify Swing wallet tab with $109 price
- */
-async function verifySwingWalletTabAt109(
-    page: Page, 
-    config: StpHtpTestConfig
-): Promise<void> {
-    console.log('[SwingWalletHelper] Verifying Swing wallet tab at $109...');
-    
-    // Click on Swing wallet tab
-    const swingTab = page.locator('[data-testid="wallet-tab-swing"]');
-    await expect(swingTab).toBeVisible({ timeout: 10000 });
-    await swingTab.click();
-    await page.waitForLoadState('networkidle');
-    
-    // Wait for swing wallet content to be visible
-    await page.waitForTimeout(1000); // Small wait for tab transition
-    
-    // Verify STP value (should remain $110.00)
-    const stpValueElement = page.locator('[data-testid="wallet-stpValue-display"]');
-    await expect(stpValueElement).toBeVisible();
-    await expect(stpValueElement).toHaveText(config.expectedValuesAt109.expectedWalletTabs.swing.stpValue);
-    console.log(`[SwingWalletHelper] ✅ STP value verified: ${config.expectedValuesAt109.expectedWalletTabs.swing.stpValue}`);
-    
-    // Verify %2STP value (should be -0.91% now)
-    const percentStpElement = page.locator('[data-testid="wallet-percentToStp-display"]');
-    await expect(percentStpElement).toBeVisible();
-    await expect(percentStpElement).toHaveText(config.expectedValuesAt109.expectedWalletTabs.swing.percentToStp);
-    console.log(`[SwingWalletHelper] ✅ %2STP value verified: ${config.expectedValuesAt109.expectedWalletTabs.swing.percentToStp}`);
-    
-    // Verify HTP value (should remain $120.00)
-    const htpValueElement = page.locator('[data-testid="wallet-htpValue-display"]');
-    await expect(htpValueElement).toBeVisible();
-    await expect(htpValueElement).toHaveText(config.expectedValuesAt109.expectedWalletTabs.swing.htpValue);
-    console.log(`[SwingWalletHelper] ✅ HTP value verified: ${config.expectedValuesAt109.expectedWalletTabs.swing.htpValue}`);
-    
-    // Verify %2HTP value (should be -9.17% now)
-    const percentHtpElement = page.locator('[data-testid="wallet-htp-display"]');
-    await expect(percentHtpElement).toBeVisible();
-    await expect(percentHtpElement).toHaveText(config.expectedValuesAt109.expectedWalletTabs.swing.percentToHtp);
-    console.log(`[SwingWalletHelper] ✅ %2HTP value verified: ${config.expectedValuesAt109.expectedWalletTabs.swing.percentToHtp}`);
-    
-    // Verify all values still have default colors (not highlighted green)
-    if (config.expectedValuesAt109.expectedWalletTabs.swing.colorValidation.stpValue === 'default') {
-        await verifyDefaultColor(page, stpValueElement, 'STP in Swing wallet at $109');
-    }
-    
-    if (config.expectedValuesAt109.expectedWalletTabs.swing.colorValidation.percentToStp === 'default') {
-        await verifyDefaultColor(page, percentStpElement, '%2STP in Swing wallet at $109');
-    }
-    
-    if (config.expectedValuesAt109.expectedWalletTabs.swing.colorValidation.htpValue === 'default') {
-        await verifyDefaultColor(page, htpValueElement, 'HTP in Swing wallet at $109');
-    }
-    
-    if (config.expectedValuesAt109.expectedWalletTabs.swing.colorValidation.percentToHtp === 'default') {
-        await verifyDefaultColor(page, percentHtpElement, '%2HTP in Swing wallet at $109');
-    }
-    
-    console.log('[SwingWalletHelper] ✅ Swing wallet validation at $109 completed');
-}
-
-/**
- * Helper function to verify Hold wallet tab with $109 price
- */
-async function verifyHoldWalletTabAt109(
-    page: Page, 
-    config: StpHtpTestConfig
-): Promise<void> {
-    console.log('[HoldWalletHelper] Verifying Hold wallet tab at $109...');
-    
-    // Click on Hold wallet tab
-    const holdTab = page.locator('[data-testid="wallet-tab-hold"]');
-    await expect(holdTab).toBeVisible({ timeout: 10000 });
-    await holdTab.click();
-    await page.waitForLoadState('networkidle');
-    
-    // Wait for hold wallet content to be visible
-    await page.waitForTimeout(1000); // Small wait for tab transition
-    
-    // Verify HTP and %2HTP columns are still visible (should be by default now)
-    console.log('[HoldWalletHelper] Verifying HTP and %2HTP columns are visible by default...');
-    
-    // Verify STP value (should remain $110.00)
-    const stpValueElement = page.locator('[data-testid="wallet-stpValue-display"]');
-    await expect(stpValueElement).toBeVisible();
-    await expect(stpValueElement).toHaveText(config.expectedValuesAt109.expectedWalletTabs.hold.stpValue);
-    console.log(`[HoldWalletHelper] ✅ STP value verified: ${config.expectedValuesAt109.expectedWalletTabs.hold.stpValue}`);
-    
-    // Verify %2STP value (should be -0.91% now)
-    const percentStpElement = page.locator('[data-testid="wallet-percentToStp-display"]');
-    await expect(percentStpElement).toBeVisible();
-    await expect(percentStpElement).toHaveText(config.expectedValuesAt109.expectedWalletTabs.hold.percentToStp);
-    console.log(`[HoldWalletHelper] ✅ %2STP value verified: ${config.expectedValuesAt109.expectedWalletTabs.hold.percentToStp}`);
-    
-    // Verify HTP value (should remain $120.00)
-    const htpValueElement = page.locator('[data-testid="wallet-htpValue-display"]');
-    await expect(htpValueElement).toBeVisible();
-    await expect(htpValueElement).toHaveText(config.expectedValuesAt109.expectedWalletTabs.hold.htpValue);
-    console.log(`[HoldWalletHelper] ✅ HTP value verified: ${config.expectedValuesAt109.expectedWalletTabs.hold.htpValue}`);
-    
-    // Verify %2HTP value (should be -9.17% now)
-    const percentHtpElement = page.locator('[data-testid="wallet-htp-display"]');
-    await expect(percentHtpElement).toBeVisible();
-    await expect(percentHtpElement).toHaveText(config.expectedValuesAt109.expectedWalletTabs.hold.percentToHtp);
-    console.log(`[HoldWalletHelper] ✅ %2HTP value verified: ${config.expectedValuesAt109.expectedWalletTabs.hold.percentToHtp}`);
-    
-    // Verify all values still have default colors (not highlighted green)
-    if (config.expectedValuesAt109.expectedWalletTabs.hold.colorValidation.stpValue === 'default') {
-        await verifyDefaultColor(page, stpValueElement, 'STP in Hold wallet at $109');
-    }
-    
-    if (config.expectedValuesAt109.expectedWalletTabs.hold.colorValidation.percentToStp === 'default') {
-        await verifyDefaultColor(page, percentStpElement, '%2STP in Hold wallet at $109');
-    }
-    
-    if (config.expectedValuesAt109.expectedWalletTabs.hold.colorValidation.htpValue === 'default') {
-        await verifyDefaultColor(page, htpValueElement, 'HTP in Hold wallet at $109');
-    }
-    
-    if (config.expectedValuesAt109.expectedWalletTabs.hold.colorValidation.percentToHtp === 'default') {
-        await verifyDefaultColor(page, percentHtpElement, '%2HTP in Hold wallet at $109');
-    }
-    
-    console.log('[HoldWalletHelper] ✅ Hold wallet validation at $109 completed');
-}
-
-/**
- * Helper function to verify Signals page values with $109 price
- */
-async function verifySignalsPageValuesAt109(
-    page: Page, 
-    config: StpHtpTestConfig
-): Promise<void> {
-    console.log('[SignalsHelper] Verifying Signals page values at $109...');
-    
-    // Navigate to Signals page
-    await page.goto('/signals');
-    await page.waitForLoadState('networkidle');
-    
-    // Verify signals table is visible
-    const signalsTable = page.locator('[data-testid="signals-table"]');
-    await expect(signalsTable).toBeVisible();
-    console.log('[SignalsHelper] Signals table is visible');
-    
-    // Find the row with our test stock ticker using the test ID
-    const tickerCell = page.locator(`[data-testid="signals-table-ticker-${config.stock.symbol}"]`);
-    await expect(tickerCell).toBeVisible({ timeout: 10000 });
-    console.log(`[SignalsHelper] Found ticker ${config.stock.symbol} in table`);
-    
-    // Verify %2STP value using the test ID (should be -0.91% now)
-    const stpCell = page.locator(`[data-testid="signals-table-percent-stp-${config.stock.symbol}"]`);
-    await expect(stpCell).toHaveText(config.expectedValuesAt109.expectedSignalsValues.percentToStp);
-    console.log(`[SignalsHelper] ✅ %2STP value verified: ${config.expectedValuesAt109.expectedSignalsValues.percentToStp}`);
-    
-    // Verify %2HTP value using the test ID (should be -9.17% now) 
-    const htpCell = page.locator(`[data-testid="signals-table-percent-htp-${config.stock.symbol}"]`);
-    await expect(htpCell).toHaveText(config.expectedValuesAt109.expectedSignalsValues.percentToHtp);
-    console.log(`[SignalsHelper] ✅ %2HTP value verified: ${config.expectedValuesAt109.expectedSignalsValues.percentToHtp}`);
-    
-    // Verify colors are still default (not highlighted green)
-    if (config.expectedValuesAt109.expectedSignalsValues.colorValidation.percentToStp === 'default') {
-        await verifyDefaultColor(page, stpCell, '%2STP in Signals at $109');
-    }
-    
-    if (config.expectedValuesAt109.expectedSignalsValues.colorValidation.percentToHtp === 'default') {
-        await verifyDefaultColor(page, htpCell, '%2HTP in Signals at $109');
-    }
-    
-    console.log('[SignalsHelper] ✅ Signals page validation at $109 completed');
-}
-
-/**
- * Helper function to verify Swing wallet tab values at $115 price
- */
-async function verifySwingWalletTabAt115(
-    page: Page,
-    config: StpHtpTestConfig
-): Promise<void> {
-    console.log('[SwingWalletHelper] Verifying Swing wallet tab at $115...');
-    
-    // Ensure we're on the Swing wallet tab
-    const swingTab = page.locator('[data-testid="wallet-tab-swing"]');
-    await expect(swingTab).toBeVisible({ timeout: 30000 });
-    await swingTab.click();
-    await page.waitForLoadState('networkidle');
-    
-    // Verify STP value (should be $110.00)
-    const stpValueElement = page.locator('[data-testid="wallet-stpValue-display"]');
-    await expect(stpValueElement).toBeVisible();
-    await expect(stpValueElement).toHaveText(config.expectedValuesAt115.expectedWalletTabs.swing.stpValue);
-    console.log(`[SwingWalletHelper] ✅ STP value verified: ${config.expectedValuesAt115.expectedWalletTabs.swing.stpValue}`);
-    
-    // Verify %2STP value (should be 4.55% now)
-    const percentStpElement = page.locator('[data-testid="wallet-percentToStp-display"]');
-    await expect(percentStpElement).toBeVisible();
-    await expect(percentStpElement).toHaveText(config.expectedValuesAt115.expectedWalletTabs.swing.percentToStp);
-    console.log(`[SwingWalletHelper] ✅ %2STP value verified: ${config.expectedValuesAt115.expectedWalletTabs.swing.percentToStp}`);
-    
-    // Verify HTP value (should be $120.00)
-    const htpValueElement = page.locator('[data-testid="wallet-htpValue-display"]');
-    await expect(htpValueElement).toBeVisible();
-    await expect(htpValueElement).toHaveText(config.expectedValuesAt115.expectedWalletTabs.swing.htpValue);
-    console.log(`[SwingWalletHelper] ✅ HTP value verified: ${config.expectedValuesAt115.expectedWalletTabs.swing.htpValue}`);
-    
-    // Verify %2HTP value (should be -4.17% now)
-    const percentHtpElement = page.locator('[data-testid="wallet-htp-display"]');
-    await expect(percentHtpElement).toBeVisible();
-    await expect(percentHtpElement).toHaveText(config.expectedValuesAt115.expectedWalletTabs.swing.percentToHtp);
-    console.log(`[SwingWalletHelper] ✅ %2HTP value verified: ${config.expectedValuesAt115.expectedWalletTabs.swing.percentToHtp}`);
-    
-    // Verify colors - %2STP should be green, others default
-    if (config.expectedValuesAt115.expectedWalletTabs.swing.colorValidation.stpValue === 'default') {
-        await verifyDefaultColor(page, stpValueElement, 'STP in Swing wallet at $115');
-    }
-    
-    if (config.expectedValuesAt115.expectedWalletTabs.swing.colorValidation.percentToStp === 'green') {
-        await verifyGreenColor(page, percentStpElement, '%2STP in Swing wallet at $115');
-    }
-    
-    if (config.expectedValuesAt115.expectedWalletTabs.swing.colorValidation.htpValue === 'default') {
-        await verifyDefaultColor(page, htpValueElement, 'HTP in Swing wallet at $115');
-    }
-    
-    if (config.expectedValuesAt115.expectedWalletTabs.swing.colorValidation.percentToHtp === 'default') {
-        await verifyDefaultColor(page, percentHtpElement, '%2HTP in Swing wallet at $115');
-    }
-    
-    console.log('[SwingWalletHelper] ✅ Swing wallet validation at $115 completed');
-}
-
-/**
- * Helper function to verify Hold wallet tab values at $115 price
- */
-async function verifyHoldWalletTabAt115(
-    page: Page,
-    config: StpHtpTestConfig
-): Promise<void> {
-    console.log('[HoldWalletHelper] Verifying Hold wallet tab at $115...');
-    console.log('[HoldWalletHelper] Verifying HTP and %2HTP columns are visible by default...');
-    
-    // Switch to Hold wallet tab
-    const holdTab = page.locator('[data-testid="wallet-tab-hold"]');
-    await expect(holdTab).toBeVisible();
-    await holdTab.click();
-    await page.waitForLoadState('networkidle');
-    
-    // Verify STP value (should be $110.00)
-    const stpValueElement = page.locator('[data-testid="wallet-stpValue-display"]');
-    await expect(stpValueElement).toBeVisible();
-    await expect(stpValueElement).toHaveText(config.expectedValuesAt115.expectedWalletTabs.hold.stpValue);
-    console.log(`[HoldWalletHelper] ✅ STP value verified: ${config.expectedValuesAt115.expectedWalletTabs.hold.stpValue}`);
-    
-    // Verify %2STP value (should be 4.55% now)
-    const percentStpElement = page.locator('[data-testid="wallet-percentToStp-display"]');
-    await expect(percentStpElement).toBeVisible();
-    await expect(percentStpElement).toHaveText(config.expectedValuesAt115.expectedWalletTabs.hold.percentToStp);
-    console.log(`[HoldWalletHelper] ✅ %2STP value verified: ${config.expectedValuesAt115.expectedWalletTabs.hold.percentToStp}`);
-    
-    // Verify HTP value (should be $120.00)
-    const htpValueElement = page.locator('[data-testid="wallet-htpValue-display"]');
-    await expect(htpValueElement).toBeVisible();
-    await expect(htpValueElement).toHaveText(config.expectedValuesAt115.expectedWalletTabs.hold.htpValue);
-    console.log(`[HoldWalletHelper] ✅ HTP value verified: ${config.expectedValuesAt115.expectedWalletTabs.hold.htpValue}`);
-    
-    // Verify %2HTP value (should be -4.17% now)
-    const percentHtpElement = page.locator('[data-testid="wallet-htp-display"]');
-    await expect(percentHtpElement).toBeVisible();
-    await expect(percentHtpElement).toHaveText(config.expectedValuesAt115.expectedWalletTabs.hold.percentToHtp);
-    console.log(`[HoldWalletHelper] ✅ %2HTP value verified: ${config.expectedValuesAt115.expectedWalletTabs.hold.percentToHtp}`);
-    
-    // Verify colors - all should be default for Hold wallet
-    if (config.expectedValuesAt115.expectedWalletTabs.hold.colorValidation.stpValue === 'default') {
-        await verifyDefaultColor(page, stpValueElement, 'STP in Hold wallet at $115');
-    }
-    
-    if (config.expectedValuesAt115.expectedWalletTabs.hold.colorValidation.percentToStp === 'default') {
-        await verifyDefaultColor(page, percentStpElement, '%2STP in Hold wallet at $115');
-    }
-    
-    if (config.expectedValuesAt115.expectedWalletTabs.hold.colorValidation.htpValue === 'default') {
-        await verifyDefaultColor(page, htpValueElement, 'HTP in Hold wallet at $115');
-    }
-    
-    if (config.expectedValuesAt115.expectedWalletTabs.hold.colorValidation.percentToHtp === 'default') {
-        await verifyDefaultColor(page, percentHtpElement, '%2HTP in Hold wallet at $115');
-    }
-    
-    console.log('[HoldWalletHelper] ✅ Hold wallet validation at $115 completed');
-}
-
-/**
- * Helper function to verify Signals page values at $115 price
- */
-async function verifySignalsPageValuesAt115(
-    page: Page, 
-    config: StpHtpTestConfig
-): Promise<void> {
-    console.log('[SignalsHelper] Verifying Signals page values at $115...');
-    
-    // Navigate to signals page
-    await page.goto('/signals');
-    await page.waitForLoadState('networkidle');
-    
-    // Verify signals table is visible
-    const signalsTable = page.locator('[data-testid="signals-table"]');
-    await expect(signalsTable).toBeVisible();
-    console.log('[SignalsHelper] Signals table is visible');
-    
-    // Find the row with our test stock ticker using the test ID
-    const tickerCell = page.locator(`[data-testid="signals-table-ticker-${config.stock.symbol}"]`);
-    await expect(tickerCell).toBeVisible({ timeout: 10000 });
-    console.log(`[SignalsHelper] Found ticker ${config.stock.symbol} in table`);
-    
-    // Verify %2STP value using the test ID (should be 4.55% now and green)
-    const stpCell = page.locator(`[data-testid="signals-table-percent-stp-${config.stock.symbol}"]`);
-    await expect(stpCell).toHaveText(config.expectedValuesAt115.expectedSignalsValues.percentToStp);
-    console.log(`[SignalsHelper] ✅ %2STP value verified: ${config.expectedValuesAt115.expectedSignalsValues.percentToStp}`);
-    
-    // Verify %2HTP value using the test ID (should be -4.17% now and default color) 
-    const htpCell = page.locator(`[data-testid="signals-table-percent-htp-${config.stock.symbol}"]`);
-    await expect(htpCell).toHaveText(config.expectedValuesAt115.expectedSignalsValues.percentToHtp);
-    console.log(`[SignalsHelper] ✅ %2HTP value verified: ${config.expectedValuesAt115.expectedSignalsValues.percentToHtp}`);
-    
-    // Verify colors - %2STP should be green, %2HTP should be default
-    if (config.expectedValuesAt115.expectedSignalsValues.colorValidation.percentToStp === 'green') {
-        await verifyGreenColor(page, stpCell, '%2STP in Signals at $115');
-    }
-    
-    if (config.expectedValuesAt115.expectedSignalsValues.colorValidation.percentToHtp === 'default') {
-        await verifyDefaultColor(page, htpCell, '%2HTP in Signals at $115');
-    }
-    
-    console.log('[SignalsHelper] ✅ Signals page validation at $115 completed');
-}
-
-/**
- * Helper function to verify Swing wallet tab values at $122 price
- */
-async function verifySwingWalletTabAt122(
-    page: Page,
-    config: StpHtpTestConfig
-): Promise<void> {
-    console.log('[SwingWalletHelper] Verifying Swing wallet tab at $122...');
-    
-    // Ensure we're on the Swing wallet tab
-    const swingTab = page.locator('[data-testid="wallet-tab-swing"]');
-    await expect(swingTab).toBeVisible();
-    await swingTab.click();
-    await page.waitForLoadState('networkidle');
-    
-    // Verify STP value (should be $110.00)
-    const stpValueElement = page.locator('[data-testid="wallet-stpValue-display"]');
-    await expect(stpValueElement).toBeVisible();
-    await expect(stpValueElement).toHaveText(config.expectedValuesAt122.expectedWalletTabs.swing.stpValue);
-    console.log(`[SwingWalletHelper] ✅ STP value verified: ${config.expectedValuesAt122.expectedWalletTabs.swing.stpValue}`);
-    
-    // Verify %2STP value (should be 10.91% now)
-    const percentStpElement = page.locator('[data-testid="wallet-percentToStp-display"]');
-    await expect(percentStpElement).toBeVisible();
-    await expect(percentStpElement).toHaveText(config.expectedValuesAt122.expectedWalletTabs.swing.percentToStp);
-    console.log(`[SwingWalletHelper] ✅ %2STP value verified: ${config.expectedValuesAt122.expectedWalletTabs.swing.percentToStp}`);
-    
-    // Verify HTP value (should be $120.00)
-    const htpValueElement = page.locator('[data-testid="wallet-htpValue-display"]');
-    await expect(htpValueElement).toBeVisible();
-    await expect(htpValueElement).toHaveText(config.expectedValuesAt122.expectedWalletTabs.swing.htpValue);
-    console.log(`[SwingWalletHelper] ✅ HTP value verified: ${config.expectedValuesAt122.expectedWalletTabs.swing.htpValue}`);
-    
-    // Verify %2HTP value (should be 1.67% now)
-    const percentHtpElement = page.locator('[data-testid="wallet-htp-display"]');
-    await expect(percentHtpElement).toBeVisible();
-    await expect(percentHtpElement).toHaveText(config.expectedValuesAt122.expectedWalletTabs.swing.percentToHtp);
-    console.log(`[SwingWalletHelper] ✅ %2HTP value verified: ${config.expectedValuesAt122.expectedWalletTabs.swing.percentToHtp}`);
-    
-    // Verify colors - %2STP should be green, others default
-    if (config.expectedValuesAt122.expectedWalletTabs.swing.colorValidation.stpValue === 'default') {
-        await verifyDefaultColor(page, stpValueElement, 'STP in Swing wallet at $122');
-    }
-    
-    if (config.expectedValuesAt122.expectedWalletTabs.swing.colorValidation.percentToStp === 'green') {
-        await verifyGreenColor(page, percentStpElement, '%2STP in Swing wallet at $122');
-    }
-    
-    if (config.expectedValuesAt122.expectedWalletTabs.swing.colorValidation.htpValue === 'default') {
-        await verifyDefaultColor(page, htpValueElement, 'HTP in Swing wallet at $122');
-    }
-    
-    if (config.expectedValuesAt122.expectedWalletTabs.swing.colorValidation.percentToHtp === 'default') {
-        await verifyDefaultColor(page, percentHtpElement, '%2HTP in Swing wallet at $122');
-    }
-    
-    console.log('[SwingWalletHelper] ✅ Swing wallet validation at $122 completed');
-}
-
-/**
- * Helper function to verify Hold wallet tab values at $122 price
- */
-async function verifyHoldWalletTabAt122(
-    page: Page,
-    config: StpHtpTestConfig
-): Promise<void> {
-    console.log('[HoldWalletHelper] Verifying Hold wallet tab at $122...');
-    console.log('[HoldWalletHelper] Verifying HTP and %2HTP columns are visible by default...');
-    
-    // Switch to Hold wallet tab
-    const holdTab = page.locator('[data-testid="wallet-tab-hold"]');
-    await expect(holdTab).toBeVisible();
-    await holdTab.click();
-    await page.waitForLoadState('networkidle');
-    
-    // Verify STP value (should be $110.00)
-    const stpValueElement = page.locator('[data-testid="wallet-stpValue-display"]');
-    await expect(stpValueElement).toBeVisible();
-    await expect(stpValueElement).toHaveText(config.expectedValuesAt122.expectedWalletTabs.hold.stpValue);
-    console.log(`[HoldWalletHelper] ✅ STP value verified: ${config.expectedValuesAt122.expectedWalletTabs.hold.stpValue}`);
-    
-    // Verify %2STP value (should be 10.91% now)
-    const percentStpElement = page.locator('[data-testid="wallet-percentToStp-display"]');
-    await expect(percentStpElement).toBeVisible();
-    await expect(percentStpElement).toHaveText(config.expectedValuesAt122.expectedWalletTabs.hold.percentToStp);
-    console.log(`[HoldWalletHelper] ✅ %2STP value verified: ${config.expectedValuesAt122.expectedWalletTabs.hold.percentToStp}`);
-    
-    // Verify HTP value (should be $120.00)
-    const htpValueElement = page.locator('[data-testid="wallet-htpValue-display"]');
-    await expect(htpValueElement).toBeVisible();
-    await expect(htpValueElement).toHaveText(config.expectedValuesAt122.expectedWalletTabs.hold.htpValue);
-    console.log(`[HoldWalletHelper] ✅ HTP value verified: ${config.expectedValuesAt122.expectedWalletTabs.hold.htpValue}`);
-    
-    // Verify %2HTP value (should be 1.67% now)
-    const percentHtpElement = page.locator('[data-testid="wallet-htp-display"]');
-    await expect(percentHtpElement).toBeVisible();
-    await expect(percentHtpElement).toHaveText(config.expectedValuesAt122.expectedWalletTabs.hold.percentToHtp);
-    console.log(`[HoldWalletHelper] ✅ %2HTP value verified: ${config.expectedValuesAt122.expectedWalletTabs.hold.percentToHtp}`);
-    
-    // Verify colors - %2HTP should be green, others default
-    if (config.expectedValuesAt122.expectedWalletTabs.hold.colorValidation.stpValue === 'default') {
-        await verifyDefaultColor(page, stpValueElement, 'STP in Hold wallet at $122');
-    }
-    
-    if (config.expectedValuesAt122.expectedWalletTabs.hold.colorValidation.percentToStp === 'default') {
-        await verifyDefaultColor(page, percentStpElement, '%2STP in Hold wallet at $122');
-    }
-    
-    if (config.expectedValuesAt122.expectedWalletTabs.hold.colorValidation.htpValue === 'default') {
-        await verifyDefaultColor(page, htpValueElement, 'HTP in Hold wallet at $122');
-    }
-    
-    if (config.expectedValuesAt122.expectedWalletTabs.hold.colorValidation.percentToHtp === 'green') {
-        await verifyGreenColor(page, percentHtpElement, '%2HTP in Hold wallet at $122');
-    }
-    
-    console.log('[HoldWalletHelper] ✅ Hold wallet validation at $122 completed');
-}
-
-/**
- * Helper function to verify Signals page values at $122 price
- */
-async function verifySignalsPageValuesAt122(
-    page: Page, 
-    config: StpHtpTestConfig
-): Promise<void> {
-    console.log('[SignalsHelper] Verifying Signals page values at $122...');
-    
-    // Navigate to signals page
-    await page.goto('/signals');
-    await page.waitForLoadState('networkidle');
-    
-    // Verify signals table is visible
-    const signalsTable = page.locator('[data-testid="signals-table"]');
-    await expect(signalsTable).toBeVisible();
-    console.log('[SignalsHelper] Signals table is visible');
-    
-    // Find the row with our test stock ticker using the test ID
-    const tickerCell = page.locator(`[data-testid="signals-table-ticker-${config.stock.symbol}"]`);
-    await expect(tickerCell).toBeVisible({ timeout: 10000 });
-    console.log(`[SignalsHelper] Found ticker ${config.stock.symbol} in table`);
-    
-    // Verify %2STP value using the test ID (should be 10.91% now and green)
-    const stpCell = page.locator(`[data-testid="signals-table-percent-stp-${config.stock.symbol}"]`);
-    await expect(stpCell).toHaveText(config.expectedValuesAt122.expectedSignalsValues.percentToStp);
-    console.log(`[SignalsHelper] ✅ %2STP value verified: ${config.expectedValuesAt122.expectedSignalsValues.percentToStp}`);
-    
-    // Verify %2HTP value using the test ID (should be 1.67% now and green) 
-    const htpCell = page.locator(`[data-testid="signals-table-percent-htp-${config.stock.symbol}"]`);
-    await expect(htpCell).toHaveText(config.expectedValuesAt122.expectedSignalsValues.percentToHtp);
-    console.log(`[SignalsHelper] ✅ %2HTP value verified: ${config.expectedValuesAt122.expectedSignalsValues.percentToHtp}`);
-    
-    // Verify colors - both should be green
-    if (config.expectedValuesAt122.expectedSignalsValues.colorValidation.percentToStp === 'green') {
-        await verifyGreenColor(page, stpCell, '%2STP in Signals at $122');
-    }
-    
-    if (config.expectedValuesAt122.expectedSignalsValues.colorValidation.percentToHtp === 'green') {
-        await verifyGreenColor(page, htpCell, '%2HTP in Signals at $122');
-    }
-    
-    console.log('[SignalsHelper] ✅ Signals page validation at $122 completed');
-}
