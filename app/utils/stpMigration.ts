@@ -98,9 +98,19 @@ export async function recalculateStockStp(
     type StockData = { symbol: string; stp?: number; htp?: number; stockCommission?: number };
     const stockData = stock as unknown as StockData;
 
+    // Debug: Log what was fetched
+    console.log(`[STP/HTP Migration] Stock data fetched:`, {
+      symbol: stockData.symbol,
+      stp: stockData.stp,
+      htp: stockData.htp,
+      commission: stockData.stockCommission
+    });
+
     // Check if stock has STP or HTP setting
     const hasStp = stockData.stp && stockData.stp > 0;
     const hasHtp = stockData.htp && stockData.htp > 0;
+
+    console.log(`[STP/HTP Migration] Has STP: ${hasStp}, Has HTP: ${hasHtp}`);
 
     if (!hasStp && !hasHtp) {
       return {
@@ -160,12 +170,18 @@ export async function recalculateStockStp(
         let correctStpValue: number | null = null;
         if (hasStp && stockData.stp) {
           correctStpValue = calculateCorrectTargetPrice(buyPrice, stockData.stp, stockData.stockCommission ?? null);
+          console.log(`[STP/HTP Migration] Calculated STP for wallet ${wallet.id}: $${correctStpValue.toFixed(4)}`);
+        } else {
+          console.log(`[STP/HTP Migration] Skipping STP calculation: hasStp=${hasStp}, stockData.stp=${stockData.stp}`);
         }
 
         // Calculate new HTP value if stock has HTP setting
         let correctHtpValue: number | null = null;
         if (hasHtp && stockData.htp) {
           correctHtpValue = calculateCorrectTargetPrice(buyPrice, stockData.htp, stockData.stockCommission ?? null);
+          console.log(`[STP/HTP Migration] Calculated HTP for wallet ${wallet.id}: $${correctHtpValue.toFixed(4)}`);
+        } else {
+          console.log(`[STP/HTP Migration] Skipping HTP calculation: hasHtp=${hasHtp}, stockData.htp=${stockData.htp}`);
         }
 
         const oldStpValue = wallet.stpValue ?? 0;
