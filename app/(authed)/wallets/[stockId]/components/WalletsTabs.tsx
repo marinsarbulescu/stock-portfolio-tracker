@@ -44,7 +44,7 @@ export default function WalletsTabs({
   onDelete,
   showEmptyWallets,
   setShowEmptyWallets,
-  stockHtp,
+  stockHtp: _stockHtp,
   stockCommission,
 }: WalletsTabsProps) {
   const truncateId = (id: string | null | undefined, length = 8): string => {

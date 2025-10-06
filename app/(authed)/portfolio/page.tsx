@@ -6,7 +6,7 @@ import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
 import { usePrices } from '@/app/contexts/PriceContext';
 import { mergeTestPricesWithRealPrices } from '@/app/utils/priceUtils';
-import { migrateStockCashFlow } from '@/app/utils/cashFlowMigration';
+// import { migrateStockCashFlow } from '@/app/utils/cashFlowMigration';
 import { recalculateStockStp } from '@/app/utils/stpMigration';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';

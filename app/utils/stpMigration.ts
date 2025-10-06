@@ -90,21 +90,25 @@ export async function recalculateStockStp(
       };
     }
 
+    // Type assertion for stock data
+    type StockData = { symbol: string; stp?: number; htp?: number; stockCommission?: number };
+    const stockData = stock as unknown as StockData;
+
     // Check if stock has STP or HTP setting
-    const hasStp = stock.stp && stock.stp > 0;
-    const hasHtp = stock.htp && stock.htp > 0;
+    const hasStp = stockData.stp && stockData.stp > 0;
+    const hasHtp = stockData.htp && stockData.htp > 0;
 
     if (!hasStp && !hasHtp) {
       return {
         success: false,
         stockId,
-        stockSymbol: stock.symbol,
+        stockSymbol: stockData.symbol,
         walletsUpdated: 0,
         error: 'Stock has no STP or HTP setting'
       };
     }
 
-    console.log(`[STP/HTP Migration] Stock: ${stock.symbol}, STP: ${stock.stp ?? 0}%, HTP: ${stock.htp ?? 0}%, Commission: ${stock.stockCommission ?? 0}%`);
+    console.log(`[STP/HTP Migration] Stock: ${stockData.symbol}, STP: ${stockData.stp ?? 0}%, HTP: ${stockData.htp ?? 0}%, Commission: ${stockData.stockCommission ?? 0}%`);
 
     // Step 2: Fetch all wallets for this stock
     const { data: wallets, errors: walletsErrors } = await client.models.StockWallet.list({
@@ -116,7 +120,7 @@ export async function recalculateStockStp(
       return {
         success: false,
         stockId,
-        stockSymbol: stock.symbol,
+        stockSymbol: stockData.symbol,
         walletsUpdated: 0,
         error: `Failed to fetch wallets: ${walletsErrors?.[0]?.message || 'Unknown error'}`
       };
@@ -132,7 +136,7 @@ export async function recalculateStockStp(
       return {
         success: true,
         stockId,
-        stockSymbol: stock.symbol,
+        stockSymbol: stockData.symbol,
         walletsUpdated: 0,
         details: []
       };
@@ -149,14 +153,14 @@ export async function recalculateStockStp(
 
         // Calculate new STP value if stock has STP setting
         let correctStpValue: number | null = null;
-        if (hasStp && stock.stp) {
-          correctStpValue = calculateCorrectTargetPrice(buyPrice, stock.stp, stock.stockCommission);
+        if (hasStp && stockData.stp) {
+          correctStpValue = calculateCorrectTargetPrice(buyPrice, stockData.stp, stockData.stockCommission ?? null);
         }
 
         // Calculate new HTP value if stock has HTP setting
         let correctHtpValue: number | null = null;
-        if (hasHtp && stock.htp) {
-          correctHtpValue = calculateCorrectTargetPrice(buyPrice, stock.htp, stock.stockCommission);
+        if (hasHtp && stockData.htp) {
+          correctHtpValue = calculateCorrectTargetPrice(buyPrice, stockData.htp, stockData.stockCommission ?? null);
         }
 
         const oldStpValue = wallet.stpValue ?? 0;
@@ -181,7 +185,7 @@ export async function recalculateStockStp(
         }
 
         // Build update payload
-        const updatePayload: any = { id: wallet.id };
+        const updatePayload: { id: string; stpValue?: number; htpValue?: number } = { id: wallet.id };
         if (correctStpValue) updatePayload.stpValue = correctStpValue;
         if (correctHtpValue) updatePayload.htpValue = correctHtpValue;
 
@@ -216,7 +220,7 @@ export async function recalculateStockStp(
     const result: MigrationResult = {
       success: errorCount === 0,
       stockId,
-      stockSymbol: stock.symbol,
+      stockSymbol: stockData.symbol,
       walletsUpdated: updatedCount,
       details
     };
