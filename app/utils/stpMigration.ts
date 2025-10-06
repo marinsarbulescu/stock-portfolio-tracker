@@ -114,6 +114,7 @@ export async function recalculateStockStp(
     // Step 2: Fetch all wallets for this stock
     const { data: wallets, errors: walletsErrors } = await client.models.StockWallet.list({
       filter: { portfolioStockId: { eq: stockId } },
+      selectionSet: ['id', 'buyPrice', 'remainingShares', 'stpValue', 'htpValue'],
       limit: FETCH_LIMIT_WALLETS_GENEROUS
     });
 
@@ -168,15 +169,7 @@ export async function recalculateStockStp(
         const oldHtpValue = wallet.htpValue ?? null;
         const stpDifference = correctStpValue ? correctStpValue - oldStpValue : 0;
 
-        // Skip if STP values are already close (within $0.01) and HTP is already set
-        if (
-          (!correctStpValue || Math.abs(stpDifference) < 0.01) &&
-          (!correctHtpValue || oldHtpValue !== null)
-        ) {
-          console.log(`[STP/HTP Migration] Wallet ${wallet.id} already correct (STP: ${oldStpValue}, HTP: ${oldHtpValue})`);
-          continue;
-        }
-
+        // Always recalculate - no skipping
         console.log(`[STP/HTP Migration] Updating wallet ${wallet.id}:`);
         if (correctStpValue) {
           console.log(`  STP: $${oldStpValue.toFixed(2)} → $${correctStpValue.toFixed(2)} (Δ $${stpDifference.toFixed(2)})`);
