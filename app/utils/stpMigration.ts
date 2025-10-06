@@ -13,6 +13,7 @@
 
 import type { Schema } from '@/amplify/data/resource';
 import { generateClient } from 'aws-amplify/data';
+import { FETCH_LIMIT_WALLETS_GENEROUS } from '@/app/config/constants';
 
 const SHARE_EPSILON = 0.0001;
 
@@ -113,7 +114,7 @@ export async function recalculateStockStp(
     // Step 2: Fetch all wallets for this stock
     const { data: wallets, errors: walletsErrors } = await client.models.StockWallet.list({
       filter: { portfolioStockId: { eq: stockId } },
-      limit: 1000
+      limit: FETCH_LIMIT_WALLETS_GENEROUS
     });
 
     if (walletsErrors || !wallets) {

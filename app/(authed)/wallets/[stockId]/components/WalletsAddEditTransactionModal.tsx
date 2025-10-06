@@ -6,7 +6,7 @@ import { type Schema } from '@/amplify/data/resource'; // Adjust path if needed
 import { generateClient } from 'aws-amplify/data';
 import { calculateSingleSalePLWithCommission } from '@/app/utils/financialCalculations';
 import { processTransactionCashFlow } from '@/app/utils/stockCashFlowManager';
-import { FETCH_LIMIT_WALLETS_GENEROUS } from '@/app/config/constants';
+import { FETCH_LIMIT_WALLETS_GENEROUS, FETCH_LIMIT_WALLETS_CANDIDATES } from '@/app/config/constants';
 
 const client = generateClient<Schema>();
 
@@ -498,7 +498,7 @@ export default function TransactionForm({
                             // REMOVED buyPrice filter here
                         ]},
                         selectionSet: ['id', 'buyPrice', 'sharesSold', 'sellTxnCount', 'totalSharesQty', 'totalInvestment', 'remainingShares'], // Ensure all needed fields fetched
-                        limit: 500 // Fetch candidates (adjust limit if needed)
+                        limit: FETCH_LIMIT_WALLETS_CANDIDATES
                     });
 
                     if (listErrors) throw listErrors; // Handle list errors
@@ -750,7 +750,7 @@ export default function TransactionForm({
                           ]},
                            // Fetch necessary fields for update/check
                           selectionSet: ['id', 'buyPrice', 'totalSharesQty', 'totalInvestment', 'remainingShares'],
-                          limit: 1000 // Fetch candidates
+                          limit: FETCH_LIMIT_WALLETS_CANDIDATES
                       });
 
                       if (listErrors) throw listErrors; // Handle list errors
