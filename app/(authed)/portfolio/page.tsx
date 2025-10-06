@@ -7,6 +7,7 @@ import type { Schema } from '@/amplify/data/resource';
 import { usePrices } from '@/app/contexts/PriceContext';
 import { mergeTestPricesWithRealPrices } from '@/app/utils/priceUtils';
 import { migrateStockCashFlow } from '@/app/utils/cashFlowMigration';
+import { recalculateStockStp } from '@/app/utils/stpMigration';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import {
@@ -550,28 +551,45 @@ function PortfolioContent() {
     }
   };
 
-  // Migration Handler
+  // Migration Handler - Recalculate STP with correct commission formula
   const handleMigrateStock = async (stock: PortfolioStockDataType) => {
-    if (!window.confirm(`Run cash flow migration for ${stock.symbol?.toUpperCase()}? This will recalculate OOP, $ Balance and ROIC based on transaction history.`)) {
+    if (!window.confirm(`Recalculate STP values for ${stock.symbol?.toUpperCase()}?\n\nThis will update all wallet STP values using the correct commission formula: baseTP / (1 - commission%)\n\nThis ensures your profit target is met AFTER commission is deducted.`)) {
       return;
     }
 
-    console.log(`Running migration for stock: ${stock.id}`);
+    console.log(`Running STP migration for stock: ${stock.id}`);
     setError(null);
 
     try {
-      const result = await migrateStockCashFlow(client, stock.id);
+      const result = await recalculateStockStp(client, stock.id);
 
       if (result.success) {
-        console.log('Migration successful:', result);
-        alert(`✅ Migration completed for ${result.stockSymbol}!\n\nResults:\n- Total OOP: $${result.calculatedOOP}\n- Cash Balance: $${result.calculatedCashBalance}\n- Transactions processed: ${result.transactionsProcessed}\n\n${result.debugLog ? result.debugLog.join('\n') : ''}`);
+        console.log('STP migration successful:', result);
+
+        let message = `✅ STP/HTP Migration completed for ${result.stockSymbol}!\n\n`;
+        message += `Wallets updated: ${result.walletsUpdated}\n\n`;
+
+        if (result.details && result.details.length > 0) {
+          message += 'Changes:\n';
+          result.details.forEach(d => {
+            message += `\nBuy $${d.buyPrice.toFixed(2)}:\n`;
+            if (d.stpDifference !== 0) {
+              message += `  STP: $${d.oldStp.toFixed(2)} → $${d.newStp.toFixed(2)} (Δ $${d.stpDifference.toFixed(2)})\n`;
+            }
+            if (d.newHtp !== null) {
+              message += `  HTP: ${d.oldHtp ? `$${d.oldHtp.toFixed(2)}` : 'null'} → $${d.newHtp.toFixed(2)}\n`;
+            }
+          });
+        }
+
+        alert(message);
         fetchPortfolio(); // Refresh the data
       } else {
-        console.error('Migration failed:', result.error);
-        alert(`❌ Migration failed for ${stock.symbol}:\n${result.error}`);
+        console.error('STP migration failed:', result.error);
+        alert(`❌ STP Migration failed for ${stock.symbol}:\n${result.error}`);
       }
     } catch (err: unknown) {
-      console.error('Unexpected error during migration:', err);
+      console.error('Unexpected error during STP migration:', err);
       setError((err as Error).message || 'An error occurred during migration.');
     }
   };

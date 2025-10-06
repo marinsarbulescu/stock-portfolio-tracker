@@ -341,11 +341,11 @@ export default function PortfolioTable({
                     <FaEdit />
                 </button>
 
-                <button 
+                <button
                   data-testid="portfolio-page-table-action-migrate-button"
-                  onClick={() => handleMigrateCashFlow(stock)} 
+                  onClick={() => handleMigrateCashFlow(stock)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: 'orange', marginRight: '5px' }}
-                  title="Migrate Cash Flow (OOP & Balance)">
+                  title="Recalculate STP with Commission Formula">
                     <FaCalculator />
                 </button>
                 

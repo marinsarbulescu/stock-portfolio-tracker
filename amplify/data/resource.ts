@@ -125,7 +125,8 @@ const schema = a.schema({
       archivedAt: a.datetime(), // Timestamp when the wallet was archived
       realizedPl: a.float().default(0), // Accumulated P/L $ from sales FROM this wallet
       tpValue: a.float(), // LEGACY: Calculated TP Price ($) - TO BE REMOVED after migration
-      stpValue: a.float(), // NEW: Calculated STP Price ($) based on buyPrice
+      stpValue: a.float(), // Calculated STP Price ($) based on buyPrice and stock STP%
+      htpValue: a.float(), // Calculated HTP Price ($) based on buyPrice and stock HTP%
       realizedPlPercent: a.float(),
       sellTxnCount: a.integer().required().default(0),
       // Add owner field if not implicitly added by .authorization

@@ -187,6 +187,7 @@ export default function TransactionForm({
     
     let pdpValue: number | null | undefined = null;
     let stpValue: number | null | undefined = null;
+    let htpValue: number | null | undefined = null;
     let stockCommissionValue: number | null | undefined = null;
 
 
@@ -209,10 +210,11 @@ export default function TransactionForm({
         try {
             //console.log("Fetching stock details for ratio/TP/LBD...");
             const { data: stock } = await client.models.PortfolioStock.get(
-                { id: portfolioStockId }, { selectionSet: ['swingHoldRatio', 'pdp', 'stp', 'stockCommission'] }
+                { id: portfolioStockId }, { selectionSet: ['swingHoldRatio', 'pdp', 'stp', 'htp', 'stockCommission'] }
             );
             pdpValue = (stock as unknown as { pdp?: number })?.pdp;
             stpValue = (stock as unknown as { stp?: number })?.stp;
+            htpValue = (stock as unknown as { htp?: number })?.htp;
             stockCommissionValue = (stock as unknown as { stockCommission?: number })?.stockCommission;
 
             if (buyType === 'Split') {
@@ -795,22 +797,46 @@ export default function TransactionForm({
 
                           // Recalculate TP for updated wallet using the same logic as new wallets
                           let updatedTpValue = null;
-                          if (finalTotalShares > 0 && finalInvestment > 0 && typeof stpValue === 'number' && stpValue > 0) {
+                          let updatedHtpValue = null;
+
+                          if (finalTotalShares > 0 && finalInvestment > 0) {
                               const avgBuyPrice = finalInvestment / finalTotalShares;
-                              const baseTP = avgBuyPrice + (avgBuyPrice * (stpValue / 100));
-                              
-                              // Apply commission adjustment if available (use the same stockCommissionValue from earlier fetch)
-                              if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
-                                  const commissionRate = stockCommissionValue / 100;
-                                  if (commissionRate >= 1) {
-                                      updatedTpValue = baseTP;
+
+                              // Calculate STP
+                              if (typeof stpValue === 'number' && stpValue > 0) {
+                                  const baseTP = avgBuyPrice + (avgBuyPrice * (stpValue / 100));
+
+                                  // Apply commission adjustment if available
+                                  if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
+                                      const commissionRate = stockCommissionValue / 100;
+                                      if (commissionRate >= 1) {
+                                          updatedTpValue = baseTP;
+                                      } else {
+                                          updatedTpValue = baseTP / (1 - commissionRate);
+                                      }
                                   } else {
-                                      updatedTpValue = baseTP / (1 - commissionRate);
+                                      updatedTpValue = baseTP;
                                   }
-                              } else {
-                                  updatedTpValue = baseTP;
+                                  updatedTpValue = parseFloat(updatedTpValue.toFixed(4));
                               }
-                              updatedTpValue = parseFloat(updatedTpValue.toFixed(4)); // Use 4 decimal places for TP precision
+
+                              // Calculate HTP
+                              if (typeof htpValue === 'number' && htpValue > 0) {
+                                  const baseHTP = avgBuyPrice + (avgBuyPrice * (htpValue / 100));
+
+                                  // Apply commission adjustment if available
+                                  if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
+                                      const commissionRate = stockCommissionValue / 100;
+                                      if (commissionRate >= 1) {
+                                          updatedHtpValue = baseHTP;
+                                      } else {
+                                          updatedHtpValue = baseHTP / (1 - commissionRate);
+                                      }
+                                  } else {
+                                      updatedHtpValue = baseHTP;
+                                  }
+                                  updatedHtpValue = parseFloat(updatedHtpValue.toFixed(4));
+                              }
                           }
 
                           const updatePayload = {
@@ -819,6 +845,7 @@ export default function TransactionForm({
                               totalInvestment: (Math.abs(finalInvestment) < 0.001) ? 0 : finalInvestment, // Currency epsilon
                               remainingShares: (Math.abs(finalRemainingShares) < epsilon) ? 0 : finalRemainingShares,
                               stpValue: updatedTpValue, // Add recalculated STP
+                              htpValue: updatedHtpValue, // Add recalculated HTP
                           };
                           const { errors: updateErrors } = await client.models.StockWallet.update(updatePayload);
                           if (updateErrors) throw updateErrors;
@@ -826,8 +853,11 @@ export default function TransactionForm({
                       } else {
                           // 3b. Create new wallet (use rounded values directly)
                           //console.log(`[Wallet Logic - ${type}] No existing wallet found. Creating new...`);
-                          // Calculate stpValue for wallet (still needed for new functionality)
+                          // Calculate stpValue and htpValue for wallet
                           let walletTpValue = null;
+                          let walletHtpValue = null;
+
+                          // Calculate STP
                           if (typeof stpValue === 'number' && stpValue > 0) {
                               const baseTP = priceValue + (priceValue * (stpValue / 100));
                               if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
@@ -838,8 +868,20 @@ export default function TransactionForm({
                               }
                               walletTpValue = parseFloat(walletTpValue.toFixed(4));
                           }
-                          
-                          // Fetch PDP/STP (use previously fetched values)
+
+                          // Calculate HTP
+                          if (typeof htpValue === 'number' && htpValue > 0) {
+                              const baseHTP = priceValue + (priceValue * (htpValue / 100));
+                              if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
+                                  const commissionRate = stockCommissionValue / 100;
+                                  walletHtpValue = commissionRate < 1 ? baseHTP / (1 - commissionRate) : baseHTP;
+                              } else {
+                                  walletHtpValue = baseHTP;
+                              }
+                              walletHtpValue = parseFloat(walletHtpValue.toFixed(4));
+                          }
+
+                          // Create wallet with both STP and HTP values
                           const createPayload = {
                               portfolioStockId: portfolioStockId,
                               walletType: type,
@@ -851,6 +893,7 @@ export default function TransactionForm({
                               realizedPl: 0,
                               sellTxnCount: 0,
                               stpValue: walletTpValue, // Calculated STP value
+                              htpValue: walletHtpValue, // Calculated HTP value
                               realizedPlPercent: 0,
                           };
                           const { errors: createErrors } = await client.models.StockWallet.create(createPayload as Parameters<typeof client.models.StockWallet.create>[0]);

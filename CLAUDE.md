@@ -55,7 +55,8 @@
 - **Maintain consistency**: Follow existing naming patterns for financial entities (stocks, wallets, transactions)
 
 ## Git & Version Control
-- **Never commit unless asked**: Only create commits when explicitly requested by the user
+- **Never commit or push without explicit request**: NEVER run git commit, git push, or any git commands that modify repository state unless the user explicitly asks you to
+- **Wait for approval**: After completing work, wait for the user to request committing changes
 - **Use git rm for deletions**: Use `git rm "filename"` instead of file system commands to properly track deletions
 - **Atomic commits**: When asked to commit, include all related changes in a single, well-described commit
 

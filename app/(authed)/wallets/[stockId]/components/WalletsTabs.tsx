@@ -3,7 +3,7 @@ import React from 'react';
 import { StockWalletDataType, WalletsTableColumnVisibilityState, WalletsTableSortableKey } from '../types';
 // import { isHtpSignalActive, getHtpDisplayValue } from '@/app/utils/htpCalculations'; // UNUSED
 import type { Dispatch, SetStateAction } from 'react';
-import { formatCurrency, formatShares, formatPercent, calculatePercentToStp, calculateHtpTargetPrice, calculatePercentToHtp } from '@/app/utils/financialCalculations';
+import { formatCurrency, formatShares, formatPercent, calculatePercentToStp } from '@/app/utils/financialCalculations';
 import { SHARE_EPSILON, SHARE_PRECISION } from '@/app/config/constants';
 
 export interface WalletsTabsProps {
@@ -82,22 +82,20 @@ export default function WalletsTabs({
   // Helper function to check if HTP is highlighted (HTP target price met)
   const isHtpHighlighted = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
     const remaining = wallet.remainingShares ?? 0;
-    const buyPrice = wallet.buyPrice;
+    const htpTargetPrice = wallet.htpValue;
 
     if (
       remaining <= SHARE_EPSILON ||
-      typeof buyPrice !== 'number' ||
       typeof currentStockPrice !== 'number' ||
-      typeof stockHtp !== 'number' ||
-      stockHtp <= 0 ||
-      buyPrice <= 0
+      typeof htpTargetPrice !== 'number' ||
+      currentStockPrice <= 0 ||
+      htpTargetPrice <= 0
     ) {
       return false;
     }
 
-    // Calculate HTP target price using same logic as %2HTP column
-    const htpTargetPrice = calculateHtpTargetPrice(buyPrice, stockHtp, stockCommission);
-    return htpTargetPrice && currentStockPrice >= htpTargetPrice;
+    // Use stored HTP target price
+    return currentStockPrice >= htpTargetPrice;
   };
 
   // HTP Sell Signal Logic - Apply to both Swing and Hold wallets
@@ -168,64 +166,48 @@ export default function WalletsTabs({
   // HTP Cell Style - highlights when current price meets or exceeds HTP target (both Swing and Hold wallets)
   const getHtpValueCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
     // Apply green highlighting for both Swing and Hold wallets
-    const buyPrice = wallet.buyPrice;
+    const htpTargetPrice = wallet.htpValue;
     const remaining = wallet.remainingShares ?? 0;
 
     if (
       remaining <= SHARE_EPSILON ||
-      typeof currentStockPrice !== 'number' || 
-      typeof buyPrice !== 'number' || 
-      typeof stockHtp !== 'number' ||
-      currentStockPrice <= 0 || 
-      buyPrice <= 0 || 
-      stockHtp <= 0
+      typeof currentStockPrice !== 'number' ||
+      typeof htpTargetPrice !== 'number' ||
+      currentStockPrice <= 0 ||
+      htpTargetPrice <= 0
     ) {
       return {};
     }
 
-    // Calculate HTP target price
-    const htpTargetPrice = calculateHtpTargetPrice(buyPrice, stockHtp, stockCommission);
-    
-    if (!htpTargetPrice) {
-      return {};
-    }
-
+    // Use stored HTP target price
     // If current price >= HTP target, show green (target met or exceeded)
     if (currentStockPrice >= htpTargetPrice) {
       return { color: 'lightgreen' };
     }
-    
+
     return {};
   };
 
   // %2HTP Cell Style - highlights when current price meets or exceeds HTP target (both Swing and Hold wallets)
   const getPercentToHtpCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
     // Apply green highlighting for both Swing and Hold wallets
-    const buyPrice = wallet.buyPrice;
+    const htpTargetPrice = wallet.htpValue;
 
     if (
-      typeof currentStockPrice !== 'number' || 
-      typeof buyPrice !== 'number' || 
-      typeof stockHtp !== 'number' ||
-      currentStockPrice <= 0 || 
-      buyPrice <= 0 || 
-      stockHtp <= 0
+      typeof currentStockPrice !== 'number' ||
+      typeof htpTargetPrice !== 'number' ||
+      currentStockPrice <= 0 ||
+      htpTargetPrice <= 0
     ) {
       return {};
     }
 
-    // Calculate HTP target price
-    const htpTargetPrice = calculateHtpTargetPrice(buyPrice, stockHtp, stockCommission);
-    
-    if (!htpTargetPrice) {
-      return {};
-    }
-
+    // Use stored HTP target price
     // If current price >= HTP target, show green (percentage >= 0)
     if (currentStockPrice >= htpTargetPrice) {
       return { color: 'lightgreen' };
     }
-    
+
     return {};
   };
 
@@ -393,14 +375,13 @@ export default function WalletsTabs({
                   )}
                   {walletColumnVisibility.htpValue && (
                     <td data-testid="wallet-htpValue-display" style={{ padding: '5px', ...getHtpValueCellStyle(wallet, currentPrice) }}>
-                      {wallet.buyPrice && stockHtp ? 
-                        formatCurrency(calculateHtpTargetPrice(wallet.buyPrice, stockHtp, stockCommission) ?? 0) : '-'}
+                      {formatCurrency(wallet.htpValue ?? 0)}
                     </td>
                   )}
                   {walletColumnVisibility.htp && (
                     <td data-testid="wallet-htp-display" style={{ padding: '5px', ...getPercentToHtpCellStyle(wallet, currentPrice) }}>
-                      {wallet.buyPrice && stockHtp && currentPrice ? 
-                        formatPercent(calculatePercentToHtp(currentPrice, wallet.buyPrice, stockHtp, stockCommission)) : '-'}
+                      {wallet.htpValue && currentPrice ?
+                        formatPercent((currentPrice - wallet.htpValue) / wallet.htpValue * 100) : '-'}
                     </td>
                   )}
                   {walletColumnVisibility.sellTxnCount && <td data-testid="wallet-sellTxnCount-display" style={{ padding: '5px' }}>{wallet.sellTxnCount ?? 0}</td>}

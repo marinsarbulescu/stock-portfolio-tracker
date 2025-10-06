@@ -46,6 +46,7 @@ type PortfolioStockDataType = Schema["PortfolioStock"]["type"];
 interface StockInfoForWalletService {
     owner: string; // Cognito User Sub ID
     stp?: number | null; // Swing Take Profit percentage
+    htp?: number | null; // Hold Take Profit percentage
     pdp?: number | null; // Add PDP for base TP calculation (still used for LBD)
     stockCommission?: number | null; // Add commission for TP adjustment
 }
@@ -375,6 +376,7 @@ export default function StockWalletPage() {
                     'totalInvestment',
                     'totalSharesQty',
                     'stpValue',
+                    'htpValue',
                     'sharesSold',
                     'realizedPl',
                     'realizedPlPercent',
@@ -535,6 +537,7 @@ export default function StockWalletPage() {
         }        const stockInfoForService: StockInfoForWalletService = { // Ensure this type matches what walletService expects
             owner: ownerId, // Use the concatenated string
             stp: stockStp,
+            htp: stockHtp,
             pdp: stockPdp,
             stockCommission: stockCommission,
         };
