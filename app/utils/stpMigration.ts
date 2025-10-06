@@ -79,7 +79,10 @@ export async function recalculateStockStp(
     console.log(`[STP/HTP Migration] Starting migration for stock: ${stockId}`);
 
     // Step 1: Fetch stock info to get STP and commission settings
-    const { data: stock, errors: stockErrors } = await client.models.PortfolioStock.get({ id: stockId });
+    const { data: stock, errors: stockErrors } = await client.models.PortfolioStock.get(
+      { id: stockId },
+      { selectionSet: ['symbol', 'stp', 'htp', 'stockCommission'] }
+    );
 
     if (stockErrors || !stock) {
       return {
