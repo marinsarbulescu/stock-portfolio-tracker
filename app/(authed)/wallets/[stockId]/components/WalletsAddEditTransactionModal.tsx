@@ -808,11 +808,12 @@ export default function TransactionForm({
 
                                   // Apply commission adjustment if available
                                   if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
-                                      const commissionRate = stockCommissionValue / 100;
+                                      const commissionRate = parseFloat((stockCommissionValue / 100).toFixed(10));
                                       if (commissionRate >= 1) {
                                           updatedTpValue = baseTP;
                                       } else {
-                                          updatedTpValue = baseTP / (1 - commissionRate);
+                                          const divisor = parseFloat((1 - commissionRate).toFixed(10));
+                                          updatedTpValue = baseTP / divisor;
                                       }
                                   } else {
                                       updatedTpValue = baseTP;
@@ -826,11 +827,12 @@ export default function TransactionForm({
 
                                   // Apply commission adjustment if available
                                   if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
-                                      const commissionRate = stockCommissionValue / 100;
+                                      const commissionRate = parseFloat((stockCommissionValue / 100).toFixed(10));
                                       if (commissionRate >= 1) {
                                           updatedHtpValue = baseHTP;
                                       } else {
-                                          updatedHtpValue = baseHTP / (1 - commissionRate);
+                                          const divisor = parseFloat((1 - commissionRate).toFixed(10));
+                                          updatedHtpValue = baseHTP / divisor;
                                       }
                                   } else {
                                       updatedHtpValue = baseHTP;
@@ -861,8 +863,13 @@ export default function TransactionForm({
                           if (typeof stpValue === 'number' && stpValue > 0) {
                               const baseTP = priceValue + (priceValue * (stpValue / 100));
                               if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
-                                  const commissionRate = stockCommissionValue / 100;
-                                  walletTpValue = commissionRate < 1 ? baseTP / (1 - commissionRate) : baseTP;
+                                  const commissionRate = parseFloat((stockCommissionValue / 100).toFixed(10));
+                                  if (commissionRate < 1) {
+                                      const divisor = parseFloat((1 - commissionRate).toFixed(10));
+                                      walletTpValue = baseTP / divisor;
+                                  } else {
+                                      walletTpValue = baseTP;
+                                  }
                               } else {
                                   walletTpValue = baseTP;
                               }
@@ -873,8 +880,13 @@ export default function TransactionForm({
                           if (typeof htpValue === 'number' && htpValue > 0) {
                               const baseHTP = priceValue + (priceValue * (htpValue / 100));
                               if (typeof stockCommissionValue === 'number' && stockCommissionValue > 0) {
-                                  const commissionRate = stockCommissionValue / 100;
-                                  walletHtpValue = commissionRate < 1 ? baseHTP / (1 - commissionRate) : baseHTP;
+                                  const commissionRate = parseFloat((stockCommissionValue / 100).toFixed(10));
+                                  if (commissionRate < 1) {
+                                      const divisor = parseFloat((1 - commissionRate).toFixed(10));
+                                      walletHtpValue = baseHTP / divisor;
+                                  } else {
+                                      walletHtpValue = baseHTP;
+                                  }
                               } else {
                                   walletHtpValue = baseHTP;
                               }

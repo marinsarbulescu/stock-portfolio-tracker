@@ -42,12 +42,17 @@ function calculateCorrectTargetPrice(
   targetPercentage: number,
   commissionPercentage: number | null
 ): number {
+  console.log(`[calculateCorrectTargetPrice] Input: buyPrice=${buyPrice}, targetPct=${targetPercentage}, commission=${commissionPercentage}`);
+
   // Calculate base target (before commission)
   const baseTP = buyPrice * (1 + targetPercentage / 100);
+  console.log(`[calculateCorrectTargetPrice] baseTP = ${buyPrice} × ${1 + targetPercentage / 100} = ${baseTP}`);
 
   // Apply commission adjustment if commission exists and > 0
   if (typeof commissionPercentage === 'number' && commissionPercentage > 0) {
-    const commissionRate = commissionPercentage / 100;
+    // Round to avoid floating point precision issues (0.9/100 = 0.009000000000000001)
+    const commissionRate = parseFloat((commissionPercentage / 100).toFixed(10));
+    console.log(`[calculateCorrectTargetPrice] commissionRate = ${commissionPercentage} / 100 = ${commissionRate}`);
 
     // Prevent division by zero or negative values
     if (commissionRate >= 1) {
@@ -55,9 +60,15 @@ function calculateCorrectTargetPrice(
       return parseFloat(baseTP.toFixed(4));
     }
 
+    const divisor = parseFloat((1 - commissionRate).toFixed(10));
+    console.log(`[calculateCorrectTargetPrice] divisor = 1 - ${commissionRate} = ${divisor}`);
+
     // Division method: ensures net profit after commission
-    const adjustedTP = baseTP / (1 - commissionRate);
-    return parseFloat(adjustedTP.toFixed(4));
+    const adjustedTP = baseTP / divisor;
+    console.log(`[calculateCorrectTargetPrice] adjustedTP = ${baseTP} / ${divisor} = ${adjustedTP}`);
+    const result = parseFloat(adjustedTP.toFixed(4));
+    console.log(`[calculateCorrectTargetPrice] Final result (rounded to 4 decimals): ${result}`);
+    return result;
   }
 
   // No commission, return base TP
