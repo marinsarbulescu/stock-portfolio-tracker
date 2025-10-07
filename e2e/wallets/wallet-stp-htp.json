@@ -359,6 +359,51 @@
               }
             }
           }
+        },
+        {
+          "price": 122,
+          "label": "$122 - After Buy Price Update to $105",
+          "transactionUpdates": [
+            {
+              "oldPrice": 100,
+              "newPrice": 105,
+              "label": "Update buy price to $105"
+            }
+          ],
+          "validations": {
+            "walletsOverview": {
+              "stpSetting": "10%",
+              "htpSetting": "20%"
+            },
+            "signalsTable": {
+              "percentToStp": "5.10%",
+              "percentToHtp": "-3.66%",
+              "stpColor": "green",
+              "htpColor": "default"
+            },
+            "walletTabs": {
+              "swing": {
+                "stpValue": "$116.08",
+                "percentToStp": "5.10%",
+                "htpValue": "$126.63",
+                "percentToHtp": "-3.66%",
+                "stpValueColor": "green",
+                "percentToStpColor": "green",
+                "htpValueColor": "default",
+                "percentToHtpColor": "default"
+              },
+              "hold": {
+                "stpValue": "$116.08",
+                "percentToStp": "5.10%",
+                "htpValue": "$126.63",
+                "percentToHtp": "-3.66%",
+                "stpValueColor": "green",
+                "percentToStpColor": "green",
+                "htpValueColor": "default",
+                "percentToHtpColor": "default"
+              }
+            }
+          }
         }
       ]
     }

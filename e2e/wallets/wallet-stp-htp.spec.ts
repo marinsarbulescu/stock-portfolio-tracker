@@ -16,7 +16,7 @@ import {
     type TransactionCreateData,
 } from '../utils/dataHelpers';
 import { E2E_TEST_USER_OWNER_ID, E2E_TEST_USERNAME } from '../utils/testCredentials';
-import { clearBrowserState, loginUser } from '../utils/pageHelpers';
+import { clearBrowserState, loginUser, editTransactionByPrice } from '../utils/pageHelpers';
 import { cleanupTestStocks } from '../utils/cleanupHelper';
 
 // Configure Amplify
@@ -142,6 +142,7 @@ async function updateTestPrice(page: any, stockSymbol: string, newPrice: number,
 
     console.log(`[PriceHelper] ✅ Test price updated to $${newPrice}`);
 }
+
 
 // Helper function to verify color
 async function verifyColor(page: any, element: any, expectedColor: string, fieldName: string) {
@@ -320,10 +321,35 @@ test.describe('STP and HTP Commission Validation', () => {
                     await page.waitForTimeout(2000);
                 }
 
+                // Update transactions if provided
+                if (scenario.transactionUpdates) {
+                    // Navigate to wallets page first
+                    await navigateToWalletsPage(page, stock.id);
+
+                    // Update transactions via UI
+                    for (const updateConfig of scenario.transactionUpdates) {
+                        console.log(`   📝 ${updateConfig.label}`);
+                        await editTransactionByPrice(page, updateConfig.oldPrice, updateConfig.newPrice);
+                    }
+
+                    // Wait for updates to propagate
+                    await page.waitForTimeout(2000);
+                }
+
                 // If this scenario has price progression, test each price point
                 if (scenario.priceProgression) {
                     for (const priceStep of scenario.priceProgression) {
                         console.log(`\n   💰 Testing at ${priceStep.label}`);
+
+                        // Update transactions if provided for this price step
+                        if (priceStep.transactionUpdates) {
+                            await navigateToWalletsPage(page, stock.id);
+                            for (const updateConfig of priceStep.transactionUpdates) {
+                                console.log(`   📝 ${updateConfig.label}`);
+                                await editTransactionByPrice(page, updateConfig.oldPrice, updateConfig.newPrice);
+                            }
+                            await page.waitForTimeout(2000);
+                        }
 
                         // Update price if not the first one (first one should already be set)
                         if (priceStep.price !== testConfig.testData.stocks[stockKey].testPrice) {

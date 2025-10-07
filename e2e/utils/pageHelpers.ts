@@ -1172,8 +1172,63 @@ export async function deleteTransaction(page: Page) {
     
     await deleteButton.click();
     console.log(`[PageHelper] Transaction deletion confirmed.`);
-    
+
     // Wait for transaction to be removed from table instead of arbitrary timeout
     await expect(deleteButton).not.toBeVisible({ timeout: 10000 });
     console.log(`[PageHelper] Transaction deleted successfully.`);
+}
+
+/**
+ * Updates a transaction's price by finding it via its current price value.
+ * This is a robust way to identify transactions when you know the original price.
+ * @param page - The Playwright Page object.
+ * @param oldPrice - The current price of the transaction to find.
+ * @param newPrice - The new price to set for the transaction.
+ */
+export async function editTransactionByPrice(page: Page, oldPrice: number, newPrice: number) {
+    console.log(`[PageHelper] Updating transaction with price $${oldPrice} to $${newPrice}...`);
+
+    // Find the transaction row with the specific price
+    const priceText = `$${oldPrice.toFixed(2)}`;
+    const rows = page.locator('[data-testid="wallets-transaction-table-transaction-row"]');
+    const rowCount = await rows.count();
+
+    let txnId = null;
+    for (let i = 0; i < rowCount; i++) {
+        const row = rows.nth(i);
+        const priceCell = row.locator('[data-testid="wallets-transaction-table-price-display"]');
+        const cellText = await priceCell.textContent();
+
+        if (cellText?.trim() === priceText) {
+            // Get the transaction ID from the edit button in this row
+            const editBtn = row.locator('button[data-testid^="wallets-transaction-table-txn-edit-button-"]');
+            const testId = await editBtn.getAttribute('data-testid');
+            txnId = testId?.replace('wallets-transaction-table-txn-edit-button-', '');
+            break;
+        }
+    }
+
+    if (!txnId) {
+        throw new Error(`Transaction with price ${priceText} not found`);
+    }
+
+    // Click the edit button using its data-testid
+    const editButton = page.locator(`[data-testid="wallets-transaction-table-txn-edit-button-${txnId}"]`);
+    await expect(editButton).toBeVisible({ timeout: 10000 });
+    await editButton.click();
+
+    // Wait for modal
+    const modal = page.locator('[data-testid="transaction-form-modal"]');
+    await expect(modal).toBeVisible({ timeout: 10000 });
+
+    // Update price
+    const priceInput = page.locator('[data-testid="txn-form-price"]');
+    await priceInput.fill(newPrice.toString());
+
+    // Submit
+    const submitButton = page.locator('[data-testid="txn-form-submit-button"]');
+    await submitButton.click();
+    await expect(modal).not.toBeVisible({ timeout: 15000 });
+
+    console.log(`[PageHelper] ✅ Transaction updated from $${oldPrice} to $${newPrice}`);
 }
