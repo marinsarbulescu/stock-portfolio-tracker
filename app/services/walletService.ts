@@ -51,8 +51,7 @@ type QueriedWalletData = Pick<Schema['StockWallet']['type'],
 // --- Placeholder for TP Calculation Logic ---
 // Commission-adjusted TP calculation function
 function calculateTpForWallet(
-    totalInvestment: number,
-    totalShares: number,
+    buyPrice: number,
     stockInfo: StockInfoForTp
 ): TpCalculationResult {
     const stp = stockInfo.stp;
@@ -62,22 +61,21 @@ function calculateTpForWallet(
     let stpValue: number | null = null;
     let htpValue: number | null = null;
 
-    if (totalShares > SHARE_EPSILON && totalInvestment > CURRENCY_EPSILON) {
-        const buyPrice = totalInvestment / totalShares;
-
+    if (buyPrice > 0) {
         // Calculate STP if available
         if (typeof stp === 'number' && stp > 0) {
-            const baseSTP = buyPrice * (1 + stp / 100);
+            const baseSTP = buyPrice + (buyPrice * (stp / 100));
 
             if (typeof stockCommission === 'number' && stockCommission > 0) {
-                const commissionRate = stockCommission / 100;
+                const commissionRate = parseFloat((stockCommission / 100).toFixed(10));
 
                 if (commissionRate >= 1) {
                     console.warn(`Commission rate (${stockCommission}%) is too high for wallet STP calculation, using base STP`);
                     stpValue = baseSTP;
                 } else {
                     // Commission-adjusted STP: baseSTP / (1 - commissionRate)
-                    stpValue = baseSTP / (1 - commissionRate);
+                    const divisor = parseFloat((1 - commissionRate).toFixed(10));
+                    stpValue = baseSTP / divisor;
                 }
             } else {
                 stpValue = baseSTP;
@@ -86,17 +84,18 @@ function calculateTpForWallet(
 
         // Calculate HTP if available
         if (typeof htp === 'number' && htp > 0) {
-            const baseHTP = buyPrice * (1 + htp / 100);
+            const baseHTP = buyPrice + (buyPrice * (htp / 100));
 
             if (typeof stockCommission === 'number' && stockCommission > 0) {
-                const commissionRate = stockCommission / 100;
+                const commissionRate = parseFloat((stockCommission / 100).toFixed(10));
 
                 if (commissionRate >= 1) {
                     console.warn(`Commission rate (${stockCommission}%) is too high for wallet HTP calculation, using base HTP`);
                     htpValue = baseHTP;
                 } else {
                     // Commission-adjusted HTP: baseHTP / (1 - commissionRate)
-                    htpValue = baseHTP / (1 - commissionRate);
+                    const divisor = parseFloat((1 - commissionRate).toFixed(10));
+                    htpValue = baseHTP / divisor;
                 }
             } else {
                 htpValue = baseHTP;
@@ -243,7 +242,7 @@ export async function adjustWalletContribution(
             console.log(`[WalletService] Updating existing ${type} wallet ${walletToUpdate.id} (Price: ${buyPrice})`);
 
             // *** Recalculate TP ***
-            const { stpValue, htpValue } = calculateTpForWallet(newTotalInv, newTotalShares, stockInfo);
+            const { stpValue, htpValue } = calculateTpForWallet(buyPrice, stockInfo);
 
             const updatePayload: Partial<Schema['StockWallet']['type']> & { id: string } = {
                 id: walletToUpdate.id,
@@ -272,7 +271,7 @@ export async function adjustWalletContribution(
         console.log(`[WalletService] Creating new ${type} wallet at price ${buyPrice}`);
 
         // *** Calculate TP for new wallet ***
-        const { stpValue, htpValue } = calculateTpForWallet(investmentDelta, sharesDelta, stockInfo);
+        const { stpValue, htpValue } = calculateTpForWallet(buyPrice, stockInfo);
 
         const createPayload = {
             portfolioStockId: stockId,
