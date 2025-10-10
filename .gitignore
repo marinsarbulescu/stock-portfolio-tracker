@@ -68,3 +68,5 @@ screenshots/Screenshot (6).png
 # Test failure screenshots
 test-failure-*.png
 screenshot-*.png
+e2e/screenshots/
+e2e_login_error_helper_*.png

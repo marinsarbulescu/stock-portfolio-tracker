@@ -147,10 +147,10 @@ export default function SignalsTable({
                         </tr>
                     ) : (
                         sortedTableData.map((item, index) => {
-                            // Check if budget available is negative for gray styling
-                            const shouldGrayOut = typeof item.budgetAvailable === 'number' && 
-                                                typeof item.budget === 'number' && 
-                                                item.budgetAvailable <= 0;
+                            // Check if budget available is less than minimum investment threshold for gray styling
+                            const shouldGrayOut = typeof item.budgetAvailable === 'number' &&
+                                                typeof item.budget === 'number' &&
+                                                item.budgetAvailable < 200;
                             
                             const textColor = shouldGrayOut ? '#9d9d9d' : 'inherit';
                             
