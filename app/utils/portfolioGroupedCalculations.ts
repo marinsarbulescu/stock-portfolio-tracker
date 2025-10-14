@@ -7,6 +7,7 @@ export interface GroupedInvestmentData {
   maxRisk: number;
   maxRiskPercentage: number;
   oop: number;
+  oopPercentage: number;
   tiedUp: number;
   marketValue: number;
   roic: number;
@@ -120,6 +121,7 @@ export function calculateGroupedInvestmentData({
       maxRisk,
       maxRiskPercentage: 0, // Will be calculated after we have total
       oop: totalOOP,
+      oopPercentage: 0, // Will be calculated after we have total
       tiedUp: totalTiedUp,
       marketValue: totalMarketValue,
       roic,
@@ -135,6 +137,18 @@ export function calculateGroupedInvestmentData({
       group.maxRiskPercentage = (group.maxRisk / totalMaxRisk) * 100;
     } else {
       group.maxRiskPercentage = 0;
+    }
+  });
+
+  // Calculate total OOP across all groups
+  const totalOOP = results.reduce((sum, group) => sum + group.oop, 0);
+
+  // Calculate OOP percentage for each group
+  results.forEach(group => {
+    if (totalOOP > 0) {
+      group.oopPercentage = (group.oop / totalOOP) * 100;
+    } else {
+      group.oopPercentage = 0;
     }
   });
 

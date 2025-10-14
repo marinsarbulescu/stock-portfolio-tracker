@@ -515,12 +515,16 @@
       "output": {
         "portfolio-overview-region-APAC-maxrisk": "$5,800.00",
         "portfolio-overview-region-APAC-maxriskpct": "28.43%",
+        "portfolio-overview-region-APAC-ooppct": "0.00%",
         "portfolio-overview-region-EU-maxrisk": "$4,100.00",
         "portfolio-overview-region-EU-maxriskpct": "20.10%",
+        "portfolio-overview-region-EU-ooppct": "0.00%",
         "portfolio-overview-region-Intl-maxrisk": "$6,900.00",
         "portfolio-overview-region-Intl-maxriskpct": "33.82%",
+        "portfolio-overview-region-Intl-ooppct": "0.00%",
         "portfolio-overview-region-US-maxrisk": "$3,600.00",
-        "portfolio-overview-region-US-maxriskpct": "17.65%"
+        "portfolio-overview-region-US-maxriskpct": "17.65%",
+        "portfolio-overview-region-US-ooppct": "0.00%"
       }
     }
   ],
@@ -529,24 +533,34 @@
       "output": {
         "portfolio-overview-marketCategory-APACIndex-maxrisk": "$3,500.00",
         "portfolio-overview-marketCategory-APACIndex-maxriskpct": "17.16%",
+        "portfolio-overview-marketCategory-APACIndex-ooppct": "0.00%",
         "portfolio-overview-marketCategory-ChinaIndex-maxrisk": "$1,300.00",
         "portfolio-overview-marketCategory-ChinaIndex-maxriskpct": "6.37%",
+        "portfolio-overview-marketCategory-ChinaIndex-ooppct": "0.00%",
         "portfolio-overview-marketCategory-Crypto-maxrisk": "$1,500.00",
         "portfolio-overview-marketCategory-Crypto-maxriskpct": "7.35%",
+        "portfolio-overview-marketCategory-Crypto-ooppct": "0.00%",
         "portfolio-overview-marketCategory-EmergingIndex-maxrisk": "$4,600.00",
         "portfolio-overview-marketCategory-EmergingIndex-maxriskpct": "22.55%",
+        "portfolio-overview-marketCategory-EmergingIndex-ooppct": "0.00%",
         "portfolio-overview-marketCategory-EuropeIndex-maxrisk": "$0.00",
         "portfolio-overview-marketCategory-EuropeIndex-maxriskpct": "0.00%",
+        "portfolio-overview-marketCategory-EuropeIndex-ooppct": "0.00%",
         "portfolio-overview-marketCategory-InternationalIndex-maxrisk": "$1,800.00",
         "portfolio-overview-marketCategory-InternationalIndex-maxriskpct": "8.82%",
+        "portfolio-overview-marketCategory-InternationalIndex-ooppct": "0.00%",
         "portfolio-overview-marketCategory-Metals-maxrisk": "$2,600.00",
         "portfolio-overview-marketCategory-Metals-maxriskpct": "12.75%",
+        "portfolio-overview-marketCategory-Metals-ooppct": "0.00%",
         "portfolio-overview-marketCategory-Oil-maxrisk": "$1,200.00",
         "portfolio-overview-marketCategory-Oil-maxriskpct": "5.88%",
+        "portfolio-overview-marketCategory-Oil-ooppct": "0.00%",
         "portfolio-overview-marketCategory-Opportunity-maxrisk": "$2,700.00",
         "portfolio-overview-marketCategory-Opportunity-maxriskpct": "13.24%",
+        "portfolio-overview-marketCategory-Opportunity-ooppct": "0.00%",
         "portfolio-overview-marketCategory-USIndex-maxrisk": "$1,200.00",
-        "portfolio-overview-marketCategory-USIndex-maxriskpct": "5.88%"
+        "portfolio-overview-marketCategory-USIndex-maxriskpct": "5.88%",
+        "portfolio-overview-marketCategory-USIndex-ooppct": "0.00%"
       }
     }
   ],
@@ -555,8 +569,10 @@
       "output": {
         "portfolio-overview-riskGrowthProfile-Hare-maxrisk": "$10,900.00",
         "portfolio-overview-riskGrowthProfile-Hare-maxriskpct": "53.43%",
+        "portfolio-overview-riskGrowthProfile-Hare-ooppct": "0.00%",
         "portfolio-overview-riskGrowthProfile-Tortoise-maxrisk": "$9,500.00",
-        "portfolio-overview-riskGrowthProfile-Tortoise-maxriskpct": "46.57%"
+        "portfolio-overview-riskGrowthProfile-Tortoise-maxriskpct": "46.57%",
+        "portfolio-overview-riskGrowthProfile-Tortoise-ooppct": "0.00%"
       }
     }
   ]

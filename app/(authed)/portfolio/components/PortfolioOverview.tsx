@@ -100,6 +100,7 @@ export default function PortfolioOverview({
             <th style={tableStyles.headerCellRight}>Max Risk</th>
             <th style={tableStyles.headerCellRight}>Max Risk %</th>
             <th style={tableStyles.headerCellRight}>OOP</th>
+            <th style={tableStyles.headerCellRight}>OOP %</th>
             <th style={tableStyles.headerCellRight}>Tied-up</th>
             <th style={tableStyles.headerCellRight}>Market Value +inv</th>
             <th style={tableStyles.headerCellRight}>ROIC</th>
@@ -127,6 +128,12 @@ export default function PortfolioOverview({
               </td>
               <td style={tableStyles.bodyCellRight}>
                 ${row.oop.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+              <td
+                style={tableStyles.bodyCellRight}
+                data-testid={`portfolio-overview-${groupBy}-${row.groupName.replace(/[_\s]/g, '')}-ooppct`}
+              >
+                {row.oopPercentage.toFixed(2)}%
               </td>
               <td style={tableStyles.bodyCellRight}>
                 ${row.tiedUp.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
