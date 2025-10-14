@@ -5,6 +5,7 @@ import { SHARE_EPSILON } from '../config/constants';
 export interface GroupedInvestmentData {
   groupName: string;
   maxRisk: number;
+  maxRiskPercentage: number;
   oop: number;
   tiedUp: number;
   marketValue: number;
@@ -73,7 +74,7 @@ export function calculateGroupedInvestmentData({
 
   // Calculate metrics for each group
   const results: GroupedInvestmentData[] = [];
-  
+
   groups.forEach((stocksInGroup, groupName) => {
     let maxRisk = 0;
     let totalOOP = 0;
@@ -96,7 +97,7 @@ export function calculateGroupedInvestmentData({
       // Market Value - current value of all positions
       // Get all wallets for this stock
       const stockWallets = wallets.filter(w => w.portfolioStockId === stock.id);
-      
+
       stockWallets.forEach(wallet => {
         if ((wallet.remainingShares ?? 0) > SHARE_EPSILON) {
           const currentPrice = latestPrices[stock.symbol]?.currentPrice;
@@ -117,11 +118,24 @@ export function calculateGroupedInvestmentData({
     results.push({
       groupName,
       maxRisk,
+      maxRiskPercentage: 0, // Will be calculated after we have total
       oop: totalOOP,
       tiedUp: totalTiedUp,
       marketValue: totalMarketValue,
       roic,
     });
+  });
+
+  // Calculate total Max Risk across all groups
+  const totalMaxRisk = results.reduce((sum, group) => sum + group.maxRisk, 0);
+
+  // Calculate Max Risk percentage for each group
+  results.forEach(group => {
+    if (totalMaxRisk > 0) {
+      group.maxRiskPercentage = (group.maxRisk / totalMaxRisk) * 100;
+    } else {
+      group.maxRiskPercentage = 0;
+    }
   });
 
   // Sort results based on groupBy type

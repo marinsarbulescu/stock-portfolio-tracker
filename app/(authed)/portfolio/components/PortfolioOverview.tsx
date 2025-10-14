@@ -98,6 +98,7 @@ export default function PortfolioOverview({
           <tr style={tableStyles.headerRow}>
             <th style={tableStyles.headerCell}>{groupColumnName}</th>
             <th style={tableStyles.headerCellRight}>Max Risk</th>
+            <th style={tableStyles.headerCellRight}>Max Risk %</th>
             <th style={tableStyles.headerCellRight}>OOP</th>
             <th style={tableStyles.headerCellRight}>Tied-up</th>
             <th style={tableStyles.headerCellRight}>Market Value +inv</th>
@@ -108,7 +109,7 @@ export default function PortfolioOverview({
           {data.map((row) => (
             <tr key={row.groupName} style={tableStyles.bodyRow}>
               <td style={tableStyles.bodyCell}>
-                {groupBy === 'marketCategory' 
+                {groupBy === 'marketCategory'
                   ? getMarketCategoryLabel(row.groupName)
                   : formatGroupName(row.groupName, groupBy)}
               </td>
@@ -117,6 +118,12 @@ export default function PortfolioOverview({
                 data-testid={`portfolio-overview-${groupBy}-${row.groupName.replace(/[_\s]/g, '')}-maxrisk`}
               >
                 ${row.maxRisk.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+              <td
+                style={tableStyles.bodyCellRight}
+                data-testid={`portfolio-overview-${groupBy}-${row.groupName.replace(/[_\s]/g, '')}-maxriskpct`}
+              >
+                {row.maxRiskPercentage.toFixed(2)}%
               </td>
               <td style={tableStyles.bodyCellRight}>
                 ${row.oop.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
