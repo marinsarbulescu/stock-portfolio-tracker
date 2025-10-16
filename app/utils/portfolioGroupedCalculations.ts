@@ -9,6 +9,7 @@ export interface GroupedInvestmentData {
   oop: number;
   oopPercentage: number;
   tiedUp: number;
+  tiedUpPercentage: number;
   marketValue: number;
   roic: number;
 }
@@ -123,6 +124,7 @@ export function calculateGroupedInvestmentData({
       oop: totalOOP,
       oopPercentage: 0, // Will be calculated after we have total
       tiedUp: totalTiedUp,
+      tiedUpPercentage: 0, // Will be calculated after we have total
       marketValue: totalMarketValue,
       roic,
     });
@@ -149,6 +151,18 @@ export function calculateGroupedInvestmentData({
       group.oopPercentage = (group.oop / totalOOP) * 100;
     } else {
       group.oopPercentage = 0;
+    }
+  });
+
+  // Calculate total Tied-Up across all groups
+  const totalTiedUp = results.reduce((sum, group) => sum + group.tiedUp, 0);
+
+  // Calculate Tied-Up percentage for each group
+  results.forEach(group => {
+    if (totalTiedUp > 0) {
+      group.tiedUpPercentage = (group.tiedUp / totalTiedUp) * 100;
+    } else {
+      group.tiedUpPercentage = 0;
     }
   });
 
