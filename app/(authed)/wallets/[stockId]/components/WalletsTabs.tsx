@@ -44,7 +44,7 @@ export default function WalletsTabs({
   onDelete,
   showEmptyWallets,
   setShowEmptyWallets,
-  stockHtp: _stockHtp,
+  // stockHtp is passed but not used in this component (kept in interface for type safety)
   stockCommission,
 }: WalletsTabsProps) {
   const truncateId = (id: string | null | undefined, length = 8): string => {
