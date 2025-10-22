@@ -246,18 +246,18 @@ export default function SignalsTable({
                                     </td>
                                 )}
                                 {reportColumnVisibility.percentToTp && (
-                                    <td 
+                                    <td
                                         data-testid={`signals-table-percent-stp-${item.symbol.toUpperCase()}`}
-                                        style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToTp) }}>
+                                        style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToTp, item.totalCurrentShares) }}>
                                         {typeof item.percentToTp === 'number'
                                             ? `${item.percentToTp.toFixed(2)}%`
                                             : '-'}
                                     </td>
                                 )}
                                 {reportColumnVisibility.percentToHtp && (
-                                    <td 
+                                    <td
                                         data-testid={`signals-table-percent-htp-${item.symbol.toUpperCase()}`}
-                                        style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToHtp) }}>
+                                        style={{ padding: '5px', ...getBreakEvenCellStyle(item.percentToHtp, item.totalCurrentShares) }}>
                                         {typeof item.percentToHtp === 'number'
                                             ? `${item.percentToHtp.toFixed(2)}%`
                                             : '-'}

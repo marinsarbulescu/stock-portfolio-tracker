@@ -165,7 +165,7 @@ export interface PrecisionConfig {
 
 // Cell styling utilities interface
 export interface CellStyles {
-  getBreakEvenCellStyle: (percent: number | null) => React.CSSProperties;
+  getBreakEvenCellStyle: (percent: number | null, totalCurrentShares?: number) => React.CSSProperties;
   getSinceBuyCellStyle: (days: number | null, swingWalletCount: number) => React.CSSProperties;
 }
 

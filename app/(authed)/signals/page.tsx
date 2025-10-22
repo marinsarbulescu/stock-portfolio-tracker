@@ -1117,8 +1117,8 @@ export default function HomePage() {
     };
 
     // Cell styling helper functions
-    const getBreakEvenCellStyle = (percent: number | null): React.CSSProperties => {
-        if (percent === null || percent === undefined) return {};
+    const getBreakEvenCellStyle = (percent: number | null, totalCurrentShares: number = 0): React.CSSProperties => {
+        if (percent === null || percent === undefined || totalCurrentShares === 0) return {};
         if (percent >= 0) {
             return { color: 'lightgreen' };
         } else if (percent >= -1) {

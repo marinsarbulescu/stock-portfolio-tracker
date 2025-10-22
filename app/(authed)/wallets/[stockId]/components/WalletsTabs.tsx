@@ -150,16 +150,23 @@ export default function WalletsTabs({
   const getPercentToStpCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
     // Apply green highlighting for both Swing and Hold wallets
     const stpValue = wallet.stpValue;
-    
-    if (typeof currentStockPrice !== 'number' || typeof stpValue !== 'number' || currentStockPrice <= 0 || stpValue <= 0) {
+    const remaining = wallet.remainingShares ?? 0;
+
+    if (
+      remaining <= SHARE_EPSILON ||
+      typeof currentStockPrice !== 'number' ||
+      typeof stpValue !== 'number' ||
+      currentStockPrice <= 0 ||
+      stpValue <= 0
+    ) {
       return {};
     }
-    
+
     // If current price >= STP target, show green (target met or exceeded)
     if (currentStockPrice >= stpValue) {
       return { color: 'lightgreen' };
     }
-    
+
     return {};
   };
 
@@ -192,8 +199,10 @@ export default function WalletsTabs({
   const getPercentToHtpCellStyle = (wallet: StockWalletDataType, currentStockPrice: number | null | undefined) => {
     // Apply green highlighting for both Swing and Hold wallets
     const htpTargetPrice = wallet.htpValue;
+    const remaining = wallet.remainingShares ?? 0;
 
     if (
+      remaining <= SHARE_EPSILON ||
       typeof currentStockPrice !== 'number' ||
       typeof htpTargetPrice !== 'number' ||
       currentStockPrice <= 0 ||
