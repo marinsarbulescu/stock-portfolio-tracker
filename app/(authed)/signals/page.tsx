@@ -761,7 +761,7 @@ export default function HomePage() {
                 htpValues: htpValues,
             };
         });
-    }, [portfolioStocks, mergedPrices, processedData, checkHtpSignalForStock, getHtpValuesForStock, stockBudgetAvailable, stockRiskInvestments, allWallets]);
+    }, [portfolioStocks, mergedPrices, processedData, checkHtpSignalForStock, getHtpValuesForStock, stockBudgetAvailable, stockRiskInvestments]);
 
     const portfolioBudgetStats = useMemo(() => {
         const totalBudget = portfolioStocks.reduce((sum, stock) => sum + (stock.budget ?? 0), 0);
