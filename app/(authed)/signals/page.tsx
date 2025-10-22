@@ -9,7 +9,7 @@ import { usePrices } from '@/app/contexts/PriceContext'; // Import context hook
 import { mergeTestPricesWithRealPrices } from '@/app/utils/priceUtils'; // Import test price utility
 import { applySplitAdjustments, extractStockSplits } from '@/app/utils/splitUtils'; // Import split adjustment utilities
 import { fetchAuthSession } from 'aws-amplify/auth';
-import { calculateTotalRealizedSwingPL, calculateSingleSalePL, calculatePercentToStp, calculatePercentToHtp, type TransactionForCalculation, type WalletForCalculation } from '@/app/utils/financialCalculations';
+import { calculateTotalRealizedSwingPL, calculateSingleSalePL, calculatePercentToStp, type TransactionForCalculation, type WalletForCalculation } from '@/app/utils/financialCalculations';
 import SignalsOverview from './components/SignalsOverview';
 import SignalsTable from './components/SignalsTable';
 // import { useAuthStatus } from '@/app/contexts/AuthStatusContext'; // Import useAuthStatus - Unused
@@ -268,6 +268,7 @@ export default function HomePage() {
                         'buyPrice',
                         'remainingShares',
                         'stpValue', // Needed for finding lowest STP
+                        'htpValue', // Needed for finding lowest HTP
                         'sellTxnCount', // Potentially useful later
                         'sharesSold', // Potentially useful later
                         'totalInvestment', // Add this for budget calculations
@@ -343,11 +344,12 @@ export default function HomePage() {
 
     interface ProcessedStockData {
         lastBuy: { date: string; price: number | null } | undefined; // Changed from lastSwingBuy
-        lastSell: { date: string } | undefined; 
+        lastSell: { date: string } | undefined;
         swingBuyCount: number;
         activeSwingWallets: StockWalletDataType[];
         lowestSwingBuyPriceWallet: StockWalletDataType | null;
         lowestSwingTpWallet: StockWalletDataType | null;
+        lowestHoldHtpWallet: StockWalletDataType | null;
         totalCurrentSwingShares: number;
         totalCurrentHoldShares: number;
     }
@@ -370,11 +372,12 @@ export default function HomePage() {
 
             const stockData: ProcessedStockData = {
                 lastBuy: undefined, // Changed from lastSwingBuy
-                lastSell: undefined, 
+                lastSell: undefined,
                 swingBuyCount: 0,
                 activeSwingWallets: [],
                 lowestSwingBuyPriceWallet: null,
                 lowestSwingTpWallet: null,
+                lowestHoldHtpWallet: null,
                 totalCurrentSwingShares: 0,
                 totalCurrentHoldShares: 0,
             };
@@ -433,6 +436,20 @@ export default function HomePage() {
                  .reduce((lowest, current) => {
                     if (!lowest) return current;
                     if (current.stpValue! < lowest.stpValue!) {
+                        return current;
+                    }
+                    return lowest;
+                 }, null as StockWalletDataType | null);
+
+            // Find Hold wallet with lowest htpValue (with remaining shares)
+            const activeHoldWallets = stockWallets.filter(w =>
+                w.walletType === 'Hold' && (w.remainingShares ?? 0) > epsilon
+            );
+            stockData.lowestHoldHtpWallet = activeHoldWallets
+                 .filter(w => typeof w.htpValue === 'number' && w.htpValue > 0)
+                 .reduce((lowest, current) => {
+                    if (!lowest) return current;
+                    if (current.htpValue! < lowest.htpValue!) {
                         return current;
                     }
                     return lowest;
@@ -703,27 +720,10 @@ export default function HomePage() {
             }
 
             // Calculate %2HTP: percentage difference between current price and HTP target for Hold wallets
+            const lowestHoldHtpValue = procData.lowestHoldHtpWallet?.htpValue;
             let percentToHtp: number | null = null;
-            if (typeof currentPrice === 'number' && typeof stock.htp === 'number' && stock.htp > 0) {
-                // Get Hold wallets for this stock with remaining shares
-                const stockHoldWallets = allWallets.filter(wallet => 
-                    wallet.portfolioStockId === stockId &&
-                    wallet.walletType === 'Hold' &&
-                    (wallet.remainingShares ?? 0) > SHARE_EPSILON
-                );
-                
-                // Find the lowest buy price among Hold wallets (similar to %2TP logic)
-                if (stockHoldWallets.length > 0) {
-                    const lowestHoldWallet = stockHoldWallets.reduce((lowest, current) => {
-                        const currentBuyPrice = current.buyPrice ?? 0;
-                        const lowestBuyPrice = lowest.buyPrice ?? 0;
-                        return currentBuyPrice < lowestBuyPrice ? current : lowest;
-                    });
-                    
-                    if (lowestHoldWallet?.buyPrice) {
-                        percentToHtp = calculatePercentToHtp(currentPrice, lowestHoldWallet.buyPrice, stock.htp, stock.stockCommission);
-                    }
-                }
+            if (typeof currentPrice === 'number' && typeof lowestHoldHtpValue === 'number' && lowestHoldHtpValue > 0) {
+                percentToHtp = calculatePercentToStp(currentPrice, lowestHoldHtpValue);
             }
 
             const sinceSellDays = calculateDaysAgo(procData.lastSell?.date); 
