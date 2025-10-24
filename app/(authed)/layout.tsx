@@ -6,6 +6,7 @@ import React from 'react';
 import { AuthStatusProvider, useAuthStatus } from '@/app/contexts/AuthStatusContext'; // Adjust path if needed
 import NavBar from '@/app/components/NavBar'; // Was NavBar, changed to NavBar to match import
 import { PriceProvider } from '@/app/contexts/PriceContext'; // Keep PriceProvider
+import { DipAnalysisProvider } from '@/app/contexts/DipAnalysisContext'; // Add DipAnalysisProvider
 import SignOutButton from '@/app/components/SignOutButton'; // Assuming you create/have this
 
 // --- Step 2: Create Inner Component to Consume Context ---
@@ -48,11 +49,13 @@ export default function AuthedLayout({ children }: { children: React.ReactNode }
     // depending on whether auth status depends on prices or not.
     // Let's assume PriceProvider is more general for now.
     <PriceProvider>
+      <DipAnalysisProvider>
         <AuthStatusProvider>
              <AuthedLayoutContent>
                 {children}
              </AuthedLayoutContent>
         </AuthStatusProvider>
+      </DipAnalysisProvider>
     </PriceProvider>
   );
 }

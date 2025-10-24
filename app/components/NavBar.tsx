@@ -3,6 +3,7 @@
 
 import Link from 'next/link';
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { usePrices } from '@/app/contexts/PriceContext';
 // import SignOutButton from './SignOutButton'; // unused import
 
@@ -42,6 +43,7 @@ const linkStyles: React.CSSProperties = {
 // Accept accessStatus prop
 export default function NavBar({ accessStatus }: NavBarProps) {
 
+    const router = useRouter();
     const {
         fetchLatestPricesForAllStocks,
         pricesLoading
@@ -75,23 +77,39 @@ export default function NavBar({ accessStatus }: NavBarProps) {
                     <Link href="/test-manager" style={{...linkStyles, color: '#ffa500'}}>Test Manager</Link>
                 )}
                 {isApproved && (
-                  <button
-                      data-testid="nav-fetch-prices-button"
-                      onClick={() => {
-                        // console.log('[NavBar.tsx] - Fetch Prices button clicked!');
-                        fetchLatestPricesForAllStocks();
-                      }}
-                      disabled={pricesLoading}
-                      style={{
-                        padding: '8px 16px',
-                        background: '#557100',
-                        borderRadius: '4px',
-                        color: 'white',
-                        cursor: 'pointer'
-                      }}
-                  >
-                      {pricesLoading ? 'Fetching...' : 'Fetch Prices'}
-                  </button>
+                  <>
+                    <button
+                        data-testid="nav-analyze-dips-button"
+                        onClick={() => router.push('/dip-analysis')}
+                        style={{
+                          padding: '8px 16px',
+                          background: '#007155',
+                          borderRadius: '4px',
+                          color: 'white',
+                          cursor: 'pointer',
+                          marginRight: '0.5rem'
+                        }}
+                    >
+                        Analyze Dips
+                    </button>
+                    <button
+                        data-testid="nav-fetch-prices-button"
+                        onClick={() => {
+                          // console.log('[NavBar.tsx] - Fetch Prices button clicked!');
+                          fetchLatestPricesForAllStocks();
+                        }}
+                        disabled={pricesLoading}
+                        style={{
+                          padding: '8px 16px',
+                          background: '#557100',
+                          borderRadius: '4px',
+                          color: 'white',
+                          cursor: 'pointer'
+                        }}
+                    >
+                        {pricesLoading ? 'Fetching...' : 'Fetch Prices'}
+                    </button>
+                  </>
                 )}
                 {/* Add SignOutButton here */}
                 {/* <div 
