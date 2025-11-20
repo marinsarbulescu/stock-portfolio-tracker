@@ -63,9 +63,9 @@
       "validations": {
         "signalsTable": {
           "5dd": "-7.41%",
-          "lbd": null,
+          "lbd": "-9.09%",
           "lastBuy": "10 d",
-          "explanation": "5DD shows because buy is >5 days old; displays worst historical dip (-7.41% from $108)"
+          "explanation": "5DD shows because buy is >5 days old; LBD shows -9.09% from $110 buy which exceeds 5% PDP threshold"
         }
       }
     },
