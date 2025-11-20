@@ -266,7 +266,7 @@ test.describe('5DD and LBD Validation', () => {
                     expect(lastBuyText?.trim()).toBe(validation.lastBuy);
                 }
 
-                // Validate LBD column (should be null/dash for this scenario)
+                // Validate LBD column
                 if (validation.lbd === null) {
                     const lbdCell = page.locator(`[data-testid="signals-table-lbd-${symbol}"]`);
                     if (await lbdCell.count() > 0) {
@@ -274,6 +274,13 @@ test.describe('5DD and LBD Validation', () => {
                         console.log(`[Validation] LBD actual: "${lbdText}", expected: "-" (null)`);
                         expect(lbdText?.trim()).toBe('-');
                     }
+                } else if (validation.lbd) {
+                    const lbdCell = page.locator(`[data-testid="signals-table-lbd-${symbol}"]`);
+                    await expect(lbdCell).toBeVisible({ timeout: 10000 });
+
+                    const lbdText = await lbdCell.textContent();
+                    console.log(`[Validation] LBD actual: "${lbdText}", expected: "${validation.lbd}"`);
+                    expect(lbdText?.trim()).toBe(validation.lbd);
                 }
 
                 console.log('✅ Scenario 1 validation completed successfully');
@@ -395,10 +402,8 @@ test.describe('5DD and LBD Validation', () => {
                 // Validate LBD column - should show -28.57% from most recent buy
                 const validation = scenario.validations.signalsTable;
                 if (validation.lbd) {
-                    // Since LBD doesn't have a testid, find it by position in the row
-                    // LBD is typically the 5th column (after r-Inv, Available, Ticker, 5DD)
-                    const stockRow = page.locator(`[data-testid="signals-table-row-${symbol}"]`);
-                    const lbdCell = stockRow.locator('td').nth(4); // 0-indexed, so 4 = 5th column
+                    const lbdCell = page.locator(`[data-testid="signals-table-lbd-${symbol}"]`);
+                    await expect(lbdCell).toBeVisible({ timeout: 10000 });
 
                     const lbdText = await lbdCell.textContent();
                     console.log(`[Validation] LBD actual: "${lbdText}", expected: "${validation.lbd}"`);
@@ -518,13 +523,12 @@ test.describe('5DD and LBD Validation', () => {
                 // Validate LBD column - should be hidden (showing dash)
                 const validation = scenario.validations.signalsTable;
                 if (validation.lbd === null) {
-                    // Find LBD cell by position in row
-                    const stockRow = page.locator(`[data-testid="signals-table-row-${symbol}"]`);
-                    const lbdCell = stockRow.locator('td').nth(4); // 0-indexed, so 4 = 5th column
-
-                    const lbdText = await lbdCell.textContent();
-                    console.log(`[Validation] LBD actual: "${lbdText}", expected: "-" (hidden - threshold not met)`);
-                    expect(lbdText?.trim()).toBe('-');
+                    const lbdCell = page.locator(`[data-testid="signals-table-lbd-${symbol}"]`);
+                    if (await lbdCell.count() > 0) {
+                        const lbdText = await lbdCell.textContent();
+                        console.log(`[Validation] LBD actual: "${lbdText}", expected: "-" (hidden - threshold not met)`);
+                        expect(lbdText?.trim()).toBe('-');
+                    }
                 }
 
                 // Validate Last Buy column - should show 1 d
@@ -637,8 +641,8 @@ test.describe('5DD and LBD Validation', () => {
 
                 // Validate LBD column - should show -5.26%
                 if (validation.lbd) {
-                    // Find LBD cell by position in row (5th column)
-                    const lbdCell = stockRow.locator('td').nth(4);
+                    const lbdCell = page.locator(`[data-testid="signals-table-lbd-${symbol}"]`);
+                    await expect(lbdCell).toBeVisible({ timeout: 10000 });
 
                     const lbdText = await lbdCell.textContent();
                     console.log(`[Validation] LBD actual: "${lbdText}", expected: "${validation.lbd}"`);

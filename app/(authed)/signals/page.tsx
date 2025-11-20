@@ -43,11 +43,11 @@ const client = generateClient<Schema>();
 export default function HomePage() {    
     
     const [reportColumnVisibility, setReportColumnVisibility] = useState<ReportColumnVisibilityState>({
-        riskInvestment: true,
+        riskInvestment: false,
         budgetAvailable: true,
         fiveDayDip: true,
         lbd: true,
-        swingWalletCount: true,
+        swingWalletCount: false,
         sinceBuy: true,
         sinceSell: false,
         currentPrice: false,
@@ -55,7 +55,7 @@ export default function HomePage() {
         ltpiaTakeProfitPrice: false,
         percentToTp: true,
         percentToHtp: true,
-        tpShares: true,
+        tpShares: false,
     });
 
     const COLUMN_LABELS: Record<keyof ReportColumnVisibilityState, string> = {
