@@ -197,7 +197,10 @@ export default function SignalsTable({
                                     </td>
                                 )}
                                 {reportColumnVisibility.lbd && (
-                                    <td style={{ padding: '5px' }}>
+                                    <td
+                                        style={{ padding: '5px' }}
+                                        data-testid={`signals-table-lbd-${item.symbol.toUpperCase()}`}
+                                    >
                                         {typeof item.lbd === 'number' ? `${item.lbd.toFixed(2)}%` : '-'}
                                     </td>
                                 )}
