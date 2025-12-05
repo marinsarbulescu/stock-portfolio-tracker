@@ -25,7 +25,8 @@
     "swingHoldRatio": 60,
     "stockCommission": 0,
     "marketCategory": "US_Index",
-    "riskGrowthProfile": "Hare"
+    "riskGrowthProfile": "Hare",
+    "htp": 20
   },
   "transactions": {
     "InitialBuy": {
@@ -49,7 +50,7 @@
             "pdp": "5%",
             "shr": "60% Swing", 
             "stp": "10%",
-            "htp": "-"
+            "htp": "20%"
           },
           "txnsAndShares": {
             "buys": 1,
@@ -90,14 +91,18 @@
             "wallet200": {
               "buyPrice": 200,
               "investment": 240,
-              "sharesLeft": 1.2
+              "sharesLeft": 1.2,
+              "stpValue": 220,
+              "htpValue": 240
             }
           },
           "hold": {
             "wallet200": {
               "buyPrice": 200,
               "investment": 160,
-              "sharesLeft": 0.8
+              "sharesLeft": 0.8,
+              "stpValue": 220,
+              "htpValue": 240
             }
           }
         },
@@ -135,7 +140,7 @@
             "pdp": "5%",
             "shr": "60% Swing",
             "stp": "10%",
-            "htp": "-"
+            "htp": "20%"
           },
           "txnsAndShares": {
             "buys": 1,
@@ -176,14 +181,18 @@
             "wallet100": {
               "buyPrice": 100,
               "investment": 240,
-              "sharesLeft": 2.4
+              "sharesLeft": 2.4,
+              "stpValue": 110,
+              "htpValue": 120
             }
           },
           "hold": {
             "wallet100": {
               "buyPrice": 100,
               "investment": 160,
-              "sharesLeft": 1.6
+              "sharesLeft": 1.6,
+              "stpValue": 110,
+              "htpValue": 120
             }
           }
         },
@@ -236,7 +245,7 @@
             "pdp": "5%",
             "shr": "60% Swing",
             "stp": "10%",
-            "htp": "-"
+            "htp": "20%"
           },
           "txnsAndShares": {
             "buys": 2,
@@ -277,24 +286,32 @@
             "wallet100": {
               "buyPrice": 100,
               "investment": 240,
-              "sharesLeft": 2.4
+              "sharesLeft": 2.4,
+              "stpValue": 110,
+              "htpValue": 120
             },
             "wallet120": {
               "buyPrice": 120,
               "investment": 180,
-              "sharesLeft": 1.5
+              "sharesLeft": 1.5,
+              "stpValue": 132,
+              "htpValue": 144
             }
           },
           "hold": {
             "wallet100": {
               "buyPrice": 100,
               "investment": 160,
-              "sharesLeft": 1.6
+              "sharesLeft": 1.6,
+              "stpValue": 110,
+              "htpValue": 120
             },
             "wallet120": {
               "buyPrice": 120,
               "investment": 120,
-              "sharesLeft": 1.0
+              "sharesLeft": 1.0,
+              "stpValue": 132,
+              "htpValue": 144
             }
           }
         },

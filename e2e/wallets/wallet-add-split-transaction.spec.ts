@@ -138,6 +138,8 @@ interface WalletExpectation {
   sharesLeft: number;
   splitAdjustedBuyPrice?: number;
   splitAdjustedShares?: number;
+  stpValue?: number;
+  htpValue?: number;
 }
 
 interface TransactionTableExpectation {
@@ -298,6 +300,77 @@ async function verifyTransactionTable(
     // once we confirm the exact test-ids used in the transaction table rows
 }
 
+/**
+ * Helper function to verify wallet STP and HTP values after stock split
+ */
+async function verifyWalletTpValues(
+    page: Page,
+    expectedWallets: WalletExpectations,
+    stepName: string
+): Promise<void> {
+    console.log(`[WalletTpHelper] Verifying wallet TP values for ${stepName}...`);
+
+    // Get all STP value cells
+    const stpCells = page.locator('[data-testid="wallet-stpValue-display"]');
+    const htpCells = page.locator('[data-testid="wallet-htpValue-display"]');
+
+    // Collect expected STP and HTP values from all wallets
+    const expectedStpValues: number[] = [];
+    const expectedHtpValues: number[] = [];
+
+    // Gather expected values from swing wallets
+    if (expectedWallets.swing) {
+        for (const walletKey of Object.keys(expectedWallets.swing)) {
+            const wallet = expectedWallets.swing[walletKey];
+            if (wallet.stpValue !== undefined) {
+                expectedStpValues.push(wallet.stpValue);
+            }
+            if (wallet.htpValue !== undefined) {
+                expectedHtpValues.push(wallet.htpValue);
+            }
+        }
+    }
+
+    // Gather expected values from hold wallets
+    if (expectedWallets.hold) {
+        for (const walletKey of Object.keys(expectedWallets.hold)) {
+            const wallet = expectedWallets.hold[walletKey];
+            if (wallet.stpValue !== undefined) {
+                expectedStpValues.push(wallet.stpValue);
+            }
+            if (wallet.htpValue !== undefined) {
+                expectedHtpValues.push(wallet.htpValue);
+            }
+        }
+    }
+
+    // Verify STP values if we have expectations
+    if (expectedStpValues.length > 0) {
+        const stpCount = await stpCells.count();
+        console.log(`[WalletTpHelper] Found ${stpCount} STP cells, expecting ${expectedStpValues.length} values`);
+
+        for (let i = 0; i < stpCount && i < expectedStpValues.length; i++) {
+            const expectedFormatted = formatCurrency(expectedStpValues[i]);
+            await expect(stpCells.nth(i)).toHaveText(expectedFormatted);
+        }
+        console.log(`[WalletTpHelper] ✅ STP values verified`);
+    }
+
+    // Verify HTP values if we have expectations
+    if (expectedHtpValues.length > 0) {
+        const htpCount = await htpCells.count();
+        console.log(`[WalletTpHelper] Found ${htpCount} HTP cells, expecting ${expectedHtpValues.length} values`);
+
+        for (let i = 0; i < htpCount && i < expectedHtpValues.length; i++) {
+            const expectedFormatted = formatCurrency(expectedHtpValues[i]);
+            await expect(htpCells.nth(i)).toHaveText(expectedFormatted);
+        }
+        console.log(`[WalletTpHelper] ✅ HTP values verified`);
+    }
+
+    console.log(`[WalletTpHelper] ✅ All wallet TP values verified for ${stepName}`);
+}
+
 test.describe('Stock Split Transaction E2E Test', () => {
     const config = testData as any as StockSplitTestConfig;
     let stockId: string;
@@ -389,6 +462,7 @@ test.describe('Stock Split Transaction E2E Test', () => {
         console.log('\n📍 Step 3: Verifying overview metrics after initial buy...');
         await verifyOverview(page, initialBuyData.output.overview, 'Initial Buy');
         await verifyTransactionTable(page, initialBuyData.output.transactionTable, 'Initial Buy');
+        await verifyWalletTpValues(page, initialBuyData.output.wallets, 'Initial Buy');
         console.log('✅ Step 3 completed');
 
         // Step 4: Add stock split transaction (2:1)
@@ -412,6 +486,7 @@ test.describe('Stock Split Transaction E2E Test', () => {
         console.log('\n📍 Step 6: Verifying split-adjusted P/L calculations...');
         await verifyOverview(page, stockSplitData.output.overview, 'After Stock Split');
         await verifyTransactionTable(page, stockSplitData.output.transactionTable, 'After Stock Split');
+        await verifyWalletTpValues(page, stockSplitData.output.wallets, 'After Stock Split');
         console.log('✅ Step 6 completed');
 
         // Step 7: Add post-split buy transaction
@@ -431,6 +506,7 @@ test.describe('Stock Split Transaction E2E Test', () => {
         console.log('\n📍 Step 8: Final verification with pre and post-split transactions...');
         await verifyOverview(page, postSplitBuyData.output.overview, 'Final State');
         await verifyTransactionTable(page, postSplitBuyData.output.transactionTable, 'Final State');
+        await verifyWalletTpValues(page, postSplitBuyData.output.wallets, 'Final State');
         console.log('✅ Step 8 completed');
 
         console.log('\n🎉 Stock split transaction test completed successfully!');

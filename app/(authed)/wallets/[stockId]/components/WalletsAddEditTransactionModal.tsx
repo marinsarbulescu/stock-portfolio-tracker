@@ -954,9 +954,9 @@ export default function TransactionForm({
                     const { data: existingWallets, errors: fetchErrors } = await client.models.StockWallet.list({
                         filter: { portfolioStockId: { eq: portfolioStockId } },
                         selectionSet: [
-                            'id', 'buyPrice', 'totalSharesQty', 'remainingShares', 
-                            'totalInvestment', 'sharesSold', 'realizedPl', 'sellTxnCount', 
-                            'realizedPlPercent', 'walletType', 'stpValue'
+                            'id', 'buyPrice', 'totalSharesQty', 'remainingShares',
+                            'totalInvestment', 'sharesSold', 'realizedPl', 'sellTxnCount',
+                            'realizedPlPercent', 'walletType', 'stpValue', 'htpValue'
                         ],
                         limit: FETCH_LIMIT_WALLETS_GENEROUS // Ensure all wallets are found for stock split
                     });
@@ -993,16 +993,19 @@ export default function TransactionForm({
                         const adjustedRemainingShares = originalRemainingShares * splitRatioValue;
                         const adjustedSharesSold = originalSharesSold * splitRatioValue;
                         
-                        // Update STP value if it exists (also needs split adjustment)
-                        const originalTpValue = wallet.stpValue || 0;
-                        const adjustedTpValue = originalTpValue > 0 ? originalTpValue / splitRatioValue : 0;
+                        // Update STP and HTP values if they exist (also need split adjustment)
+                        const originalStpValue = wallet.stpValue || 0;
+                        const adjustedStpValue = originalStpValue > 0 ? originalStpValue / splitRatioValue : 0;
+                        const originalHtpValue = wallet.htpValue || 0;
+                        const adjustedHtpValue = originalHtpValue > 0 ? originalHtpValue / splitRatioValue : 0;
                         
                         console.log(`[StockSplit] Updating wallet ${wallet.id}:`, {
                             buyPrice: `${originalBuyPrice} → ${adjustedBuyPrice}`,
                             totalShares: `${originalTotalShares} → ${adjustedTotalShares}`,
                             remainingShares: `${originalRemainingShares} → ${adjustedRemainingShares}`,
                             sharesSold: `${originalSharesSold} → ${adjustedSharesSold}`,
-                            stpValue: `${originalTpValue} → ${adjustedTpValue}`
+                            stpValue: `${originalStpValue} → ${adjustedStpValue}`,
+                            htpValue: `${originalHtpValue} → ${adjustedHtpValue}`
                         });
                         
                         // Prepare wallet update payload
@@ -1012,7 +1015,8 @@ export default function TransactionForm({
                             totalSharesQty: adjustedTotalShares,
                             remainingShares: adjustedRemainingShares,
                             sharesSold: adjustedSharesSold,
-                            stpValue: adjustedTpValue,
+                            stpValue: adjustedStpValue,
+                            htpValue: adjustedHtpValue,
                             // Keep other fields unchanged
                             totalInvestment: wallet.totalInvestment, // Investment amount stays the same
                             realizedPl: wallet.realizedPl, // P/L dollar amount stays the same
