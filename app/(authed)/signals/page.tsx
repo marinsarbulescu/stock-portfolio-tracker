@@ -193,12 +193,13 @@ export default function HomePage() {
             'swingShares',
             'holdShares',
             'investment',
-            'quantity',            
+            'quantity',
             'txnType',
             'signal',
             'lbd',
             'amount',
             'txnProfit',
+            'splitRatio',
         ] as const;
 
         try {
