@@ -80,38 +80,14 @@ export default function WalletsOverview({
 
               <div>
                 <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Budget</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-                  <div>
-                    <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.RISK_BUDGET}>
-                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Max Risk</p>
-                    </Tooltip>
-                    <p data-testid="overview-settings-budget">{formatCurrency(stockBudget ?? 0)}</p>
-                  </div>
-                  <div>
-                    <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.BUDGET_USED}>
-                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Used</p>
-                    </Tooltip>
-                    <p data-testid="overview-settings-budget-used">{formatCurrency(budgetUsed)}</p>
-                  </div>
-                  <div>
-                    <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.BUDGET_AVAILABLE}>
-                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Available</p>
-                    </Tooltip>
-                    <p data-testid="overview-settings-budget-available">{formatCurrency(budgetAvailable)}</p>
-                  </div>
-                  <div>
-                    <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.TIED_UP}>
-                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Tied-Up</p>
-                    </Tooltip>
-                    <p data-testid="overview-settings-invested">{formatCurrency(totalTiedUpInvestment)}</p>
-                  </div>
-                  <div>
-                    <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.R_INV}>
-                      <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>r-Inv</p>
-                    </Tooltip>
-                    <p data-testid="overview-settings-risk-investment">{formatCurrency(riskInvestment)}</p>
-                  </div>
-                </div>
+                <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.RISK_BUDGET}>
+                  <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Max OOP</p>
+                </Tooltip>
+                <p data-testid="overview-settings-budget">{formatCurrency(stockBudget ?? 0)}</p>
+                <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.BUDGET_AVAILABLE}>
+                  <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Available</p>
+                </Tooltip>
+                <p data-testid="overview-settings-budget-available">{formatCurrency(budgetAvailable)}</p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                     <div>
                       <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.PDP}>
@@ -139,11 +115,11 @@ export default function WalletsOverview({
               <div>
                 <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>$ Performance</p>
                 <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.TOTAL_OOP}>
-                  <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Total OOP</p>
+                  <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>OOP</p>
                 </Tooltip>
                 <p data-testid="overview-cash-total-oop">{formatCurrency(totalOOP)}</p>
                 <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.CASH_BALANCE}>
-                  <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>$ Balance</p>
+                  <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Cash Balance</p>
                 </Tooltip>
                 <p data-testid="overview-cash-balance">{formatCurrency(currentCashBalance)}</p>
                 <Tooltip content={WALLETS_OVERVIEW_TOOLTIPS.MARKET_VALUE}>

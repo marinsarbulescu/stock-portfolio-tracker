@@ -262,7 +262,7 @@ async function verifyOverview(
     // Verify Settings section
     console.log(`[OverviewHelper] Verifying Settings section...`);
     await expect(page.locator('[data-testid="overview-settings-budget"]')).toContainText(`${expectedOverview.settings.budget.toFixed(0)}`);
-    await expect(page.locator('[data-testid="overview-settings-invested"]')).toContainText(`${expectedOverview.settings.invested.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`);
+    // Note: overview-settings-invested (Tied-Up) was removed from UI
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toContainText(`${expectedOverview.settings.pdp}%`);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toContainText(`${expectedOverview.settings.shr}%`);
     await expect(page.locator('[data-testid="overview-settings-stp"]')).toContainText(`${expectedOverview.settings.stp}`);
@@ -307,7 +307,7 @@ async function verifyInitialSettings(page: any, stockConfig: any): Promise<void>
     
     // Verify initial settings match stock configuration
     await expect(page.locator('[data-testid="overview-settings-budget"]')).toContainText(`$${stockConfig.budget.toFixed(2)}`);
-    await expect(page.locator('[data-testid="overview-settings-invested"]')).toContainText('$0.00');
+    // Note: overview-settings-invested (Tied-Up) was removed from UI
     await expect(page.locator('[data-testid="overview-settings-pdp"]')).toContainText(`${stockConfig.pdp}%`);
     await expect(page.locator('[data-testid="overview-settings-shr"]')).toContainText(`${stockConfig.swingHoldRatio}%`);
     await expect(page.locator('[data-testid="overview-settings-stp"]')).toContainText(`${stockConfig.stp}%`);

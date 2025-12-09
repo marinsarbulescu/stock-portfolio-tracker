@@ -63,20 +63,10 @@ export default function SignalsOverview({
                             <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>Budget</p>
 
                             <Tooltip content={SIGNALS_OVERVIEW_TOOLTIPS.RISK_BUDGET}>
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Max Risk</p>
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Max OOP</p>
                             </Tooltip>
                             <p>
                                 ${portfolioBudgetStats.totalBudget.toLocaleString(undefined, {
-                                    minimumFractionDigits: CURRENCY_PRECISION,
-                                    maximumFractionDigits: CURRENCY_PRECISION,
-                                })}
-                            </p>
-
-                            <Tooltip content={SIGNALS_OVERVIEW_TOOLTIPS.BUDGET_USED}>
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Used</p>
-                            </Tooltip>
-                            <p>
-                                ${portfolioBudgetStats.totalBudgetUsed.toLocaleString(undefined, {
                                     minimumFractionDigits: CURRENCY_PRECISION,
                                     maximumFractionDigits: CURRENCY_PRECISION,
                                 })}
@@ -91,38 +81,18 @@ export default function SignalsOverview({
                                     maximumFractionDigits: CURRENCY_PRECISION,
                                 })}
                             </p>
-
-                            <Tooltip content={SIGNALS_OVERVIEW_TOOLTIPS.TIED_UP}>
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Tied-Up</p>
-                            </Tooltip>
-                            <p>
-                                ${portfolioBudgetStats.totalInvested.toLocaleString(undefined, {
-                                    minimumFractionDigits: CURRENCY_PRECISION,
-                                    maximumFractionDigits: CURRENCY_PRECISION,
-                                })}
-                            </p>
-
-                            <Tooltip content={SIGNALS_OVERVIEW_TOOLTIPS.R_INV}>
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>r-Inv</p>
-                            </Tooltip>
-                            <p>
-                                ${portfolioBudgetStats.totalRiskInvestment.toLocaleString(undefined, {
-                                    minimumFractionDigits: CURRENCY_PRECISION,
-                                    maximumFractionDigits: CURRENCY_PRECISION,
-                                })}
-                            </p>                            
                         </div>
 
                         <div>
                             <p style={{ fontWeight: 'bold', fontSize: '1.1em' }}>$ Performance</p>
                             <Tooltip content={SIGNALS_OVERVIEW_TOOLTIPS.TOTAL_OOP}>
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Total OOP</p>
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>OOP</p>
                             </Tooltip>
                             <p data-testid="portfolio-performance-total-oop">
                                 {formatCurrency(portfolioPerformanceMetrics.totalOOP)}
                             </p>
                             <Tooltip content={SIGNALS_OVERVIEW_TOOLTIPS.CASH_BALANCE}>
-                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>$ Balance</p>
+                                <p style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '0.9em', cursor: 'help' }}>Cash Balance</p>
                             </Tooltip>
                             <p data-testid="portfolio-performance-cash-balance">
                                 {formatCurrency(portfolioPerformanceMetrics.totalCashBalance)}
