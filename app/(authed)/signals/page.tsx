@@ -781,9 +781,17 @@ export default function HomePage() {
         // Calculate total risk investment (sum of all rInv values)
         const totalRiskInvestment = Object.values(stockRiskInvestments).reduce((sum: number, rInv: number | null) => sum + (rInv ?? 0), 0);
 
-        // Calculate portfolio-level budget metrics using allWallets
-        const totalOOP = allWallets.reduce((sum, wallet) => sum + (wallet.totalInvestment || 0), 0);
-        const totalCashBalance = allWallets.reduce((sum, wallet) => sum + (wallet.cashBalance || 0), 0);
+        // Calculate portfolio-level budget metrics using portfolioStocks (same source as $ Performance)
+        let totalOOP = 0;
+        let totalCashBalance = 0;
+        portfolioStocks.forEach(stock => {
+            const stockWithCashFlow = stock as unknown as PortfolioStockDataType & {
+                totalOutOfPocket?: number;
+                currentCashBalance?: number;
+            };
+            totalOOP += stockWithCashFlow.totalOutOfPocket || 0;
+            totalCashBalance += stockWithCashFlow.currentCashBalance || 0;
+        });
 
         const totalBudgetUsed = Math.max(0, totalOOP - totalCashBalance);
         const totalBudgetAvailable = Math.max(0, totalBudget - totalBudgetUsed);
