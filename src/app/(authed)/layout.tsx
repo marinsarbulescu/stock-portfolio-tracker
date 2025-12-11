@@ -3,6 +3,7 @@
 import { useAuthenticator, Authenticator } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { MobileNav } from "@/components/MobileNav";
 
 function AuthedLayoutContent({ children }: { children: React.ReactNode }) {
   const { authStatus, signOut, user } = useAuthenticator((context) => [
@@ -20,7 +21,7 @@ function AuthedLayoutContent({ children }: { children: React.ReactNode }) {
   if (authStatus === "configuring") {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     );
   }
@@ -30,23 +31,27 @@ function AuthedLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-muted">
+      <header className="bg-card shadow-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-semibold text-gray-900">
+          <h1 className="text-xl font-semibold text-card-foreground">
             Stock Portfolio Tracker
           </h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">
+          <div className="hidden md:flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">
               {user?.signInDetails?.loginId}
             </span>
             <button
               onClick={signOut}
-              className="text-sm text-gray-600 hover:text-gray-900 px-3 py-1 rounded border hover:bg-gray-50"
+              className="text-sm text-muted-foreground hover:text-foreground px-3 py-1 rounded border border-border hover:bg-muted"
             >
               Sign Out
             </button>
           </div>
+          <MobileNav
+            userEmail={user?.signInDetails?.loginId}
+            onSignOut={signOut}
+          />
         </div>
       </header>
       <main className="max-w-7xl mx-auto px-4 py-6">{children}</main>

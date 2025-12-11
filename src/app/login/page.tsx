@@ -15,9 +15,9 @@ function LoginContent() {
   }, [authStatus, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center mb-8 text-gray-900">
+    <div className="min-h-screen flex items-center justify-center bg-muted">
+      <div className="w-full max-w-md px-4">
+        <h1 className="text-2xl font-bold text-center mb-8 text-foreground">
           Stock Portfolio Tracker
         </h1>
         <Authenticator hideSignUp={true} />
