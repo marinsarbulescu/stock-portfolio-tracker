@@ -56,22 +56,43 @@ Run sandbox to regenerate types:
 npx ampx sandbox --once
 ```
 
-### Testing
-- **Unit tests**: Jest + React Testing Library
-- Use `data-testid` attributes for E2E tests
-- Prefer semantic selectors over CSS class selectors
-- Follow TDD: write tests first, then implementation
+### Testing (TDD Required)
 
+**This project follows Test-Driven Development (TDD) as the default workflow.**
+
+#### TDD Cycle
+1. **Red**: Write a failing test that describes the expected behavior
+2. **Green**: Write the minimum code to make the test pass
+3. **Refactor**: Clean up the code while keeping tests green
+
+#### When to Write Tests First
+- **Utility functions**: Always write tests before implementation
+- **React components**: Write tests for expected behavior/rendering
+- **API handlers**: Test expected inputs/outputs
+- **Business logic**: Test all edge cases before coding
+
+#### Test Organization
+- Place tests in `__tests__/` directories next to source files
+- Name test files: `{filename}.test.ts` or `{filename}.test.tsx`
+- Use descriptive test names that explain the expected behavior
+
+#### Test Commands
 ```bash
 # Run all tests
 npm test
 
-# Run tests in watch mode
+# Run tests in watch mode (recommended during development)
 npm run test:watch
 
 # Run tests with coverage
 npm run test:coverage
 ```
+
+#### Testing Guidelines
+- Use `data-testid` attributes for component selection
+- Prefer semantic queries (getByRole, getByLabelText) over test IDs when possible
+- Mock external dependencies (API calls, Amplify client)
+- Keep tests focused and independent
 
 ## Deployment
 - Push to `beta` branch deploys to beta.mystocs.com
