@@ -1,8 +1,9 @@
 "use client";
 
 import { useAuthenticator, Authenticator } from "@aws-amplify/ui-react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
+import Link from "next/link";
 import { MobileNav } from "@/components/MobileNav";
 
 function AuthedLayoutContent({ children }: { children: React.ReactNode }) {
@@ -11,6 +12,7 @@ function AuthedLayoutContent({ children }: { children: React.ReactNode }) {
     context.user,
   ]);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (authStatus === "unauthenticated") {
@@ -34,9 +36,33 @@ function AuthedLayoutContent({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-muted">
       <header className="bg-card shadow-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-semibold text-card-foreground">
-            Stock Portfolio Tracker
-          </h1>
+          <div className="flex items-center gap-8">
+            <h1 className="text-xl font-semibold text-card-foreground">
+              Stock Portfolio Tracker
+            </h1>
+            <nav className="hidden md:flex items-center gap-4">
+              <Link
+                href="/dashboard"
+                className={`text-sm ${
+                  pathname === "/dashboard"
+                    ? "text-foreground font-medium"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Dashboard
+              </Link>
+              <Link
+                href="/assets"
+                className={`text-sm ${
+                  pathname === "/assets"
+                    ? "text-foreground font-medium"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Assets
+              </Link>
+            </nav>
+          </div>
           <div className="hidden md:flex items-center gap-4">
             <span className="text-sm text-muted-foreground">
               {user?.signInDetails?.loginId}

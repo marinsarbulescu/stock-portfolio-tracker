@@ -102,10 +102,12 @@ npm run test:coverage
 
 ### Sandbox (Local Development)
 - **Cognito User Pool**: `amplifyAuthUserPool4BA7F805-AjKwZ77Os3T6`
+- **DynamoDB Table ID**: `yuxh2uw64jgnfon4amqqm7trmu`
 - **Region**: us-east-2
 - **Admin User ID**: `010b75c0-30c1-7061-dd29-1c5e38c4a042`
 
 ### Production (beta.mystocs.com)
 - **Cognito User Pool**: `amplifyAuthUserPool4BA7F805-lEKM7HRpFKht`
+- **DynamoDB Table ID**: `73xhjaml3jcblg3stg5txx3wge`
 - **Region**: us-east-2
 - **Admin User ID**: `110b85c0-5021-70b3-22de-f6877bd250af`

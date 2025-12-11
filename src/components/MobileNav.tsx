@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface MobileNavProps {
   userEmail?: string;
@@ -10,6 +12,7 @@ interface MobileNavProps {
 export function MobileNav({ userEmail, onSignOut }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -75,6 +78,30 @@ export function MobileNav({ userEmail, onSignOut }: MobileNavProps) {
               </p>
             </div>
           )}
+          <nav className="py-2 border-b border-border">
+            <Link
+              href="/dashboard"
+              onClick={() => setIsOpen(false)}
+              className={`block px-4 py-2 text-sm ${
+                pathname === "/dashboard"
+                  ? "text-foreground font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`}
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/assets"
+              onClick={() => setIsOpen(false)}
+              className={`block px-4 py-2 text-sm ${
+                pathname === "/assets"
+                  ? "text-foreground font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`}
+            >
+              Assets
+            </Link>
+          </nav>
           <button
             onClick={() => {
               setIsOpen(false);
