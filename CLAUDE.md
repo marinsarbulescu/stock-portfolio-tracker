@@ -57,14 +57,34 @@ npx ampx sandbox --once
 ```
 
 ### Testing
+- **Unit tests**: Jest + React Testing Library
 - Use `data-testid` attributes for E2E tests
 - Prefer semantic selectors over CSS class selectors
+- Follow TDD: write tests first, then implementation
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+```
 
 ## Deployment
 - Push to `beta` branch deploys to beta.mystocs.com
 - Amplify Hosting handles CI/CD automatically
 
-## AWS Resources (Sandbox)
+## AWS Resources
+
+### Sandbox (Local Development)
 - **Cognito User Pool**: `amplifyAuthUserPool4BA7F805-AjKwZ77Os3T6`
 - **Region**: us-east-2
 - **Admin User ID**: `010b75c0-30c1-7061-dd29-1c5e38c4a042`
+
+### Production (beta.mystocs.com)
+- **Cognito User Pool**: `amplifyAuthUserPool4BA7F805-lEKM7HRpFKht`
+- **Region**: us-east-2
+- **Admin User ID**: `110b85c0-5021-70b3-22de-f6877bd250af`
