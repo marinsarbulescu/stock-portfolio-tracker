@@ -26,7 +26,7 @@ export default function AssetsPage() {
         header: "Symbol",
         render: (item) => (
           <Link
-            href={`/assets/${item.id}`}
+            href={`/assets/${item.id}/transactions`}
             className="font-medium text-blue-400 hover:text-blue-300 hover:underline"
           >
             {item.symbol}
@@ -50,6 +50,19 @@ export default function AssetsPage() {
       {
         key: "status",
         header: "Status",
+      },
+      {
+        key: "actions",
+        header: "",
+        sortable: false,
+        render: (item) => (
+          <Link
+            href={`/assets/${item.id}`}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Edit
+          </Link>
+        ),
       },
     ],
     []

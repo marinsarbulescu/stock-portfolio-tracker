@@ -6,6 +6,7 @@ export interface Column<T> {
   key: keyof T | string;
   header: string;
   sortable?: boolean;
+  toggleable?: boolean; // Set to false to always show column (e.g., actions)
   render?: (item: T) => React.ReactNode;
 }
 
@@ -14,6 +15,7 @@ interface SortableTableProps<T> {
   columns: Column<T>[];
   keyField: keyof T;
   emptyMessage?: string;
+  hiddenColumns?: Set<string>; // Keys of columns to hide
 }
 
 type SortDirection = "asc" | "desc";
@@ -23,9 +25,16 @@ export function SortableTable<T>({
   columns,
   keyField,
   emptyMessage = "No data available",
+  hiddenColumns,
 }: SortableTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+
+  // Filter out hidden columns
+  const visibleColumns = useMemo(() => {
+    if (!hiddenColumns || hiddenColumns.size === 0) return columns;
+    return columns.filter((col) => !hiddenColumns.has(String(col.key)));
+  }, [columns, hiddenColumns]);
 
   const sortedData = useMemo(() => {
     if (!sortKey) return data;
@@ -81,7 +90,7 @@ export function SortableTable<T>({
       <table className="w-full">
         <thead>
           <tr className="border-b border-border">
-            {columns.map((column) => (
+            {visibleColumns.map((column) => (
               <th
                 key={String(column.key)}
                 className={`px-4 py-3 text-left text-sm font-medium text-muted-foreground ${
@@ -105,7 +114,7 @@ export function SortableTable<T>({
               key={String((item as Record<string, unknown>)[keyField as string])}
               className="border-b border-border hover:bg-muted/50"
             >
-              {columns.map((column) => (
+              {visibleColumns.map((column) => (
                 <td
                   key={String(column.key)}
                   className="px-4 py-3 text-sm text-card-foreground"

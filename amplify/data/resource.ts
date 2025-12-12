@@ -4,6 +4,8 @@ const schema = a.schema({
   // Enums
   AssetType: a.enum(["STOCK", "ETF", "CRYPTO"]),
   AssetStatus: a.enum(["ACTIVE", "HIDDEN", "ARCHIVED"]),
+  TransactionType: a.enum(["BUY", "SELL", "DIVIDEND", "SPLIT", "SLP"]),
+  TransactionSignal: a.enum(["REPULL", "CUSTOM", "INITIAL", "EOM", "ENTAR", "TP"]),
 
   // Asset - Primary table for stocks, ETFs, and crypto
   Asset: a
@@ -18,6 +20,8 @@ const schema = a.schema({
       yearlyBudgets: a.hasMany("YearlyBudget", "assetId"),
       profitTargets: a.hasMany("ProfitTarget", "assetId"),
       entryTargets: a.hasMany("EntryTarget", "assetId"),
+      transactions: a.hasMany("Transaction", "assetId"),
+      wallets: a.hasMany("Wallet", "assetId"),
     })
     .authorization((allow) => [allow.owner()]),
 
@@ -39,9 +43,10 @@ const schema = a.schema({
       targetPercent: a.float().required(),
       allocationPercent: a.float(), // Optional - % of shares to sell
       sortOrder: a.integer().required(),
-      // Relationship
+      // Relationships
       assetId: a.id().required(),
       asset: a.belongsTo("Asset", "assetId"),
+      allocations: a.hasMany("TransactionAllocation", "profitTargetId"),
     })
     .authorization((allow) => [allow.owner()]),
 
@@ -51,6 +56,48 @@ const schema = a.schema({
       name: a.string().required(),
       targetPercent: a.float().required(), // Stored as positive
       sortOrder: a.integer().required(),
+      // Relationship
+      assetId: a.id().required(),
+      asset: a.belongsTo("Asset", "assetId"),
+    })
+    .authorization((allow) => [allow.owner()]),
+
+  // Transaction - Buy/Sell/Dividend/Split/SLP records
+  Transaction: a
+    .model({
+      type: a.ref("TransactionType").required(),
+      date: a.datetime().required(), // Date+time, allows backdating
+      signal: a.ref("TransactionSignal"), // Required for BUY/SELL
+      quantity: a.float(), // Number of shares (BUY/SELL)
+      amount: a.float(), // Payment received (DIVIDEND/SLP)
+      splitRatio: a.float(), // Required for SPLIT
+      price: a.float(), // Required for BUY/SELL
+      investment: a.float(), // Required for BUY
+      // Relationships
+      assetId: a.id().required(),
+      asset: a.belongsTo("Asset", "assetId"),
+      allocations: a.hasMany("TransactionAllocation", "transactionId"),
+    })
+    .authorization((allow) => [allow.owner()]),
+
+  // TransactionAllocation - Links BUY transactions to profit targets
+  TransactionAllocation: a
+    .model({
+      transactionId: a.id().required(),
+      transaction: a.belongsTo("Transaction", "transactionId"),
+      profitTargetId: a.id().required(),
+      profitTarget: a.belongsTo("ProfitTarget", "profitTargetId"),
+      percentage: a.float().required(), // User input (e.g., 50)
+      shares: a.float().required(), // Calculated: (percentage/100) * totalShares
+    })
+    .authorization((allow) => [allow.owner()]),
+
+  // Wallet - Aggregates BUY transactions by price
+  Wallet: a
+    .model({
+      price: a.float().required(),
+      investment: a.float().required(), // Sum of all investments at this price
+      shares: a.float().required(), // Calculated: investment / price
       // Relationship
       assetId: a.id().required(),
       asset: a.belongsTo("Asset", "assetId"),
