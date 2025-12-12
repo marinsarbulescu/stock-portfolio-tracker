@@ -424,6 +424,15 @@ export default function AssetTransactionsPage() {
     }
   }, [wallets, selectedProfitTargetId]);
 
+  // Count wallets per profit target
+  const walletCountByPT = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const wallet of wallets) {
+      counts[wallet.profitTargetId] = (counts[wallet.profitTargetId] || 0) + 1;
+    }
+    return counts;
+  }, [wallets]);
+
   useEffect(() => {
     fetchAsset();
     fetchTransactions();
@@ -615,23 +624,26 @@ export default function AssetTransactionsPage() {
                   : "bg-card border border-border text-muted-foreground hover:text-foreground"
               }`}
             >
-              All
+              All{wallets.length > 0 && ` (${wallets.length})`}
             </button>
             {profitTargets
               .sort((a, b) => a.sortOrder - b.sortOrder)
-              .map((pt) => (
-                <button
-                  key={pt.id}
-                  onClick={() => setSelectedProfitTargetId(pt.id)}
-                  className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                    selectedProfitTargetId === pt.id
-                      ? "bg-blue-600 text-white"
-                      : "bg-card border border-border text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {pt.name}
-                </button>
-              ))}
+              .map((pt) => {
+                const count = walletCountByPT[pt.id] || 0;
+                return (
+                  <button
+                    key={pt.id}
+                    onClick={() => setSelectedProfitTargetId(pt.id)}
+                    className={`px-3 py-1.5 text-sm rounded transition-colors ${
+                      selectedProfitTargetId === pt.id
+                        ? "bg-blue-600 text-white"
+                        : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {pt.name}{count > 0 && ` (${count})`}
+                  </button>
+                );
+              })}
           </div>
 
           <div className="bg-card border border-border rounded-lg">
