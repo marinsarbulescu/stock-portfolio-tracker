@@ -54,7 +54,7 @@ function AuthedLayoutContent({ children }: { children: React.ReactNode }) {
               <Link
                 href="/assets"
                 className={`text-sm ${
-                  pathname === "/assets"
+                  pathname === "/assets" || pathname?.startsWith("/assets/")
                     ? "text-foreground font-medium"
                     : "text-muted-foreground hover:text-foreground"
                 }`}

@@ -94,7 +94,7 @@ export function MobileNav({ userEmail, onSignOut }: MobileNavProps) {
               href="/assets"
               onClick={() => setIsOpen(false)}
               className={`block px-4 py-2 text-sm ${
-                pathname === "/assets"
+                pathname === "/assets" || pathname?.startsWith("/assets/")
                   ? "text-foreground font-medium"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}

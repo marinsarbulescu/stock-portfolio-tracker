@@ -44,3 +44,12 @@ next-env.d.ts
 .amplify/
 amplify_outputs.json
 amplifyconfiguration.json
+
+# claude code
+.claude/settings.local.json
+
+# windows artifacts
+nul
+
+# local readme
+README.md
