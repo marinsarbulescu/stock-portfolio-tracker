@@ -217,7 +217,7 @@ export function TransactionModal({
       result.push({
         profitTargetId: pt.id,
         percentage,
-        shares: (percentage / 100) * totalShares,
+        shares: parseFloat(((percentage / 100) * totalShares).toFixed(5)),
       });
     });
 
@@ -615,7 +615,7 @@ export function TransactionModal({
               </h4>
               {totalShares > 0 && (
                 <span className="text-xs text-muted-foreground">
-                  Total: {totalShares.toLocaleString(undefined, { maximumFractionDigits: 4 })} shares
+                  Total: {totalShares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} shares
                 </span>
               )}
             </div>
@@ -655,7 +655,7 @@ export function TransactionModal({
                           type="number"
                           min="0"
                           max="100"
-                          step="1"
+                          step="0.01"
                           value={inputValue}
                           onChange={(e) =>
                             setFormData({
@@ -674,9 +674,9 @@ export function TransactionModal({
                       <span className="text-muted-foreground">→</span>
                       <span className="text-card-foreground">
                         {inputValue
-                          ? displayShares.toLocaleString(undefined, { maximumFractionDigits: 4 })
+                          ? displayShares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                           : autoPercentage > 0
-                          ? `(${displayShares.toLocaleString(undefined, { maximumFractionDigits: 4 })})`
+                          ? `(${displayShares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
                           : "-"}{" "}
                         shares
                       </span>
@@ -695,7 +695,7 @@ export function TransactionModal({
                   </span>
                   <span className="text-muted-foreground">→</span>
                   <span className="text-card-foreground font-medium">
-                    {totalShares.toLocaleString(undefined, { maximumFractionDigits: 4 })} shares
+                    {totalShares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} shares
                   </span>
                 </div>
 

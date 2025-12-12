@@ -47,6 +47,7 @@ const schema = a.schema({
       assetId: a.id().required(),
       asset: a.belongsTo("Asset", "assetId"),
       allocations: a.hasMany("TransactionAllocation", "profitTargetId"),
+      wallets: a.hasMany("Wallet", "profitTargetId"),
     })
     .authorization((allow) => [allow.owner()]),
 
@@ -92,15 +93,17 @@ const schema = a.schema({
     })
     .authorization((allow) => [allow.owner()]),
 
-  // Wallet - Aggregates BUY transactions by price
+  // Wallet - Aggregates BUY transactions by price and profit target
   Wallet: a
     .model({
       price: a.float().required(),
-      investment: a.float().required(), // Sum of all investments at this price
+      investment: a.float().required(), // Sum of all investments at this price/PT
       shares: a.float().required(), // Calculated: investment / price
-      // Relationship
+      // Relationships
       assetId: a.id().required(),
       asset: a.belongsTo("Asset", "assetId"),
+      profitTargetId: a.id().required(),
+      profitTarget: a.belongsTo("ProfitTarget", "profitTargetId"),
     })
     .authorization((allow) => [allow.owner()]),
 });

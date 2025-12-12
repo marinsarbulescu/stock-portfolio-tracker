@@ -43,6 +43,7 @@ interface WalletRow {
   price: number;
   shares: number;
   investment: number;
+  profitTargetId: string;
 }
 
 const SIGNAL_LABELS: Record<TransactionSignal, string> = {
@@ -78,6 +79,7 @@ export default function AssetTransactionsPage() {
   const [wallets, setWallets] = useState<WalletRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedProfitTargetId, setSelectedProfitTargetId] = useState<string | null>(null); // null = "All"
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -194,6 +196,7 @@ export default function AssetTransactionsPage() {
         price: w.price,
         shares: w.shares,
         investment: w.investment,
+        profitTargetId: w.profitTargetId,
       }));
       // Sort by price descending
       walletData.sort((a, b) => b.price - a.price);
@@ -203,23 +206,24 @@ export default function AssetTransactionsPage() {
     }
   }, [assetId]);
 
-  // Wallet helper functions
-  async function findWalletByPrice(price: number) {
+  // Wallet helper functions - now using composite key (assetId, price, profitTargetId)
+  async function findWalletByCompositeKey(price: number, profitTargetId: string) {
     const response = await client.models.Wallet.list({
       filter: {
         assetId: { eq: assetId },
         price: { eq: price },
+        profitTargetId: { eq: profitTargetId },
       },
     });
     return response.data[0] || null;
   }
 
-  async function upsertWallet(price: number, investmentDelta: number) {
-    const existing = await findWalletByPrice(price);
+  async function upsertWallet(price: number, profitTargetId: string, investmentDelta: number) {
+    const existing = await findWalletByCompositeKey(price, profitTargetId);
 
     if (existing) {
       const newInvestment = existing.investment + investmentDelta;
-      const newShares = newInvestment / price;
+      const newShares = parseFloat((newInvestment / price).toFixed(5));
 
       if (newInvestment <= 0) {
         // Delete wallet if no investment left
@@ -232,12 +236,13 @@ export default function AssetTransactionsPage() {
         });
       }
     } else if (investmentDelta > 0) {
-      // Create new wallet
+      // Create new wallet for this (assetId, price, profitTargetId) combination
       await client.models.Wallet.create({
         assetId,
         price,
+        profitTargetId,
         investment: investmentDelta,
-        shares: investmentDelta / price,
+        shares: parseFloat((investmentDelta / price).toFixed(5)),
       });
     }
   }
@@ -249,19 +254,25 @@ export default function AssetTransactionsPage() {
     const txn = transactions.find((t) => t.id === id);
 
     try {
-      // Delete allocations first
+      // Get allocations before deleting (needed for wallet updates)
       const allocationsResponse = await client.models.TransactionAllocation.list({
         filter: { transactionId: { eq: id } },
       });
-      for (const alloc of allocationsResponse.data) {
+      const allocations = allocationsResponse.data;
+
+      // Delete allocations first
+      for (const alloc of allocations) {
         await client.models.TransactionAllocation.delete({ id: alloc.id });
       }
 
       await client.models.Transaction.delete({ id });
 
-      // Update wallet if it was a BUY transaction
+      // Update wallets if it was a BUY transaction - one per allocation
       if (txn?.type === "BUY" && txn.price && txn.investment) {
-        await upsertWallet(txn.price, -txn.investment);
+        for (const alloc of allocations) {
+          const allocationInvestment = (alloc.percentage / 100) * txn.investment;
+          await upsertWallet(txn.price, alloc.profitTargetId, -allocationInvestment);
+        }
         await fetchWallets();
       }
 
@@ -305,7 +316,7 @@ export default function AssetTransactionsPage() {
           }
           if (item.type === "BUY" || item.type === "SELL") {
             return item.quantity !== null
-              ? item.quantity.toLocaleString(undefined, { maximumFractionDigits: 4 })
+              ? item.quantity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
               : "-";
           }
           return "-";
@@ -368,8 +379,8 @@ export default function AssetTransactionsPage() {
     { storageKey: "transactions-columns" }
   );
 
-  // Wallet columns
-  const walletColumns: Column<WalletRow>[] = useMemo(
+  // Wallet columns (without profitTargetId for display)
+  const walletColumns: Column<Omit<WalletRow, "profitTargetId">>[] = useMemo(
     () => [
       {
         key: "price",
@@ -380,7 +391,7 @@ export default function AssetTransactionsPage() {
         key: "shares",
         header: "Shares",
         render: (item) =>
-          item.shares.toLocaleString(undefined, { maximumFractionDigits: 4 }),
+          item.shares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
       },
       {
         key: "investment",
@@ -390,6 +401,28 @@ export default function AssetTransactionsPage() {
     ],
     []
   );
+
+  // Filter/aggregate wallets based on selected profit target tab
+  const displayWallets = useMemo(() => {
+    if (selectedProfitTargetId === null) {
+      // "All" tab: aggregate wallets by price (sum across all PTs)
+      const aggregated = wallets.reduce((acc, wallet) => {
+        const key = wallet.price;
+        if (!acc[key]) {
+          acc[key] = { id: `agg-${key}`, price: wallet.price, shares: 0, investment: 0 };
+        }
+        acc[key].shares += wallet.shares;
+        acc[key].investment += wallet.investment;
+        return acc;
+      }, {} as Record<number, { id: string; price: number; shares: number; investment: number }>);
+      return Object.values(aggregated).sort((a, b) => b.price - a.price);
+    } else {
+      // Specific PT tab: filter wallets for that PT
+      return wallets
+        .filter((w) => w.profitTargetId === selectedProfitTargetId)
+        .sort((a, b) => b.price - a.price);
+    }
+  }, [wallets, selectedProfitTargetId]);
 
   useEffect(() => {
     fetchAsset();
@@ -421,9 +454,19 @@ export default function AssetTransactionsPage() {
         }
         transactionId = result.data!.id;
       } else if (selectedTransaction) {
-        // For BUY edits, subtract old values from old wallet before updating
+        // For BUY edits, subtract old values from old wallets (per allocation) before updating
         if (selectedTransaction.type === "BUY" && selectedTransaction.price && selectedTransaction.investment) {
-          await upsertWallet(selectedTransaction.price, -selectedTransaction.investment);
+          const oldAllocations = await client.models.TransactionAllocation.list({
+            filter: { transactionId: { eq: selectedTransaction.id } },
+          });
+          for (const alloc of oldAllocations.data) {
+            const allocationInvestment = (alloc.percentage / 100) * selectedTransaction.investment;
+            await upsertWallet(selectedTransaction.price, alloc.profitTargetId, -allocationInvestment);
+          }
+          // Delete old allocations
+          for (const alloc of oldAllocations.data) {
+            await client.models.TransactionAllocation.delete({ id: alloc.id });
+          }
         }
 
         const result = await client.models.Transaction.update({
@@ -436,35 +479,24 @@ export default function AssetTransactionsPage() {
           return;
         }
         transactionId = selectedTransaction.id;
-
-        // Delete old allocations when editing
-        if (data.type === "BUY") {
-          const existingAllocations = await client.models.TransactionAllocation.list({
-            filter: { transactionId: { eq: transactionId } },
-          });
-          for (const alloc of existingAllocations.data) {
-            await client.models.TransactionAllocation.delete({ id: alloc.id });
-          }
-        }
       } else {
         return;
       }
 
-      // Create new allocations for BUY transactions
-      if (data.type === "BUY" && allocations && allocations.length > 0) {
+      // Create new allocations and wallets for BUY transactions
+      if (data.type === "BUY" && allocations && allocations.length > 0 && data.price && data.investment) {
         for (const alloc of allocations) {
+          // Create allocation record
           await client.models.TransactionAllocation.create({
             transactionId,
             profitTargetId: alloc.profitTargetId,
             percentage: alloc.percentage,
             shares: alloc.shares,
           });
+          // Create/update wallet for this profit target
+          const allocationInvestment = (alloc.percentage / 100) * data.investment;
+          await upsertWallet(data.price, alloc.profitTargetId, allocationInvestment);
         }
-      }
-
-      // Update wallet for BUY transactions
-      if (data.type === "BUY" && data.price && data.investment) {
-        await upsertWallet(data.price, data.investment);
         await fetchWallets();
       }
 
@@ -479,24 +511,29 @@ export default function AssetTransactionsPage() {
     // Find transaction to get wallet info before deleting
     const txn = transactions.find((t) => t.id === id);
 
-    // Delete allocations first
+    // Get and delete allocations first (needed for wallet updates)
     try {
-      const allocations = await client.models.TransactionAllocation.list({
+      const allocationsResponse = await client.models.TransactionAllocation.list({
         filter: { transactionId: { eq: id } },
       });
-      for (const alloc of allocations.data) {
+      const allocations = allocationsResponse.data;
+
+      for (const alloc of allocations) {
         await client.models.TransactionAllocation.delete({ id: alloc.id });
       }
+
+      await client.models.Transaction.delete({ id });
+
+      // Update wallets if it was a BUY transaction - one per allocation
+      if (txn?.type === "BUY" && txn.price && txn.investment) {
+        for (const alloc of allocations) {
+          const allocationInvestment = (alloc.percentage / 100) * txn.investment;
+          await upsertWallet(txn.price, alloc.profitTargetId, -allocationInvestment);
+        }
+        await fetchWallets();
+      }
     } catch (err) {
-      console.error("Error deleting allocations:", err);
-    }
-
-    await client.models.Transaction.delete({ id });
-
-    // Update wallet if it was a BUY transaction
-    if (txn?.type === "BUY" && txn.price && txn.investment) {
-      await upsertWallet(txn.price, -txn.investment);
-      await fetchWallets();
+      console.error("Error deleting transaction:", err);
     }
 
     await fetchTransactions();
@@ -563,16 +600,50 @@ export default function AssetTransactionsPage() {
         </div>
       )}
 
-      {/* Wallets Table */}
-      {wallets.length > 0 && (
+      {/* Wallets Section with PT Tabs */}
+      {(wallets.length > 0 || profitTargets.length > 0) && (
         <div className="mb-8">
           <h3 className="text-lg font-semibold text-foreground mb-4">Wallets</h3>
+
+          {/* Profit Target Tabs */}
+          <div className="flex gap-2 mb-4 flex-wrap">
+            <button
+              onClick={() => setSelectedProfitTargetId(null)}
+              className={`px-3 py-1.5 text-sm rounded transition-colors ${
+                selectedProfitTargetId === null
+                  ? "bg-blue-600 text-white"
+                  : "bg-card border border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              All
+            </button>
+            {profitTargets
+              .sort((a, b) => a.sortOrder - b.sortOrder)
+              .map((pt) => (
+                <button
+                  key={pt.id}
+                  onClick={() => setSelectedProfitTargetId(pt.id)}
+                  className={`px-3 py-1.5 text-sm rounded transition-colors ${
+                    selectedProfitTargetId === pt.id
+                      ? "bg-blue-600 text-white"
+                      : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {pt.name}
+                </button>
+              ))}
+          </div>
+
           <div className="bg-card border border-border rounded-lg">
             <SortableTable
-              data={wallets}
+              data={displayWallets}
               columns={walletColumns}
               keyField="id"
-              emptyMessage="No wallets yet."
+              emptyMessage={
+                selectedProfitTargetId === null
+                  ? "No wallets yet."
+                  : "No wallets for this profit target."
+              }
             />
           </div>
         </div>
