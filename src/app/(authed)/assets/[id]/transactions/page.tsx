@@ -8,6 +8,7 @@ import { SortableTable, Column } from "@/components/SortableTable";
 import { ColumnToggle } from "@/components/ColumnToggle";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 import { TransactionModal, Transaction, TransactionAllocation } from "@/components/TransactionModal";
+import { SellModal, SellData } from "@/components/SellModal";
 
 type TransactionType = "BUY" | "SELL" | "DIVIDEND" | "SPLIT" | "SLP";
 type TransactionSignal = "REPULL" | "CUSTOM" | "INITIAL" | "EOM" | "ENTAR" | "TP";
@@ -16,6 +17,7 @@ interface Asset {
   id: string;
   symbol: string;
   name: string;
+  commission: number | null;
 }
 
 interface ProfitTarget {
@@ -86,6 +88,9 @@ export default function AssetTransactionsPage() {
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
+  // Sell modal state
+  const [sellWallet, setSellWallet] = useState<WalletRow | null>(null);
+
   async function handleRowClick(transaction: TransactionRow) {
     // Fetch allocations for BUY transactions
     let allocations: TransactionAllocation[] | undefined;
@@ -129,6 +134,7 @@ export default function AssetTransactionsPage() {
           id: response.data.id,
           symbol: response.data.symbol,
           name: response.data.name,
+          commission: response.data.commission ?? null,
         });
       }
     } catch (err) {
@@ -326,7 +332,7 @@ export default function AssetTransactionsPage() {
         key: "amount",
         header: "Amount",
         render: (item) => {
-          if (item.type === "DIVIDEND" || item.type === "SLP") {
+          if (item.type === "DIVIDEND" || item.type === "SLP" || item.type === "SELL") {
             return item.amount !== null ? formatCurrency(item.amount) : "-";
           }
           return "-";
@@ -379,9 +385,9 @@ export default function AssetTransactionsPage() {
     { storageKey: "transactions-columns" }
   );
 
-  // Wallet columns (without profitTargetId for display)
-  const walletColumns: Column<Omit<WalletRow, "profitTargetId">>[] = useMemo(
-    () => [
+  // Wallet columns - include Action column only on PT tabs (not on "All" tab)
+  const walletColumns = useMemo(() => {
+    const baseColumns: Column<WalletRow>[] = [
       {
         key: "price",
         header: "Price",
@@ -398,23 +404,41 @@ export default function AssetTransactionsPage() {
         header: "Investment",
         render: (item) => formatCurrency(item.investment),
       },
-    ],
-    []
-  );
+    ];
+
+    // Add Action column only when viewing a specific PT (not "All" tab)
+    if (selectedProfitTargetId !== null) {
+      baseColumns.push({
+        key: "action",
+        header: "Action",
+        sortable: false,
+        render: (item) => (
+          <button
+            onClick={() => setSellWallet(item)}
+            className="text-red-400 hover:text-red-300 hover:underline text-sm"
+          >
+            Sell
+          </button>
+        ),
+      });
+    }
+
+    return baseColumns;
+  }, [selectedProfitTargetId]);
 
   // Filter/aggregate wallets based on selected profit target tab
-  const displayWallets = useMemo(() => {
+  const displayWallets = useMemo((): WalletRow[] => {
     if (selectedProfitTargetId === null) {
       // "All" tab: aggregate wallets by price (sum across all PTs)
       const aggregated = wallets.reduce((acc, wallet) => {
         const key = wallet.price;
         if (!acc[key]) {
-          acc[key] = { id: `agg-${key}`, price: wallet.price, shares: 0, investment: 0 };
+          acc[key] = { id: `agg-${key}`, price: wallet.price, shares: 0, investment: 0, profitTargetId: "" };
         }
         acc[key].shares += wallet.shares;
         acc[key].investment += wallet.investment;
         return acc;
-      }, {} as Record<number, { id: string; price: number; shares: number; investment: number }>);
+      }, {} as Record<number, WalletRow>);
       return Object.values(aggregated).sort((a, b) => b.price - a.price);
     } else {
       // Specific PT tab: filter wallets for that PT
@@ -546,6 +570,54 @@ export default function AssetTransactionsPage() {
     }
 
     await fetchTransactions();
+  }
+
+  // Handle sell from wallet
+  async function handleSell(data: SellData) {
+    if (!sellWallet) return;
+
+    try {
+      // 1. Create SELL transaction with walletId
+      const result = await client.models.Transaction.create({
+        type: "SELL",
+        date: data.date,
+        signal: data.signal,
+        price: data.price,
+        quantity: data.quantity,
+        amount: data.netProceeds,
+        walletId: sellWallet.id,
+        assetId,
+      });
+
+      if (result.errors) {
+        console.error("Create SELL errors:", result.errors);
+        setError("Failed to create sell transaction: " + result.errors.map(e => e.message).join(", "));
+        return;
+      }
+
+      // 2. Update wallet - reduce shares and investment
+      const newShares = sellWallet.shares - data.quantity;
+      if (newShares <= 0) {
+        // Delete wallet if no shares left
+        await client.models.Wallet.delete({ id: sellWallet.id });
+      } else {
+        // Update wallet with remaining shares
+        const newInvestment = newShares * sellWallet.price;
+        await client.models.Wallet.update({
+          id: sellWallet.id,
+          shares: parseFloat(newShares.toFixed(5)),
+          investment: newInvestment,
+        });
+      }
+
+      // 3. Refresh data and close modal
+      await fetchWallets();
+      await fetchTransactions();
+      setSellWallet(null);
+    } catch (err) {
+      console.error("Sell error:", err);
+      setError("Failed to process sell transaction");
+    }
   }
 
   // Auto-dismiss error
@@ -691,6 +763,15 @@ export default function AssetTransactionsPage() {
           onDelete={handleDelete}
         />
       )}
+
+      {/* Sell Modal */}
+      <SellModal
+        isOpen={sellWallet !== null}
+        wallet={sellWallet}
+        asset={asset}
+        onClose={() => setSellWallet(null)}
+        onSave={handleSell}
+      />
     </div>
   );
 }

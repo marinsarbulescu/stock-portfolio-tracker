@@ -70,7 +70,7 @@ const schema = a.schema({
       date: a.datetime().required(), // Date+time, allows backdating
       signal: a.ref("TransactionSignal"), // Required for BUY/SELL
       quantity: a.float(), // Number of shares (BUY/SELL)
-      amount: a.float(), // Payment received (DIVIDEND/SLP)
+      amount: a.float(), // Payment received (DIVIDEND/SLP) or net proceeds (SELL)
       splitRatio: a.float(), // Required for SPLIT
       price: a.float(), // Required for BUY/SELL
       investment: a.float(), // Required for BUY
@@ -78,6 +78,8 @@ const schema = a.schema({
       assetId: a.id().required(),
       asset: a.belongsTo("Asset", "assetId"),
       allocations: a.hasMany("TransactionAllocation", "transactionId"),
+      walletId: a.id(), // Optional - only for SELL transactions
+      wallet: a.belongsTo("Wallet", "walletId"),
     })
     .authorization((allow) => [allow.owner()]),
 
@@ -104,6 +106,7 @@ const schema = a.schema({
       asset: a.belongsTo("Asset", "assetId"),
       profitTargetId: a.id().required(),
       profitTarget: a.belongsTo("ProfitTarget", "profitTargetId"),
+      sellTransactions: a.hasMany("Transaction", "walletId"),
     })
     .authorization((allow) => [allow.owner()]),
 });
