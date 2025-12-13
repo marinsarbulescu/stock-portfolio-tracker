@@ -74,6 +74,8 @@ const schema = a.schema({
       splitRatio: a.float(), // Required for SPLIT
       price: a.float(), // Required for BUY/SELL
       investment: a.float(), // Required for BUY
+      entryTargetPrice: a.float(), // Calculated ET price for BUY (price * (1 + ET%/100))
+      entryTargetPercent: a.float(), // ET percentage used (e.g., -5)
       // Relationships
       assetId: a.id().required(),
       asset: a.belongsTo("Asset", "assetId"),
@@ -101,6 +103,7 @@ const schema = a.schema({
       price: a.float().required(),
       investment: a.float().required(), // Sum of all investments at this price/PT
       shares: a.float().required(), // Calculated: investment / price
+      profitTargetPrice: a.float().required(), // Pre-calculated: price * (1 + PT%) / (1 - commission%)
       // Relationships
       assetId: a.id().required(),
       asset: a.belongsTo("Asset", "assetId"),

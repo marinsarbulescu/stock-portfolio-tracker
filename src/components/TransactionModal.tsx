@@ -24,6 +24,8 @@ export interface Transaction {
   investment: number | null;
   assetId: string;
   allocations?: TransactionAllocation[];
+  entryTargetPrice?: number | null;
+  entryTargetPercent?: number | null;
 }
 
 interface Asset {
@@ -39,12 +41,20 @@ interface ProfitTarget {
   sortOrder: number;
 }
 
+interface EntryTarget {
+  id: string;
+  name: string;
+  targetPercent: number;
+  sortOrder: number;
+}
+
 interface TransactionModalProps {
   isOpen: boolean;
   mode: "create" | "edit";
   transaction?: Transaction | null;
   assets: Asset[];
   profitTargets?: ProfitTarget[];
+  entryTargets?: EntryTarget[];
   onClose: () => void;
   onSave: (data: Omit<Transaction, "id">) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
@@ -113,6 +123,7 @@ export function TransactionModal({
   transaction,
   assets,
   profitTargets = [],
+  entryTargets = [],
   onClose,
   onSave,
   onDelete,
@@ -329,6 +340,20 @@ export function TransactionModal({
           ? calculateFinalAllocations()
           : undefined;
 
+      // Calculate entry target for BUY transactions
+      let entryTargetPrice: number | null = null;
+      let entryTargetPercent: number | null = null;
+      if (formData.type === "BUY" && price && entryTargets.length > 0) {
+        // Use the first entry target by sortOrder
+        const sortedEntryTargets = [...entryTargets].sort((a, b) => a.sortOrder - b.sortOrder);
+        const firstET = sortedEntryTargets[0];
+        if (firstET) {
+          entryTargetPercent = firstET.targetPercent;
+          // ET is a buy signal when price drops - subtract the percentage
+          entryTargetPrice = price * (1 - Math.abs(firstET.targetPercent) / 100);
+        }
+      }
+
       await onSave({
         assetId: formData.assetId,
         type: formData.type,
@@ -340,6 +365,8 @@ export function TransactionModal({
         price,
         investment,
         allocations,
+        entryTargetPrice,
+        entryTargetPercent,
       });
       onClose();
     } catch {

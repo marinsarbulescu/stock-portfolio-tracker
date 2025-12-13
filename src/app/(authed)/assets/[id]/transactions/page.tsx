@@ -18,9 +18,17 @@ interface Asset {
   symbol: string;
   name: string;
   commission: number | null;
+  testPrice: number | null;
 }
 
 interface ProfitTarget {
+  id: string;
+  name: string;
+  targetPercent: number;
+  sortOrder: number;
+}
+
+interface EntryTarget {
   id: string;
   name: string;
   targetPercent: number;
@@ -38,6 +46,8 @@ interface TransactionRow {
   price: number | null;
   investment: number | null;
   splitRatio: number | null;
+  entryTargetPrice: number | null;
+  entryTargetPercent: number | null;
 }
 
 interface WalletRow {
@@ -46,6 +56,7 @@ interface WalletRow {
   shares: number;
   investment: number;
   profitTargetId: string;
+  profitTargetPrice: number;
 }
 
 const SIGNAL_LABELS: Record<TransactionSignal, string> = {
@@ -78,6 +89,7 @@ export default function AssetTransactionsPage() {
   const [asset, setAsset] = useState<Asset | null>(null);
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [profitTargets, setProfitTargets] = useState<ProfitTarget[]>([]);
+  const [entryTargets, setEntryTargets] = useState<EntryTarget[]>([]);
   const [wallets, setWallets] = useState<WalletRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -135,6 +147,7 @@ export default function AssetTransactionsPage() {
           symbol: response.data.symbol,
           name: response.data.name,
           commission: response.data.commission ?? null,
+          testPrice: response.data.testPrice ?? null,
         });
       }
     } catch (err) {
@@ -160,6 +173,23 @@ export default function AssetTransactionsPage() {
     }
   }, [assetId]);
 
+  const fetchEntryTargets = useCallback(async () => {
+    try {
+      const response = await client.models.EntryTarget.list({
+        filter: { assetId: { eq: assetId } },
+      });
+      const targets = response.data.map((item) => ({
+        id: item.id,
+        name: item.name,
+        targetPercent: item.targetPercent,
+        sortOrder: item.sortOrder,
+      }));
+      setEntryTargets(targets);
+    } catch (err) {
+      console.error("Error fetching entry targets:", err);
+    }
+  }, [assetId]);
+
   const fetchTransactions = useCallback(async () => {
     try {
       setError(null);
@@ -178,6 +208,8 @@ export default function AssetTransactionsPage() {
         price: item.price ?? null,
         investment: item.investment ?? null,
         splitRatio: item.splitRatio ?? null,
+        entryTargetPrice: item.entryTargetPrice ?? null,
+        entryTargetPercent: item.entryTargetPercent ?? null,
       }));
 
       // Sort by date descending (newest first)
@@ -203,6 +235,7 @@ export default function AssetTransactionsPage() {
         shares: w.shares,
         investment: w.investment,
         profitTargetId: w.profitTargetId,
+        profitTargetPrice: w.profitTargetPrice,
       }));
       // Sort by price descending
       walletData.sort((a, b) => b.price - a.price);
@@ -224,7 +257,12 @@ export default function AssetTransactionsPage() {
     return response.data[0] || null;
   }
 
-  async function upsertWallet(price: number, profitTargetId: string, investmentDelta: number) {
+  async function upsertWallet(
+    price: number,
+    profitTargetId: string,
+    investmentDelta: number,
+    profitTargetPrice?: number
+  ) {
     const existing = await findWalletByCompositeKey(price, profitTargetId);
 
     if (existing) {
@@ -241,7 +279,7 @@ export default function AssetTransactionsPage() {
           shares: newShares,
         });
       }
-    } else if (investmentDelta > 0) {
+    } else if (investmentDelta > 0 && profitTargetPrice !== undefined) {
       // Create new wallet for this (assetId, price, profitTargetId) combination
       await client.models.Wallet.create({
         assetId,
@@ -249,6 +287,7 @@ export default function AssetTransactionsPage() {
         profitTargetId,
         investment: investmentDelta,
         shares: parseFloat((investmentDelta / price).toFixed(5)),
+        profitTargetPrice,
       });
     }
   }
@@ -288,6 +327,18 @@ export default function AssetTransactionsPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchTransactions, fetchWallets, transactions]);
+
+  // Find the last (most recent) BUY transaction for ET highlighting
+  const lastBuyTransaction = useMemo(() => {
+    // transactions are sorted by date descending, so first BUY is the most recent
+    return transactions.find((t) => t.type === "BUY") || null;
+  }, [transactions]);
+
+  // Get first entry target for column header
+  const firstEntryTarget = useMemo(() => {
+    if (entryTargets.length === 0) return null;
+    return [...entryTargets].sort((a, b) => a.sortOrder - b.sortOrder)[0];
+  }, [entryTargets]);
 
   const columns: Column<TransactionRow>[] = useMemo(
     () => [
@@ -349,6 +400,22 @@ export default function AssetTransactionsPage() {
         render: (item) => formatCurrency(item.investment),
       },
       {
+        key: "entryTarget",
+        header: firstEntryTarget ? `ET (-${Math.abs(firstEntryTarget.targetPercent)}%)` : "ET",
+        render: (item) => {
+          if (item.type !== "BUY" || item.entryTargetPrice === null) {
+            return "-";
+          }
+          const isLastBuy = lastBuyTransaction?.id === item.id;
+          const shouldHighlight = isLastBuy && asset?.testPrice !== null && asset?.testPrice !== undefined && asset.testPrice <= item.entryTargetPrice;
+          return (
+            <span className={shouldHighlight ? "text-green-400 font-medium" : ""}>
+              {formatCurrency(item.entryTargetPrice)}
+            </span>
+          );
+        },
+      },
+      {
         key: "actions",
         header: "",
         sortable: false,
@@ -376,7 +443,7 @@ export default function AssetTransactionsPage() {
         ),
       },
     ],
-    [handleDeleteFromTable]
+    [handleDeleteFromTable, firstEntryTarget, lastBuyTransaction, asset]
   );
 
   // Column visibility toggle
@@ -433,7 +500,7 @@ export default function AssetTransactionsPage() {
       const aggregated = wallets.reduce((acc, wallet) => {
         const key = wallet.price;
         if (!acc[key]) {
-          acc[key] = { id: `agg-${key}`, price: wallet.price, shares: 0, investment: 0, profitTargetId: "" };
+          acc[key] = { id: `agg-${key}`, price: wallet.price, shares: 0, investment: 0, profitTargetId: "", profitTargetPrice: 0 };
         }
         acc[key].shares += wallet.shares;
         acc[key].investment += wallet.investment;
@@ -457,12 +524,36 @@ export default function AssetTransactionsPage() {
     return counts;
   }, [wallets]);
 
+  // Calculate which PTs are "hit" based on lowest profitTargetPrice
+  const hitProfitTargetIds = useMemo(() => {
+    if (!asset?.testPrice) return new Set<string>();
+
+    const hitIds = new Set<string>();
+
+    for (const pt of profitTargets) {
+      // Get wallets for this PT
+      const ptWallets = wallets.filter((w) => w.profitTargetId === pt.id);
+      if (ptWallets.length === 0) continue;
+
+      // Find lowest profitTargetPrice (from lowest buy price wallet)
+      const lowestTargetPrice = Math.min(...ptWallets.map((w) => w.profitTargetPrice));
+
+      // Check if current price meets target
+      if (asset.testPrice >= lowestTargetPrice) {
+        hitIds.add(pt.id);
+      }
+    }
+
+    return hitIds;
+  }, [asset?.testPrice, profitTargets, wallets]);
+
   useEffect(() => {
     fetchAsset();
     fetchTransactions();
     fetchProfitTargets();
+    fetchEntryTargets();
     fetchWallets();
-  }, [fetchAsset, fetchTransactions, fetchProfitTargets, fetchWallets]);
+  }, [fetchAsset, fetchTransactions, fetchProfitTargets, fetchEntryTargets, fetchWallets]);
 
   function handleNewTransaction() {
     setSelectedTransaction(null);
@@ -518,6 +609,8 @@ export default function AssetTransactionsPage() {
 
       // Create new allocations and wallets for BUY transactions
       if (data.type === "BUY" && allocations && allocations.length > 0 && data.price && data.investment) {
+        const commission = asset?.commission ?? 0;
+
         for (const alloc of allocations) {
           // Create allocation record
           await client.models.TransactionAllocation.create({
@@ -526,9 +619,16 @@ export default function AssetTransactionsPage() {
             percentage: alloc.percentage,
             shares: alloc.shares,
           });
+
+          // Calculate profitTargetPrice for this wallet
+          const pt = profitTargets.find((p) => p.id === alloc.profitTargetId);
+          const ptPercent = pt?.targetPercent ?? 0;
+          // Formula: buyPrice × (1 + PT%) / (1 - commission%)
+          const profitTargetPrice = data.price * (1 + ptPercent / 100) / (1 - commission / 100);
+
           // Create/update wallet for this profit target
           const allocationInvestment = (alloc.percentage / 100) * data.investment;
-          await upsertWallet(data.price, alloc.profitTargetId, allocationInvestment);
+          await upsertWallet(data.price, alloc.profitTargetId, allocationInvestment, profitTargetPrice);
         }
         await fetchWallets();
       }
@@ -657,9 +757,16 @@ export default function AssetTransactionsPage() {
       </div>
 
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-foreground">
-          {asset?.symbol || "..."} Transactions
-        </h2>
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">
+            {asset ? `${asset.symbol} ${asset.name}` : "..."}
+          </h2>
+          {asset?.testPrice !== null && asset?.testPrice !== undefined && (
+            <p className="text-muted-foreground">
+              {formatCurrency(asset.testPrice)}
+            </p>
+          )}
+        </div>
         <button
           onClick={handleNewTransaction}
           className="px-4 py-2 text-sm bg-foreground text-background rounded hover:opacity-90"
@@ -702,6 +809,7 @@ export default function AssetTransactionsPage() {
               .sort((a, b) => a.sortOrder - b.sortOrder)
               .map((pt) => {
                 const count = walletCountByPT[pt.id] || 0;
+                const isHit = hitProfitTargetIds.has(pt.id);
                 return (
                   <button
                     key={pt.id}
@@ -709,7 +817,9 @@ export default function AssetTransactionsPage() {
                     className={`px-3 py-1.5 text-sm rounded transition-colors ${
                       selectedProfitTargetId === pt.id
                         ? "bg-blue-600 text-white"
-                        : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                        : isHit
+                          ? "bg-card border border-green-500 text-green-400 font-medium"
+                          : "bg-card border border-border text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     {pt.name}{count > 0 && ` (${count})`}
@@ -758,6 +868,7 @@ export default function AssetTransactionsPage() {
           transaction={selectedTransaction}
           assets={[asset]}
           profitTargets={profitTargets}
+          entryTargets={entryTargets}
           onClose={() => setIsModalOpen(false)}
           onSave={handleSave}
           onDelete={handleDelete}

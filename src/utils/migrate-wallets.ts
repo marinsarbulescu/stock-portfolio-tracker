@@ -56,6 +56,15 @@ export async function migrateWallets(): Promise<MigrationResult[]> {
     const buyTransactions = transactionsResponse.data;
     console.log(`  Found ${buyTransactions.length} BUY transactions`);
 
+    // Get profit targets for this asset (needed for profitTargetPrice calculation)
+    const profitTargetsResponse = await client.models.ProfitTarget.list({
+      filter: { assetId: { eq: asset.id } },
+    });
+    const profitTargetsMap = new Map(
+      profitTargetsResponse.data.map((pt) => [pt.id, pt.targetPercent])
+    );
+    const commission = asset.commission ?? 0;
+
     // 4. Build new wallet map from transaction allocations
     const newWalletMap = new Map<string, {
       assetId: string;
@@ -63,6 +72,7 @@ export async function migrateWallets(): Promise<MigrationResult[]> {
       profitTargetId: string;
       investment: number;
       shares: number;
+      profitTargetPrice: number;
     }>();
 
     for (const txn of buyTransactions) {
@@ -84,10 +94,15 @@ export async function migrateWallets(): Promise<MigrationResult[]> {
         const allocationInvestment = (alloc.percentage / 100) * txn.investment;
         const allocationShares = allocationInvestment / txn.price;
 
+        // Calculate profitTargetPrice: buyPrice × (1 + PT%) / (1 - commission%)
+        const ptPercent = profitTargetsMap.get(alloc.profitTargetId) ?? 0;
+        const profitTargetPrice = txn.price * (1 + ptPercent / 100) / (1 - commission / 100);
+
         if (newWalletMap.has(key)) {
           const existing = newWalletMap.get(key)!;
           existing.investment += allocationInvestment;
           existing.shares += allocationShares;
+          // profitTargetPrice stays the same since it's based on the same price/PT combo
         } else {
           newWalletMap.set(key, {
             assetId: asset.id,
@@ -95,6 +110,7 @@ export async function migrateWallets(): Promise<MigrationResult[]> {
             profitTargetId: alloc.profitTargetId,
             investment: allocationInvestment,
             shares: allocationShares,
+            profitTargetPrice,
           });
         }
       }

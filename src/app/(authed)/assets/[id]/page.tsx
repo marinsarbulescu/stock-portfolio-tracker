@@ -334,12 +334,21 @@ export default function EditAssetPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <Link
-          href="/assets"
-          className="text-muted-foreground hover:text-foreground"
-        >
-          &larr; Back to Assets
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/assets"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            &larr; Back to Assets
+          </Link>
+          <span className="text-muted-foreground">|</span>
+          <Link
+            href={`/assets/${assetId}/transactions`}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Transactions
+          </Link>
+        </div>
         <button
           onClick={handleDelete}
           disabled={isSubmitting}
