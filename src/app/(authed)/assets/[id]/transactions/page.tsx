@@ -48,6 +48,7 @@ interface TransactionRow {
   splitRatio: number | null;
   entryTargetPrice: number | null;
   entryTargetPercent: number | null;
+  costBasis: number | null;
 }
 
 interface WalletRow {
@@ -210,6 +211,7 @@ export default function AssetTransactionsPage() {
         splitRatio: item.splitRatio ?? null,
         entryTargetPrice: item.entryTargetPrice ?? null,
         entryTargetPercent: item.entryTargetPercent ?? null,
+        costBasis: item.costBasis ?? null,
       }));
 
       // Sort by date descending (newest first)
@@ -416,6 +418,39 @@ export default function AssetTransactionsPage() {
         },
       },
       {
+        key: "pl",
+        header: "P/L",
+        render: (item) => {
+          if (item.type !== "SELL" || item.amount === null || item.costBasis === null) {
+            return "-";
+          }
+          const pl = item.amount - item.costBasis;
+          const isPositive = pl >= 0;
+          return (
+            <span className={isPositive ? "text-green-400" : "text-red-400"}>
+              {isPositive ? "+" : ""}{formatCurrency(pl)}
+            </span>
+          );
+        },
+      },
+      {
+        key: "plPercent",
+        header: "P/L (%)",
+        render: (item) => {
+          if (item.type !== "SELL" || item.amount === null || item.costBasis === null || item.costBasis === 0) {
+            return "-";
+          }
+          const pl = item.amount - item.costBasis;
+          const plPercent = (pl / item.costBasis) * 100;
+          const isPositive = plPercent >= 0;
+          return (
+            <span className={isPositive ? "text-green-400" : "text-red-400"}>
+              {isPositive ? "+" : ""}{plPercent.toFixed(2)}%
+            </span>
+          );
+        },
+      },
+      {
         key: "actions",
         header: "",
         sortable: false,
@@ -451,47 +486,6 @@ export default function AssetTransactionsPage() {
     columns,
     { storageKey: "transactions-columns" }
   );
-
-  // Wallet columns - include Action column only on PT tabs (not on "All" tab)
-  const walletColumns = useMemo(() => {
-    const baseColumns: Column<WalletRow>[] = [
-      {
-        key: "price",
-        header: "Price",
-        render: (item) => formatCurrency(item.price),
-      },
-      {
-        key: "shares",
-        header: "Shares",
-        render: (item) =>
-          item.shares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      },
-      {
-        key: "investment",
-        header: "Investment",
-        render: (item) => formatCurrency(item.investment),
-      },
-    ];
-
-    // Add Action column only when viewing a specific PT (not "All" tab)
-    if (selectedProfitTargetId !== null) {
-      baseColumns.push({
-        key: "action",
-        header: "Action",
-        sortable: false,
-        render: (item) => (
-          <button
-            onClick={() => setSellWallet(item)}
-            className="text-red-400 hover:text-red-300 hover:underline text-sm"
-          >
-            Sell
-          </button>
-        ),
-      });
-    }
-
-    return baseColumns;
-  }, [selectedProfitTargetId]);
 
   // Filter/aggregate wallets based on selected profit target tab
   const displayWallets = useMemo((): WalletRow[] => {
@@ -546,6 +540,77 @@ export default function AssetTransactionsPage() {
 
     return hitIds;
   }, [asset?.testPrice, profitTargets, wallets]);
+
+  // Wallet columns - include PT-specific columns only on PT tabs (not on "All" tab)
+  const walletColumns = useMemo(() => {
+    const baseColumns: Column<WalletRow>[] = [
+      {
+        key: "price",
+        header: "Price",
+        render: (item) => formatCurrency(item.price),
+      },
+      {
+        key: "shares",
+        header: "Shares",
+        render: (item) =>
+          item.shares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      },
+      {
+        key: "investment",
+        header: "Investment",
+        render: (item) => formatCurrency(item.investment),
+      },
+    ];
+
+    // Add PT-specific columns only when viewing a specific PT (not "All" tab)
+    if (selectedProfitTargetId !== null) {
+      const isPTHit = hitProfitTargetIds.has(selectedProfitTargetId);
+
+      // PT column - target sell price
+      baseColumns.push({
+        key: "pt",
+        header: "PT",
+        render: (item) => formatCurrency(item.profitTargetPrice),
+      });
+
+      // %2PT column - percentage distance to PT
+      baseColumns.push({
+        key: "pct2pt",
+        header: "%2PT",
+        render: (item) => {
+          if (!asset?.testPrice || !item.profitTargetPrice) return "-";
+          const pct2pt = ((asset.testPrice - item.profitTargetPrice) / item.profitTargetPrice) * 100;
+          const isPositive = pct2pt >= 0;
+          return (
+            <span className={isPositive ? "text-green-400" : ""}>
+              {isPositive ? "+" : ""}{pct2pt.toFixed(2)}%
+            </span>
+          );
+        },
+      });
+
+      // Action column
+      baseColumns.push({
+        key: "action",
+        header: "Action",
+        sortable: false,
+        render: (item) => (
+          <button
+            onClick={() => setSellWallet(item)}
+            className={`hover:underline text-sm ${
+              isPTHit
+                ? "text-green-400 hover:text-green-300"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Sell
+          </button>
+        ),
+      });
+    }
+
+    return baseColumns;
+  }, [selectedProfitTargetId, hitProfitTargetIds, asset?.testPrice]);
 
   useEffect(() => {
     fetchAsset();
@@ -677,7 +742,10 @@ export default function AssetTransactionsPage() {
     if (!sellWallet) return;
 
     try {
-      // 1. Create SELL transaction with walletId
+      // Calculate costBasis: buyPrice × quantity (what was originally paid for these shares)
+      const costBasis = sellWallet.price * data.quantity;
+
+      // 1. Create SELL transaction with walletId and costBasis
       const result = await client.models.Transaction.create({
         type: "SELL",
         date: data.date,
@@ -685,6 +753,7 @@ export default function AssetTransactionsPage() {
         price: data.price,
         quantity: data.quantity,
         amount: data.netProceeds,
+        costBasis,
         walletId: sellWallet.id,
         assetId,
       });
