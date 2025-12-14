@@ -642,7 +642,7 @@ export function TransactionModal({
               </h4>
               {totalShares > 0 && (
                 <span className="text-xs text-muted-foreground">
-                  Total: {totalShares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} shares
+                  Total: {totalShares.toLocaleString(undefined, { minimumFractionDigits: 5, maximumFractionDigits: 5 })} shares
                 </span>
               )}
             </div>
@@ -701,9 +701,9 @@ export function TransactionModal({
                       <span className="text-muted-foreground">→</span>
                       <span className="text-card-foreground">
                         {inputValue
-                          ? displayShares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          ? displayShares.toLocaleString(undefined, { minimumFractionDigits: 5, maximumFractionDigits: 5 })
                           : autoPercentage > 0
-                          ? `(${displayShares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                          ? `(${displayShares.toLocaleString(undefined, { minimumFractionDigits: 5, maximumFractionDigits: 5 })})`
                           : "-"}{" "}
                         shares
                       </span>
@@ -722,7 +722,7 @@ export function TransactionModal({
                   </span>
                   <span className="text-muted-foreground">→</span>
                   <span className="text-card-foreground font-medium">
-                    {totalShares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} shares
+                    {totalShares.toLocaleString(undefined, { minimumFractionDigits: 5, maximumFractionDigits: 5 })} shares
                   </span>
                 </div>
 

@@ -168,7 +168,7 @@ export function SellModal({
           <div className="flex justify-between">
             <span className="text-muted-foreground">Available Shares:</span>
             <span className="text-card-foreground">
-              {wallet.shares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}
+              {wallet.shares.toLocaleString(undefined, { minimumFractionDigits: 5, maximumFractionDigits: 5 })}
             </span>
           </div>
           <div className="flex justify-between">

@@ -490,7 +490,7 @@ export default function AssetTransactionsPage() {
           }
           if (item.type === "BUY" || item.type === "SELL") {
             return item.quantity !== null
-              ? item.quantity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              ? item.quantity.toLocaleString(undefined, { minimumFractionDigits: 5, maximumFractionDigits: 5 })
               : "-";
           }
           return "-";
@@ -643,7 +643,7 @@ export default function AssetTransactionsPage() {
         key: "shares",
         header: "Shares",
         render: (item) =>
-          item.shares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+          item.shares.toLocaleString(undefined, { minimumFractionDigits: 5, maximumFractionDigits: 5 }),
       },
       {
         key: "investment",
@@ -1101,7 +1101,7 @@ export default function AssetTransactionsPage() {
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Total shs</span>
                 <span className="text-sm text-foreground">
-                  {txnStats.totalShares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {txnStats.totalShares.toLocaleString(undefined, { minimumFractionDigits: 5, maximumFractionDigits: 5 })}
                 </span>
               </div>
               {profitTargets
@@ -1115,7 +1115,7 @@ export default function AssetTransactionsPage() {
                         PT +{pt.targetPercent}%
                       </span>
                       <span className="text-sm text-foreground">
-                        {shares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {shares.toLocaleString(undefined, { minimumFractionDigits: 5, maximumFractionDigits: 5 })}
                       </span>
                     </div>
                   );
