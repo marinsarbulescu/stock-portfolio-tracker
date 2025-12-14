@@ -1,8 +1,14 @@
 import yahooFinance from "yahoo-finance2";
 
+interface HistoricalClose {
+  date: string;
+  close: number;
+}
+
 interface PriceResult {
   symbol: string;
   currentPrice: number | null;
+  historicalCloses: HistoricalClose[];
 }
 
 interface GetPricesEvent {
@@ -20,17 +26,43 @@ export const handler = async (event: GetPricesEvent): Promise<PriceResult[]> => 
 
   const results: PriceResult[] = [];
 
+  // Calculate date range for historical data (7 days to ensure 5 trading days)
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 7);
+
   // Sequential fetching to avoid rate limiting
   for (const symbol of symbols) {
     try {
-      const quote = await yahooFinance.quote(symbol, {
-        fields: ["regularMarketPrice"],
-      });
+      // Fetch quote and historical data concurrently for each symbol
+      const [quote, chart] = await Promise.all([
+        yahooFinance.quote(symbol, {
+          fields: ["regularMarketPrice"],
+        }),
+        yahooFinance.chart(symbol, {
+          period1: startDate,
+          interval: "1d",
+        }),
+      ]);
+
       const currentPrice = quote?.regularMarketPrice ?? null;
-      results.push({ symbol, currentPrice });
+
+      // Extract historical closes from chart data
+      const historicalCloses: HistoricalClose[] = [];
+      if (chart?.quotes) {
+        for (const q of chart.quotes) {
+          if (q.close !== null && q.close !== undefined && q.date) {
+            historicalCloses.push({
+              date: q.date.toISOString().split("T")[0],
+              close: q.close,
+            });
+          }
+        }
+      }
+
+      results.push({ symbol, currentPrice, historicalCloses });
     } catch (error) {
       console.error(`Error fetching ${symbol}:`, error);
-      results.push({ symbol, currentPrice: null });
+      results.push({ symbol, currentPrice: null, historicalCloses: [] });
     }
   }
 

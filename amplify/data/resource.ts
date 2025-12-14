@@ -115,10 +115,17 @@ const schema = a.schema({
     })
     .authorization((allow) => [allow.owner()]),
 
+  // Custom type for historical close data
+  HistoricalClose: a.customType({
+    date: a.string().required(),
+    close: a.float().required(),
+  }),
+
   // Custom type for Yahoo Finance price result
   PriceResult: a.customType({
     symbol: a.string().required(),
     currentPrice: a.float(),
+    historicalCloses: a.ref("HistoricalClose").array(),
   }),
 
   // Query to fetch latest prices from Yahoo Finance

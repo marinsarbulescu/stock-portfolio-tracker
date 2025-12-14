@@ -350,10 +350,12 @@ export default function AssetTransactionsPage() {
     if (!asset) return { effectivePrice: null, isTestPrice: false };
 
     const price = getEffectivePrice(asset.symbol, prices, asset.testPrice);
-    const fetchedPrice = prices[asset.symbol];
+    const priceData = prices[asset.symbol];
     const isTest =
       price !== null &&
-      (!(asset.symbol in prices) || fetchedPrice === null || fetchedPrice === 0);
+      (!priceData ||
+        priceData.currentPrice === null ||
+        priceData.currentPrice === 0);
 
     return { effectivePrice: price, isTestPrice: isTest };
   }, [asset, prices]);

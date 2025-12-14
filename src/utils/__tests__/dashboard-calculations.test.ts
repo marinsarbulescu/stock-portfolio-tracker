@@ -5,6 +5,8 @@ import {
   getDaysSinceColor,
   calculatePctToTarget,
   getPct2PTColor,
+  calculate5DPullback,
+  HistoricalClose,
 } from "../dashboard-calculations";
 
 describe("calculatePullbackPercent", () => {
@@ -182,5 +184,110 @@ describe("getPct2PTColor", () => {
 
   it("should return default for -5%", () => {
     expect(getPct2PTColor(-5)).toBe("default");
+  });
+});
+
+describe("calculate5DPullback", () => {
+  // Helper to create historical closes
+  const makeCloses = (closes: number[]): HistoricalClose[] => {
+    // Creates closes for the last N days in descending date order
+    return closes.map((close, i) => ({
+      date: new Date(Date.now() - (i + 1) * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0],
+      close,
+    }));
+  };
+
+  it("should return null when effective price is null", () => {
+    const closes = makeCloses([100, 101, 102, 103, 104]);
+    expect(calculate5DPullback(null, closes, 5)).toBeNull();
+  });
+
+  it("should return null when historical closes is empty", () => {
+    expect(calculate5DPullback(95, [], 5)).toBeNull();
+  });
+
+  it("should return null when historical closes is null/undefined", () => {
+    expect(calculate5DPullback(95, null as unknown as HistoricalClose[], 5)).toBeNull();
+  });
+
+  it("should return null when entry target is null", () => {
+    const closes = makeCloses([100, 101, 102, 103, 104]);
+    expect(calculate5DPullback(95, closes, null)).toBeNull();
+  });
+
+  it("should return null when no closes meet the threshold", () => {
+    // Effective price 95, closes all at 99 = -4.04% dip (doesn't meet -5% threshold)
+    const closes = makeCloses([99, 99, 99, 99, 99]);
+    expect(calculate5DPullback(95, closes, 5)).toBeNull();
+  });
+
+  it("should return the dip from highest close among hits", () => {
+    // Effective price $95, ET -5%
+    // Day -1: $95 → 0% → No hit
+    // Day -2: $102 → -6.86% → Hit (highest close!)
+    // Day -3: $98 → -3.06% → No hit
+    // Day -4: $101 → -5.94% → Hit
+    // Day -5: $99 → -4.04% → No hit
+    const closes = makeCloses([95, 102, 98, 101, 99]);
+    const result = calculate5DPullback(95, closes, 5);
+    // Expected: (95 - 102) / 102 * 100 = -6.86%
+    expect(result).toBeCloseTo(-6.86, 2);
+  });
+
+  it("should use only the last 5 closes even if more provided", () => {
+    // 7 closes provided, but should only use last 5
+    // Closes in date order (newest first): 95, 102, 98, 101, 99, 110, 115
+    // Only last 5: 95, 102, 98, 101, 99
+    // The 110 and 115 should be ignored
+    const closes = makeCloses([95, 102, 98, 101, 99, 110, 115]);
+    const result = calculate5DPullback(95, closes, 5);
+    // Should be same as previous test: -6.86%
+    expect(result).toBeCloseTo(-6.86, 2);
+  });
+
+  it("should work with a single hit", () => {
+    // Only one close meets threshold
+    const closes = makeCloses([98, 98, 105, 98, 98]);
+    // Effective 95, closes at 98 give -3.06% (no hit), close at 105 gives -9.52% (hit)
+    const result = calculate5DPullback(95, closes, 5);
+    // Expected: (95 - 105) / 105 * 100 = -9.52%
+    expect(result).toBeCloseTo(-9.52, 2);
+  });
+
+  it("should handle when all closes are hits", () => {
+    // All closes meet threshold, should return dip from highest
+    const closes = makeCloses([110, 108, 106, 104, 102]);
+    // Effective 95, ET 5%
+    // Dips: -13.64%, -12.04%, -10.38%, -8.65%, -6.86%
+    // All meet -5% threshold, highest close is 110
+    const result = calculate5DPullback(95, closes, 5);
+    // Expected: (95 - 110) / 110 * 100 = -13.64%
+    expect(result).toBeCloseTo(-13.64, 2);
+  });
+
+  it("should handle entry target as absolute value", () => {
+    // ET stored as positive 5 (meaning -5% threshold)
+    const closes = makeCloses([100, 101, 102]);
+    const result = calculate5DPullback(95, closes, 5);
+    // 95 vs 102 = -6.86% (meets -5%)
+    expect(result).toBeCloseTo(-6.86, 2);
+  });
+
+  it("should skip closes with zero value", () => {
+    // One close is 0 (invalid data), should skip it
+    const closes = makeCloses([99, 0, 105, 98, 97]);
+    // Effective 95, only 105 gives -9.52% hit
+    const result = calculate5DPullback(95, closes, 5);
+    expect(result).toBeCloseTo(-9.52, 2);
+  });
+
+  it("should return exact threshold hit", () => {
+    // Price exactly at -5% threshold
+    // If close is 100 and effective is 95, dip = -5% exactly
+    const closes = makeCloses([100]);
+    const result = calculate5DPullback(95, closes, 5);
+    expect(result).toBeCloseTo(-5, 2);
   });
 });

@@ -10,7 +10,17 @@ import React, {
 } from "react";
 import { client } from "@/utils/amplify-client";
 
-type PriceMap = Record<string, number | null>;
+export interface HistoricalClose {
+  date: string;
+  close: number;
+}
+
+export interface PriceData {
+  currentPrice: number | null;
+  historicalCloses: HistoricalClose[];
+}
+
+type PriceMap = Record<string, PriceData>;
 
 interface PriceContextType {
   prices: PriceMap;
@@ -25,7 +35,7 @@ interface PriceContextType {
 const PriceContext = createContext<PriceContextType | undefined>(undefined);
 
 const BATCH_SIZE = 5;
-const STORAGE_KEY_PRICES = "yahoo-finance-prices";
+const STORAGE_KEY_PRICES = "yahoo-finance-prices-v2";
 const STORAGE_KEY_TIMESTAMP = "yahoo-finance-timestamp";
 
 export function PriceProvider({ children }: { children: ReactNode }) {
@@ -82,7 +92,13 @@ export function PriceProvider({ children }: { children: ReactNode }) {
         if (data) {
           data.forEach((result) => {
             if (result?.symbol) {
-              fetchedPrices[result.symbol] = result.currentPrice ?? null;
+              fetchedPrices[result.symbol] = {
+                currentPrice: result.currentPrice ?? null,
+                historicalCloses: (result.historicalCloses ?? []).map((hc) => ({
+                  date: hc?.date ?? "",
+                  close: hc?.close ?? 0,
+                })),
+              };
             }
           });
         }

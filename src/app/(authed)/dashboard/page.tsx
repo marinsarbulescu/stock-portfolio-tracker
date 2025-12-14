@@ -5,7 +5,7 @@ import Link from "next/link";
 import { client } from "@/utils/amplify-client";
 import { SortableTable, Column } from "@/components/SortableTable";
 import { usePrices } from "@/contexts/PriceContext";
-import { getEffectivePrice } from "@/utils/price-utils";
+import { getEffectivePrice, getHistoricalCloses } from "@/utils/price-utils";
 import {
   calculatePullbackPercent,
   isPullbackTriggered,
@@ -13,6 +13,7 @@ import {
   getDaysSinceColor,
   calculatePctToTarget,
   getPct2PTColor,
+  calculate5DPullback,
 } from "@/utils/dashboard-calculations";
 
 interface DashboardAsset {
@@ -27,6 +28,8 @@ interface DashboardAsset {
   daysSinceLastBuy: number | null;
   lowestPTPrice: number | null;
   pctToLowestPT: number | null;
+  fiveDPullback: number | null;
+  firstEntryTargetPercent: number | null;
 }
 
 interface RawAssetData {
@@ -37,6 +40,7 @@ interface RawAssetData {
   lastBuyDate: string | null;
   entryTargetPercent: number | null;
   lowestPTPrice: number | null;
+  firstEntryTargetPercent: number | null;
 }
 
 export default function Dashboard() {
@@ -59,7 +63,7 @@ export default function Dashboard() {
       setError(null);
 
       // Parallel fetch all required data
-      const [assetsResponse, transactionsResponse, walletsResponse] =
+      const [assetsResponse, transactionsResponse, walletsResponse, entryTargetsResponse] =
         await Promise.all([
           client.models.Asset.list({
             filter: { status: { eq: "ACTIVE" } },
@@ -68,11 +72,13 @@ export default function Dashboard() {
             filter: { type: { eq: "BUY" } },
           }),
           client.models.Wallet.list(),
+          client.models.EntryTarget.list(),
         ]);
 
       const assets = assetsResponse.data;
       const transactions = transactionsResponse.data;
       const wallets = walletsResponse.data;
+      const entryTargets = entryTargetsResponse.data;
 
       // Process raw data for each asset (without effective price calculation)
       const processedRawData: RawAssetData[] = assets.map((asset) => {
@@ -92,6 +98,12 @@ export default function Dashboard() {
             ? Math.min(...assetWallets.map((w) => w.profitTargetPrice))
             : null;
 
+        // Find first entry target for this asset (lowest sortOrder)
+        const assetEntryTargets = entryTargets
+          .filter((et) => et.assetId === asset.id)
+          .sort((a, b) => a.sortOrder - b.sortOrder);
+        const firstEntryTargetPercent = assetEntryTargets[0]?.targetPercent ?? null;
+
         return {
           id: asset.id,
           symbol: asset.symbol,
@@ -100,6 +112,7 @@ export default function Dashboard() {
           lastBuyDate: lastBuy?.date ?? null,
           entryTargetPercent: lastBuy?.entryTargetPercent ?? null,
           lowestPTPrice,
+          firstEntryTargetPercent,
         };
       });
 
@@ -129,12 +142,12 @@ export default function Dashboard() {
       );
 
       // Check if price is from testPrice (not from Yahoo Finance)
-      const fetchedPrice = prices[asset.symbol];
+      const priceData = prices[asset.symbol];
       const isTestPrice =
         currentPrice !== null &&
-        (!(asset.symbol in prices) ||
-          fetchedPrice === null ||
-          fetchedPrice === 0);
+        (!priceData ||
+          priceData.currentPrice === null ||
+          priceData.currentPrice === 0);
 
       const pullbackPercent = calculatePullbackPercent(
         currentPrice,
@@ -144,6 +157,14 @@ export default function Dashboard() {
       const pctToLowestPT = calculatePctToTarget(
         currentPrice,
         asset.lowestPTPrice
+      );
+
+      // Calculate 5D Pullback using historical closes and first entry target
+      const historicalCloses = getHistoricalCloses(asset.symbol, prices);
+      const fiveDPullback = calculate5DPullback(
+        currentPrice,
+        historicalCloses,
+        asset.firstEntryTargetPercent
       );
 
       return {
@@ -158,6 +179,8 @@ export default function Dashboard() {
         daysSinceLastBuy,
         lowestPTPrice: asset.lowestPTPrice,
         pctToLowestPT,
+        fiveDPullback,
+        firstEntryTargetPercent: asset.firstEntryTargetPercent,
       };
     });
   }, [rawAssetData, prices]);
@@ -211,6 +234,18 @@ export default function Dashboard() {
           }
 
           return <span>{item.pullbackPercent.toFixed(2)}%</span>;
+        },
+      },
+      {
+        key: "fiveDPullback",
+        header: "5D Pullback",
+        sortable: true,
+        render: (item) => {
+          if (item.fiveDPullback === null) {
+            return <span className="text-muted-foreground">-</span>;
+          }
+
+          return <span>{item.fiveDPullback.toFixed(2)}%</span>;
         },
       },
       {
