@@ -95,6 +95,7 @@ export default function AssetTransactionsPage() {
   const [profitTargets, setProfitTargets] = useState<ProfitTarget[]>([]);
   const [entryTargets, setEntryTargets] = useState<EntryTarget[]>([]);
   const [wallets, setWallets] = useState<WalletRow[]>([]);
+  const [maxOOP, setMaxOOP] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedProfitTargetId, setSelectedProfitTargetId] = useState<string | null>(null); // null = "All"
@@ -253,6 +254,25 @@ export default function AssetTransactionsPage() {
     }
   }, [assetId]);
 
+  const fetchMaxOOP = useCallback(async () => {
+    try {
+      const currentYear = new Date().getFullYear();
+      const response = await client.models.YearlyBudget.list({
+        filter: {
+          assetId: { eq: assetId },
+          year: { eq: currentYear },
+        },
+      });
+      if (response.data.length > 0) {
+        setMaxOOP(response.data[0].amount);
+      } else {
+        setMaxOOP(null);
+      }
+    } catch (err) {
+      console.error("Error fetching yearly budget:", err);
+    }
+  }, [assetId]);
+
   // Wallet helper functions - now using composite key (assetId, price, profitTargetId)
   async function findWalletByCompositeKey(price: number, profitTargetId: string) {
     const response = await client.models.Wallet.list({
@@ -363,6 +383,68 @@ export default function AssetTransactionsPage() {
     return { effectivePrice: price, isTestPrice: isTest };
   }, [asset, prices]);
 
+  // Calculate OOP and Cash Balance by processing transactions chronologically
+  const { oop, cashBalance } = useMemo(() => {
+    // Sort by date ascending (oldest first)
+    const sorted = [...transactions].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    let totalOOP = 0;
+    let currentCashBalance = 0;
+
+    for (const txn of sorted) {
+      if (txn.type === "BUY" && txn.investment !== null) {
+        const investment = txn.investment;
+        if (currentCashBalance >= investment) {
+          // Fund entirely from cash balance
+          currentCashBalance -= investment;
+        } else {
+          // Need additional out-of-pocket cash
+          const additionalOOP = investment - currentCashBalance;
+          totalOOP += additionalOOP;
+          currentCashBalance = 0;
+        }
+      } else if (txn.type === "SELL" && txn.amount !== null) {
+        // Add sale proceeds to cash balance
+        currentCashBalance += txn.amount;
+      } else if ((txn.type === "DIVIDEND" || txn.type === "SLP") && txn.amount !== null) {
+        // Dividend/SLP adds to cash balance
+        currentCashBalance += txn.amount;
+      }
+    }
+
+    return {
+      oop: Math.max(0, totalOOP),
+      cashBalance: Math.max(0, currentCashBalance),
+    };
+  }, [transactions]);
+
+  // Calculate transaction counts and shares
+  const txnStats = useMemo(() => {
+    let buyCount = 0;
+    let sellCount = 0;
+
+    for (const txn of transactions) {
+      if (txn.type === "BUY") {
+        buyCount++;
+      } else if (txn.type === "SELL") {
+        sellCount++;
+      }
+    }
+
+    // Total shares from wallets (current holdings)
+    const totalShares = wallets.reduce((sum, w) => sum + w.shares, 0);
+
+    // Shares per profit target
+    const sharesByPT: Record<string, number> = {};
+    for (const wallet of wallets) {
+      sharesByPT[wallet.profitTargetId] = (sharesByPT[wallet.profitTargetId] || 0) + wallet.shares;
+    }
+
+    return { buyCount, sellCount, totalShares, sharesByPT };
+  }, [transactions, wallets]);
+
   const columns: Column<TransactionRow>[] = useMemo(
     () => [
       {
@@ -446,12 +528,7 @@ export default function AssetTransactionsPage() {
             return "-";
           }
           const pl = item.amount - item.costBasis;
-          const isPositive = pl >= 0;
-          return (
-            <span className={isPositive ? "text-green-400" : "text-red-400"}>
-              {isPositive ? "+" : ""}{formatCurrency(pl)}
-            </span>
-          );
+          return `${pl >= 0 ? "+" : ""}${formatCurrency(pl)}`;
         },
       },
       {
@@ -463,12 +540,7 @@ export default function AssetTransactionsPage() {
           }
           const pl = item.amount - item.costBasis;
           const plPercent = (pl / item.costBasis) * 100;
-          const isPositive = plPercent >= 0;
-          return (
-            <span className={isPositive ? "text-green-400" : "text-red-400"}>
-              {isPositive ? "+" : ""}{plPercent.toFixed(2)}%
-            </span>
-          );
+          return `${plPercent >= 0 ? "+" : ""}${plPercent.toFixed(2)}%`;
         },
       },
       {
@@ -639,7 +711,8 @@ export default function AssetTransactionsPage() {
     fetchProfitTargets();
     fetchEntryTargets();
     fetchWallets();
-  }, [fetchAsset, fetchTransactions, fetchProfitTargets, fetchEntryTargets, fetchWallets]);
+    fetchMaxOOP();
+  }, [fetchAsset, fetchTransactions, fetchProfitTargets, fetchEntryTargets, fetchWallets, fetchMaxOOP]);
 
   function handleNewTransaction() {
     setSelectedTransaction(null);
@@ -948,6 +1021,111 @@ export default function AssetTransactionsPage() {
           </button>
         </div>
       )}
+
+      {/* Overview Section */}
+      <div className="mb-8 bg-card border border-border rounded-lg p-4">
+        <h3 className="text-lg font-semibold text-foreground mb-4">Overview</h3>
+        <div className="grid grid-cols-3 gap-8">
+          {/* Budget Column */}
+          <div>
+            <h4 className="text-sm font-medium text-muted-foreground mb-3">Budget</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Max OOP</span>
+                <span className="text-sm text-foreground">
+                  {maxOOP !== null ? formatCurrency(maxOOP) : "-"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Available</span>
+                <span className="text-sm text-foreground">
+                  {maxOOP !== null
+                    ? formatCurrency(Math.max(0, maxOOP - oop) + cashBalance)
+                    : "-"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">ET</span>
+                <span className="text-sm text-foreground">
+                  {firstEntryTarget ? `${firstEntryTarget.targetPercent}%` : "-"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* $ Performance Column */}
+          <div>
+            <h4 className="text-sm font-medium text-muted-foreground mb-3">$ Performance</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">OOP</span>
+                <span className="text-sm text-foreground">{formatCurrency(oop)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Cash Balance</span>
+                <span className="text-sm text-foreground">{formatCurrency(cashBalance)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Market Value</span>
+                <span className="text-sm text-foreground">
+                  {effectivePrice !== null
+                    ? formatCurrency(txnStats.totalShares * effectivePrice)
+                    : "-"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">ROIC</span>
+                <span className="text-sm text-foreground">
+                  {effectivePrice !== null && oop > 0
+                    ? (() => {
+                        const marketValue = txnStats.totalShares * effectivePrice;
+                        const roic = ((cashBalance + marketValue - oop) / oop) * 100;
+                        return `${roic >= 0 ? "+" : ""}${roic.toFixed(2)}%`;
+                      })()
+                    : "-"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Txns & Shs Column */}
+          <div>
+            <h4 className="text-sm font-medium text-muted-foreground mb-3">Txns &amp; Shs</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Buys</span>
+                <span className="text-sm text-foreground">{txnStats.buyCount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Sells</span>
+                <span className="text-sm text-foreground">{txnStats.sellCount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Total shs</span>
+                <span className="text-sm text-foreground">
+                  {txnStats.totalShares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              {profitTargets
+                .sort((a, b) => a.sortOrder - b.sortOrder)
+                .map((pt) => {
+                  const shares = txnStats.sharesByPT[pt.id] || 0;
+                  if (shares === 0) return null;
+                  return (
+                    <div key={pt.id} className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        PT +{pt.targetPercent}%
+                      </span>
+                      <span className="text-sm text-foreground">
+                        {shares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Wallets Section with PT Tabs */}
       {(wallets.length > 0 || profitTargets.length > 0) && (
