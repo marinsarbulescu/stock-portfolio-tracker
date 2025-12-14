@@ -37,6 +37,7 @@ export function MobileNav({ userEmail, onSignOut }: MobileNavProps) {
         className="p-2 text-muted-foreground hover:text-foreground"
         aria-label="Toggle menu"
         aria-expanded={isOpen}
+        data-testid="mobile-menu-toggle"
       >
         {isOpen ? (
           <svg
@@ -82,6 +83,7 @@ export function MobileNav({ userEmail, onSignOut }: MobileNavProps) {
             <Link
               href="/dashboard"
               onClick={() => setIsOpen(false)}
+              data-testid="mobile-nav-dashboard"
               className={`block px-4 py-2 text-sm ${
                 pathname === "/dashboard"
                   ? "text-foreground font-medium"
@@ -93,6 +95,7 @@ export function MobileNav({ userEmail, onSignOut }: MobileNavProps) {
             <Link
               href="/assets"
               onClick={() => setIsOpen(false)}
+              data-testid="mobile-nav-assets"
               className={`block px-4 py-2 text-sm ${
                 pathname === "/assets" || pathname?.startsWith("/assets/")
                   ? "text-foreground font-medium"
@@ -107,6 +110,7 @@ export function MobileNav({ userEmail, onSignOut }: MobileNavProps) {
               setIsOpen(false);
               onSignOut();
             }}
+            data-testid="mobile-btn-signout"
             className="w-full text-left px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted"
           >
             Sign Out

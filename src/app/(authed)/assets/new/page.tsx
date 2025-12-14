@@ -111,6 +111,7 @@ export default function NewAssetPage() {
               <input
                 type="text"
                 id="symbol"
+                data-testid="asset-form-symbol"
                 value={formData.symbol}
                 onChange={(e) =>
                   setFormData({ ...formData, symbol: e.target.value })
@@ -133,6 +134,7 @@ export default function NewAssetPage() {
               <input
                 type="text"
                 id="name"
+                data-testid="asset-form-name"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
@@ -156,6 +158,7 @@ export default function NewAssetPage() {
               </label>
               <select
                 id="type"
+                data-testid="asset-form-type"
                 value={formData.type}
                 onChange={(e) =>
                   setFormData({ ...formData, type: e.target.value as AssetType })
@@ -178,6 +181,7 @@ export default function NewAssetPage() {
               <input
                 type="number"
                 id="testPrice"
+                data-testid="asset-form-testPrice"
                 step="0.01"
                 value={formData.testPrice}
                 onChange={(e) =>
@@ -198,6 +202,7 @@ export default function NewAssetPage() {
               <input
                 type="number"
                 id="commission"
+                data-testid="asset-form-commission"
                 step="0.01"
                 value={formData.commission}
                 onChange={(e) =>
@@ -221,6 +226,7 @@ export default function NewAssetPage() {
             </label>
             <select
               id="status"
+              data-testid="asset-form-status"
               value={formData.status}
               onChange={(e) =>
                 setFormData({ ...formData, status: e.target.value as AssetStatus })
@@ -243,6 +249,7 @@ export default function NewAssetPage() {
             <button
               type="submit"
               disabled={isSubmitting}
+              data-testid="asset-form-submit"
               className="px-4 py-2 text-sm bg-foreground text-background rounded hover:opacity-90 disabled:opacity-50"
             >
               {isSubmitting ? "Creating..." : "Create Asset"}

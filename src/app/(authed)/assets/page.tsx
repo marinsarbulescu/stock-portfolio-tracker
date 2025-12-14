@@ -27,6 +27,7 @@ export default function AssetsPage() {
         render: (item) => (
           <Link
             href={`/assets/${item.id}/transactions`}
+            data-testid={`asset-table-symbol-${item.symbol}`}
             className="font-medium text-blue-400 hover:text-blue-300 hover:underline"
           >
             {item.symbol}
@@ -36,20 +37,36 @@ export default function AssetsPage() {
       {
         key: "name",
         header: "Name",
+        render: (item) => (
+          <span data-testid={`asset-table-name-${item.symbol}`}>{item.name}</span>
+        ),
       },
       {
         key: "type",
         header: "Type",
+        render: (item) => (
+          <span data-testid={`asset-table-type-${item.symbol}`}>
+            {item.type.toLowerCase()}
+          </span>
+        ),
       },
       {
         key: "commission",
         header: "Commission",
-        render: (item) =>
-          item.commission !== null ? `${item.commission}%` : "-",
+        render: (item) => (
+          <span data-testid={`asset-table-commission-${item.symbol}`}>
+            {item.commission !== null ? `${item.commission.toFixed(2)}%` : "-"}
+          </span>
+        ),
       },
       {
         key: "status",
         header: "Status",
+        render: (item) => (
+          <span data-testid={`asset-table-status-${item.symbol}`}>
+            {item.status.toLowerCase()}
+          </span>
+        ),
       },
       {
         key: "actions",
@@ -58,6 +75,7 @@ export default function AssetsPage() {
         render: (item) => (
           <Link
             href={`/assets/${item.id}`}
+            data-testid={`asset-table-edit-${item.symbol}`}
             className="text-muted-foreground hover:text-foreground"
           >
             Edit
@@ -99,6 +117,7 @@ export default function AssetsPage() {
         <h2 className="text-2xl font-bold text-foreground">Assets</h2>
         <Link
           href="/assets/new"
+          data-testid="btn-new-asset"
           className="px-4 py-2 text-sm bg-foreground text-background rounded hover:opacity-90"
         >
           New Asset

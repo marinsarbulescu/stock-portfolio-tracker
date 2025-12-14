@@ -54,7 +54,7 @@ export async function loginUser(
   await cognitoResponsePromise;
 
   // Verify we're redirected to dashboard and nav is visible
-  await expect(page.locator('nav a:has-text("Dashboard")')).toBeVisible({
+  await expect(page.locator('[data-testid="nav-dashboard"]')).toBeVisible({
     timeout: 15000,
   });
 }

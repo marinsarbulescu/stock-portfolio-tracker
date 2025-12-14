@@ -1,0 +1,38 @@
+{
+  "scenario": "AssetCRUD",
+  "description": "Test creating, editing, and deleting an asset via UI",
+  "create": {
+    "input": {
+      "symbol": "E2E-NEW-ASSET",
+      "name": "E2E New Asset",
+      "type": "ETF",
+      "testPrice": "100",
+      "commission": "1",
+      "status": "ACTIVE"
+    },
+    "expected": {
+      "symbol": "E2E-NEW-ASSET",
+      "name": "E2E New Asset",
+      "type": "etf",
+      "commission": "1.00%",
+      "status": "active"
+    }
+  },
+  "edit": {
+    "input": {
+      "symbol": "E2E-NEW-ASSET2",
+      "name": "E2E New Asset2",
+      "type": "STOCK",
+      "testPrice": "110",
+      "commission": "2",
+      "status": "ACTIVE"
+    },
+    "expected": {
+      "symbol": "E2E-NEW-ASSET2",
+      "name": "E2E New Asset2",
+      "type": "stock",
+      "commission": "2.00%",
+      "status": "active"
+    }
+  }
+}

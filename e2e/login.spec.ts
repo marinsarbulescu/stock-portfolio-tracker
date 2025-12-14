@@ -13,8 +13,8 @@ test.describe("Authentication", () => {
     await expect(page).toHaveURL(/\/dashboard/);
 
     // Verify navigation menu is visible
-    await expect(page.locator('nav a:has-text("Dashboard")')).toBeVisible();
-    await expect(page.locator('nav a:has-text("Assets")')).toBeVisible();
+    await expect(page.locator('[data-testid="nav-dashboard"]')).toBeVisible();
+    await expect(page.locator('[data-testid="nav-assets"]')).toBeVisible();
   });
 
   test("shows login form on /login page", async ({ page }) => {

@@ -45,6 +45,7 @@ function AuthedLayoutContent({ children }: { children: React.ReactNode }) {
               <nav className="hidden md:flex items-center gap-4">
                 <Link
                   href="/dashboard"
+                  data-testid="nav-dashboard"
                   className={`text-sm ${
                     pathname === "/dashboard"
                       ? "text-foreground font-medium"
@@ -55,6 +56,7 @@ function AuthedLayoutContent({ children }: { children: React.ReactNode }) {
                 </Link>
                 <Link
                   href="/assets"
+                  data-testid="nav-assets"
                   className={`text-sm ${
                     pathname === "/assets" || pathname?.startsWith("/assets/")
                       ? "text-foreground font-medium"
@@ -71,6 +73,7 @@ function AuthedLayoutContent({ children }: { children: React.ReactNode }) {
               </span>
               <button
                 onClick={signOut}
+                data-testid="btn-signout"
                 className="text-sm text-muted-foreground hover:text-foreground px-3 py-1 rounded border border-border hover:bg-muted"
               >
                 Sign Out
