@@ -107,6 +107,9 @@ export default function AssetTransactionsPage() {
   // Sell modal state
   const [sellWallet, setSellWallet] = useState<WalletRow | null>(null);
 
+  // Delete all state
+  const [isDeleting, setIsDeleting] = useState(false);
+
   async function handleRowClick(transaction: TransactionRow) {
     // Fetch allocations for BUY transactions
     let allocations: TransactionAllocation[] | undefined;
@@ -755,6 +758,66 @@ export default function AssetTransactionsPage() {
     await fetchTransactions();
   }
 
+  // Delete all transactions and wallets for this asset
+  async function handleDeleteAll() {
+    const confirmation = prompt(
+      `This will delete ALL transactions and wallets for this asset.\n\nType "DELETE" to confirm:`
+    );
+
+    if (confirmation !== "DELETE") {
+      return;
+    }
+
+    setIsDeleting(true);
+    setError(null);
+
+    try {
+      // Fetch ALL records directly from DB with high limit (DynamoDB needs this for filtered queries)
+      const FETCH_LIMIT = 5000;
+
+      // 1. Fetch and delete all transactions for this asset
+      const txnResponse = await client.models.Transaction.list({
+        filter: { assetId: { eq: assetId } },
+        limit: FETCH_LIMIT,
+      });
+      const allTransactions = txnResponse.data;
+
+      // 2. Delete all transaction allocations first
+      for (const txn of allTransactions) {
+        const allocationsResponse = await client.models.TransactionAllocation.list({
+          filter: { transactionId: { eq: txn.id } },
+          limit: FETCH_LIMIT,
+        });
+        for (const alloc of allocationsResponse.data) {
+          await client.models.TransactionAllocation.delete({ id: alloc.id });
+        }
+      }
+
+      // 3. Delete all transactions
+      for (const txn of allTransactions) {
+        await client.models.Transaction.delete({ id: txn.id });
+      }
+
+      // 4. Fetch and delete all wallets for this asset
+      const walletResponse = await client.models.Wallet.list({
+        filter: { assetId: { eq: assetId } },
+        limit: FETCH_LIMIT,
+      });
+      for (const wallet of walletResponse.data) {
+        await client.models.Wallet.delete({ id: wallet.id });
+      }
+
+      // Refresh data
+      await fetchTransactions();
+      await fetchWallets();
+    } catch (err) {
+      console.error("Delete all error:", err);
+      setError("Failed to delete all data");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   // Handle sell from wallet
   async function handleSell(data: SellData) {
     if (!sellWallet) return;
@@ -854,12 +917,23 @@ export default function AssetTransactionsPage() {
             </p>
           )}
         </div>
-        <button
-          onClick={handleNewTransaction}
-          className="px-4 py-2 text-sm bg-foreground text-background rounded hover:opacity-90"
-        >
-          New Transaction
-        </button>
+        <div className="flex gap-2">
+          {(transactions.length > 0 || wallets.length > 0) && (
+            <button
+              onClick={handleDeleteAll}
+              disabled={isDeleting}
+              className="px-4 py-2 text-sm border border-red-500 text-red-500 rounded hover:bg-red-500/10 disabled:opacity-50"
+            >
+              {isDeleting ? "Deleting..." : "Delete All"}
+            </button>
+          )}
+          <button
+            onClick={handleNewTransaction}
+            className="px-4 py-2 text-sm bg-foreground text-background rounded hover:opacity-90"
+          >
+            New Transaction
+          </button>
+        </div>
       </div>
 
       {error && (

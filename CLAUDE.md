@@ -111,3 +111,63 @@ npm run test:coverage
 - **DynamoDB Table ID**: `73xhjaml3jcblg3stg5txx3wge`
 - **Region**: us-east-2
 - **Admin User ID**: `110b85c0-5021-70b3-22de-f6877bd250af`
+
+## Import Transaction History from Production
+
+Use this to replay transaction history from the old production app (main branch) into beta.
+
+### Prerequisites
+
+1. **Sandbox running**: `npx ampx sandbox`
+2. **Asset exists in beta** with:
+   - Commission set (e.g., 0.5%)
+   - Entry Target created (e.g., -4%)
+   - Profit Targets created (e.g., 8% sortOrder 1, 16% sortOrder 2)
+
+### Step 1: Export Data from Production DynamoDB
+
+1. Go to AWS Console → DynamoDB → Tables → `StockTransaction-73xhjaml3jcblg3stg5txx3wge-NONE`
+2. Click "Explore table items"
+3. Filter by `portfolioStockId` = the asset's ID in production
+4. Select all items → Actions → Download as CSV
+5. Save as `scripts/data/{SYMBOL} transactions.csv`
+
+6. Go to table `StockWallet-73xhjaml3jcblg3stg5txx3wge-NONE`
+7. Filter by `portfolioStockId` = same asset ID
+8. Download as CSV → Save as `scripts/data/{SYMBOL} wallets.csv`
+
+### Step 2: Create Import Script
+
+Copy `scripts/import-rnmby.ts` and modify for your asset:
+- Update asset symbol in the filter
+- Adjust profit target percentages if different
+- Update signal mapping if needed
+
+### Step 3: Run Import
+
+```powershell
+# In PowerShell (quotes handle special characters in password)
+$env:EMAIL="marin.sarbulescu@gmail.com"; $env:PASSWORD="T5u#PW4&!9wm4SzG"; npx tsx scripts/import-rnmby.ts
+```
+
+### Step 4: Verify
+
+1. Check transaction count matches
+2. Check wallet balances are correct
+3. Dashboard shows correct signals
+
+### Field Mapping Reference
+
+| Production Field | Beta Field | Notes |
+|-----------------|------------|-------|
+| `date` | `date` | Convert to ISO |
+| `signal` | `signal` | Map: `_5DD`→REPULL, `LBD`→ENTAR, `Cust`→CUSTOM, `Initial`→INITIAL, `TP`→TP |
+| `quantity` | `quantity` | Direct |
+| `price` | `price` | Direct |
+| `investment` | `investment` | Direct |
+| `txnType` | PT allocation | `Hold`→PT16%, `Swing`→PT8%, `Split`→50/50 |
+| `completedTxnId` | Wallet lookup | For SELL: get buyPrice from wallet |
+
+### Clean Up
+
+Use "Delete All" button on Transactions page to clear and re-import if needed.
