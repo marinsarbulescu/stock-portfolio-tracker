@@ -6,33 +6,24 @@ test.describe("Authentication", () => {
     await clearBrowserState(page);
   });
 
-  test("user can login successfully", async ({ page }) => {
-    await loginUser(page);
+  test("authentication flow - redirect, form display, and successful login", async ({ page }) => {
+    // Step 1: Verify unauthenticated users are redirected to login
+    await page.goto("/dashboard");
+    await expect(page).toHaveURL(/\/login/);
 
-    // Verify we're on the dashboard
-    await expect(page).toHaveURL(/\/dashboard/);
-
-    // Verify navigation menu is visible
-    await expect(page.locator('[data-testid="nav-dashboard"]')).toBeVisible();
-    await expect(page.locator('[data-testid="nav-assets"]')).toBeVisible();
-  });
-
-  test("shows login form on /login page", async ({ page }) => {
-    await page.goto("/login");
-
-    // Verify login form elements are present
+    // Step 2: Verify login form elements are present
     await expect(page.locator('input[name="username"]')).toBeVisible();
     await expect(page.locator('input[name="password"]')).toBeVisible();
     await expect(
       page.locator('button[type="submit"]:has-text("Sign in")')
     ).toBeVisible();
-  });
 
-  test("redirects unauthenticated users to login", async ({ page }) => {
-    // Try to access protected route without login
-    await page.goto("/dashboard");
+    // Step 3: Login successfully
+    await loginUser(page);
 
-    // Should redirect to login
-    await expect(page).toHaveURL(/\/login/);
+    // Step 4: Verify redirect to dashboard and navigation is visible
+    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page.locator('[data-testid="nav-dashboard"]')).toBeVisible();
+    await expect(page.locator('[data-testid="nav-assets"]')).toBeVisible();
   });
 });
