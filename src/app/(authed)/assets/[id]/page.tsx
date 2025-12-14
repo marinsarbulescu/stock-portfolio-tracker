@@ -353,6 +353,7 @@ export default function EditAssetPage() {
           <span className="text-muted-foreground">|</span>
           <Link
             href={`/assets/${assetId}/transactions`}
+            data-testid="link-transactions"
             className="text-muted-foreground hover:text-foreground"
           >
             Transactions

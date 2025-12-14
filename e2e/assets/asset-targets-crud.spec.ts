@@ -1,37 +1,41 @@
-// e2e/assets/asset-targets.spec.ts
+// e2e/assets/asset-targets-crud.spec.ts
 //
 // This Playwright test verifies Entry Target and Profit Target CRUD operations.
-// All test input/output values are loaded from asset-targets.json
+// All test input/output values are loaded from asset-targets-crud.json
 //
 // Test flow:
 // 1. Login to the application
 // 2. Navigate to Assets page and clean up test asset
 // 3. Create prerequisite asset
-// 4. Navigate to asset edit page
-// 5. Entry Target: Create, verify, edit, verify, delete
-// 6. Profit Targets: Create 3, verify, edit one, verify, delete all
-// 7. Delete the asset (cleanup)
+// 4. Entry Target: Create, verify, edit, verify, delete
+// 5. Profit Targets: Create 3, verify
+// 6. Navigate to Transactions page, verify PT wallet tabs exist
+// 7. Edit one Profit Target, verify
+// 8. Navigate to Transactions page, verify PT tabs reflect the edit
+// 9. Delete all Profit Targets
+// 10. Navigate to Transactions page, verify no PT tabs
+// 11. Delete the asset (cleanup)
 
-import { test, expect } from "@playwright/test";
+import { test, expect, Page } from "@playwright/test";
 import { loginUser, clearBrowserState } from "../utils/auth";
 import { loadAssetTargetsTestData, TargetInput, TargetExpected } from "../utils/jsonHelper";
 
-// Set test timeout to 120 seconds (longer for full ET/PT CRUD flow)
-test.setTimeout(120000);
+// Set test timeout to 180 seconds (longer for full ET/PT CRUD flow + transactions page navigation)
+test.setTimeout(180000);
 
 // Load test configuration from JSON
-const testConfig = loadAssetTargetsTestData("e2e/assets/asset-targets.json");
+const testConfig = loadAssetTargetsTestData("e2e/assets/asset-targets-crud.json");
 
 // Helper: Wait for assets table to load
-async function waitForAssetsTableToLoad(page: ReturnType<typeof test.step>) {
+async function waitForAssetsTableToLoad(page: Page) {
   console.log("[PageHelper] Waiting for assets table to load...");
   await expect(page.locator('[data-testid="btn-new-asset"]')).toBeVisible({ timeout: 15000 });
-  await expect(page.getByText("Loading assets...")).not.toBeVisible({ timeout: 15000 });
+  await expect(page.locator('[data-testid="assets-loading"]')).not.toBeVisible({ timeout: 15000 });
   console.log("[PageHelper] Assets table loaded.");
 }
 
 // Helper: Navigate to Assets page
-async function navigateToAssetsPage(page: ReturnType<typeof test.step>) {
+async function navigateToAssetsPage(page: Page) {
   console.log("[PageHelper] Navigating to Assets page...");
   await page.goto("/assets");
   await expect(page).toHaveURL(/\/assets$/);
@@ -40,7 +44,7 @@ async function navigateToAssetsPage(page: ReturnType<typeof test.step>) {
 }
 
 // Helper: Check if asset exists and delete it
-async function cleanupTestAssetViaUI(page: ReturnType<typeof test.step>, symbol: string) {
+async function cleanupTestAssetViaUI(page: Page, symbol: string) {
   console.log(`[PageHelper] Checking for existing test asset: ${symbol}...`);
 
   const assetLink = page.locator(`[data-testid="asset-table-symbol-${symbol}"]`);
@@ -62,7 +66,7 @@ async function cleanupTestAssetViaUI(page: ReturnType<typeof test.step>, symbol:
 }
 
 // Helper: Create asset via UI
-async function createAssetViaUI(page: ReturnType<typeof test.step>) {
+async function createAssetViaUI(page: Page) {
   const input = testConfig.asset.input;
   console.log(`[PageHelper] Creating asset ${input.symbol} via UI...`);
 
@@ -83,7 +87,7 @@ async function createAssetViaUI(page: ReturnType<typeof test.step>) {
 }
 
 // Helper: Navigate to asset edit page
-async function navigateToAssetEditPage(page: ReturnType<typeof test.step>, symbol: string) {
+async function navigateToAssetEditPage(page: Page, symbol: string) {
   console.log(`[PageHelper] Navigating to edit page for ${symbol}...`);
   await navigateToAssetsPage(page);
   const editLink = page.locator(`[data-testid="asset-table-edit-${symbol}"]`);
@@ -94,7 +98,7 @@ async function navigateToAssetEditPage(page: ReturnType<typeof test.step>, symbo
 
 // Helper: Create a target (entry or profit)
 async function createTarget(
-  page: ReturnType<typeof test.step>,
+  page: Page,
   type: "entry" | "profit",
   input: TargetInput
 ) {
@@ -123,7 +127,7 @@ async function createTarget(
 
 // Helper: Verify a target in the table
 async function verifyTarget(
-  page: ReturnType<typeof test.step>,
+  page: Page,
   type: "entry" | "profit",
   expected: TargetExpected
 ) {
@@ -148,7 +152,7 @@ async function verifyTarget(
 
 // Helper: Edit a target
 async function editTarget(
-  page: ReturnType<typeof test.step>,
+  page: Page,
   type: "entry" | "profit",
   sortOrder: string,
   input: TargetInput
@@ -187,7 +191,7 @@ async function editTarget(
 
 // Helper: Delete a target
 async function deleteTarget(
-  page: ReturnType<typeof test.step>,
+  page: Page,
   type: "entry" | "profit",
   sortOrder: string
 ) {
@@ -206,12 +210,70 @@ async function deleteTarget(
 }
 
 // Helper: Delete asset via UI
-async function deleteAssetViaUI(page: ReturnType<typeof test.step>) {
+async function deleteAssetViaUI(page: Page) {
   console.log("[PageHelper] Deleting asset...");
   page.once("dialog", (dialog) => dialog.accept());
   await page.locator('[data-testid="btn-delete-asset"]').click();
   await expect(page).toHaveURL(/\/assets$/);
   console.log("[PageHelper] Asset deleted successfully.");
+}
+
+// Helper: Navigate to Transactions page from asset edit page
+async function navigateToTransactionsPage(page: Page) {
+  console.log("[PageHelper] Navigating to Transactions page...");
+  await page.locator('[data-testid="link-transactions"]').click();
+  await expect(page).toHaveURL(/\/transactions$/);
+  // Wait for page to load - use the Edit Asset link which is always visible
+  await expect(page.locator('[data-testid="link-edit-asset"]')).toBeVisible({ timeout: 10000 });
+  console.log("[PageHelper] On Transactions page.");
+}
+
+// Helper: Navigate back to asset edit page from Transactions page
+async function navigateBackToEditPage(page: Page) {
+  console.log("[PageHelper] Navigating back to Edit Asset page...");
+  await page.locator('[data-testid="link-edit-asset"]').click();
+  await expect(page).toHaveURL(/\/assets\/[^/]+$/);
+  await expect(page.locator('[data-testid="asset-form-symbol"]')).toBeVisible({ timeout: 10000 });
+  console.log("[PageHelper] Back on Edit Asset page.");
+}
+
+// Helper: Verify wallet tabs on Transactions page
+async function verifyWalletTabs(
+  page: Page,
+  expectedPTPercents: string[]
+) {
+  console.log(`[PageHelper] Verifying wallet tabs: All + ${expectedPTPercents.join(", ")}...`);
+
+  // Always expect "All" tab
+  await expect(page.locator('[data-testid="wallet-tab-all"]')).toBeVisible({ timeout: 5000 });
+
+  // Verify each expected PT tab exists
+  for (const ptPercent of expectedPTPercents) {
+    const tabLocator = page.locator(`[data-testid="wallet-tab-pt-${ptPercent}"]`);
+    await expect(tabLocator).toBeVisible({ timeout: 5000 });
+    console.log(`[PageHelper] Found PT tab for +${ptPercent}%`);
+  }
+
+  console.log("[PageHelper] Wallet tabs verified successfully.");
+}
+
+// Helper: Verify NO PT wallet tabs (only All or no tabs section)
+async function verifyNoPTWalletTabs(page: Page) {
+  console.log("[PageHelper] Verifying no PT wallet tabs...");
+
+  // The wallet-tabs container should either not exist or only contain "All" tab
+  const tabsContainer = page.locator('[data-testid="wallet-tabs"]');
+  const tabsExist = await tabsContainer.count() > 0;
+
+  if (tabsExist) {
+    // If tabs exist, only "All" should be there
+    await expect(page.locator('[data-testid="wallet-tab-all"]')).toBeVisible();
+    // PT tabs should not exist
+    const ptTabs = page.locator('[data-testid^="wallet-tab-pt-"]');
+    await expect(ptTabs).toHaveCount(0);
+  }
+
+  console.log("[PageHelper] No PT wallet tabs confirmed.");
 }
 
 // Test Suite
@@ -269,16 +331,41 @@ test.describe("Assets - Entry Target & Profit Target CRUD (JSON-driven)", () => 
       await verifyTarget(page, "profit", pt.expected);
     }
 
+    // Step 6b: Verify PT tabs on Transactions page after creating PTs
+    console.log(`[${testConfig.scenario}] Step 6b: Verify PT tabs on Transactions page...`);
+    await navigateToTransactionsPage(page);
+    // Expect tabs for PT percentages from JSON create inputs
+    const createdPTPercents = testConfig.profitTargets.create.map(pt => pt.input.targetPercent);
+    await verifyWalletTabs(page, createdPTPercents);
+    await navigateBackToEditPage(page);
+
     // Step 7: Profit Target - Edit PT2
     console.log(`[${testConfig.scenario}] Step 7: Edit Profit Target...`);
     await editTarget(page, "profit", testConfig.profitTargets.edit.targetSortOrder, testConfig.profitTargets.edit.input);
     await verifyTarget(page, "profit", testConfig.profitTargets.edit.expected);
+
+    // Step 7b: Verify PT tabs reflect edited percentage
+    console.log(`[${testConfig.scenario}] Step 7b: Verify PT tabs after edit...`);
+    await navigateToTransactionsPage(page);
+    // Replace edited PT's percentage in the expected list
+    const editedSortOrder = parseInt(testConfig.profitTargets.edit.targetSortOrder);
+    const editedPTPercents = createdPTPercents.map((pct, idx) =>
+      idx + 1 === editedSortOrder ? testConfig.profitTargets.edit.input.targetPercent : pct
+    );
+    await verifyWalletTabs(page, editedPTPercents);
+    await navigateBackToEditPage(page);
 
     // Step 8: Profit Targets - Delete all (in reverse order to avoid sortOrder issues)
     console.log(`[${testConfig.scenario}] Step 8: Delete all Profit Targets...`);
     await deleteTarget(page, "profit", "3");
     await deleteTarget(page, "profit", "2");
     await deleteTarget(page, "profit", "1");
+
+    // Step 8b: Verify no PT tabs on Transactions page after deleting all PTs
+    console.log(`[${testConfig.scenario}] Step 8b: Verify no PT tabs after delete...`);
+    await navigateToTransactionsPage(page);
+    await verifyNoPTWalletTabs(page);
+    await navigateBackToEditPage(page);
 
     // Step 9: Delete asset
     console.log(`[${testConfig.scenario}] Step 9: Delete asset...`);

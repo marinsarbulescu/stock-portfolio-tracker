@@ -25,7 +25,7 @@ const tests: TestItem[] = [
   {
     id: "targets-1",
     name: "AssetTargets - Entry Target and Profit Target CRUD",
-    specFile: "assets/asset-targets.spec.ts",
+    specFile: "assets/asset-targets-crud.spec.ts",
     describeName: "Assets - ET/PT CRUD",
   },
 ];

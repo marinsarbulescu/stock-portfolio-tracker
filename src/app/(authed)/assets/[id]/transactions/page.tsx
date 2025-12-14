@@ -445,11 +445,17 @@ export default function AssetTransactionsPage() {
     return { buyCount, sellCount, totalShares, sharesByPT };
   }, [transactions, wallets]);
 
+  // Helper to capitalize type values (BUY -> Buy)
+  const formatType = (type: string) => {
+    return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+  };
+
   const columns: Column<TransactionRow>[] = useMemo(
     () => [
       {
         key: "date",
         header: "Date",
+        defaultHidden: true,
         render: (item) => (
           <button
             onClick={() => handleRowClick(item)}
@@ -462,12 +468,18 @@ export default function AssetTransactionsPage() {
       {
         key: "type",
         header: "Type",
+        render: (item) => formatType(item.type),
       },
       {
         key: "signal",
         header: "Signal",
         render: (item) =>
           item.signal ? SIGNAL_LABELS[item.signal] || item.signal : "-",
+      },
+      {
+        key: "price",
+        header: "Price",
+        render: (item) => formatCurrency(item.price),
       },
       {
         key: "quantity",
@@ -483,21 +495,6 @@ export default function AssetTransactionsPage() {
           }
           return "-";
         },
-      },
-      {
-        key: "amount",
-        header: "Amount",
-        render: (item) => {
-          if (item.type === "DIVIDEND" || item.type === "SLP" || item.type === "SELL") {
-            return item.amount !== null ? formatCurrency(item.amount) : "-";
-          }
-          return "-";
-        },
-      },
-      {
-        key: "price",
-        header: "Price",
-        render: (item) => formatCurrency(item.price),
       },
       {
         key: "investment",
@@ -972,6 +969,7 @@ export default function AssetTransactionsPage() {
           <span className="text-muted-foreground">|</span>
           <Link
             href={`/assets/${assetId}`}
+            data-testid="link-edit-asset"
             className="text-muted-foreground hover:text-foreground"
           >
             Edit Asset
@@ -1133,9 +1131,10 @@ export default function AssetTransactionsPage() {
           <h3 className="text-lg font-semibold text-foreground mb-4">Wallets</h3>
 
           {/* Profit Target Tabs */}
-          <div className="flex gap-2 mb-4 flex-wrap">
+          <div className="flex gap-2 mb-4 flex-wrap" data-testid="wallet-tabs">
             <button
               onClick={() => setSelectedProfitTargetId(null)}
+              data-testid="wallet-tab-all"
               className={`px-3 py-1.5 text-sm rounded transition-colors ${
                 selectedProfitTargetId === null
                   ? "bg-blue-600 text-white"
@@ -1153,6 +1152,7 @@ export default function AssetTransactionsPage() {
                   <button
                     key={pt.id}
                     onClick={() => setSelectedProfitTargetId(pt.id)}
+                    data-testid={`wallet-tab-pt-${pt.targetPercent}`}
                     className={`px-3 py-1.5 text-sm rounded transition-colors ${
                       selectedProfitTargetId === pt.id
                         ? "bg-blue-600 text-white"

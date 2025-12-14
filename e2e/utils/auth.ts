@@ -1,8 +1,17 @@
 import { type Page, expect } from "@playwright/test";
 
-// Test credentials for beta environment
-const E2E_TEST_USERNAME = "marin.sarbulescu@gmail.com";
-const E2E_TEST_PASSWORD = "T5u#PW4&!9wm4SzG";
+// Test credentials from environment variables
+const E2E_TEST_USERNAME = process.env.E2E_TEST_USERNAME;
+const E2E_TEST_PASSWORD = process.env.E2E_TEST_PASSWORD;
+
+function getCredentials() {
+  if (!E2E_TEST_USERNAME || !E2E_TEST_PASSWORD) {
+    throw new Error(
+      "E2E_TEST_USERNAME and E2E_TEST_PASSWORD environment variables must be set"
+    );
+  }
+  return { username: E2E_TEST_USERNAME, password: E2E_TEST_PASSWORD };
+}
 
 /**
  * Clears browser localStorage, sessionStorage, and cookies.
@@ -24,9 +33,12 @@ export async function clearBrowserState(page: Page) {
  */
 export async function loginUser(
   page: Page,
-  username = E2E_TEST_USERNAME,
-  password = E2E_TEST_PASSWORD
+  username?: string,
+  password?: string
 ) {
+  const credentials = getCredentials();
+  const user = username ?? credentials.username;
+  const pass = password ?? credentials.password;
   // Clear state and navigate to login
   await clearBrowserState(page);
   await page.goto("/login");
@@ -37,8 +49,8 @@ export async function loginUser(
   });
 
   // Fill credentials
-  await page.locator('input[name="username"]').fill(username);
-  await page.locator('input[name="password"]').fill(password);
+  await page.locator('input[name="username"]').fill(user);
+  await page.locator('input[name="password"]').fill(pass);
 
   // Wait for Cognito response after clicking sign in
   const cognitoResponsePromise = page.waitForResponse(

@@ -131,7 +131,7 @@ export default function AssetsPage() {
       )}
 
       {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">
+        <div data-testid="assets-loading" className="text-center py-8 text-muted-foreground">
           Loading assets...
         </div>
       ) : (

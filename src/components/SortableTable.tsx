@@ -7,6 +7,7 @@ export interface Column<T> {
   header: string;
   sortable?: boolean;
   toggleable?: boolean; // Set to false to always show column (e.g., actions)
+  defaultHidden?: boolean; // Set to true to hide column by default (user can toggle)
   render?: (item: T) => React.ReactNode;
 }
 

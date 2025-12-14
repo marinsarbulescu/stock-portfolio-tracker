@@ -13,7 +13,7 @@ export function useColumnVisibility<T>(
 ) {
   const { storageKey } = options;
 
-  // Get initial visible keys from localStorage or default to all visible
+  // Get initial visible keys from localStorage or default based on column config
   const getInitialVisibleKeys = (): Set<string> => {
     // Get all toggleable column keys
     const allToggleableKeys = new Set(
@@ -22,14 +22,21 @@ export function useColumnVisibility<T>(
         .map((col) => String(col.key))
     );
 
+    // Get keys that should be hidden by default
+    const defaultHiddenKeys = new Set(
+      columns
+        .filter((col) => col.toggleable !== false && col.defaultHidden === true)
+        .map((col) => String(col.key))
+    );
+
     if (storageKey && typeof window !== "undefined") {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
         try {
           const storedKeys = new Set<string>(JSON.parse(stored));
-          // Add any new columns that weren't in storage (show by default)
+          // Add any new columns that weren't in storage (show by default unless defaultHidden)
           allToggleableKeys.forEach((key) => {
-            if (!storedKeys.has(key)) {
+            if (!storedKeys.has(key) && !defaultHiddenKeys.has(key)) {
               storedKeys.add(key);
             }
           });
@@ -45,8 +52,14 @@ export function useColumnVisibility<T>(
         }
       }
     }
-    // Default: all toggleable columns are visible
-    return allToggleableKeys;
+    // Default: all toggleable columns are visible except those with defaultHidden
+    const visibleByDefault = new Set<string>();
+    allToggleableKeys.forEach((key) => {
+      if (!defaultHiddenKeys.has(key)) {
+        visibleByDefault.add(key);
+      }
+    });
+    return visibleByDefault;
   };
 
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(
