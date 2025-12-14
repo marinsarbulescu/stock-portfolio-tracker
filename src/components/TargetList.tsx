@@ -227,6 +227,7 @@ export function TargetList(props: TargetListProps) {
         {!isAdding && (
           <button
             onClick={startAdding}
+            data-testid={`${props.type}-target-add-btn`}
             className="text-sm text-blue-400 hover:text-blue-300"
           >
             + Add
@@ -249,7 +250,7 @@ export function TargetList(props: TargetListProps) {
           </thead>
           <tbody>
             {sortedTargets.map((target) => (
-              <tr key={target.id} className="border-b border-border">
+              <tr key={target.id} className="border-b border-border" data-testid={`${props.type}-target-row-${target.sortOrder}`}>
                 {editingId === target.id ? (
                   <>
                     <td className="px-4 py-2">
@@ -259,6 +260,7 @@ export function TargetList(props: TargetListProps) {
                         onChange={(e) =>
                           setEditTarget({ ...editTarget, name: e.target.value })
                         }
+                        data-testid={`${props.type}-target-edit-name-${target.sortOrder}`}
                         className="w-full px-2 py-1 bg-background border border-border rounded text-foreground text-sm"
                       />
                     </td>
@@ -270,6 +272,7 @@ export function TargetList(props: TargetListProps) {
                         onChange={(e) =>
                           setEditTarget({ ...editTarget, targetPercent: e.target.value })
                         }
+                        data-testid={`${props.type}-target-edit-percent-${target.sortOrder}`}
                         className="w-20 px-2 py-1 bg-background border border-border rounded text-foreground text-sm"
                       />
                     </td>
@@ -282,6 +285,7 @@ export function TargetList(props: TargetListProps) {
                           onChange={(e) =>
                             setEditTarget({ ...editTarget, allocationPercent: e.target.value })
                           }
+                          data-testid={`${props.type}-target-edit-alloc-${target.sortOrder}`}
                           className="w-20 px-2 py-1 bg-background border border-border rounded text-foreground text-sm"
                         />
                       </td>
@@ -293,6 +297,7 @@ export function TargetList(props: TargetListProps) {
                         onChange={(e) =>
                           setEditTarget({ ...editTarget, sortOrder: e.target.value })
                         }
+                        data-testid={`${props.type}-target-edit-order-${target.sortOrder}`}
                         className="w-16 px-2 py-1 bg-background border border-border rounded text-foreground text-sm"
                       />
                     </td>
@@ -301,12 +306,14 @@ export function TargetList(props: TargetListProps) {
                         <button
                           onClick={() => handleUpdate(target.id)}
                           disabled={isSubmitting}
+                          data-testid={`${props.type}-target-edit-save-${target.sortOrder}`}
                           className="text-green-400 hover:text-green-300 disabled:opacity-50"
                         >
                           Save
                         </button>
                         <button
                           onClick={cancelEditing}
+                          data-testid={`${props.type}-target-edit-cancel-${target.sortOrder}`}
                           className="text-muted-foreground hover:text-foreground"
                         >
                           Cancel
@@ -316,28 +323,30 @@ export function TargetList(props: TargetListProps) {
                   </>
                 ) : (
                   <>
-                    <td className="px-4 py-2 text-card-foreground">{target.name}</td>
-                    <td className="px-4 py-2 text-card-foreground">
+                    <td className="px-4 py-2 text-card-foreground" data-testid={`${props.type}-target-name-${target.sortOrder}`}>{target.name}</td>
+                    <td className="px-4 py-2 text-card-foreground" data-testid={`${props.type}-target-percent-${target.sortOrder}`}>
                       {isProfit ? "+" : "-"}{target.targetPercent}%
                     </td>
                     {isProfit && (
-                      <td className="px-4 py-2 text-card-foreground">
+                      <td className="px-4 py-2 text-card-foreground" data-testid={`${props.type}-target-alloc-${target.sortOrder}`}>
                         {"allocationPercent" in target && target.allocationPercent !== null
                           ? `${target.allocationPercent}%`
                           : "-"}
                       </td>
                     )}
-                    <td className="px-4 py-2 text-card-foreground">{target.sortOrder}</td>
+                    <td className="px-4 py-2 text-card-foreground" data-testid={`${props.type}-target-order-${target.sortOrder}`}>{target.sortOrder}</td>
                     <td className="px-4 py-2">
                       <div className="flex gap-2">
                         <button
                           onClick={() => startEditing(target)}
+                          data-testid={`${props.type}-target-edit-btn-${target.sortOrder}`}
                           className="text-blue-400 hover:text-blue-300"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => handleDelete(target.id)}
+                          data-testid={`${props.type}-target-delete-btn-${target.sortOrder}`}
                           className="text-red-400 hover:text-red-300"
                         >
                           Delete
@@ -350,7 +359,7 @@ export function TargetList(props: TargetListProps) {
             ))}
 
             {isAdding && (
-              <tr className="border-b border-border bg-muted/30">
+              <tr className="border-b border-border bg-muted/30" data-testid={`${props.type}-target-new-row`}>
                 <td className="px-4 py-2">
                   <input
                     type="text"
@@ -359,6 +368,7 @@ export function TargetList(props: TargetListProps) {
                       setNewTarget({ ...newTarget, name: e.target.value })
                     }
                     placeholder="Name"
+                    data-testid={`${props.type}-target-new-name`}
                     className="w-full px-2 py-1 bg-background border border-border rounded text-foreground text-sm"
                   />
                 </td>
@@ -371,6 +381,7 @@ export function TargetList(props: TargetListProps) {
                       setNewTarget({ ...newTarget, targetPercent: e.target.value })
                     }
                     placeholder="%"
+                    data-testid={`${props.type}-target-new-percent`}
                     className="w-20 px-2 py-1 bg-background border border-border rounded text-foreground text-sm"
                   />
                 </td>
@@ -384,6 +395,7 @@ export function TargetList(props: TargetListProps) {
                         setNewTarget({ ...newTarget, allocationPercent: e.target.value })
                       }
                       placeholder="Alloc"
+                      data-testid={`${props.type}-target-new-alloc`}
                       className="w-20 px-2 py-1 bg-background border border-border rounded text-foreground text-sm"
                     />
                   </td>
@@ -395,6 +407,7 @@ export function TargetList(props: TargetListProps) {
                     onChange={(e) =>
                       setNewTarget({ ...newTarget, sortOrder: e.target.value })
                     }
+                    data-testid={`${props.type}-target-new-order`}
                     className="w-16 px-2 py-1 bg-background border border-border rounded text-foreground text-sm"
                   />
                 </td>
@@ -403,12 +416,14 @@ export function TargetList(props: TargetListProps) {
                     <button
                       onClick={handleCreate}
                       disabled={isSubmitting}
+                      data-testid={`${props.type}-target-new-submit`}
                       className="text-green-400 hover:text-green-300 disabled:opacity-50"
                     >
                       Add
                     </button>
                     <button
                       onClick={() => setIsAdding(false)}
+                      data-testid={`${props.type}-target-new-cancel`}
                       className="text-muted-foreground hover:text-foreground"
                     >
                       Cancel

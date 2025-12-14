@@ -1,0 +1,101 @@
+{
+  "scenario": "AssetTargets",
+  "description": "Test creating, editing, and deleting Entry Targets and Profit Targets for an asset",
+  "asset": {
+    "input": {
+      "symbol": "E2E-TARGETS",
+      "name": "E2E Targets Test Asset",
+      "type": "STOCK",
+      "testPrice": "100",
+      "commission": "0.5",
+      "status": "ACTIVE"
+    }
+  },
+  "entryTarget": {
+    "create": {
+      "input": {
+        "name": "ET1",
+        "targetPercent": "4",
+        "sortOrder": "1"
+      },
+      "expected": {
+        "name": "ET1",
+        "targetPercent": "-4%",
+        "sortOrder": "1"
+      }
+    },
+    "edit": {
+      "input": {
+        "name": "ET1-EDITED",
+        "targetPercent": "5",
+        "sortOrder": "1"
+      },
+      "expected": {
+        "name": "ET1-EDITED",
+        "targetPercent": "-5%",
+        "sortOrder": "1"
+      }
+    }
+  },
+  "profitTargets": {
+    "create": [
+      {
+        "input": {
+          "name": "PT1",
+          "targetPercent": "8",
+          "allocationPercent": "50",
+          "sortOrder": "1"
+        },
+        "expected": {
+          "name": "PT1",
+          "targetPercent": "+8%",
+          "allocationPercent": "50%",
+          "sortOrder": "1"
+        }
+      },
+      {
+        "input": {
+          "name": "PT2",
+          "targetPercent": "16",
+          "allocationPercent": "30",
+          "sortOrder": "2"
+        },
+        "expected": {
+          "name": "PT2",
+          "targetPercent": "+16%",
+          "allocationPercent": "30%",
+          "sortOrder": "2"
+        }
+      },
+      {
+        "input": {
+          "name": "PT3",
+          "targetPercent": "24",
+          "allocationPercent": "20",
+          "sortOrder": "3"
+        },
+        "expected": {
+          "name": "PT3",
+          "targetPercent": "+24%",
+          "allocationPercent": "20%",
+          "sortOrder": "3"
+        }
+      }
+    ],
+    "edit": {
+      "targetSortOrder": "2",
+      "input": {
+        "name": "PT2-EDITED",
+        "targetPercent": "20",
+        "allocationPercent": "25",
+        "sortOrder": "2"
+      },
+      "expected": {
+        "name": "PT2-EDITED",
+        "targetPercent": "+20%",
+        "allocationPercent": "25%",
+        "sortOrder": "2"
+      }
+    }
+  }
+}
