@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { client } from "@/utils/amplify-client";
+import { usePrices } from "@/contexts/PriceContext";
 import { TargetList, EntryTarget, ProfitTarget } from "@/components/TargetList";
 import { BudgetList, Budget } from "@/components/BudgetList";
 
@@ -33,6 +34,7 @@ export default function EditAssetPage() {
   const params = useParams();
   const router = useRouter();
   const assetId = params.id as string;
+  const { clearPrice } = usePrices();
 
   const [asset, setAsset] = useState<Asset | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -189,15 +191,22 @@ export default function EditAssetPage() {
     setError(null);
 
     try {
+      const symbol = formData.symbol.trim().toUpperCase();
+
       await client.models.Asset.update({
         id: assetId,
-        symbol: formData.symbol.trim().toUpperCase(),
+        symbol,
         name: formData.name.trim(),
         type: formData.type,
         testPrice: formData.testPrice ? parseFloat(formData.testPrice) : null,
         commission: formData.commission ? parseFloat(formData.commission) : null,
         status: formData.status,
       });
+
+      // Clear cached Yahoo Finance price so testPrice takes precedence
+      if (formData.testPrice) {
+        clearPrice(symbol);
+      }
 
       await fetchAsset();
     } catch (err) {

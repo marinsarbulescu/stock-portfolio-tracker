@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
 import { MobileNav } from "@/components/MobileNav";
+import { PriceProvider } from "@/contexts/PriceContext";
 
 function AuthedLayoutContent({ children }: { children: React.ReactNode }) {
   const { authStatus, signOut, user } = useAuthenticator((context) => [
@@ -33,55 +34,57 @@ function AuthedLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-muted">
-      <header className="bg-card shadow-sm border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-8">
-            <h1 className="text-xl font-semibold text-card-foreground">
-              Stock Portfolio Tracker
-            </h1>
-            <nav className="hidden md:flex items-center gap-4">
-              <Link
-                href="/dashboard"
-                className={`text-sm ${
-                  pathname === "/dashboard"
-                    ? "text-foreground font-medium"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+    <PriceProvider>
+      <div className="min-h-screen bg-muted">
+        <header className="bg-card shadow-sm border-b border-border">
+          <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div className="flex items-center gap-8">
+              <h1 className="text-xl font-semibold text-card-foreground">
+                Stock Portfolio Tracker
+              </h1>
+              <nav className="hidden md:flex items-center gap-4">
+                <Link
+                  href="/dashboard"
+                  className={`text-sm ${
+                    pathname === "/dashboard"
+                      ? "text-foreground font-medium"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/assets"
+                  className={`text-sm ${
+                    pathname === "/assets" || pathname?.startsWith("/assets/")
+                      ? "text-foreground font-medium"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Assets
+                </Link>
+              </nav>
+            </div>
+            <div className="hidden md:flex items-center gap-4">
+              <span className="text-sm text-muted-foreground">
+                {user?.signInDetails?.loginId}
+              </span>
+              <button
+                onClick={signOut}
+                className="text-sm text-muted-foreground hover:text-foreground px-3 py-1 rounded border border-border hover:bg-muted"
               >
-                Dashboard
-              </Link>
-              <Link
-                href="/assets"
-                className={`text-sm ${
-                  pathname === "/assets" || pathname?.startsWith("/assets/")
-                    ? "text-foreground font-medium"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Assets
-              </Link>
-            </nav>
+                Sign Out
+              </button>
+            </div>
+            <MobileNav
+              userEmail={user?.signInDetails?.loginId}
+              onSignOut={signOut}
+            />
           </div>
-          <div className="hidden md:flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
-              {user?.signInDetails?.loginId}
-            </span>
-            <button
-              onClick={signOut}
-              className="text-sm text-muted-foreground hover:text-foreground px-3 py-1 rounded border border-border hover:bg-muted"
-            >
-              Sign Out
-            </button>
-          </div>
-          <MobileNav
-            userEmail={user?.signInDetails?.loginId}
-            onSignOut={signOut}
-          />
-        </div>
-      </header>
-      <main className="max-w-7xl mx-auto px-4 py-6">{children}</main>
-    </div>
+        </header>
+        <main className="max-w-7xl mx-auto px-4 py-6">{children}</main>
+      </div>
+    </PriceProvider>
   );
 }
 

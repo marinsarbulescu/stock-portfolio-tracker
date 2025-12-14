@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { client } from "@/utils/amplify-client";
+import { usePrices } from "@/contexts/PriceContext";
+import { getEffectivePrice } from "@/utils/price-utils";
 import { SortableTable, Column } from "@/components/SortableTable";
 import { ColumnToggle } from "@/components/ColumnToggle";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
@@ -86,6 +88,7 @@ function formatCurrency(value: number | null): string {
 export default function AssetTransactionsPage() {
   const params = useParams();
   const assetId = params.id as string;
+  const { prices } = usePrices();
 
   const [asset, setAsset] = useState<Asset | null>(null);
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
@@ -342,6 +345,19 @@ export default function AssetTransactionsPage() {
     return [...entryTargets].sort((a, b) => a.sortOrder - b.sortOrder)[0];
   }, [entryTargets]);
 
+  // Calculate effective price and whether it's a test price
+  const { effectivePrice, isTestPrice } = useMemo(() => {
+    if (!asset) return { effectivePrice: null, isTestPrice: false };
+
+    const price = getEffectivePrice(asset.symbol, prices, asset.testPrice);
+    const fetchedPrice = prices[asset.symbol];
+    const isTest =
+      price !== null &&
+      (!(asset.symbol in prices) || fetchedPrice === null || fetchedPrice === 0);
+
+    return { effectivePrice: price, isTestPrice: isTest };
+  }, [asset, prices]);
+
   const columns: Column<TransactionRow>[] = useMemo(
     () => [
       {
@@ -409,7 +425,7 @@ export default function AssetTransactionsPage() {
             return "-";
           }
           const isLastBuy = lastBuyTransaction?.id === item.id;
-          const shouldHighlight = isLastBuy && asset?.testPrice !== null && asset?.testPrice !== undefined && asset.testPrice <= item.entryTargetPrice;
+          const shouldHighlight = isLastBuy && effectivePrice !== null && effectivePrice <= item.entryTargetPrice;
           return (
             <span className={shouldHighlight ? "text-green-400 font-medium" : ""}>
               {formatCurrency(item.entryTargetPrice)}
@@ -478,7 +494,7 @@ export default function AssetTransactionsPage() {
         ),
       },
     ],
-    [handleDeleteFromTable, firstEntryTarget, lastBuyTransaction, asset]
+    [handleDeleteFromTable, firstEntryTarget, lastBuyTransaction, effectivePrice]
   );
 
   // Column visibility toggle
@@ -520,7 +536,7 @@ export default function AssetTransactionsPage() {
 
   // Calculate which PTs are "hit" based on lowest profitTargetPrice
   const hitProfitTargetIds = useMemo(() => {
-    if (!asset?.testPrice) return new Set<string>();
+    if (!effectivePrice) return new Set<string>();
 
     const hitIds = new Set<string>();
 
@@ -533,13 +549,13 @@ export default function AssetTransactionsPage() {
       const lowestTargetPrice = Math.min(...ptWallets.map((w) => w.profitTargetPrice));
 
       // Check if current price meets target
-      if (asset.testPrice >= lowestTargetPrice) {
+      if (effectivePrice >= lowestTargetPrice) {
         hitIds.add(pt.id);
       }
     }
 
     return hitIds;
-  }, [asset?.testPrice, profitTargets, wallets]);
+  }, [effectivePrice, profitTargets, wallets]);
 
   // Wallet columns - include PT-specific columns only on PT tabs (not on "All" tab)
   const walletColumns = useMemo(() => {
@@ -578,8 +594,8 @@ export default function AssetTransactionsPage() {
         key: "pct2pt",
         header: "%2PT",
         render: (item) => {
-          if (!asset?.testPrice || !item.profitTargetPrice) return "-";
-          const pct2pt = ((asset.testPrice - item.profitTargetPrice) / item.profitTargetPrice) * 100;
+          if (!effectivePrice || !item.profitTargetPrice) return "-";
+          const pct2pt = ((effectivePrice - item.profitTargetPrice) / item.profitTargetPrice) * 100;
           const isPositive = pct2pt >= 0;
           return (
             <span className={isPositive ? "text-green-400" : ""}>
@@ -610,7 +626,7 @@ export default function AssetTransactionsPage() {
     }
 
     return baseColumns;
-  }, [selectedProfitTargetId, hitProfitTargetIds, asset?.testPrice]);
+  }, [selectedProfitTargetId, hitProfitTargetIds, effectivePrice]);
 
   useEffect(() => {
     fetchAsset();
@@ -830,9 +846,9 @@ export default function AssetTransactionsPage() {
           <h2 className="text-2xl font-bold text-foreground">
             {asset ? `${asset.symbol} ${asset.name}` : "..."}
           </h2>
-          {asset?.testPrice !== null && asset?.testPrice !== undefined && (
-            <p className="text-muted-foreground">
-              {formatCurrency(asset.testPrice)}
+          {effectivePrice !== null && (
+            <p className={isTestPrice ? "text-purple-400" : "text-muted-foreground"}>
+              {formatCurrency(effectivePrice)}
             </p>
           )}
         </div>

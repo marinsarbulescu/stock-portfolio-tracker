@@ -1,4 +1,5 @@
 import { a, defineData, type ClientSchema } from "@aws-amplify/backend";
+import { getYfinanceData } from "../functions/getYfinanceData/resource.js";
 
 const schema = a.schema({
   // Enums
@@ -113,6 +114,20 @@ const schema = a.schema({
       sellTransactions: a.hasMany("Transaction", "walletId"),
     })
     .authorization((allow) => [allow.owner()]),
+
+  // Custom type for Yahoo Finance price result
+  PriceResult: a.customType({
+    symbol: a.string().required(),
+    currentPrice: a.float(),
+  }),
+
+  // Query to fetch latest prices from Yahoo Finance
+  getLatestPrices: a
+    .query()
+    .arguments({ symbols: a.string().array().required() })
+    .returns(a.ref("PriceResult").array())
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(getYfinanceData)),
 });
 
 export type Schema = ClientSchema<typeof schema>;

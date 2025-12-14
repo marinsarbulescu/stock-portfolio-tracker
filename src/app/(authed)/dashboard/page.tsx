@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { client } from "@/utils/amplify-client";
 import { SortableTable, Column } from "@/components/SortableTable";
+import { usePrices } from "@/contexts/PriceContext";
+import { getEffectivePrice } from "@/utils/price-utils";
 import {
   calculatePullbackPercent,
   isPullbackTriggered,
@@ -17,6 +19,7 @@ interface DashboardAsset {
   id: string;
   symbol: string;
   currentPrice: number | null;
+  isTestPrice: boolean;
   lastBuyPrice: number | null;
   lastBuyDate: string | null;
   entryTargetPercent: number | null;
@@ -26,10 +29,29 @@ interface DashboardAsset {
   pctToLowestPT: number | null;
 }
 
+interface RawAssetData {
+  id: string;
+  symbol: string;
+  testPrice: number | null;
+  lastBuyPrice: number | null;
+  lastBuyDate: string | null;
+  entryTargetPercent: number | null;
+  lowestPTPrice: number | null;
+}
+
 export default function Dashboard() {
-  const [dashboardData, setDashboardData] = useState<DashboardAsset[]>([]);
+  const [rawAssetData, setRawAssetData] = useState<RawAssetData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const {
+    prices,
+    lastFetchTimestamp,
+    isLoading: isFetchingPrices,
+    error: priceError,
+    progressMessage,
+    fetchPrices,
+  } = usePrices();
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -52,8 +74,8 @@ export default function Dashboard() {
       const transactions = transactionsResponse.data;
       const wallets = walletsResponse.data;
 
-      // Process data for each asset
-      const processedAssets: DashboardAsset[] = assets.map((asset) => {
+      // Process raw data for each asset (without effective price calculation)
+      const processedRawData: RawAssetData[] = assets.map((asset) => {
         // Find most recent BUY transaction for this asset
         const assetBuyTransactions = transactions
           .filter((t) => t.assetId === asset.id)
@@ -70,37 +92,21 @@ export default function Dashboard() {
             ? Math.min(...assetWallets.map((w) => w.profitTargetPrice))
             : null;
 
-        // Calculate derived values
-        const currentPrice = asset.testPrice ?? null;
-        const lastBuyPrice = lastBuy?.price ?? null;
-        const lastBuyDate = lastBuy?.date ?? null;
-        const entryTargetPercent = lastBuy?.entryTargetPercent ?? null;
-
-        const pullbackPercent = calculatePullbackPercent(
-          currentPrice,
-          lastBuyPrice
-        );
-        const daysSinceLastBuy = calculateDaysSince(lastBuyDate);
-        const pctToLowestPT = calculatePctToTarget(currentPrice, lowestPTPrice);
-
         return {
           id: asset.id,
           symbol: asset.symbol,
-          currentPrice,
-          lastBuyPrice,
-          lastBuyDate,
-          entryTargetPercent,
-          pullbackPercent,
-          daysSinceLastBuy,
+          testPrice: asset.testPrice ?? null,
+          lastBuyPrice: lastBuy?.price ?? null,
+          lastBuyDate: lastBuy?.date ?? null,
+          entryTargetPercent: lastBuy?.entryTargetPercent ?? null,
           lowestPTPrice,
-          pctToLowestPT,
         };
       });
 
       // Sort by symbol alphabetically
-      processedAssets.sort((a, b) => a.symbol.localeCompare(b.symbol));
+      processedRawData.sort((a, b) => a.symbol.localeCompare(b.symbol));
 
-      setDashboardData(processedAssets);
+      setRawAssetData(processedRawData);
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
       setError("Failed to load dashboard data");
@@ -112,6 +118,54 @@ export default function Dashboard() {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  // Compute dashboard data with effective prices
+  const dashboardData: DashboardAsset[] = useMemo(() => {
+    return rawAssetData.map((asset) => {
+      const currentPrice = getEffectivePrice(
+        asset.symbol,
+        prices,
+        asset.testPrice
+      );
+
+      // Check if price is from testPrice (not from Yahoo Finance)
+      const fetchedPrice = prices[asset.symbol];
+      const isTestPrice =
+        currentPrice !== null &&
+        (!(asset.symbol in prices) ||
+          fetchedPrice === null ||
+          fetchedPrice === 0);
+
+      const pullbackPercent = calculatePullbackPercent(
+        currentPrice,
+        asset.lastBuyPrice
+      );
+      const daysSinceLastBuy = calculateDaysSince(asset.lastBuyDate);
+      const pctToLowestPT = calculatePctToTarget(
+        currentPrice,
+        asset.lowestPTPrice
+      );
+
+      return {
+        id: asset.id,
+        symbol: asset.symbol,
+        currentPrice,
+        isTestPrice,
+        lastBuyPrice: asset.lastBuyPrice,
+        lastBuyDate: asset.lastBuyDate,
+        entryTargetPercent: asset.entryTargetPercent,
+        pullbackPercent,
+        daysSinceLastBuy,
+        lowestPTPrice: asset.lowestPTPrice,
+        pctToLowestPT,
+      };
+    });
+  }, [rawAssetData, prices]);
+
+  const handleFetchPrices = useCallback(() => {
+    const symbols = rawAssetData.map((a) => a.symbol);
+    fetchPrices(symbols);
+  }, [rawAssetData, fetchPrices]);
 
   const columns: Column<DashboardAsset>[] = useMemo(
     () => [
@@ -126,6 +180,21 @@ export default function Dashboard() {
             {item.symbol}
           </Link>
         ),
+      },
+      {
+        key: "currentPrice",
+        header: "Price",
+        sortable: true,
+        render: (item) => {
+          if (item.currentPrice === null) {
+            return <span className="text-muted-foreground">-</span>;
+          }
+          return (
+            <span className={item.isTestPrice ? "text-purple-400" : ""}>
+              {item.currentPrice.toFixed(2)}
+            </span>
+          );
+        },
       },
       {
         key: "pullbackPercent",
@@ -195,11 +264,33 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-foreground mb-6">Dashboard</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-foreground">Dashboard</h2>
+        <div className="flex items-center gap-4">
+          {lastFetchTimestamp && (
+            <span className="text-sm text-muted-foreground">
+              Last fetch: {lastFetchTimestamp.toLocaleTimeString()}
+            </span>
+          )}
+          <button
+            onClick={handleFetchPrices}
+            disabled={isFetchingPrices || isLoading || rawAssetData.length === 0}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+          >
+            {isFetchingPrices ? "Fetching..." : "Fetch Prices"}
+          </button>
+        </div>
+      </div>
 
-      {error && (
+      {progressMessage && (
+        <div className="mb-4 p-3 bg-blue-500/20 text-blue-400 rounded">
+          {progressMessage}
+        </div>
+      )}
+
+      {(error || priceError) && (
         <div className="mb-4 p-3 bg-red-500/20 text-red-400 rounded">
-          {error}
+          {error || priceError}
         </div>
       )}
 
