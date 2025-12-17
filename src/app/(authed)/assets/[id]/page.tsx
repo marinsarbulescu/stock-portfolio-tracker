@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuthenticator } from "@aws-amplify/ui-react";
 import { client } from "@/utils/amplify-client";
 import { usePrices } from "@/contexts/PriceContext";
 import { TargetList, EntryTarget, ProfitTarget } from "@/components/TargetList";
@@ -31,6 +32,7 @@ interface FormData {
 }
 
 export default function EditAssetPage() {
+  const { authStatus } = useAuthenticator((context) => [context.authStatus]);
   const params = useParams();
   const router = useRouter();
   const assetId = params.id as string;
@@ -157,11 +159,13 @@ export default function EditAssetPage() {
   }, [assetId]);
 
   useEffect(() => {
-    fetchAsset();
-    fetchEntryTargets();
-    fetchProfitTargets();
-    fetchBudgets();
-  }, [fetchAsset, fetchEntryTargets, fetchProfitTargets, fetchBudgets]);
+    if (authStatus === "authenticated") {
+      fetchAsset();
+      fetchEntryTargets();
+      fetchProfitTargets();
+      fetchBudgets();
+    }
+  }, [authStatus, fetchAsset, fetchEntryTargets, fetchProfitTargets, fetchBudgets]);
 
   function validate(): boolean {
     const newErrors: Record<string, string> = {};

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useAuthenticator } from "@aws-amplify/ui-react";
 import { client } from "@/utils/amplify-client";
 import { usePrices } from "@/contexts/PriceContext";
 import { getEffectivePrice } from "@/utils/price-utils";
@@ -86,6 +87,7 @@ function formatCurrency(value: number | null): string {
 }
 
 export default function AssetTransactionsPage() {
+  const { authStatus } = useAuthenticator((context) => [context.authStatus]);
   const params = useParams();
   const assetId = params.id as string;
   const { prices } = usePrices();
@@ -703,13 +705,15 @@ export default function AssetTransactionsPage() {
   }, [selectedProfitTargetId, hitProfitTargetIds, effectivePrice]);
 
   useEffect(() => {
-    fetchAsset();
-    fetchTransactions();
-    fetchProfitTargets();
-    fetchEntryTargets();
-    fetchWallets();
-    fetchMaxOOP();
-  }, [fetchAsset, fetchTransactions, fetchProfitTargets, fetchEntryTargets, fetchWallets, fetchMaxOOP]);
+    if (authStatus === "authenticated") {
+      fetchAsset();
+      fetchTransactions();
+      fetchProfitTargets();
+      fetchEntryTargets();
+      fetchWallets();
+      fetchMaxOOP();
+    }
+  }, [authStatus, fetchAsset, fetchTransactions, fetchProfitTargets, fetchEntryTargets, fetchWallets, fetchMaxOOP]);
 
   function handleNewTransaction() {
     setSelectedTransaction(null);

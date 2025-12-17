@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { useAuthenticator } from "@aws-amplify/ui-react";
 import { client } from "@/utils/amplify-client";
 import { SortableTable, Column } from "@/components/SortableTable";
 
@@ -15,6 +16,7 @@ interface Asset {
 }
 
 export default function AssetsPage() {
+  const { authStatus } = useAuthenticator((context) => [context.authStatus]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -108,8 +110,10 @@ export default function AssetsPage() {
   }, []);
 
   useEffect(() => {
-    fetchAssets();
-  }, [fetchAssets]);
+    if (authStatus === "authenticated") {
+      fetchAssets();
+    }
+  }, [authStatus, fetchAssets]);
 
   return (
     <div>

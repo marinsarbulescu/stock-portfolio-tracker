@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { useAuthenticator } from "@aws-amplify/ui-react";
 import { client } from "@/utils/amplify-client";
 import { SortableTable, Column } from "@/components/SortableTable";
 import { usePrices } from "@/contexts/PriceContext";
@@ -44,6 +45,7 @@ interface RawAssetData {
 }
 
 export default function Dashboard() {
+  const { authStatus } = useAuthenticator((context) => [context.authStatus]);
   const [rawAssetData, setRawAssetData] = useState<RawAssetData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -129,8 +131,10 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+    if (authStatus === "authenticated") {
+      fetchDashboardData();
+    }
+  }, [authStatus, fetchDashboardData]);
 
   // Compute dashboard data with effective prices
   const dashboardData: DashboardAsset[] = useMemo(() => {
