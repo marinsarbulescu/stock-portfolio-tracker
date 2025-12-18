@@ -222,12 +222,41 @@ export default function EditAssetPage() {
   }
 
   async function handleDelete() {
-    if (!confirm("Are you sure you want to delete this asset? This will also delete all entry targets, profit targets, and budgets.")) {
+    if (!confirm("Are you sure you want to delete this asset? This will also delete all transactions, wallets, entry targets, profit targets, and budgets.")) {
       return;
     }
 
     setIsSubmitting(true);
     try {
+      const FETCH_LIMIT = 5000;
+
+      // Delete all transactions and their allocations
+      const txnResponse = await client.models.Transaction.list({
+        filter: { assetId: { eq: assetId } },
+        limit: FETCH_LIMIT,
+      });
+      for (const txn of txnResponse.data) {
+        // Delete allocations for this transaction
+        const allocResponse = await client.models.TransactionAllocation.list({
+          filter: { transactionId: { eq: txn.id } },
+          limit: FETCH_LIMIT,
+        });
+        for (const alloc of allocResponse.data) {
+          await client.models.TransactionAllocation.delete({ id: alloc.id });
+        }
+        // Delete the transaction
+        await client.models.Transaction.delete({ id: txn.id });
+      }
+
+      // Delete all wallets
+      const walletResponse = await client.models.Wallet.list({
+        filter: { assetId: { eq: assetId } },
+        limit: FETCH_LIMIT,
+      });
+      for (const wallet of walletResponse.data) {
+        await client.models.Wallet.delete({ id: wallet.id });
+      }
+
       // Delete entry targets
       for (const target of entryTargets) {
         await client.models.EntryTarget.delete({ id: target.id });
