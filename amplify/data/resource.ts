@@ -87,13 +87,15 @@ const schema = a.schema({
     })
     .authorization((allow) => [allow.owner()]),
 
-  // TransactionAllocation - Links BUY transactions to profit targets
+  // TransactionAllocation - Links BUY transactions to profit targets and wallets
   TransactionAllocation: a
     .model({
       transactionId: a.id().required(),
       transaction: a.belongsTo("Transaction", "transactionId"),
       profitTargetId: a.id().required(),
       profitTarget: a.belongsTo("ProfitTarget", "profitTargetId"),
+      walletId: a.id().required(), // Links allocation to the wallet it contributes to
+      wallet: a.belongsTo("Wallet", "walletId"),
       percentage: a.float().required(), // User input (e.g., 50)
       shares: a.float().required(), // Calculated: (percentage/100) * totalShares
     })
@@ -112,6 +114,7 @@ const schema = a.schema({
       profitTargetId: a.id().required(),
       profitTarget: a.belongsTo("ProfitTarget", "profitTargetId"),
       sellTransactions: a.hasMany("Transaction", "walletId"),
+      allocations: a.hasMany("TransactionAllocation", "walletId"), // BUY allocations that contributed to this wallet
     })
     .authorization((allow) => [allow.owner()]),
 

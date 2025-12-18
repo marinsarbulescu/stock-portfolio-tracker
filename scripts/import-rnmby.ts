@@ -243,16 +243,8 @@ async function processBuy(
   const allocations = getAllocations(txn.txnType, quantity, pt8, pt16);
 
   for (const alloc of allocations) {
-    // Create TransactionAllocation
-    await client.models.TransactionAllocation.create({
-      transactionId: newTxn.id,
-      profitTargetId: alloc.ptId,
-      percentage: alloc.percentage,
-      shares: alloc.shares,
-    });
-
-    // Create or update Wallet
-    await upsertWallet(
+    // Create or update Wallet FIRST to get wallet ID
+    const walletId = await upsertWallet(
       asset.id,
       alloc.ptId,
       price,
@@ -262,6 +254,17 @@ async function processBuy(
       asset.commission || 0,
       betaWallets
     );
+
+    // Create TransactionAllocation with walletId
+    if (walletId) {
+      await client.models.TransactionAllocation.create({
+        transactionId: newTxn.id,
+        profitTargetId: alloc.ptId,
+        walletId,
+        percentage: alloc.percentage,
+        shares: alloc.shares,
+      });
+    }
   }
 }
 
@@ -373,7 +376,7 @@ async function upsertWallet(
   targetPercent: number,
   commission: number,
   betaWallets: Map<string, { id: string; shares: number }>
-) {
+): Promise<string | undefined> {
   const walletKey = `${assetId}-${profitTargetId}-${price}`;
 
   // Calculate profit target price
@@ -391,6 +394,7 @@ async function upsertWallet(
     });
     existing.shares = newShares;
     console.log(`   📊 Wallet updated: ${newShares.toFixed(5)} shares @ $${price.toFixed(2)}`);
+    return existing.id;
   } else {
     // Create new wallet
     const { data: newWallet } = await client.models.Wallet.create({
@@ -405,8 +409,10 @@ async function upsertWallet(
     if (newWallet) {
       betaWallets.set(walletKey, { id: newWallet.id, shares });
       console.log(`   💼 Wallet created: ${shares.toFixed(5)} shares @ $${price.toFixed(2)} (PT: $${profitTargetPrice.toFixed(2)})`);
+      return newWallet.id;
     }
   }
+  return undefined;
 }
 
 // Run

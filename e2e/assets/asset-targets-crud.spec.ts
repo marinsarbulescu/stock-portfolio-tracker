@@ -58,10 +58,7 @@ async function navigateBackToEditPage(page: Page) {
 
 // Helper: Verify wallet tabs on Transactions page
 async function verifyWalletTabs(page: Page, expectedPTPercents: string[]) {
-  console.log(`[AssetTargets] Verifying wallet tabs: All + ${expectedPTPercents.join(", ")}...`);
-
-  // Always expect "All" tab
-  await expect(page.locator('[data-testid="wallet-tab-all"]')).toBeVisible({ timeout: 5000 });
+  console.log(`[AssetTargets] Verifying wallet tabs: ${expectedPTPercents.join(", ")}...`);
 
   // Verify each expected PT tab exists
   for (const ptPercent of expectedPTPercents) {
@@ -73,21 +70,13 @@ async function verifyWalletTabs(page: Page, expectedPTPercents: string[]) {
   console.log("[AssetTargets] Wallet tabs verified successfully.");
 }
 
-// Helper: Verify NO PT wallet tabs (only All or no tabs section)
+// Helper: Verify NO PT wallet tabs exist
 async function verifyNoPTWalletTabs(page: Page) {
   console.log("[AssetTargets] Verifying no PT wallet tabs...");
 
-  // The wallet-tabs container should either not exist or only contain "All" tab
-  const tabsContainer = page.locator('[data-testid="wallet-tabs"]');
-  const tabsExist = await tabsContainer.count() > 0;
-
-  if (tabsExist) {
-    // If tabs exist, only "All" should be there
-    await expect(page.locator('[data-testid="wallet-tab-all"]')).toBeVisible();
-    // PT tabs should not exist
-    const ptTabs = page.locator('[data-testid^="wallet-tab-pt-"]');
-    await expect(ptTabs).toHaveCount(0);
-  }
+  // PT tabs should not exist
+  const ptTabs = page.locator('[data-testid^="wallet-tab-pt-"]');
+  await expect(ptTabs).toHaveCount(0);
 
   console.log("[AssetTargets] No PT wallet tabs confirmed.");
 }

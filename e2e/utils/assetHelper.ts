@@ -333,9 +333,6 @@ export async function deleteTarget(
 export async function verifyWalletTabs(page: Page, ptPercents: string[]): Promise<void> {
   console.log(`[AssetHelper] Verifying wallet tabs for PTs: ${ptPercents.join(", ")}...`);
 
-  // Verify "All" tab exists
-  await expect(page.locator('[data-testid="wallet-tab-all"]')).toBeVisible({ timeout: 5000 });
-
   // Verify each PT tab
   for (const pct of ptPercents) {
     await expect(page.locator(`[data-testid="wallet-tab-pt-${pct}"]`)).toBeVisible({ timeout: 5000 });
@@ -345,13 +342,13 @@ export async function verifyWalletTabs(page: Page, ptPercents: string[]): Promis
 }
 
 /**
- * Verify that no PT wallet tabs exist (only "All" tab or no tabs at all).
+ * Verify that no PT wallet tabs exist.
  * Call this from the transactions page.
  */
 export async function verifyNoPTWalletTabs(page: Page): Promise<void> {
   console.log("[AssetHelper] Verifying no PT wallet tabs exist...");
-  // The wallet-tabs container should not exist when there are no PTs
-  await expect(page.locator('[data-testid="wallet-tabs"]')).not.toBeVisible({ timeout: 5000 });
+  const ptTabs = page.locator('[data-testid^="wallet-tab-pt-"]');
+  await expect(ptTabs).toHaveCount(0, { timeout: 5000 });
   console.log("[AssetHelper] No PT wallet tabs confirmed.");
 }
 

@@ -54,6 +54,12 @@ interface TransactionRow {
   costBasis: number | null;
 }
 
+interface AllocationInfo {
+  profitTargetId: string;
+  walletId: string;
+  percentage: number;
+}
+
 interface WalletRow {
   id: string;
   price: number;
@@ -97,10 +103,11 @@ export default function AssetTransactionsPage() {
   const [profitTargets, setProfitTargets] = useState<ProfitTarget[]>([]);
   const [entryTargets, setEntryTargets] = useState<EntryTarget[]>([]);
   const [wallets, setWallets] = useState<WalletRow[]>([]);
+  const [allocationsMap, setAllocationsMap] = useState<Map<string, AllocationInfo[]>>(new Map());
   const [maxOOP, setMaxOOP] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedProfitTargetId, setSelectedProfitTargetId] = useState<string | null>(null); // null = "All"
+  const [selectedProfitTargetId, setSelectedProfitTargetId] = useState<string | null>(null);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -227,6 +234,25 @@ export default function AssetTransactionsPage() {
       transactionData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       setTransactions(transactionData);
+
+      // Fetch allocations for all BUY transactions
+      const buyTxnIds = transactionData.filter(t => t.type === "BUY").map(t => t.id);
+      if (buyTxnIds.length > 0) {
+        const allocMap = new Map<string, AllocationInfo[]>();
+        for (const txnId of buyTxnIds) {
+          const allocResponse = await client.models.TransactionAllocation.list({
+            filter: { transactionId: { eq: txnId } },
+          });
+          if (allocResponse.data.length > 0) {
+            allocMap.set(txnId, allocResponse.data.map(a => ({
+              profitTargetId: a.profitTargetId,
+              walletId: a.walletId,
+              percentage: a.percentage,
+            })));
+          }
+        }
+        setAllocationsMap(allocMap);
+      }
     } catch (err) {
       console.error("Error fetching transactions:", err);
       setError("Failed to load transactions");
@@ -292,7 +318,7 @@ export default function AssetTransactionsPage() {
     profitTargetId: string,
     investmentDelta: number,
     profitTargetPrice?: number
-  ) {
+  ): Promise<string | undefined> {
     const existing = await findWalletByCompositeKey(price, profitTargetId);
 
     if (existing) {
@@ -302,16 +328,18 @@ export default function AssetTransactionsPage() {
       if (newInvestment <= 0) {
         // Delete wallet if no investment left
         await client.models.Wallet.delete({ id: existing.id });
+        return undefined;
       } else {
         await client.models.Wallet.update({
           id: existing.id,
           investment: newInvestment,
           shares: newShares,
         });
+        return existing.id;
       }
     } else if (investmentDelta > 0 && profitTargetPrice !== undefined) {
       // Create new wallet for this (assetId, price, profitTargetId) combination
-      await client.models.Wallet.create({
+      const result = await client.models.Wallet.create({
         assetId,
         price,
         profitTargetId,
@@ -319,7 +347,9 @@ export default function AssetTransactionsPage() {
         shares: parseFloat((investmentDelta / price).toFixed(5)),
         profitTargetPrice,
       });
+      return result.data?.id;
     }
+    return undefined;
   }
 
   const handleDeleteFromTable = useCallback(async (id: string) => {
@@ -504,6 +534,39 @@ export default function AssetTransactionsPage() {
         render: (item) => formatCurrency(item.investment),
       },
       {
+        key: "wallet",
+        header: "Wallet",
+        defaultHidden: true,
+        render: (item) => {
+          if (item.type !== "BUY") return "-";
+          const allocations = allocationsMap.get(item.id);
+          if (!allocations || allocations.length === 0) return "-";
+
+          // Sort allocations by PT sortOrder
+          const sortedAllocations = [...allocations].sort((a, b) => {
+            const ptA = profitTargets.find(p => p.id === a.profitTargetId);
+            const ptB = profitTargets.find(p => p.id === b.profitTargetId);
+            return (ptA?.sortOrder ?? 0) - (ptB?.sortOrder ?? 0);
+          });
+
+          // Show PT name with shortened wallet ID, one per line
+          return (
+            <div className="flex flex-col text-xs text-muted-foreground">
+              {sortedAllocations.map((alloc) => {
+                const pt = profitTargets.find(p => p.id === alloc.profitTargetId);
+                const ptName = pt ? `+${pt.targetPercent}%` : "PT";
+                const shortWalletId = alloc.walletId.substring(0, 8);
+                return (
+                  <span key={alloc.walletId}>
+                    {ptName}: {shortWalletId}
+                  </span>
+                );
+              })}
+            </div>
+          );
+        },
+      },
+      {
         key: "entryTarget",
         header: firstEntryTarget ? `ET (-${Math.abs(firstEntryTarget.targetPercent)}%)` : "ET",
         render: (item) => {
@@ -570,35 +633,21 @@ export default function AssetTransactionsPage() {
         ),
       },
     ],
-    [handleDeleteFromTable, firstEntryTarget, lastBuyTransaction, effectivePrice]
+    [handleDeleteFromTable, firstEntryTarget, lastBuyTransaction, effectivePrice, allocationsMap, profitTargets]
   );
 
-  // Column visibility toggle
+  // Column visibility toggle for transactions
   const { visibleKeys, hiddenColumns, toggle: toggleColumn } = useColumnVisibility(
     columns,
     { storageKey: "transactions-columns" }
   );
 
-  // Filter/aggregate wallets based on selected profit target tab
+  // Filter wallets for selected profit target
   const displayWallets = useMemo((): WalletRow[] => {
-    if (selectedProfitTargetId === null) {
-      // "All" tab: aggregate wallets by price (sum across all PTs)
-      const aggregated = wallets.reduce((acc, wallet) => {
-        const key = wallet.price;
-        if (!acc[key]) {
-          acc[key] = { id: `agg-${key}`, price: wallet.price, shares: 0, investment: 0, profitTargetId: "", profitTargetPrice: 0 };
-        }
-        acc[key].shares += wallet.shares;
-        acc[key].investment += wallet.investment;
-        return acc;
-      }, {} as Record<number, WalletRow>);
-      return Object.values(aggregated).sort((a, b) => b.price - a.price);
-    } else {
-      // Specific PT tab: filter wallets for that PT
-      return wallets
-        .filter((w) => w.profitTargetId === selectedProfitTargetId)
-        .sort((a, b) => b.price - a.price);
-    }
+    if (!selectedProfitTargetId) return [];
+    return wallets
+      .filter((w) => w.profitTargetId === selectedProfitTargetId)
+      .sort((a, b) => b.price - a.price);
   }, [wallets, selectedProfitTargetId]);
 
   // Count wallets per profit target
@@ -633,76 +682,80 @@ export default function AssetTransactionsPage() {
     return hitIds;
   }, [effectivePrice, profitTargets, wallets]);
 
-  // Wallet columns - include PT-specific columns only on PT tabs (not on "All" tab)
-  const walletColumns = useMemo(() => {
-    const baseColumns: Column<WalletRow>[] = [
-      {
-        key: "price",
-        header: "Price",
-        render: (item) => formatCurrency(item.price),
+  // Wallet columns
+  const isPTHit = selectedProfitTargetId ? hitProfitTargetIds.has(selectedProfitTargetId) : false;
+
+  const walletColumns: Column<WalletRow>[] = useMemo(() => [
+    {
+      key: "walletId",
+      header: "Wallet ID",
+      defaultHidden: true,
+      render: (item) => (
+        <span className="text-xs text-muted-foreground font-mono">
+          {item.id.substring(0, 8)}
+        </span>
+      ),
+    },
+    {
+      key: "price",
+      header: "Price",
+      render: (item) => formatCurrency(item.price),
+    },
+    {
+      key: "shares",
+      header: "Shares",
+      render: (item) =>
+        item.shares.toLocaleString(undefined, { minimumFractionDigits: 5, maximumFractionDigits: 5 }),
+    },
+    {
+      key: "investment",
+      header: "Investment",
+      render: (item) => formatCurrency(item.investment),
+    },
+    {
+      key: "pt",
+      header: "PT",
+      render: (item) => formatCurrency(item.profitTargetPrice),
+    },
+    {
+      key: "pct2pt",
+      header: "%2PT",
+      render: (item) => {
+        if (!effectivePrice || !item.profitTargetPrice) return "-";
+        const pct2pt = ((effectivePrice - item.profitTargetPrice) / item.profitTargetPrice) * 100;
+        const isPositive = pct2pt >= 0;
+        return (
+          <span className={isPositive ? "text-green-400" : ""}>
+            {isPositive ? "+" : ""}{pct2pt.toFixed(2)}%
+          </span>
+        );
       },
-      {
-        key: "shares",
-        header: "Shares",
-        render: (item) =>
-          item.shares.toLocaleString(undefined, { minimumFractionDigits: 5, maximumFractionDigits: 5 }),
-      },
-      {
-        key: "investment",
-        header: "Investment",
-        render: (item) => formatCurrency(item.investment),
-      },
-    ];
+    },
+    {
+      key: "action",
+      header: "Action",
+      sortable: false,
+      toggleable: false,
+      render: (item) => (
+        <button
+          onClick={() => setSellWallet(item)}
+          className={`hover:underline text-sm ${
+            isPTHit
+              ? "text-green-400 hover:text-green-300"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Sell
+        </button>
+      ),
+    },
+  ], [effectivePrice, isPTHit]);
 
-    // Add PT-specific columns only when viewing a specific PT (not "All" tab)
-    if (selectedProfitTargetId !== null) {
-      const isPTHit = hitProfitTargetIds.has(selectedProfitTargetId);
-
-      // PT column - target sell price
-      baseColumns.push({
-        key: "pt",
-        header: "PT",
-        render: (item) => formatCurrency(item.profitTargetPrice),
-      });
-
-      // %2PT column - percentage distance to PT
-      baseColumns.push({
-        key: "pct2pt",
-        header: "%2PT",
-        render: (item) => {
-          if (!effectivePrice || !item.profitTargetPrice) return "-";
-          const pct2pt = ((effectivePrice - item.profitTargetPrice) / item.profitTargetPrice) * 100;
-          const isPositive = pct2pt >= 0;
-          return (
-            <span className={isPositive ? "text-green-400" : ""}>
-              {isPositive ? "+" : ""}{pct2pt.toFixed(2)}%
-            </span>
-          );
-        },
-      });
-
-      // Action column
-      baseColumns.push({
-        key: "action",
-        header: "Action",
-        sortable: false,
-        render: (item) => (
-          <button
-            onClick={() => setSellWallet(item)}
-            className={`hover:underline text-sm ${
-              isPTHit
-                ? "text-green-400 hover:text-green-300"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Sell
-          </button>
-        ),
-      });
-    }
-
-    return baseColumns;
-  }, [selectedProfitTargetId, hitProfitTargetIds, effectivePrice]);
+  // Column visibility toggle for wallets
+  const { visibleKeys: walletVisibleKeys, hiddenColumns: walletHiddenColumns, toggle: toggleWalletColumn } = useColumnVisibility(
+    walletColumns,
+    { storageKey: "wallets-columns" }
+  );
 
   useEffect(() => {
     if (authStatus === "authenticated") {
@@ -714,6 +767,14 @@ export default function AssetTransactionsPage() {
       fetchMaxOOP();
     }
   }, [authStatus, fetchAsset, fetchTransactions, fetchProfitTargets, fetchEntryTargets, fetchWallets, fetchMaxOOP]);
+
+  // Auto-select first PT when profit targets load
+  useEffect(() => {
+    if (profitTargets.length > 0 && selectedProfitTargetId === null) {
+      const sortedPTs = [...profitTargets].sort((a, b) => a.sortOrder - b.sortOrder);
+      setSelectedProfitTargetId(sortedPTs[0].id);
+    }
+  }, [profitTargets, selectedProfitTargetId]);
 
   function handleNewTransaction() {
     setSelectedTransaction(null);
@@ -772,23 +833,26 @@ export default function AssetTransactionsPage() {
         const commission = asset?.commission ?? 0;
 
         for (const alloc of allocations) {
-          // Create allocation record
-          await client.models.TransactionAllocation.create({
-            transactionId,
-            profitTargetId: alloc.profitTargetId,
-            percentage: alloc.percentage,
-            shares: alloc.shares,
-          });
-
           // Calculate profitTargetPrice for this wallet
           const pt = profitTargets.find((p) => p.id === alloc.profitTargetId);
           const ptPercent = pt?.targetPercent ?? 0;
           // Formula: buyPrice × (1 + PT%) / (1 - commission%)
           const profitTargetPrice = data.price * (1 + ptPercent / 100) / (1 - commission / 100);
 
-          // Create/update wallet for this profit target
+          // Create/update wallet for this profit target FIRST to get wallet ID
           const allocationInvestment = (alloc.percentage / 100) * data.investment;
-          await upsertWallet(data.price, alloc.profitTargetId, allocationInvestment, profitTargetPrice);
+          const walletId = await upsertWallet(data.price, alloc.profitTargetId, allocationInvestment, profitTargetPrice);
+
+          // Create allocation record with walletId
+          if (walletId) {
+            await client.models.TransactionAllocation.create({
+              transactionId,
+              profitTargetId: alloc.profitTargetId,
+              walletId,
+              percentage: alloc.percentage,
+              shares: alloc.shares,
+            });
+          }
         }
         await fetchWallets();
       }
@@ -1136,17 +1200,6 @@ export default function AssetTransactionsPage() {
 
           {/* Profit Target Tabs */}
           <div className="flex gap-2 mb-4 flex-wrap" data-testid="wallet-tabs">
-            <button
-              onClick={() => setSelectedProfitTargetId(null)}
-              data-testid="wallet-tab-all"
-              className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                selectedProfitTargetId === null
-                  ? "bg-blue-600 text-white"
-                  : "bg-card border border-border text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              All{wallets.length > 0 && ` (${wallets.length})`}
-            </button>
             {profitTargets
               .sort((a, b) => a.sortOrder - b.sortOrder)
               .map((pt) => {
@@ -1171,16 +1224,19 @@ export default function AssetTransactionsPage() {
               })}
           </div>
 
+          <ColumnToggle
+            columns={walletColumns}
+            visibleKeys={walletVisibleKeys}
+            onToggle={toggleWalletColumn}
+          />
+
           <div className="bg-card border border-border rounded-lg">
             <SortableTable
               data={displayWallets}
               columns={walletColumns}
               keyField="id"
-              emptyMessage={
-                selectedProfitTargetId === null
-                  ? "No wallets yet."
-                  : "No wallets for this profit target."
-              }
+              emptyMessage="No wallets for this profit target."
+              hiddenColumns={walletHiddenColumns}
             />
           </div>
         </div>
