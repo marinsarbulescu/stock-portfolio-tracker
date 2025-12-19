@@ -13,10 +13,11 @@ import {
   TransactionExpected,
   WalletExpected,
   OverviewExpected,
+  EditTransactionTarget,
 } from "./jsonHelper";
 
 // Re-export types for convenience
-export type { AssetCreateInput, TargetInput, TargetExpected, TransactionInput, TransactionExpected, WalletExpected, OverviewExpected };
+export type { AssetCreateInput, TargetInput, TargetExpected, TransactionInput, TransactionExpected, WalletExpected, OverviewExpected, EditTransactionTarget };
 
 // ============================================================================
 // Navigation & Page Helpers
@@ -63,6 +64,8 @@ export async function navigateToTransactionsPage(page: Page): Promise<void> {
   console.log("[AssetHelper] Navigating to Transactions page...");
   await page.locator('[data-testid="link-transactions"]').click();
   await expect(page).toHaveURL(/\/transactions$/);
+  // Wait for the page to fully load (button appears after data loads)
+  await expect(page.locator('[data-testid="btn-new-transaction"]')).toBeVisible({ timeout: 10000 });
   console.log("[AssetHelper] On Transactions page.");
 }
 
@@ -552,6 +555,65 @@ export async function createBuyTransaction(
 }
 
 /**
+ * Edit a BUY transaction via the modal.
+ * Call this from the transactions page.
+ * @param target - The transaction to find and edit (by signal, price, investment)
+ * @param input - The new values to set
+ */
+export async function editBuyTransaction(
+  page: Page,
+  target: EditTransactionTarget,
+  input: TransactionInput
+): Promise<void> {
+  console.log(`[AssetHelper] Editing BUY transaction: ${target.signal} @ ${target.price}...`);
+
+  // Wait for the transactions page to be fully loaded
+  await expect(page.locator('[data-testid="btn-new-transaction"]')).toBeVisible({ timeout: 10000 });
+
+  // Wait a moment for the table to render
+  await page.waitForTimeout(500);
+
+  // Find the transaction row
+  const row = await findTransactionRow(page, target.price, target.signal, target.investment);
+
+  // Click on the edit button within this row (data-testid starts with "transaction-edit-")
+  const editButton = row.locator('[data-testid^="transaction-edit-"]');
+  await editButton.click();
+
+  // Wait for modal to open in edit mode
+  await expect(page.locator('[data-testid="transaction-form-signal"]')).toBeVisible({ timeout: 5000 });
+
+  // Update signal
+  await page.locator('[data-testid="transaction-form-signal"]').selectOption(input.signal);
+
+  // Clear and update price
+  await page.locator('[data-testid="transaction-form-price"]').clear();
+  await page.locator('[data-testid="transaction-form-price"]').fill(input.price);
+
+  // Clear and update investment
+  await page.locator('[data-testid="transaction-form-investment"]').clear();
+  await page.locator('[data-testid="transaction-form-investment"]').fill(input.investment);
+
+  // Wait for PT allocation inputs to update
+  await page.waitForTimeout(500);
+
+  // Update PT allocations
+  for (const alloc of input.allocations) {
+    const allocInput = page.locator(`[data-testid="transaction-pt-alloc-${alloc.ptPercent}"]`);
+    await allocInput.clear();
+    await allocInput.fill(alloc.percentage);
+  }
+
+  // Submit
+  await page.locator('[data-testid="transaction-form-submit"]').click();
+
+  // Wait for modal to close
+  await expect(page.locator('[data-testid="transaction-form-submit"]')).not.toBeVisible({ timeout: 10000 });
+
+  console.log("[AssetHelper] BUY transaction edited successfully.");
+}
+
+/**
  * Find a transaction row by unique combination of price, signal, and investment.
  * Returns a locator for the row.
  */
@@ -658,6 +720,34 @@ export async function verifyWallet(
   await expect(row).toContainText(expected.pct2pt);
 
   console.log("[AssetHelper] Wallet verified successfully.");
+}
+
+/**
+ * Verify a wallet is NOT present for a given PT tab and price.
+ */
+export async function verifyWalletNotPresent(
+  page: Page,
+  ptPercent: string,
+  price: string
+): Promise<void> {
+  console.log(`[AssetHelper] Verifying wallet NOT present: PT=${ptPercent}%, price=${price}...`);
+
+  // Click the PT tab
+  await page.locator(`[data-testid="wallet-tab-pt-${ptPercent}"]`).click();
+
+  // Wait for tab to be active
+  await page.waitForTimeout(300);
+
+  // Find wallet row by price - should not exist
+  const walletSection = page.locator('[data-testid="wallet-tabs"]').locator("..");
+  const row = walletSection.locator("tr").filter({ hasText: price });
+
+  const count = await row.count();
+  if (count > 0) {
+    throw new Error(`Expected no wallet with price=${price} in PT+${ptPercent}%, but found ${count}`);
+  }
+
+  console.log("[AssetHelper] Wallet confirmed NOT present.");
 }
 
 /**

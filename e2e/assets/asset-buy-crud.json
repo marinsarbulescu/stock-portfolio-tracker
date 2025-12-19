@@ -167,6 +167,79 @@
           ]
         }
       }
+    },
+    "editBuyA": {
+      "testPriceUpdate": "90",
+      "target": {
+        "signal": "Initial",
+        "price": "$100.00",
+        "investment": "$200.00"
+      },
+      "input": {
+        "signal": "INITIAL",
+        "price": "130",
+        "investment": "600",
+        "allocations": [
+          { "ptPercent": "4", "percentage": "40" },
+          { "ptPercent": "8", "percentage": "50" },
+          { "ptPercent": "16", "percentage": "10" }
+        ]
+      },
+      "expected": {
+        "transaction": {
+          "type": "Buy",
+          "signal": "Initial",
+          "price": "$130.00",
+          "quantity": "4.61538",
+          "investment": "$600.00",
+          "entryTarget": "$127.40",
+          "profitLoss": "-",
+          "profitLossPercent": "-"
+        },
+        "priorTransactions": [
+          {
+            "type": "Buy",
+            "signal": "Custom",
+            "price": "$100.00",
+            "quantity": "3.00000",
+            "investment": "$300.00",
+            "entryTarget": "$98.00",
+            "profitLoss": "-",
+            "profitLossPercent": "-"
+          },
+          {
+            "type": "Buy",
+            "signal": "EnTar",
+            "price": "$120.00",
+            "quantity": "3.33333",
+            "investment": "$400.00",
+            "entryTarget": "$117.60",
+            "profitLoss": "-",
+            "profitLossPercent": "-"
+          }
+        ],
+        "wallets": [
+          { "ptPercent": "4", "price": "$130.00", "shares": "1.84615", "investment": "$240.00", "pt": "$136.57", "pct2pt": "-34.10%" },
+          { "ptPercent": "4", "price": "$120.00", "shares": "1.66667", "investment": "$200.00", "pt": "$126.06", "pct2pt": "-28.61%" },
+          { "ptPercent": "4", "price": "$100.00", "shares": "1.50000", "investment": "$150.00", "pt": "$105.05", "pct2pt": "-14.33%" },
+          { "ptPercent": "8", "price": "$130.00", "shares": "2.30769", "investment": "$300.00", "pt": "$141.82", "pct2pt": "-36.54%" },
+          { "ptPercent": "8", "price": "$120.00", "shares": "1.66667", "investment": "$200.00", "pt": "$130.91", "pct2pt": "-31.25%" },
+          { "ptPercent": "8", "price": "$100.00", "shares": "0.75000", "investment": "$75.00", "pt": "$109.09", "pct2pt": "-17.50%" },
+          { "ptPercent": "16", "price": "$130.00", "shares": "0.46154", "investment": "$60.00", "pt": "$152.32", "pct2pt": "-40.92%" },
+          { "ptPercent": "16", "price": "$100.00", "shares": "0.75000", "investment": "$75.00", "pt": "$117.17", "pct2pt": "-23.19%" }
+        ],
+        "walletsNotPresent": [
+          { "ptPercent": "16", "price": "$120.00" }
+        ],
+        "overview": {
+          "totalShares": "10.94872",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "5.01282" },
+            { "ptPercent": "8", "shares": "4.72436" },
+            { "ptPercent": "16", "shares": "1.21154" }
+          ]
+        }
+      }
     }
   }
 }

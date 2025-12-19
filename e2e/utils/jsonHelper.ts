@@ -120,13 +120,23 @@ export interface OverviewExpected {
   ptShares: { ptPercent: string; shares: string }[];
 }
 
+// Target to identify a transaction for editing (presence indicates edit operation)
+export interface EditTransactionTarget {
+  signal: string;  // Display signal (e.g., "Initial")
+  price: string;   // Formatted price (e.g., "$100.00")
+  investment: string; // Formatted investment (e.g., "$200.00")
+}
+
+// Unified transaction action - presence of `target` indicates edit operation
 export interface BuyTransactionAction {
   testPriceUpdate?: string;
+  target?: EditTransactionTarget; // If present, this is an edit operation
   input: TransactionInput;
   expected: {
     transaction: TransactionExpected;
     priorTransactions?: TransactionExpected[];
     wallets: WalletExpected[];
+    walletsNotPresent?: { ptPercent: string; price: string }[];
     overview: OverviewExpected;
   };
 }

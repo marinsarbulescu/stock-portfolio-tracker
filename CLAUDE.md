@@ -114,6 +114,20 @@ npx playwright test --workers=1 --headed
 - Shared helpers are in `e2e/utils/assetHelper.ts`
 - Type definitions are in `e2e/utils/jsonHelper.ts`
 
+#### Data-Testid Convention
+**IMPORTANT**: Always use `data-testid` attributes for element selection in e2e tests. Never locate elements by:
+- Position or order (e.g., `.first()`, `.nth()`)
+- Text content that might change
+- CSS classes or styling
+- DOM structure assumptions
+
+Naming convention for `data-testid`:
+- Buttons: `btn-{action}` (e.g., `btn-new-asset`, `btn-delete-asset`)
+- Form fields: `{form}-form-{field}` (e.g., `asset-form-symbol`)
+- Table cells: `{table}-table-{column}-{identifier}` (e.g., `asset-table-symbol-AAPL`)
+- Links: `link-{destination}` (e.g., `link-transactions`)
+- Actions on items: `{entity}-{action}-{id}` (e.g., `transaction-edit-123`, `transaction-delete-123`)
+
 #### E2E Formulas Spreadsheet
 **Important**: Always commit `e2e/e2e-tests-formulas.xlsx` when updating e2e tests. This Excel file contains the formulas used to calculate expected values for test verification. Excel temp files (`~$*.xlsx`) are gitignored.
 
