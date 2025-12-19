@@ -94,6 +94,29 @@ npm run test:coverage
 - Mock external dependencies (API calls, Amplify client)
 - Keep tests focused and independent
 
+### E2E Testing (Playwright)
+
+#### Running E2E Tests
+```bash
+# Run all e2e tests headless
+npx playwright test --workers=1
+
+# Run specific test
+npx playwright test --workers=1 --grep "BUY Transaction"
+
+# Run headed (visible browser)
+npx playwright test --workers=1 --headed
+```
+
+#### E2E Test Files
+- Tests are in `e2e/` directory
+- Test data is in JSON files (e.g., `e2e/assets/asset-buy-crud.json`)
+- Shared helpers are in `e2e/utils/assetHelper.ts`
+- Type definitions are in `e2e/utils/jsonHelper.ts`
+
+#### E2E Formulas Spreadsheet
+**Important**: Always commit `e2e/e2e-tests-formulas.xlsx` when updating e2e tests. This Excel file contains the formulas used to calculate expected values for test verification. Excel temp files (`~$*.xlsx`) are gitignored.
+
 ## Deployment
 - Push to `beta` branch deploys to beta.mystocs.com
 - Amplify Hosting handles CI/CD automatically
