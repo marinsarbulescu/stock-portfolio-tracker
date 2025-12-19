@@ -1068,6 +1068,7 @@ export default function AssetTransactionsPage() {
           )}
           <button
             onClick={handleNewTransaction}
+            data-testid="btn-new-transaction"
             className="px-4 py-2 text-sm bg-foreground text-background rounded hover:opacity-90"
           >
             New Transaction
@@ -1168,7 +1169,7 @@ export default function AssetTransactionsPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Total shs</span>
-                <span className="text-sm text-foreground">
+                <span className="text-sm text-foreground" data-testid="overview-total-shares">
                   {txnStats.totalShares.toLocaleString(undefined, { minimumFractionDigits: 5, maximumFractionDigits: 5 })}
                 </span>
               </div>
@@ -1178,7 +1179,7 @@ export default function AssetTransactionsPage() {
                   const shares = txnStats.sharesByPT[pt.id] || 0;
                   if (shares === 0) return null;
                   return (
-                    <div key={pt.id} className="flex justify-between">
+                    <div key={pt.id} className="flex justify-between" data-testid={`overview-pt-shares-${pt.targetPercent}`}>
                       <span className="text-sm text-muted-foreground">
                         PT +{pt.targetPercent}%
                       </span>

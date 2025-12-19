@@ -5,10 +5,18 @@
 // assets and their targets via the UI.
 
 import { expect, Page } from "@playwright/test";
-import { AssetCreateInput, TargetInput, TargetExpected } from "./jsonHelper";
+import {
+  AssetCreateInput,
+  TargetInput,
+  TargetExpected,
+  TransactionInput,
+  TransactionExpected,
+  WalletExpected,
+  OverviewExpected,
+} from "./jsonHelper";
 
 // Re-export types for convenience
-export type { AssetCreateInput, TargetInput, TargetExpected };
+export type { AssetCreateInput, TargetInput, TargetExpected, TransactionInput, TransactionExpected, WalletExpected, OverviewExpected };
 
 // ============================================================================
 // Navigation & Page Helpers
@@ -208,9 +216,19 @@ export async function createTarget(
 ): Promise<void> {
   console.log(`[AssetHelper] Creating ${type} target: ${input.name}...`);
 
-  // Click Add button
+  // Wait for any previous form to be hidden first
+  const newRowLocator = page.locator(`[data-testid="${type}-target-new-row"]`);
+  const isNewRowVisible = await newRowLocator.isVisible();
+  if (isNewRowVisible) {
+    console.log(`[AssetHelper] Waiting for previous form to close...`);
+    await expect(newRowLocator).not.toBeVisible({ timeout: 5000 });
+  }
+
+  // Click Add button to show form
+  console.log(`[AssetHelper] Clicking Add button...`);
   await page.locator(`[data-testid="${type}-target-add-btn"]`).click();
-  await expect(page.locator(`[data-testid="${type}-target-new-row"]`)).toBeVisible({ timeout: 5000 });
+  await expect(newRowLocator).toBeVisible({ timeout: 5000 });
+  console.log(`[AssetHelper] Form visible, filling fields...`);
 
   // Fill form
   await page.locator(`[data-testid="${type}-target-new-name"]`).fill(input.name);
@@ -221,11 +239,18 @@ export async function createTarget(
   await page.locator(`[data-testid="${type}-target-new-order"]`).clear();
   await page.locator(`[data-testid="${type}-target-new-order"]`).fill(input.sortOrder);
 
-  // Submit
-  await page.locator(`[data-testid="${type}-target-new-submit"]`).click();
+  // Wait for submit button to be enabled and click
+  const submitBtn = page.locator(`[data-testid="${type}-target-new-submit"]`);
+  await expect(submitBtn).toBeEnabled({ timeout: 5000 });
+  console.log(`[AssetHelper] Clicking submit button...`);
+  await submitBtn.click();
+
+  // Wait for form to close (indicates save started)
+  await expect(newRowLocator).not.toBeVisible({ timeout: 10000 });
+  console.log(`[AssetHelper] Form closed, waiting for row...`);
 
   // Wait for row to appear
-  await expect(page.locator(`[data-testid="${type}-target-row-${input.sortOrder}"]`)).toBeVisible({ timeout: 5000 });
+  await expect(page.locator(`[data-testid="${type}-target-row-${input.sortOrder}"]`)).toBeVisible({ timeout: 10000 });
   console.log(`[AssetHelper] ${type} target created successfully.`);
 }
 
@@ -400,4 +425,185 @@ export async function setupTestAsset(page: Page, options: SetupTestAssetOptions)
   }
 
   console.log(`[AssetHelper] Test asset ${options.asset.symbol} setup complete.`);
+}
+
+// ============================================================================
+// BUY Transaction CRUD Helpers
+// ============================================================================
+
+/**
+ * Create a BUY transaction via the modal.
+ * Call this from the transactions page.
+ */
+export async function createBuyTransaction(
+  page: Page,
+  input: TransactionInput
+): Promise<void> {
+  console.log(`[AssetHelper] Creating BUY transaction: price=${input.price}, investment=${input.investment}...`);
+
+  // Click New Transaction button
+  await page.locator('[data-testid="btn-new-transaction"]').click();
+
+  // Wait for modal to open
+  await expect(page.locator('[data-testid="transaction-form-signal"]')).toBeVisible({ timeout: 5000 });
+
+  // Type should already be BUY (default), but ensure it
+  await page.locator('[data-testid="transaction-form-type"]').selectOption("BUY");
+
+  // Fill signal
+  await page.locator('[data-testid="transaction-form-signal"]').selectOption(input.signal);
+
+  // Fill price
+  await page.locator('[data-testid="transaction-form-price"]').fill(input.price);
+
+  // Fill investment
+  await page.locator('[data-testid="transaction-form-investment"]').fill(input.investment);
+
+  // Wait for PT allocation inputs to appear (they appear after price+investment are filled)
+  await page.waitForTimeout(500);
+
+  // Fill PT allocations
+  for (const alloc of input.allocations) {
+    const allocInput = page.locator(`[data-testid="transaction-pt-alloc-${alloc.ptPercent}"]`);
+    await allocInput.fill(alloc.percentage);
+  }
+
+  // Submit
+  await page.locator('[data-testid="transaction-form-submit"]').click();
+
+  // Wait for modal to close
+  await expect(page.locator('[data-testid="transaction-form-submit"]')).not.toBeVisible({ timeout: 10000 });
+
+  console.log("[AssetHelper] BUY transaction created successfully.");
+}
+
+/**
+ * Find a transaction row by unique combination of price, signal, and investment.
+ * Returns a locator for the row.
+ */
+export async function findTransactionRow(
+  page: Page,
+  price: string,
+  signal: string,
+  investment: string
+): Promise<import("@playwright/test").Locator> {
+  console.log(`[AssetHelper] Finding transaction row: price=${price}, signal=${signal}, investment=${investment}...`);
+
+  // Find a tr that contains all three values
+  const row = page.locator("tr").filter({ hasText: price }).filter({ hasText: signal }).filter({ hasText: investment });
+
+  // Ensure we found exactly one
+  const count = await row.count();
+  if (count === 0) {
+    throw new Error(`No transaction row found with price=${price}, signal=${signal}, investment=${investment}`);
+  }
+  if (count > 1) {
+    console.warn(`[AssetHelper] Found ${count} matching rows, using first one`);
+  }
+
+  return row.first();
+}
+
+/**
+ * Verify transaction values in the table.
+ * Finds the transaction by price+signal+investment and checks all expected values.
+ */
+export async function verifyTransaction(
+  page: Page,
+  expected: TransactionExpected
+): Promise<void> {
+  console.log(`[AssetHelper] Verifying transaction: type=${expected.type}, signal=${expected.signal}...`);
+
+  const row = await findTransactionRow(page, expected.price, expected.signal, expected.investment);
+
+  // Verify each expected value is in the row
+  await expect(row).toContainText(expected.type);
+  await expect(row).toContainText(expected.signal);
+  await expect(row).toContainText(expected.price);
+  await expect(row).toContainText(expected.quantity);
+  await expect(row).toContainText(expected.investment);
+  await expect(row).toContainText(expected.entryTarget);
+
+  // P/L fields may be "-" for BUY transactions
+  if (expected.profitLoss !== "-") {
+    await expect(row).toContainText(expected.profitLoss);
+  }
+  if (expected.profitLossPercent !== "-") {
+    await expect(row).toContainText(expected.profitLossPercent);
+  }
+
+  console.log("[AssetHelper] Transaction verified successfully.");
+}
+
+/**
+ * Find a wallet row by price and shares within the currently selected PT tab.
+ */
+export async function findWalletRow(
+  page: Page,
+  ptPercent: string,
+  price: string,
+  shares: string
+): Promise<import("@playwright/test").Locator> {
+  console.log(`[AssetHelper] Finding wallet row: PT=${ptPercent}%, price=${price}, shares=${shares}...`);
+
+  // Click the PT tab
+  await page.locator(`[data-testid="wallet-tab-pt-${ptPercent}"]`).click();
+
+  // Wait for tab to be active
+  await page.waitForTimeout(300);
+
+  // Find wallet row by price and shares
+  // The wallet table is within the wallets section
+  const walletSection = page.locator('[data-testid="wallet-tabs"]').locator("..");
+  const row = walletSection.locator("tr").filter({ hasText: price }).filter({ hasText: shares });
+
+  const count = await row.count();
+  if (count === 0) {
+    throw new Error(`No wallet row found with price=${price}, shares=${shares} in PT+${ptPercent}%`);
+  }
+
+  return row.first();
+}
+
+/**
+ * Verify wallet values for a given PT tab.
+ */
+export async function verifyWallet(
+  page: Page,
+  expected: WalletExpected
+): Promise<void> {
+  console.log(`[AssetHelper] Verifying wallet: PT=${expected.ptPercent}%, price=${expected.price}...`);
+
+  const row = await findWalletRow(page, expected.ptPercent, expected.price, expected.shares);
+
+  // Verify each expected value
+  await expect(row).toContainText(expected.price);
+  await expect(row).toContainText(expected.shares);
+  await expect(row).toContainText(expected.investment);
+  await expect(row).toContainText(expected.pt);
+  await expect(row).toContainText(expected.pct2pt);
+
+  console.log("[AssetHelper] Wallet verified successfully.");
+}
+
+/**
+ * Verify the overview section values.
+ */
+export async function verifyOverview(
+  page: Page,
+  expected: OverviewExpected
+): Promise<void> {
+  console.log(`[AssetHelper] Verifying overview: totalShares=${expected.totalShares}...`);
+
+  // Verify total shares
+  const totalSharesEl = page.locator('[data-testid="overview-total-shares"]');
+  await expect(totalSharesEl).toHaveText(expected.totalShares);
+
+  // Verify PT shares
+  for (const ptShares of expected.ptShares) {
+    const ptSharesEl = page.locator(`[data-testid="overview-pt-shares-${ptShares.ptPercent}"]`);
+    await expect(ptSharesEl).toContainText(ptShares.shares);
+  }
+
+  console.log("[AssetHelper] Overview verified successfully.");
 }

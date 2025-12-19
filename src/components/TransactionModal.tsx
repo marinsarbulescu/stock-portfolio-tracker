@@ -439,6 +439,7 @@ export function TransactionModal({
             </label>
             <select
               id="type"
+              data-testid="transaction-form-type"
               value={formData.type}
               onChange={(e) =>
                 setFormData({
@@ -477,6 +478,7 @@ export function TransactionModal({
             <input
               type="datetime-local"
               id="date"
+              data-testid="transaction-form-date"
               value={formData.date}
               onChange={(e) =>
                 setFormData({ ...formData, date: e.target.value })
@@ -497,6 +499,7 @@ export function TransactionModal({
             </label>
             <select
               id="signal"
+              data-testid="transaction-form-signal"
               value={formData.signal}
               onChange={(e) =>
                 setFormData({
@@ -530,6 +533,7 @@ export function TransactionModal({
             <input
               type="number"
               id="price"
+              data-testid="transaction-form-price"
               step="0.01"
               value={formData.price}
               onChange={(e) =>
@@ -553,6 +557,7 @@ export function TransactionModal({
             <input
               type="number"
               id="investment"
+              data-testid="transaction-form-investment"
               step="0.01"
               value={formData.investment}
               onChange={(e) =>
@@ -680,6 +685,7 @@ export function TransactionModal({
                       <div className="flex items-center gap-1">
                         <input
                           type="number"
+                          data-testid={`transaction-pt-alloc-${pt.targetPercent}`}
                           min="0"
                           max="100"
                           step="0.01"
@@ -742,6 +748,7 @@ export function TransactionModal({
             {mode === "edit" && onDelete && (
               <button
                 type="button"
+                data-testid="transaction-form-delete"
                 onClick={handleDelete}
                 disabled={isSubmitting}
                 className="px-4 py-2 text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
@@ -753,6 +760,7 @@ export function TransactionModal({
           <div className="flex gap-3">
             <button
               type="button"
+              data-testid="transaction-form-cancel"
               onClick={onClose}
               className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded hover:bg-muted"
             >
@@ -760,6 +768,7 @@ export function TransactionModal({
             </button>
             <button
               type="submit"
+              data-testid="transaction-form-submit"
               disabled={isSubmitting}
               className="px-4 py-2 text-sm bg-foreground text-background rounded hover:opacity-90 disabled:opacity-50"
             >

@@ -1,0 +1,61 @@
+{
+  "scenario": "AssetBuyCRUD",
+  "description": "Test BUY transaction CRUD with wallet and overview verification",
+  "asset": {
+    "input": {
+      "symbol": "E2E-ASSET-BUY-CRUD",
+      "name": "E2E Buy CRUD Test",
+      "type": "STOCK",
+      "testPrice": "100",
+      "commission": "1",
+      "status": "ACTIVE"
+    }
+  },
+  "entryTargets": [
+    { "input": { "name": "ET1", "targetPercent": "2", "sortOrder": "1" } }
+  ],
+  "profitTargets": [
+    { "input": { "name": "PT1", "targetPercent": "4", "allocationPercent": "50", "sortOrder": "1" } },
+    { "input": { "name": "PT2", "targetPercent": "8", "allocationPercent": "30", "sortOrder": "2" } },
+    { "input": { "name": "PT3", "targetPercent": "16", "allocationPercent": "20", "sortOrder": "3" } }
+  ],
+  "transactions": {
+    "buyA": {
+      "input": {
+        "signal": "INITIAL",
+        "price": "100",
+        "investment": "200",
+        "allocations": [
+          { "ptPercent": "4", "percentage": "50" },
+          { "ptPercent": "8", "percentage": "30" },
+          { "ptPercent": "16", "percentage": "20" }
+        ]
+      },
+      "expected": {
+        "transaction": {
+          "type": "Buy",
+          "signal": "Initial",
+          "price": "$100.00",
+          "quantity": "2.00000",
+          "investment": "$200.00",
+          "entryTarget": "$98.00",
+          "profitLoss": "-",
+          "profitLossPercent": "-"
+        },
+        "wallets": [
+          { "ptPercent": "4", "price": "$100.00", "shares": "1.00000", "investment": "$100.00", "pt": "$105.05", "pct2pt": "-4.81%" },
+          { "ptPercent": "8", "price": "$100.00", "shares": "0.60000", "investment": "$60.00", "pt": "$109.09", "pct2pt": "-8.33%" },
+          { "ptPercent": "16", "price": "$100.00", "shares": "0.40000", "investment": "$40.00", "pt": "$117.17", "pct2pt": "-14.66%" }
+        ],
+        "overview": {
+          "totalShares": "2.00000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "1.00000" },
+            { "ptPercent": "8", "shares": "0.60000" },
+            { "ptPercent": "16", "shares": "0.40000" }
+          ]
+        }
+      }
+    }
+  }
+}
