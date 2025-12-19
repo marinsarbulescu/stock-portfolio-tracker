@@ -121,9 +121,11 @@ export interface OverviewExpected {
 }
 
 export interface BuyTransactionAction {
+  testPriceUpdate?: string;
   input: TransactionInput;
   expected: {
     transaction: TransactionExpected;
+    priorTransactions?: TransactionExpected[];
     wallets: WalletExpected[];
     overview: OverviewExpected;
   };

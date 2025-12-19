@@ -76,6 +76,32 @@ export async function navigateBackToEditPage(page: Page): Promise<void> {
   console.log("[AssetHelper] On asset edit page.");
 }
 
+/**
+ * Update the test price of an asset. Call this from the transactions page.
+ * Navigates to edit page, updates price, saves, and returns to transactions.
+ */
+export async function updateTestPrice(page: Page, newPrice: string): Promise<void> {
+  console.log(`[AssetHelper] Updating test price to ${newPrice}...`);
+
+  // Navigate back to edit page
+  await navigateBackToEditPage(page);
+
+  // Update test price field
+  await page.locator('[data-testid="asset-form-testPrice"]').clear();
+  await page.locator('[data-testid="asset-form-testPrice"]').fill(newPrice);
+
+  // Submit form
+  await page.locator('[data-testid="asset-form-submit"]').click();
+
+  // Wait for save to complete
+  await expect(page.locator('[data-testid="asset-form-submit"]')).toHaveText("Save Changes", { timeout: 10000 });
+
+  // Navigate back to transactions
+  await navigateToTransactionsPage(page);
+
+  console.log("[AssetHelper] Test price updated successfully.");
+}
+
 // ============================================================================
 // Asset CRUD Helpers
 // ============================================================================
@@ -107,7 +133,7 @@ export async function cleanupTestAssetViaUI(page: Page, symbol: string): Promise
     await page.locator('[data-testid="btn-delete-asset"]').click();
 
     // Wait for redirect back to assets page
-    await expect(page).toHaveURL(/\/assets$/);
+    await expect(page).toHaveURL(/\/assets$/, { timeout: 10000 });
 
     // Verify asset is deleted
     await expect(

@@ -56,6 +56,117 @@
           ]
         }
       }
+    },
+    "buyB": {
+      "input": {
+        "signal": "CUSTOM",
+        "price": "100",
+        "investment": "300",
+        "allocations": [
+          { "ptPercent": "4", "percentage": "50" },
+          { "ptPercent": "8", "percentage": "25" },
+          { "ptPercent": "16", "percentage": "25" }
+        ]
+      },
+      "expected": {
+        "transaction": {
+          "type": "Buy",
+          "signal": "Custom",
+          "price": "$100.00",
+          "quantity": "3.00000",
+          "investment": "$300.00",
+          "entryTarget": "$98.00",
+          "profitLoss": "-",
+          "profitLossPercent": "-"
+        },
+        "priorTransactions": [
+          {
+            "type": "Buy",
+            "signal": "Initial",
+            "price": "$100.00",
+            "quantity": "2.00000",
+            "investment": "$200.00",
+            "entryTarget": "$98.00",
+            "profitLoss": "-",
+            "profitLossPercent": "-"
+          }
+        ],
+        "wallets": [
+          { "ptPercent": "4", "price": "$100.00", "shares": "2.50000", "investment": "$250.00", "pt": "$105.05", "pct2pt": "-4.81%" },
+          { "ptPercent": "8", "price": "$100.00", "shares": "1.35000", "investment": "$135.00", "pt": "$109.09", "pct2pt": "-8.33%" },
+          { "ptPercent": "16", "price": "$100.00", "shares": "1.15000", "investment": "$115.00", "pt": "$117.17", "pct2pt": "-14.66%" }
+        ],
+        "overview": {
+          "totalShares": "5.00000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "2.50000" },
+            { "ptPercent": "8", "shares": "1.35000" },
+            { "ptPercent": "16", "shares": "1.15000" }
+          ]
+        }
+      }
+    },
+    "buyC": {
+      "testPriceUpdate": "120",
+      "input": {
+        "signal": "ENTAR",
+        "price": "120",
+        "investment": "400",
+        "allocations": [
+          { "ptPercent": "4", "percentage": "50" },
+          { "ptPercent": "8", "percentage": "50" },
+          { "ptPercent": "16", "percentage": "0" }
+        ]
+      },
+      "expected": {
+        "transaction": {
+          "type": "Buy",
+          "signal": "EnTar",
+          "price": "$120.00",
+          "quantity": "3.33333",
+          "investment": "$400.00",
+          "entryTarget": "$117.60",
+          "profitLoss": "-",
+          "profitLossPercent": "-"
+        },
+        "priorTransactions": [
+          {
+            "type": "Buy",
+            "signal": "Initial",
+            "price": "$100.00",
+            "quantity": "2.00000",
+            "investment": "$200.00",
+            "entryTarget": "$98.00",
+            "profitLoss": "-",
+            "profitLossPercent": "-"
+          },
+          {
+            "type": "Buy",
+            "signal": "Custom",
+            "price": "$100.00",
+            "quantity": "3.00000",
+            "investment": "$300.00",
+            "entryTarget": "$98.00",
+            "profitLoss": "-",
+            "profitLossPercent": "-"
+          }
+        ],
+        "wallets": [
+          { "ptPercent": "4", "price": "$120.00", "shares": "1.66667", "investment": "$200.00", "pt": "$126.06", "pct2pt": "-4.81%" },
+          { "ptPercent": "4", "price": "$100.00", "shares": "2.50000", "investment": "$250.00", "pt": "$105.05", "pct2pt": "14.23%" },
+          { "ptPercent": "8", "price": "$120.00", "shares": "1.66667", "investment": "$200.00", "pt": "$130.91", "pct2pt": "-8.33%" },
+          { "ptPercent": "8", "price": "$100.00", "shares": "1.35000", "investment": "$135.00", "pt": "$109.09", "pct2pt": "10.00%" },
+          { "ptPercent": "16", "price": "$100.00", "shares": "1.15000", "investment": "$115.00", "pt": "$117.17", "pct2pt": "2.41%" }
+        ],
+        "overview": {
+          "totalShares": "8.33334",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "4.16667" },
+            { "ptPercent": "8", "shares": "3.01667" },
+            { "ptPercent": "16", "shares": "1.15000" }
+          ]
+        }
+      }
     }
   }
 }

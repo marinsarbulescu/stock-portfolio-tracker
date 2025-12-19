@@ -7,11 +7,10 @@
 // 1. Login to the application
 // 2. Create test asset with ET and PTs
 // 3. Navigate to transactions page
-// 4. Create BUY transaction (BuyA)
-// 5. Verify transaction in table
-// 6. Verify wallets for each PT
-// 7. Verify overview section
-// 8. Cleanup: delete asset
+// 4. Create BuyA transaction, verify table/wallets/overview
+// 5. Create BuyB transaction, verify table/wallets/overview (cumulative)
+// 6. Update test price to $120, create BuyC, verify (multiple wallet rows per PT)
+// 7. Cleanup: delete asset
 
 import { test, expect } from "@playwright/test";
 import { loginUser, clearBrowserState } from "../utils/auth";
@@ -25,6 +24,7 @@ import {
   verifyTransaction,
   verifyWallet,
   verifyOverview,
+  updateTestPrice,
 } from "../utils/assetHelper";
 
 // Set test timeout to 180 seconds (longer for full BUY CRUD flow)
@@ -94,8 +94,68 @@ test.describe("Assets - BUY Transaction CRUD (JSON-driven)", () => {
     console.log(`[${testConfig.scenario}] Step 6: Verifying overview...`);
     await verifyOverview(page, buyA.expected.overview);
 
-    // Step 7: Cleanup - navigate to assets and delete
-    console.log(`[${testConfig.scenario}] Step 7: Cleaning up...`);
+    // Step 7: Create BuyB transaction
+    console.log(`[${testConfig.scenario}] Step 7: Creating BuyB transaction...`);
+    const buyB = testConfig.transactions.buyB;
+    await createBuyTransaction(page, buyB.input);
+
+    // Wait for transaction to appear in the table
+    await page.waitForTimeout(1000);
+
+    // Step 8: Verify BuyB transaction in table
+    console.log(`[${testConfig.scenario}] Step 8: Verifying BuyB transaction in table...`);
+    await verifyTransaction(page, buyB.expected.transaction);
+
+    // Verify prior transactions (BuyA) are still in table with correct values
+    console.log(`[${testConfig.scenario}] Step 8b: Verifying prior transactions...`);
+    for (const priorTxn of buyB.expected.priorTransactions || []) {
+      await verifyTransaction(page, priorTxn);
+    }
+
+    // Step 9: Verify updated wallets (cumulative after BuyA + BuyB)
+    console.log(`[${testConfig.scenario}] Step 9: Verifying wallets after BuyB...`);
+    for (const walletExpected of buyB.expected.wallets) {
+      await verifyWallet(page, walletExpected);
+    }
+
+    // Step 10: Verify updated overview
+    console.log(`[${testConfig.scenario}] Step 10: Verifying overview after BuyB...`);
+    await verifyOverview(page, buyB.expected.overview);
+
+    // Step 11: Update test price to $120
+    console.log(`[${testConfig.scenario}] Step 11: Updating test price to $120...`);
+    const buyC = testConfig.transactions.buyC;
+    await updateTestPrice(page, buyC.testPriceUpdate);
+
+    // Step 12: Create BuyC transaction
+    console.log(`[${testConfig.scenario}] Step 12: Creating BuyC transaction...`);
+    await createBuyTransaction(page, buyC.input);
+
+    // Wait for transaction to appear in the table
+    await page.waitForTimeout(1000);
+
+    // Step 13: Verify BuyC transaction in table
+    console.log(`[${testConfig.scenario}] Step 13: Verifying BuyC transaction in table...`);
+    await verifyTransaction(page, buyC.expected.transaction);
+
+    // Verify prior transactions (BuyA, BuyB) are still in table with updated ET values
+    console.log(`[${testConfig.scenario}] Step 13b: Verifying prior transactions...`);
+    for (const priorTxn of buyC.expected.priorTransactions || []) {
+      await verifyTransaction(page, priorTxn);
+    }
+
+    // Step 14: Verify all wallets (new $120 + old $100 with updated %2PT)
+    console.log(`[${testConfig.scenario}] Step 14: Verifying wallets after BuyC...`);
+    for (const walletExpected of buyC.expected.wallets) {
+      await verifyWallet(page, walletExpected);
+    }
+
+    // Step 15: Verify updated overview
+    console.log(`[${testConfig.scenario}] Step 15: Verifying overview after BuyC...`);
+    await verifyOverview(page, buyC.expected.overview);
+
+    // Step 16: Cleanup - navigate to assets and delete
+    console.log(`[${testConfig.scenario}] Step 16: Cleaning up...`);
     await navigateToAssetsPage(page);
     await cleanupTestAssetViaUI(page, testConfig.asset.input.symbol);
 
