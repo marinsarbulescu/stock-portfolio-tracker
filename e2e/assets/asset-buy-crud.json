@@ -239,6 +239,64 @@
           ]
         }
       }
+    },
+    "delBuyA": {
+      "testPriceUpdate": "90",
+      "delete": true,
+      "target": {
+        "signal": "Initial",
+        "price": "$130.00",
+        "investment": "$600.00"
+      },
+      "expected": {
+        "transactionNotPresent": {
+          "signal": "Initial",
+          "price": "$130.00",
+          "investment": "$600.00"
+        },
+        "priorTransactions": [
+          {
+            "type": "Buy",
+            "signal": "EnTar",
+            "price": "$120.00",
+            "quantity": "3.33333",
+            "investment": "$400.00",
+            "entryTarget": "$117.60",
+            "profitLoss": "-",
+            "profitLossPercent": "-"
+          },
+          {
+            "type": "Buy",
+            "signal": "Custom",
+            "price": "$100.00",
+            "quantity": "3.00000",
+            "investment": "$300.00",
+            "entryTarget": "$98.00",
+            "profitLoss": "-",
+            "profitLossPercent": "-"
+          }
+        ],
+        "wallets": [
+          { "ptPercent": "4", "price": "$120.00", "shares": "1.66667", "investment": "$200.00", "pt": "$126.06", "pct2pt": "-28.61%" },
+          { "ptPercent": "4", "price": "$100.00", "shares": "1.50000", "investment": "$150.00", "pt": "$105.05", "pct2pt": "-14.33%" },
+          { "ptPercent": "8", "price": "$120.00", "shares": "1.66667", "investment": "$200.00", "pt": "$130.91", "pct2pt": "-31.25%" },
+          { "ptPercent": "8", "price": "$100.00", "shares": "0.75000", "investment": "$75.00", "pt": "$109.09", "pct2pt": "-17.50%" },
+          { "ptPercent": "16", "price": "$100.00", "shares": "0.75000", "investment": "$75.00", "pt": "$117.17", "pct2pt": "-23.19%" }
+        ],
+        "walletsNotPresent": [
+          { "ptPercent": "4", "price": "$130.00" },
+          { "ptPercent": "8", "price": "$130.00" },
+          { "ptPercent": "16", "price": "$130.00" }
+        ],
+        "overview": {
+          "totalShares": "6.33334",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "3.16667" },
+            { "ptPercent": "8", "shares": "2.41667" },
+            { "ptPercent": "16", "shares": "0.75000" }
+          ]
+        }
+      }
     }
   }
 }

@@ -127,13 +127,15 @@ export interface EditTransactionTarget {
   investment: string; // Formatted investment (e.g., "$200.00")
 }
 
-// Unified transaction action - presence of `target` indicates edit operation
+// Unified transaction action - presence of `target` indicates edit/delete operation
 export interface BuyTransactionAction {
   testPriceUpdate?: string;
-  target?: EditTransactionTarget; // If present, this is an edit operation
-  input: TransactionInput;
+  target?: EditTransactionTarget; // If present, this is an edit or delete operation
+  delete?: boolean;               // If true (with target), this is a delete operation
+  input?: TransactionInput;       // Optional for delete (not needed)
   expected: {
-    transaction: TransactionExpected;
+    transaction?: TransactionExpected;           // The new/edited transaction (not for delete)
+    transactionNotPresent?: EditTransactionTarget; // Verify deleted transaction
     priorTransactions?: TransactionExpected[];
     wallets: WalletExpected[];
     walletsNotPresent?: { ptPercent: string; price: string }[];

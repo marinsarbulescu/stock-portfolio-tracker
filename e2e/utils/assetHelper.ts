@@ -614,6 +614,63 @@ export async function editBuyTransaction(
 }
 
 /**
+ * Delete a BUY transaction via the UI.
+ * Call this from the transactions page.
+ * @param target - The transaction to find and delete (by signal, price, investment)
+ */
+export async function deleteBuyTransaction(
+  page: Page,
+  target: EditTransactionTarget
+): Promise<void> {
+  console.log(`[AssetHelper] Deleting BUY transaction: ${target.signal} @ ${target.price}...`);
+
+  // Wait for the transactions page to be fully loaded
+  await expect(page.locator('[data-testid="btn-new-transaction"]')).toBeVisible({ timeout: 10000 });
+
+  // Wait a moment for the table to render
+  await page.waitForTimeout(500);
+
+  // Find the transaction row
+  const row = await findTransactionRow(page, target.price, target.signal, target.investment);
+
+  // Set up dialog handler for confirm dialog
+  page.once("dialog", (dialog) => dialog.accept());
+
+  // Click on the delete button within this row
+  const deleteButton = row.locator('[data-testid^="transaction-delete-"]');
+  await deleteButton.click();
+
+  // Wait for the row to actually disappear from the DOM
+  await expect(row).not.toBeVisible({ timeout: 10000 });
+
+  console.log("[AssetHelper] BUY transaction deleted successfully.");
+}
+
+/**
+ * Verify a transaction is NOT present in the table.
+ * Call this from the transactions page.
+ */
+export async function verifyTransactionNotPresent(
+  page: Page,
+  target: EditTransactionTarget
+): Promise<void> {
+  console.log(`[AssetHelper] Verifying transaction NOT present: ${target.signal} @ ${target.price}...`);
+
+  // Find rows that match the criteria
+  const row = page.locator("tr")
+    .filter({ hasText: target.price })
+    .filter({ hasText: target.signal })
+    .filter({ hasText: target.investment });
+
+  const count = await row.count();
+  if (count > 0) {
+    throw new Error(`Expected no transaction with price=${target.price}, signal=${target.signal}, investment=${target.investment}, but found ${count}`);
+  }
+
+  console.log("[AssetHelper] Transaction confirmed NOT present.");
+}
+
+/**
  * Find a transaction row by unique combination of price, signal, and investment.
  * Returns a locator for the row.
  */

@@ -17,7 +17,9 @@ import {
   navigateToTransactionsPage,
   createBuyTransaction,
   editBuyTransaction,
+  deleteBuyTransaction,
   verifyTransaction,
+  verifyTransactionNotPresent,
   verifyWallet,
   verifyWalletNotPresent,
   verifyOverview,
@@ -72,10 +74,12 @@ test.describe("Assets - BUY Transaction CRUD (JSON-driven)", () => {
 
     for (let i = 0; i < transactionEntries.length; i++) {
       const [txnKey, txn] = transactionEntries[i];
-      const isEdit = !!txn.target;
+      const isDelete = !!txn.delete;
+      const isEdit = !!txn.target && !isDelete;
       const stepNum = i + 1;
+      const opType = isDelete ? 'DELETE' : isEdit ? 'EDIT' : 'CREATE';
 
-      console.log(`[${testConfig.scenario}] === Transaction ${stepNum}/${transactionEntries.length}: ${txnKey} (${isEdit ? 'EDIT' : 'CREATE'}) ===`);
+      console.log(`[${testConfig.scenario}] === Transaction ${stepNum}/${transactionEntries.length}: ${txnKey} (${opType}) ===`);
 
       // Update test price if needed
       if (txn.testPriceUpdate) {
@@ -83,21 +87,29 @@ test.describe("Assets - BUY Transaction CRUD (JSON-driven)", () => {
         await updateTestPrice(page, txn.testPriceUpdate);
       }
 
-      // Create or Edit transaction
-      if (isEdit) {
+      // Create, Edit, or Delete transaction
+      if (isDelete) {
+        console.log(`[${testConfig.scenario}] Deleting transaction: ${txn.target!.signal} @ ${txn.target!.price}...`);
+        await deleteBuyTransaction(page, txn.target!);
+      } else if (isEdit) {
         console.log(`[${testConfig.scenario}] Editing transaction: ${txn.target!.signal} @ ${txn.target!.price}...`);
-        await editBuyTransaction(page, txn.target!, txn.input);
+        await editBuyTransaction(page, txn.target!, txn.input!);
       } else {
-        console.log(`[${testConfig.scenario}] Creating transaction: ${txn.input.signal} @ $${txn.input.price}...`);
-        await createBuyTransaction(page, txn.input);
+        console.log(`[${testConfig.scenario}] Creating transaction: ${txn.input!.signal} @ $${txn.input!.price}...`);
+        await createBuyTransaction(page, txn.input!);
       }
 
-      // Wait for transaction to appear/update in the table
+      // Wait for transaction to appear/update/disappear in the table
       await page.waitForTimeout(1000);
 
-      // Verify the transaction in table
-      console.log(`[${testConfig.scenario}] Verifying transaction in table...`);
-      await verifyTransaction(page, txn.expected.transaction);
+      // Verify the transaction in table (or not present for delete)
+      if (isDelete) {
+        console.log(`[${testConfig.scenario}] Verifying transaction deleted...`);
+        await verifyTransactionNotPresent(page, txn.expected.transactionNotPresent!);
+      } else {
+        console.log(`[${testConfig.scenario}] Verifying transaction in table...`);
+        await verifyTransaction(page, txn.expected.transaction!);
+      }
 
       // Verify prior transactions if defined
       if (txn.expected.priorTransactions?.length) {
