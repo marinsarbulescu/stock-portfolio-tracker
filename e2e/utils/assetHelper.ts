@@ -28,8 +28,8 @@ export type { AssetCreateInput, TargetInput, TargetExpected, TransactionInput, T
 export async function waitForAssetsTableToLoad(page: Page): Promise<void> {
   console.log("[AssetHelper] Waiting for assets table to load...");
   await expect(page.locator('[data-testid="btn-new-asset"]')).toBeVisible({ timeout: 15000 });
-  // Check both possible loading indicators
-  await expect(page.getByText("Loading assets...")).not.toBeVisible({ timeout: 15000 });
+  // Wait for loading indicator to disappear
+  await expect(page.locator('[data-testid="assets-loading"]')).not.toBeVisible({ timeout: 15000 });
   console.log("[AssetHelper] Assets table loaded.");
 }
 
@@ -148,6 +148,54 @@ export async function createAssetViaUI(page: Page, input: AssetCreateInput): Pro
   await expect(page).toHaveURL(/\/assets\/[^/]+$/);
 
   console.log("[AssetHelper] Asset created successfully.");
+}
+
+/**
+ * Edit an asset via UI. Call this from the Assets page.
+ * After editing, the page will be on the asset edit page.
+ */
+export async function editAssetViaUI(
+  page: Page,
+  currentSymbol: string,
+  input: AssetCreateInput
+): Promise<void> {
+  console.log(`[AssetHelper] Editing asset ${currentSymbol} via UI...`);
+
+  // Find and click the Edit link for the asset
+  const editLink = page.locator(`[data-testid="asset-table-edit-${currentSymbol}"]`);
+  await editLink.click();
+
+  // Wait for edit form to load
+  await expect(page.locator('[data-testid="asset-form-symbol"]')).toBeVisible({
+    timeout: 10000,
+  });
+
+  // Clear and fill the form with new values
+  await page.locator('[data-testid="asset-form-symbol"]').clear();
+  await page.locator('[data-testid="asset-form-symbol"]').fill(input.symbol);
+
+  await page.locator('[data-testid="asset-form-name"]').clear();
+  await page.locator('[data-testid="asset-form-name"]').fill(input.name);
+
+  await page.locator('[data-testid="asset-form-type"]').selectOption(input.type);
+
+  await page.locator('[data-testid="asset-form-testPrice"]').clear();
+  await page.locator('[data-testid="asset-form-testPrice"]').fill(input.testPrice);
+
+  await page.locator('[data-testid="asset-form-commission"]').clear();
+  await page.locator('[data-testid="asset-form-commission"]').fill(input.commission);
+
+  await page.locator('[data-testid="asset-form-status"]').selectOption(input.status);
+
+  // Submit form
+  await page.locator('[data-testid="asset-form-submit"]').click();
+
+  // Wait for form to save (button text changes from "Saving..." back to "Save Changes")
+  await expect(page.locator('[data-testid="asset-form-submit"]')).toHaveText("Save Changes", {
+    timeout: 10000,
+  });
+
+  console.log("[AssetHelper] Asset edited successfully.");
 }
 
 /**

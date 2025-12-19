@@ -22,6 +22,7 @@ import {
   navigateToAssetsPage,
   cleanupTestAssetViaUI,
   createAssetViaUI,
+  editAssetViaUI,
   verifyAssetInTable,
   verifyAssetNotInTable,
 } from "../utils/assetHelper";
@@ -31,51 +32,6 @@ test.setTimeout(90000);
 
 // Load test configuration from JSON
 const testConfig = loadAssetCrudTestData("e2e/assets/asset-crud.json");
-
-// Helper function to edit asset via UI (specific to this test's flow)
-async function editAssetViaUI(
-  page: Page,
-  currentSymbol: string,
-  input: AssetAction["input"]
-) {
-  console.log(`[AssetCRUD] Editing asset ${currentSymbol} via UI...`);
-
-  // Find and click the Edit link for the asset
-  const editLink = page.locator(`[data-testid="asset-table-edit-${currentSymbol}"]`);
-  await editLink.click();
-
-  // Wait for edit form to load
-  await expect(page.locator('[data-testid="asset-form-symbol"]')).toBeVisible({
-    timeout: 10000,
-  });
-
-  // Clear and fill the form with new values
-  await page.locator('[data-testid="asset-form-symbol"]').clear();
-  await page.locator('[data-testid="asset-form-symbol"]').fill(input.symbol);
-
-  await page.locator('[data-testid="asset-form-name"]').clear();
-  await page.locator('[data-testid="asset-form-name"]').fill(input.name);
-
-  await page.locator('[data-testid="asset-form-type"]').selectOption(input.type);
-
-  await page.locator('[data-testid="asset-form-testPrice"]').clear();
-  await page.locator('[data-testid="asset-form-testPrice"]').fill(input.testPrice);
-
-  await page.locator('[data-testid="asset-form-commission"]').clear();
-  await page.locator('[data-testid="asset-form-commission"]').fill(input.commission);
-
-  await page.locator('[data-testid="asset-form-status"]').selectOption(input.status);
-
-  // Submit form
-  await page.locator('[data-testid="asset-form-submit"]').click();
-
-  // Wait for form to save (button text changes from "Saving..." back to "Save Changes")
-  await expect(page.locator('[data-testid="asset-form-submit"]')).toHaveText("Save Changes", {
-    timeout: 10000,
-  });
-
-  console.log("[AssetCRUD] Asset edited successfully.");
-}
 
 // Helper function to delete asset via UI from table (navigates to edit page first)
 async function deleteAssetFromTable(

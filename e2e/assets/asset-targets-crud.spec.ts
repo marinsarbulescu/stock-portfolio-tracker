@@ -16,7 +16,7 @@
 // 10. Navigate to Transactions page, verify no PT tabs
 // 11. Delete the asset (cleanup)
 
-import { test, expect, Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { loginUser, clearBrowserState } from "../utils/auth";
 import { loadAssetTargetsTestData } from "../utils/jsonHelper";
 import {
@@ -29,6 +29,10 @@ import {
   verifyTarget,
   editTarget,
   deleteTarget,
+  navigateToTransactionsPage,
+  navigateBackToEditPage,
+  verifyWalletTabs,
+  verifyNoPTWalletTabs,
 } from "../utils/assetHelper";
 
 // Set test timeout to 180 seconds (longer for full ET/PT CRUD flow + transactions page navigation)
@@ -36,50 +40,6 @@ test.setTimeout(180000);
 
 // Load test configuration from JSON
 const testConfig = loadAssetTargetsTestData("e2e/assets/asset-targets-crud.json");
-
-// Helper: Navigate to Transactions page from asset edit page
-async function navigateToTransactionsPage(page: Page) {
-  console.log("[AssetTargets] Navigating to Transactions page...");
-  await page.locator('[data-testid="link-transactions"]').click();
-  await expect(page).toHaveURL(/\/transactions$/);
-  // Wait for page to load - use the Edit Asset link which is always visible
-  await expect(page.locator('[data-testid="link-edit-asset"]')).toBeVisible({ timeout: 10000 });
-  console.log("[AssetTargets] On Transactions page.");
-}
-
-// Helper: Navigate back to asset edit page from Transactions page
-async function navigateBackToEditPage(page: Page) {
-  console.log("[AssetTargets] Navigating back to Edit Asset page...");
-  await page.locator('[data-testid="link-edit-asset"]').click();
-  await expect(page).toHaveURL(/\/assets\/[^/]+$/);
-  await expect(page.locator('[data-testid="asset-form-symbol"]')).toBeVisible({ timeout: 10000 });
-  console.log("[AssetTargets] Back on Edit Asset page.");
-}
-
-// Helper: Verify wallet tabs on Transactions page
-async function verifyWalletTabs(page: Page, expectedPTPercents: string[]) {
-  console.log(`[AssetTargets] Verifying wallet tabs: ${expectedPTPercents.join(", ")}...`);
-
-  // Verify each expected PT tab exists
-  for (const ptPercent of expectedPTPercents) {
-    const tabLocator = page.locator(`[data-testid="wallet-tab-pt-${ptPercent}"]`);
-    await expect(tabLocator).toBeVisible({ timeout: 5000 });
-    console.log(`[AssetTargets] Found PT tab for +${ptPercent}%`);
-  }
-
-  console.log("[AssetTargets] Wallet tabs verified successfully.");
-}
-
-// Helper: Verify NO PT wallet tabs exist
-async function verifyNoPTWalletTabs(page: Page) {
-  console.log("[AssetTargets] Verifying no PT wallet tabs...");
-
-  // PT tabs should not exist
-  const ptTabs = page.locator('[data-testid^="wallet-tab-pt-"]');
-  await expect(ptTabs).toHaveCount(0);
-
-  console.log("[AssetTargets] No PT wallet tabs confirmed.");
-}
 
 // Test Suite
 test.describe("Assets - Entry Target & Profit Target CRUD (JSON-driven)", () => {
