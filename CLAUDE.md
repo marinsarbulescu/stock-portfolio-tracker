@@ -131,6 +131,9 @@ Naming convention for `data-testid`:
 #### E2E Formulas Spreadsheet
 **Important**: Always commit `e2e/e2e-tests-formulas.xlsx` when updating e2e tests. This Excel file contains the formulas used to calculate expected values for test verification. Excel temp files (`~$*.xlsx`) are gitignored.
 
+#### E2E Test Data Values
+**IMPORTANT**: Never calculate or derive your own input/expected values for e2e tests. Always use the exact values provided by the user. If the test fails because the UI shows different values than expected, discuss with the user before making changes. Do not assume calculation errors - the discrepancy may reveal a bug in the application.
+
 ## Deployment
 - Push to `beta` branch deploys to beta.mystocs.com
 - Amplify Hosting handles CI/CD automatically
