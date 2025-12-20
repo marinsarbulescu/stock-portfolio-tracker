@@ -6,7 +6,7 @@ const schema = a.schema({
   AssetType: a.enum(["STOCK", "ETF", "CRYPTO"]),
   AssetStatus: a.enum(["ACTIVE", "HIDDEN", "ARCHIVED"]),
   TransactionType: a.enum(["BUY", "SELL", "DIVIDEND", "SPLIT", "SLP"]),
-  TransactionSignal: a.enum(["REPULL", "CUSTOM", "INITIAL", "EOM", "ENTAR", "TP"]),
+  TransactionSignal: a.enum(["REPULL", "CUSTOM", "INITIAL", "EOM", "ENTAR", "PROFITTARGET"]),
 
   // Asset - Primary table for stocks, ETFs, and crypto
   Asset: a
@@ -76,6 +76,7 @@ const schema = a.schema({
       price: a.float(), // Required for BUY/SELL
       investment: a.float(), // Required for BUY
       costBasis: a.float(), // For SELL: buyPrice × quantity (what was paid for sold shares)
+      profitTargetPercent: a.float(), // For SELL: PT% of the wallet sold from (e.g., 4, 8, 16)
       entryTargetPrice: a.float(), // Calculated ET price for BUY (price * (1 + ET%/100))
       entryTargetPercent: a.float(), // ET percentage used (e.g., -5)
       // Relationships

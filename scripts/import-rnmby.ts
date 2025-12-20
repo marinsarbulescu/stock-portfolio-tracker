@@ -28,12 +28,12 @@ Amplify.configure(outputs);
 const client = generateClient<Schema>();
 
 // Signal mapping from production to beta
-const SIGNAL_MAP: Record<string, "REPULL" | "CUSTOM" | "INITIAL" | "EOM" | "ENTAR" | "TP"> = {
+const SIGNAL_MAP: Record<string, "REPULL" | "CUSTOM" | "INITIAL" | "EOM" | "ENTAR" | "PROFITTARGET"> = {
   "_5DD": "REPULL",
   "LBD": "ENTAR",
   "Cust": "CUSTOM",
   "Initial": "INITIAL",
-  "TP": "TP",
+  "TP": "PROFITTARGET",
 };
 
 // Interfaces
@@ -279,7 +279,7 @@ async function processSell(
 ) {
   const sellPrice = parseFloat(txn.price);
   const quantity = parseFloat(txn.quantity);
-  const signal = SIGNAL_MAP[txn.signal] || "TP";
+  const signal = SIGNAL_MAP[txn.signal] || "PROFITTARGET";
 
   // Look up the original wallet to get buy price
   const oldWallet = walletMap.get(txn.completedTxnId);

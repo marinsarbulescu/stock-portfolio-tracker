@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Modal } from "./Modal";
 
-type TransactionSignal = "TP" | "CUSTOM";
+type TransactionSignal = "PROFITTARGET" | "CUSTOM";
 
 interface WalletRow {
   id: string;
@@ -37,7 +37,7 @@ interface SellModalProps {
 }
 
 const SIGNAL_TYPES: { value: TransactionSignal; label: string }[] = [
-  { value: "TP", label: "Take Profit" },
+  { value: "PROFITTARGET", label: "Profit Target" },
   { value: "CUSTOM", label: "Custom" },
 ];
 
@@ -65,7 +65,7 @@ export function SellModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [date, setDate] = useState(getDefaultDateTime());
-  const [signal, setSignal] = useState<TransactionSignal>("TP");
+  const [signal, setSignal] = useState<TransactionSignal>("PROFITTARGET");
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("");
 
@@ -73,7 +73,7 @@ export function SellModal({
   useEffect(() => {
     if (isOpen && wallet) {
       setDate(getDefaultDateTime());
-      setSignal("TP");
+      setSignal("PROFITTARGET");
       setPrice("");
       // Default quantity to full wallet shares (5 decimal precision)
       setQuantity(wallet.shares.toFixed(5));

@@ -14,7 +14,7 @@ import { TransactionModal, Transaction, TransactionAllocation } from "@/componen
 import { SellModal, SellData } from "@/components/SellModal";
 
 type TransactionType = "BUY" | "SELL" | "DIVIDEND" | "SPLIT" | "SLP";
-type TransactionSignal = "REPULL" | "CUSTOM" | "INITIAL" | "EOM" | "ENTAR" | "TP";
+type TransactionSignal = "REPULL" | "CUSTOM" | "INITIAL" | "EOM" | "ENTAR" | "PROFITTARGET";
 
 interface Asset {
   id: string;
@@ -28,6 +28,7 @@ interface ProfitTarget {
   id: string;
   name: string;
   targetPercent: number;
+  allocationPercent: number | null;
   sortOrder: number;
 }
 
@@ -75,7 +76,7 @@ const SIGNAL_LABELS: Record<TransactionSignal, string> = {
   INITIAL: "Initial",
   EOM: "EOM",
   ENTAR: "EnTar",
-  TP: "TP",
+  PROFITTARGET: "Profit Target",
 };
 
 function formatDate(isoString: string): string {
@@ -182,6 +183,7 @@ export default function AssetTransactionsPage() {
         id: item.id,
         name: item.name,
         targetPercent: item.targetPercent,
+        allocationPercent: item.allocationPercent ?? null,
         sortOrder: item.sortOrder,
       }));
       setProfitTargets(targets);
@@ -274,8 +276,8 @@ export default function AssetTransactionsPage() {
         profitTargetId: w.profitTargetId,
         profitTargetPrice: w.profitTargetPrice,
       }));
-      // Sort by price descending
-      walletData.sort((a, b) => b.price - a.price);
+      // Sort by price ascending (lowest price first)
+      walletData.sort((a, b) => a.price - b.price);
       setWallets(walletData);
     } catch (err) {
       console.error("Error fetching wallets:", err);
@@ -535,6 +537,16 @@ export default function AssetTransactionsPage() {
         render: (item) => formatCurrency(item.investment),
       },
       {
+        key: "amount",
+        header: "Amount",
+        render: (item) => {
+          if (item.type === "SELL" || item.type === "DIVIDEND" || item.type === "SLP") {
+            return formatCurrency(item.amount);
+          }
+          return "-";
+        },
+      },
+      {
         key: "wallet",
         header: "Wallet",
         defaultHidden: true,
@@ -591,7 +603,7 @@ export default function AssetTransactionsPage() {
             return "-";
           }
           const pl = item.amount - item.costBasis;
-          return `${pl >= 0 ? "+" : ""}${formatCurrency(pl)}`;
+          return formatCurrency(pl);
         },
       },
       {
@@ -603,7 +615,7 @@ export default function AssetTransactionsPage() {
           }
           const pl = item.amount - item.costBasis;
           const plPercent = (pl / item.costBasis) * 100;
-          return `${plPercent >= 0 ? "+" : ""}${plPercent.toFixed(2)}%`;
+          return `${plPercent.toFixed(2)}%`;
         },
       },
       {
@@ -671,7 +683,7 @@ export default function AssetTransactionsPage() {
     if (!selectedProfitTargetId) return [];
     return wallets
       .filter((w) => w.profitTargetId === selectedProfitTargetId)
-      .sort((a, b) => b.price - a.price);
+      .sort((a, b) => a.price - b.price);
   }, [wallets, selectedProfitTargetId]);
 
   // Count wallets per profit target
@@ -750,7 +762,7 @@ export default function AssetTransactionsPage() {
         const isPositive = pct2pt >= 0;
         return (
           <span className={isPositive ? "text-green-400" : ""}>
-            {isPositive ? "+" : ""}{pct2pt.toFixed(2)}%
+            {pct2pt.toFixed(2)}%
           </span>
         );
       },
@@ -988,7 +1000,11 @@ export default function AssetTransactionsPage() {
       // Calculate costBasis: buyPrice × quantity (what was originally paid for these shares)
       const costBasis = sellWallet.price * data.quantity;
 
-      // 1. Create SELL transaction with walletId and costBasis
+      // Get PT percentage from the wallet's profit target
+      const pt = profitTargets.find(p => p.id === sellWallet.profitTargetId);
+      const profitTargetPercent = pt?.targetPercent ?? null;
+
+      // 1. Create SELL transaction with walletId, costBasis, and PT%
       const result = await client.models.Transaction.create({
         type: "SELL",
         date: data.date,
@@ -997,6 +1013,7 @@ export default function AssetTransactionsPage() {
         quantity: data.quantity,
         amount: data.netProceeds,
         costBasis,
+        profitTargetPercent,
         walletId: sellWallet.id,
         assetId,
       });
@@ -1171,7 +1188,7 @@ export default function AssetTransactionsPage() {
                     ? (() => {
                         const marketValue = txnStats.totalShares * effectivePrice;
                         const roic = ((cashBalance + marketValue - oop) / oop) * 100;
-                        return `${roic >= 0 ? "+" : ""}${roic.toFixed(2)}%`;
+                        return `${roic.toFixed(2)}%`;
                       })()
                     : "-"}
                 </span>

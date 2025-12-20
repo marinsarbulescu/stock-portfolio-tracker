@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Modal } from "./Modal";
 
 type TransactionType = "BUY" | "SELL" | "DIVIDEND" | "SPLIT" | "SLP";
-type TransactionSignal = "REPULL" | "CUSTOM" | "INITIAL" | "EOM" | "ENTAR" | "TP";
+type TransactionSignal = "REPULL" | "CUSTOM" | "INITIAL" | "EOM" | "ENTAR" | "PROFITTARGET";
 
 export interface TransactionAllocation {
   profitTargetId: string;
@@ -38,6 +38,7 @@ interface ProfitTarget {
   id: string;
   name: string;
   targetPercent: number;
+  allocationPercent: number | null;
   sortOrder: number;
 }
 
@@ -83,7 +84,7 @@ const TRANSACTION_TYPES: { value: TransactionType; label: string }[] = [
 const SIGNAL_TYPES: { value: TransactionSignal; label: string }[] = [
   { value: "INITIAL", label: "Initial" },
   { value: "ENTAR", label: "Entry Target" },
-  { value: "TP", label: "Take Profit" },
+  { value: "PROFITTARGET", label: "Profit Target" },
   { value: "EOM", label: "End of Month" },
   { value: "REPULL", label: "Recent Pullback" },
   { value: "CUSTOM", label: "Custom" },
@@ -167,6 +168,14 @@ export function TransactionModal({
           allocations: allocationsMap,
         });
       } else {
+        // Build default allocations from profit target allocationPercent values
+        const defaultAllocations: Record<string, string> = {};
+        profitTargets.forEach((pt) => {
+          if (pt.allocationPercent !== null && pt.allocationPercent > 0) {
+            defaultAllocations[pt.id] = pt.allocationPercent.toString();
+          }
+        });
+
         setFormData({
           assetId: assets[0]?.id || "",
           type: "BUY",
@@ -177,12 +186,12 @@ export function TransactionModal({
           splitRatio: "",
           price: "",
           investment: "",
-          allocations: {},
+          allocations: defaultAllocations,
         });
       }
       setError(null);
     }
-  }, [isOpen, mode, transaction, assets]);
+  }, [isOpen, mode, transaction, assets, profitTargets]);
 
   const visibleFields = getFieldsForType(formData.type);
 
@@ -511,7 +520,7 @@ export function TransactionModal({
             >
               <option value="">Select signal</option>
               {SIGNAL_TYPES.filter(
-                (s) => formData.type !== "BUY" || s.value !== "TP"
+                (s) => formData.type !== "BUY" || s.value !== "PROFITTARGET"
               ).map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}

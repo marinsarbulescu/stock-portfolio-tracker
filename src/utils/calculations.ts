@@ -9,11 +9,11 @@ export function calculateProfitPercent(buyPrice: number, currentPrice: number): 
 }
 
 /**
- * Calculate the take profit target price
+ * Calculate the profit target price
  * @param buyPrice - Original purchase price
  * @param targetPercent - Target profit percentage (e.g., 9 for 9%)
  * @returns Target sell price
  */
-export function calculateTakeProfit(buyPrice: number, targetPercent: number): number {
+export function calculateProfitTargetPrice(buyPrice: number, targetPercent: number): number {
   return buyPrice * (1 + targetPercent / 100);
 }

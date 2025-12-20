@@ -1,4 +1,4 @@
-import { calculateProfitPercent, calculateTakeProfit } from '../calculations';
+import { calculateProfitPercent, calculateProfitTargetPrice } from '../calculations';
 
 describe('calculateProfitPercent', () => {
   it('should calculate positive profit correctly', () => {
@@ -18,12 +18,12 @@ describe('calculateProfitPercent', () => {
   });
 });
 
-describe('calculateTakeProfit', () => {
-  it('should calculate take profit price with 9% target', () => {
-    expect(calculateTakeProfit(100, 9)).toBeCloseTo(109, 2);
+describe('calculateProfitTargetPrice', () => {
+  it('should calculate profit target price with 9% target', () => {
+    expect(calculateProfitTargetPrice(100, 9)).toBeCloseTo(109, 2);
   });
 
-  it('should calculate take profit price with decimal buy price', () => {
-    expect(calculateTakeProfit(50.5, 10)).toBeCloseTo(55.55, 2);
+  it('should calculate profit target price with decimal buy price', () => {
+    expect(calculateProfitTargetPrice(50.5, 10)).toBeCloseTo(55.55, 2);
   });
 });
