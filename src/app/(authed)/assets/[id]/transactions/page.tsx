@@ -90,7 +90,8 @@ function formatDate(isoString: string): string {
 
 function formatCurrency(value: number | null): string {
   if (value === null) return "-";
-  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const absValue = Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return value < 0 ? `-$${absValue}` : `$${absValue}`;
 }
 
 export default function AssetTransactionsPage() {
