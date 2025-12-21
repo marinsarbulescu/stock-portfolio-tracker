@@ -32,17 +32,8 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
 
   if (!isOpen) return null;
 
-  function handleOverlayClick(event: React.MouseEvent) {
-    if (event.target === event.currentTarget) {
-      onClose();
-    }
-  }
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={handleOverlayClick}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div
         ref={modalRef}
         className="bg-card border border-border rounded-lg shadow-lg w-full max-w-md mx-4"

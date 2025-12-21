@@ -53,6 +53,9 @@ interface TransactionRow {
   entryTargetPrice: number | null;
   entryTargetPercent: number | null;
   costBasis: number | null;
+  walletId: string | null;
+  walletPrice: number | null;
+  profitTargetPercent: number | null;
 }
 
 interface AllocationInfo {
@@ -75,7 +78,7 @@ const SIGNAL_LABELS: Record<TransactionSignal, string> = {
   CUSTOM: "Custom",
   INITIAL: "Initial",
   EOM: "EOM",
-  ENTAR: "EnTar",
+  ENTAR: "Entry Target",
   PROFITTARGET: "Profit Target",
 };
 
@@ -152,6 +155,7 @@ export default function AssetTransactionsPage() {
       investment: transaction.investment,
       assetId: transaction.assetId,
       allocations,
+      walletId: transaction.walletId,
     });
     setModalMode("edit");
     setIsModalOpen(true);
@@ -231,6 +235,9 @@ export default function AssetTransactionsPage() {
         entryTargetPrice: item.entryTargetPrice ?? null,
         entryTargetPercent: item.entryTargetPercent ?? null,
         costBasis: item.costBasis ?? null,
+        walletId: item.walletId ?? null,
+        walletPrice: item.walletPrice ?? null,
+        profitTargetPercent: item.profitTargetPercent ?? null,
       }));
 
       // Sort by date descending (newest first)
@@ -626,26 +633,28 @@ export default function AssetTransactionsPage() {
         toggleable: false,
         render: (item) => (
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleRowClick(item)}
-              data-testid={`transaction-edit-${item.id}`}
-              className="text-muted-foreground hover:text-foreground p-1"
-              aria-label="Edit transaction"
-            >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+            {item.type !== "SELL" && (
+              <button
+                onClick={() => handleRowClick(item)}
+                data-testid={`transaction-edit-${item.id}`}
+                className="text-muted-foreground hover:text-foreground p-1"
+                aria-label="Edit transaction"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
-            </button>
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+              </button>
+            )}
             <button
               onClick={() => handleDeleteFromTable(item.id)}
               data-testid={`transaction-delete-${item.id}`}
@@ -904,6 +913,85 @@ export default function AssetTransactionsPage() {
   async function handleDelete(id: string) {
     // Find transaction to get wallet info before deleting
     const txn = transactions.find((t) => t.id === id);
+    if (!txn) return;
+
+    // For SELL transactions, special handling
+    if (txn.type === "SELL") {
+      // Check for subsequent transactions
+      const hasSubsequentTxns = transactions.some(
+        (t) => t.id !== id && new Date(t.date) > new Date(txn.date)
+      );
+      if (hasSubsequentTxns) {
+        alert("Cannot delete this SELL transaction because there are subsequent transactions. Delete newer transactions first.");
+        return;
+      }
+
+      // Validate required data for wallet restoration
+      if (!txn.walletId || !txn.walletPrice || !txn.quantity || txn.profitTargetPercent === null) {
+        alert("Cannot delete: missing wallet restoration data.");
+        return;
+      }
+
+      // Find PT by percentage
+      const pt = profitTargets.find(p => p.targetPercent === txn.profitTargetPercent);
+      if (!pt) {
+        alert("Cannot delete: the Profit Target for this transaction no longer exists.");
+        return;
+      }
+
+      try {
+        // Calculate wallet data
+        const buyPrice = txn.walletPrice;
+        const sharesToRestore = txn.quantity;
+        const investmentToRestore = buyPrice * sharesToRestore;
+        const commission = asset?.commission ?? 0;
+        const profitTargetPrice = buyPrice * (1 + pt.targetPercent / 100) / (1 - commission / 100);
+
+        const existingWallet = wallets.find(w => w.id === txn.walletId);
+        const oldWalletId = txn.walletId;
+
+        if (existingWallet) {
+          // Update existing wallet - add shares back
+          await client.models.Wallet.update({
+            id: existingWallet.id,
+            shares: existingWallet.shares + sharesToRestore,
+            investment: existingWallet.investment + investmentToRestore,
+          });
+        } else {
+          // Recreate wallet with new ID
+          const newWallet = await client.models.Wallet.create({
+            assetId,
+            price: buyPrice,
+            shares: sharesToRestore,
+            investment: investmentToRestore,
+            profitTargetId: pt.id,
+            profitTargetPrice,
+          });
+
+          // Update TransactionAllocations that pointed to old wallet
+          if (newWallet.data?.id) {
+            const allocResponse = await client.models.TransactionAllocation.list({
+              filter: { walletId: { eq: oldWalletId } },
+            });
+            for (const alloc of allocResponse.data) {
+              await client.models.TransactionAllocation.update({
+                id: alloc.id,
+                walletId: newWallet.data.id,
+              });
+            }
+          }
+        }
+
+        // Delete the SELL transaction
+        await client.models.Transaction.delete({ id });
+        await fetchTransactions();
+        await fetchWallets();
+      } catch (err) {
+        console.error("Error deleting SELL transaction:", err);
+        setError("Failed to delete SELL transaction");
+      }
+      return;
+    }
 
     // Get and delete allocations first (needed for wallet updates)
     try {
@@ -919,7 +1007,7 @@ export default function AssetTransactionsPage() {
       await client.models.Transaction.delete({ id });
 
       // Update wallets if it was a BUY transaction - one per allocation
-      if (txn?.type === "BUY" && txn.price && txn.investment) {
+      if (txn.type === "BUY" && txn.price && txn.investment) {
         for (const alloc of allocations) {
           const allocationInvestment = (alloc.percentage / 100) * txn.investment;
           await upsertWallet(txn.price, alloc.profitTargetId, -allocationInvestment);
@@ -1005,7 +1093,7 @@ export default function AssetTransactionsPage() {
       const pt = profitTargets.find(p => p.id === sellWallet.profitTargetId);
       const profitTargetPercent = pt?.targetPercent ?? null;
 
-      // 1. Create SELL transaction with walletId, costBasis, and PT%
+      // 1. Create SELL transaction with walletId, costBasis, PT%, and walletPrice
       const result = await client.models.Transaction.create({
         type: "SELL",
         date: data.date,
@@ -1015,6 +1103,7 @@ export default function AssetTransactionsPage() {
         amount: data.netProceeds,
         costBasis,
         profitTargetPercent,
+        walletPrice: sellWallet.price,
         walletId: sellWallet.id,
         assetId,
       });
@@ -1219,7 +1308,6 @@ export default function AssetTransactionsPage() {
                 .sort((a, b) => a.sortOrder - b.sortOrder)
                 .map((pt) => {
                   const shares = txnStats.sharesByPT[pt.id] || 0;
-                  if (shares === 0) return null;
                   return (
                     <div key={pt.id} className="flex justify-between" data-testid={`overview-pt-shares-${pt.targetPercent}`}>
                       <span className="text-sm text-muted-foreground">

@@ -121,7 +121,7 @@
       "expected": {
         "transaction": {
           "type": "Buy",
-          "signal": "EnTar",
+          "signal": "Entry Target",
           "price": "$120.00",
           "quantity": "3.33333",
           "investment": "$400.00",
@@ -208,7 +208,7 @@
           },
           {
             "type": "Buy",
-            "signal": "EnTar",
+            "signal": "Entry Target",
             "price": "$120.00",
             "quantity": "3.33333",
             "investment": "$400.00",
@@ -257,7 +257,7 @@
         "priorTransactions": [
           {
             "type": "Buy",
-            "signal": "EnTar",
+            "signal": "Entry Target",
             "price": "$120.00",
             "quantity": "3.33333",
             "investment": "$400.00",

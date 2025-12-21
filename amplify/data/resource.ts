@@ -77,6 +77,7 @@ const schema = a.schema({
       investment: a.float(), // Required for BUY
       costBasis: a.float(), // For SELL: buyPrice × quantity (what was paid for sold shares)
       profitTargetPercent: a.float(), // For SELL: PT% of the wallet sold from (e.g., 4, 8, 16)
+      walletPrice: a.float(), // For SELL: original buy price from wallet (for wallet restoration)
       entryTargetPrice: a.float(), // Calculated ET price for BUY (price * (1 + ET%/100))
       entryTargetPercent: a.float(), // ET percentage used (e.g., -5)
       // Relationships

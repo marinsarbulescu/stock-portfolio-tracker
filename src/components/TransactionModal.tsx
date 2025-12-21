@@ -26,6 +26,8 @@ export interface Transaction {
   allocations?: TransactionAllocation[];
   entryTargetPrice?: number | null;
   entryTargetPercent?: number | null;
+  walletId?: string | null;
+  costBasis?: number | null;
 }
 
 interface Asset {
