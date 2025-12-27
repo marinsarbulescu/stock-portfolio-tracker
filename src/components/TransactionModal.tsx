@@ -27,6 +27,8 @@ export interface Transaction {
   entryTargetPrice?: number | null;
   entryTargetPercent?: number | null;
   walletId?: string | null;
+  walletPrice?: number | null;
+  profitTargetPercent?: number | null;
   costBasis?: number | null;
 }
 
@@ -113,7 +115,8 @@ function formatDateTimeLocal(isoString: string): string {
   const day = String(date.getDate()).padStart(2, "0");
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 }
 
 function getDefaultDateTime(): string {
@@ -490,6 +493,7 @@ export function TransactionModal({
               type="datetime-local"
               id="date"
               data-testid="transaction-form-date"
+              step="1"
               value={formData.date}
               onChange={(e) =>
                 setFormData({ ...formData, date: e.target.value })

@@ -48,7 +48,8 @@ function formatDateTimeLocal(isoString: string): string {
   const day = String(date.getDate()).padStart(2, "0");
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 }
 
 function getDefaultDateTime(): string {
@@ -190,6 +191,7 @@ export function SellModal({
           <input
             type="datetime-local"
             id="sell-date"
+            step="1"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             className="w-full px-3 py-2 bg-background border border-border rounded text-foreground focus:outline-none focus:ring-2 focus:ring-border"

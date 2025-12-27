@@ -84,10 +84,13 @@ const SIGNAL_LABELS: Record<TransactionSignal, string> = {
 
 function formatDate(isoString: string): string {
   const date = new Date(isoString);
-  return date.toLocaleDateString("en-US", {
+  return date.toLocaleString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
   });
 }
 
@@ -156,6 +159,9 @@ export default function AssetTransactionsPage() {
       assetId: transaction.assetId,
       allocations,
       walletId: transaction.walletId,
+      walletPrice: transaction.walletPrice,
+      profitTargetPercent: transaction.profitTargetPercent,
+      costBasis: transaction.costBasis,
     });
     setModalMode("edit");
     setIsModalOpen(true);
@@ -362,20 +368,97 @@ export default function AssetTransactionsPage() {
     return undefined;
   }
 
-  const handleDeleteFromTable = useCallback(async (id: string) => {
-    if (!confirm("Are you sure you want to delete this transaction?")) return;
-
+  // Core delete logic (no confirmation dialog)
+  const handleDeleteTransaction = useCallback(async (id: string) => {
     // Find transaction to get wallet info before deleting
     const txn = transactions.find((t) => t.id === id);
+    if (!txn) return;
 
+    // For SELL transactions, special handling
+    if (txn.type === "SELL") {
+      // Check for subsequent transactions
+      const hasSubsequentTxns = transactions.some(
+        (t) => t.id !== id && new Date(t.date) > new Date(txn.date)
+      );
+      if (hasSubsequentTxns) {
+        alert("Cannot delete this SELL transaction because there are subsequent transactions. Delete newer transactions first.");
+        return;
+      }
+
+      // Validate required data for wallet restoration
+      if (!txn.walletId || !txn.walletPrice || !txn.quantity || txn.profitTargetPercent === null) {
+        alert("Cannot delete: missing wallet restoration data.");
+        return;
+      }
+
+      // Find PT by percentage
+      const pt = profitTargets.find(p => p.targetPercent === txn.profitTargetPercent);
+      if (!pt) {
+        alert("Cannot delete: the Profit Target for this transaction no longer exists.");
+        return;
+      }
+
+      try {
+        // Calculate wallet data
+        const buyPrice = txn.walletPrice;
+        const sharesToRestore = txn.quantity;
+        const investmentToRestore = buyPrice * sharesToRestore;
+        const commission = asset?.commission ?? 0;
+        const profitTargetPrice = buyPrice * (1 + pt.targetPercent / 100) / (1 - commission / 100);
+
+        const existingWallet = wallets.find(w => w.id === txn.walletId);
+        const oldWalletId = txn.walletId;
+
+        if (existingWallet) {
+          // Update existing wallet - add shares back
+          await client.models.Wallet.update({
+            id: existingWallet.id,
+            shares: existingWallet.shares + sharesToRestore,
+            investment: existingWallet.investment + investmentToRestore,
+          });
+        } else {
+          // Recreate wallet with new ID
+          const newWallet = await client.models.Wallet.create({
+            assetId,
+            price: buyPrice,
+            shares: sharesToRestore,
+            investment: investmentToRestore,
+            profitTargetId: pt.id,
+            profitTargetPrice,
+          });
+
+          // Update TransactionAllocations that pointed to old wallet
+          if (newWallet.data?.id) {
+            const allocResponse = await client.models.TransactionAllocation.list({
+              filter: { walletId: { eq: oldWalletId } },
+            });
+            for (const alloc of allocResponse.data) {
+              await client.models.TransactionAllocation.update({
+                id: alloc.id,
+                walletId: newWallet.data.id,
+              });
+            }
+          }
+        }
+
+        // Delete the SELL transaction
+        await client.models.Transaction.delete({ id });
+        await fetchTransactions();
+        await fetchWallets();
+      } catch (err) {
+        console.error("Error deleting SELL transaction:", err);
+        setError("Failed to delete SELL transaction");
+      }
+      return;
+    }
+
+    // For non-SELL transactions (BUY, DIVIDEND, SPLIT, SLP)
     try {
-      // Get allocations before deleting (needed for wallet updates)
       const allocationsResponse = await client.models.TransactionAllocation.list({
         filter: { transactionId: { eq: id } },
       });
       const allocations = allocationsResponse.data;
 
-      // Delete allocations first
       for (const alloc of allocations) {
         await client.models.TransactionAllocation.delete({ id: alloc.id });
       }
@@ -383,7 +466,7 @@ export default function AssetTransactionsPage() {
       await client.models.Transaction.delete({ id });
 
       // Update wallets if it was a BUY transaction - one per allocation
-      if (txn?.type === "BUY" && txn.price && txn.investment) {
+      if (txn.type === "BUY" && txn.price && txn.investment) {
         for (const alloc of allocations) {
           const allocationInvestment = (alloc.percentage / 100) * txn.investment;
           await upsertWallet(txn.price, alloc.profitTargetId, -allocationInvestment);
@@ -395,8 +478,13 @@ export default function AssetTransactionsPage() {
     } catch {
       setError("Failed to delete transaction");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchTransactions, fetchWallets, transactions]);
+  }, [transactions, profitTargets, asset?.commission, wallets, assetId, fetchTransactions, fetchWallets, upsertWallet]);
+
+  // Wrapper with confirmation dialog for table delete button
+  const handleDeleteFromTable = useCallback(async (id: string) => {
+    if (!confirm("Are you sure you want to delete this transaction?")) return;
+    await handleDeleteTransaction(id);
+  }, [handleDeleteTransaction]);
 
   // Find the last (most recent) BUY transaction for ET highlighting
   const lastBuyTransaction = useMemo(() => {
@@ -493,7 +581,14 @@ export default function AssetTransactionsPage() {
   };
 
   const columns: Column<TransactionRow>[] = useMemo(
-    () => [
+    () => {
+      const hasSubsequentTransactions = (txn: TransactionRow) => {
+        return transactions.some(
+          (t) => t.id !== txn.id && new Date(t.date) > new Date(txn.date)
+        );
+      };
+
+      return [
       {
         key: "date",
         header: "Date",
@@ -633,7 +728,7 @@ export default function AssetTransactionsPage() {
         toggleable: false,
         render: (item) => (
           <div className="flex items-center gap-2">
-            {item.type !== "SELL" && (
+            {(item.type !== "SELL" || !hasSubsequentTransactions(item)) && (
               <button
                 onClick={() => handleRowClick(item)}
                 data-testid={`transaction-edit-${item.id}`}
@@ -678,8 +773,9 @@ export default function AssetTransactionsPage() {
           </div>
         ),
       },
-    ],
-    [handleDeleteFromTable, firstEntryTarget, lastBuyTransaction, effectivePrice, allocationsMap, profitTargets]
+    ];
+    },
+    [handleDeleteFromTable, firstEntryTarget, lastBuyTransaction, effectivePrice, allocationsMap, profitTargets, transactions]
   );
 
   // Column visibility toggle for transactions
@@ -860,6 +956,135 @@ export default function AssetTransactionsPage() {
           }
         }
 
+        // For SELL edits, handle wallet restoration and re-deduction
+        if (selectedTransaction.type === "SELL") {
+          const oldQuantity = selectedTransaction.quantity;
+          const newQuantity = data.quantity;
+          const walletPrice = selectedTransaction.walletPrice;
+          const walletId = selectedTransaction.walletId;
+          const profitTargetPercent = selectedTransaction.profitTargetPercent;
+
+          // Validate required data
+          if (!walletId || !walletPrice || !oldQuantity || profitTargetPercent === null || profitTargetPercent === undefined) {
+            setError("Cannot edit: missing wallet restoration data.");
+            return;
+          }
+
+          // Check for subsequent transactions
+          const hasSubsequentTxns = transactions.some(
+            (t) => t.id !== selectedTransaction.id && new Date(t.date) > new Date(selectedTransaction.date)
+          );
+          if (hasSubsequentTxns) {
+            setError("Cannot edit this SELL transaction because there are subsequent transactions.");
+            return;
+          }
+
+          // Find PT by percentage
+          const pt = profitTargets.find(p => p.targetPercent === profitTargetPercent);
+          if (!pt) {
+            setError("Cannot edit: the Profit Target for this transaction no longer exists.");
+            return;
+          }
+
+          const commission = asset?.commission ?? 0;
+          const profitTargetPrice = walletPrice * (1 + pt.targetPercent / 100) / (1 - commission / 100);
+
+          // Step 1: Restore old wallet (add old shares back)
+          const oldInvestment = walletPrice * oldQuantity;
+          let existingWallet = wallets.find(w => w.id === walletId);
+
+          if (existingWallet) {
+            // Update existing wallet - add shares back
+            await client.models.Wallet.update({
+              id: existingWallet.id,
+              shares: existingWallet.shares + oldQuantity,
+              investment: existingWallet.investment + oldInvestment,
+            });
+            existingWallet = {
+              ...existingWallet,
+              shares: existingWallet.shares + oldQuantity,
+              investment: existingWallet.investment + oldInvestment,
+            };
+          } else {
+            // Recreate wallet
+            const newWallet = await client.models.Wallet.create({
+              assetId,
+              price: walletPrice,
+              shares: oldQuantity,
+              investment: oldInvestment,
+              profitTargetId: pt.id,
+              profitTargetPrice,
+            });
+
+            if (newWallet.data?.id) {
+              // Update TransactionAllocations that pointed to old wallet
+              const allocResponse = await client.models.TransactionAllocation.list({
+                filter: { walletId: { eq: walletId } },
+              });
+              for (const alloc of allocResponse.data) {
+                await client.models.TransactionAllocation.update({
+                  id: alloc.id,
+                  walletId: newWallet.data.id,
+                });
+              }
+              existingWallet = {
+                id: newWallet.data.id,
+                price: walletPrice,
+                shares: oldQuantity,
+                investment: oldInvestment,
+                profitTargetId: pt.id,
+                profitTargetPrice,
+              } as WalletRow;
+            }
+          }
+
+          // Step 2: Validate and deduct new values
+          if (existingWallet && newQuantity && newQuantity > existingWallet.shares) {
+            setError(`Cannot edit: quantity (${newQuantity}) exceeds available shares (${existingWallet.shares.toFixed(5)}).`);
+            return;
+          }
+
+          // Step 3: Deduct new shares from wallet
+          if (existingWallet && newQuantity) {
+            const newShares = existingWallet.shares - newQuantity;
+            if (newShares <= 0) {
+              await client.models.Wallet.delete({ id: existingWallet.id });
+            } else {
+              const newInvestment = newShares * walletPrice;
+              await client.models.Wallet.update({
+                id: existingWallet.id,
+                shares: parseFloat(newShares.toFixed(5)),
+                investment: newInvestment,
+              });
+            }
+          }
+
+          // Step 4: Update transaction with recalculated values
+          const newCostBasis = walletPrice * (newQuantity || 0);
+          const grossProceeds = (data.price || 0) * (newQuantity || 0);
+          const newAmount = grossProceeds * (1 - commission / 100);
+
+          const result = await client.models.Transaction.update({
+            id: selectedTransaction.id,
+            date: data.date,
+            signal: data.signal,
+            price: data.price,
+            quantity: newQuantity,
+            costBasis: newCostBasis,
+            amount: newAmount,
+          });
+
+          if (result.errors) {
+            console.error("Update errors:", result.errors);
+            setError("Failed to update transaction: " + result.errors.map(e => e.message).join(", "));
+            return;
+          }
+
+          await fetchWallets();
+          await fetchTransactions();
+          return;
+        }
+
         const result = await client.models.Transaction.update({
           id: selectedTransaction.id,
           ...transactionData,
@@ -908,117 +1133,6 @@ export default function AssetTransactionsPage() {
       console.error("Save error:", err);
       setError("Failed to save transaction");
     }
-  }
-
-  async function handleDelete(id: string) {
-    // Find transaction to get wallet info before deleting
-    const txn = transactions.find((t) => t.id === id);
-    if (!txn) return;
-
-    // For SELL transactions, special handling
-    if (txn.type === "SELL") {
-      // Check for subsequent transactions
-      const hasSubsequentTxns = transactions.some(
-        (t) => t.id !== id && new Date(t.date) > new Date(txn.date)
-      );
-      if (hasSubsequentTxns) {
-        alert("Cannot delete this SELL transaction because there are subsequent transactions. Delete newer transactions first.");
-        return;
-      }
-
-      // Validate required data for wallet restoration
-      if (!txn.walletId || !txn.walletPrice || !txn.quantity || txn.profitTargetPercent === null) {
-        alert("Cannot delete: missing wallet restoration data.");
-        return;
-      }
-
-      // Find PT by percentage
-      const pt = profitTargets.find(p => p.targetPercent === txn.profitTargetPercent);
-      if (!pt) {
-        alert("Cannot delete: the Profit Target for this transaction no longer exists.");
-        return;
-      }
-
-      try {
-        // Calculate wallet data
-        const buyPrice = txn.walletPrice;
-        const sharesToRestore = txn.quantity;
-        const investmentToRestore = buyPrice * sharesToRestore;
-        const commission = asset?.commission ?? 0;
-        const profitTargetPrice = buyPrice * (1 + pt.targetPercent / 100) / (1 - commission / 100);
-
-        const existingWallet = wallets.find(w => w.id === txn.walletId);
-        const oldWalletId = txn.walletId;
-
-        if (existingWallet) {
-          // Update existing wallet - add shares back
-          await client.models.Wallet.update({
-            id: existingWallet.id,
-            shares: existingWallet.shares + sharesToRestore,
-            investment: existingWallet.investment + investmentToRestore,
-          });
-        } else {
-          // Recreate wallet with new ID
-          const newWallet = await client.models.Wallet.create({
-            assetId,
-            price: buyPrice,
-            shares: sharesToRestore,
-            investment: investmentToRestore,
-            profitTargetId: pt.id,
-            profitTargetPrice,
-          });
-
-          // Update TransactionAllocations that pointed to old wallet
-          if (newWallet.data?.id) {
-            const allocResponse = await client.models.TransactionAllocation.list({
-              filter: { walletId: { eq: oldWalletId } },
-            });
-            for (const alloc of allocResponse.data) {
-              await client.models.TransactionAllocation.update({
-                id: alloc.id,
-                walletId: newWallet.data.id,
-              });
-            }
-          }
-        }
-
-        // Delete the SELL transaction
-        await client.models.Transaction.delete({ id });
-        await fetchTransactions();
-        await fetchWallets();
-      } catch (err) {
-        console.error("Error deleting SELL transaction:", err);
-        setError("Failed to delete SELL transaction");
-      }
-      return;
-    }
-
-    // Get and delete allocations first (needed for wallet updates)
-    try {
-      const allocationsResponse = await client.models.TransactionAllocation.list({
-        filter: { transactionId: { eq: id } },
-      });
-      const allocations = allocationsResponse.data;
-
-      for (const alloc of allocations) {
-        await client.models.TransactionAllocation.delete({ id: alloc.id });
-      }
-
-      await client.models.Transaction.delete({ id });
-
-      // Update wallets if it was a BUY transaction - one per allocation
-      if (txn.type === "BUY" && txn.price && txn.investment) {
-        for (const alloc of allocations) {
-          const allocationInvestment = (alloc.percentage / 100) * txn.investment;
-          await upsertWallet(txn.price, alloc.profitTargetId, -allocationInvestment);
-        }
-        await fetchWallets();
-      }
-    } catch (err) {
-      console.error("Error deleting transaction:", err);
-    }
-
-    await fetchTransactions();
   }
 
   // Delete all transactions and wallets for this asset
@@ -1401,7 +1515,7 @@ export default function AssetTransactionsPage() {
           entryTargets={entryTargets}
           onClose={() => setIsModalOpen(false)}
           onSave={handleSave}
-          onDelete={handleDelete}
+          onDelete={handleDeleteTransaction}
         />
       )}
 
