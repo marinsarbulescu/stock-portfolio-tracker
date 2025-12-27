@@ -397,8 +397,14 @@ export default function AssetTransactionsPage() {
         const commission = asset?.commission ?? 0;
         const profitTargetPrice = buyPrice * (1 + pt.targetPercent / 100) / (1 - commission / 100);
 
-        const existingWallet = wallets.find(w => w.id === txn.walletId);
+        // First try to find wallet by original ID
+        let existingWallet = wallets.find(w => w.id === txn.walletId);
         const oldWalletId = txn.walletId;
+
+        // If not found by ID, check for wallet with same price and profit target
+        if (!existingWallet) {
+          existingWallet = wallets.find(w => w.price === buyPrice && w.profitTargetId === pt.id);
+        }
 
         if (existingWallet) {
           // Update existing wallet - add shares back
@@ -407,8 +413,21 @@ export default function AssetTransactionsPage() {
             shares: existingWallet.shares + sharesToRestore,
             investment: existingWallet.investment + investmentToRestore,
           });
+
+          // Update TransactionAllocations that pointed to old wallet ID to point to existing wallet
+          if (existingWallet.id !== oldWalletId) {
+            const allocResponse = await client.models.TransactionAllocation.list({
+              filter: { walletId: { eq: oldWalletId } },
+            });
+            for (const alloc of allocResponse.data) {
+              await client.models.TransactionAllocation.update({
+                id: alloc.id,
+                walletId: existingWallet.id,
+              });
+            }
+          }
         } else {
-          // Recreate wallet with new ID
+          // Create new wallet only if no matching wallet exists
           const newWallet = await client.models.Wallet.create({
             assetId,
             price: buyPrice,
@@ -982,7 +1001,13 @@ export default function AssetTransactionsPage() {
 
           // Step 1: Restore old wallet (add old shares back)
           const oldInvestment = walletPrice * oldQuantity;
+          // First try to find wallet by original ID
           let existingWallet = wallets.find(w => w.id === walletId);
+
+          // If not found by ID, check for wallet with same price and profit target
+          if (!existingWallet) {
+            existingWallet = wallets.find(w => w.price === walletPrice && w.profitTargetId === pt.id);
+          }
 
           if (existingWallet) {
             // Update existing wallet - add shares back
@@ -991,13 +1016,27 @@ export default function AssetTransactionsPage() {
               shares: existingWallet.shares + oldQuantity,
               investment: existingWallet.investment + oldInvestment,
             });
+
+            // Update TransactionAllocations that pointed to old wallet ID to point to existing wallet
+            if (existingWallet.id !== walletId) {
+              const allocResponse = await client.models.TransactionAllocation.list({
+                filter: { walletId: { eq: walletId } },
+              });
+              for (const alloc of allocResponse.data) {
+                await client.models.TransactionAllocation.update({
+                  id: alloc.id,
+                  walletId: existingWallet.id,
+                });
+              }
+            }
+
             existingWallet = {
               ...existingWallet,
               shares: existingWallet.shares + oldQuantity,
               investment: existingWallet.investment + oldInvestment,
             };
           } else {
-            // Recreate wallet
+            // Create new wallet only if no matching wallet exists
             const newWallet = await client.models.Wallet.create({
               assetId,
               price: walletPrice,
