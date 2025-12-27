@@ -376,15 +376,6 @@ export default function AssetTransactionsPage() {
 
     // For SELL transactions, special handling
     if (txn.type === "SELL") {
-      // Check for subsequent transactions
-      const hasSubsequentTxns = transactions.some(
-        (t) => t.id !== id && new Date(t.date) > new Date(txn.date)
-      );
-      if (hasSubsequentTxns) {
-        alert("Cannot delete this SELL transaction because there are subsequent transactions. Delete newer transactions first.");
-        return;
-      }
-
       // Validate required data for wallet restoration
       if (!txn.walletId || !txn.walletPrice || !txn.quantity || txn.profitTargetPercent === null) {
         alert("Cannot delete: missing wallet restoration data.");
