@@ -208,6 +208,7 @@ export function SellModal({
           </label>
           <select
             id="sell-signal"
+            data-testid="sell-form-signal"
             value={signal}
             onChange={(e) => setSignal(e.target.value as TransactionSignal)}
             className="w-full px-3 py-2 bg-background border border-border rounded text-foreground focus:outline-none focus:ring-2 focus:ring-border"
@@ -231,6 +232,7 @@ export function SellModal({
           <input
             type="number"
             id="sell-price"
+            data-testid="sell-form-price"
             step="0.01"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
@@ -250,6 +252,7 @@ export function SellModal({
           <input
             type="number"
             id="sell-quantity"
+            data-testid="sell-form-quantity"
             step="0.00001"
             min="0"
             max={wallet.shares}
@@ -297,6 +300,7 @@ export function SellModal({
           </button>
           <button
             type="submit"
+            data-testid="sell-form-submit"
             disabled={isSubmitting}
             className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
           >

@@ -113,6 +113,7 @@ export interface WalletExpected {
   investment: string;
   pt: string;
   pct2pt: string;
+  pct2ptHighlight?: "green" | "none";  // Optional highlight verification
 }
 
 export interface OverviewExpected {
@@ -153,6 +154,67 @@ export interface AssetBuyCrudTestConfig {
   profitTargets: { input: TargetInput }[];
   transactions: {
     [key: string]: BuyTransactionAction;
+  };
+}
+
+// ============================================================================
+// SELL Transaction CRUD Types
+// ============================================================================
+
+export interface SellTransactionInput {
+  ptPercent: string;    // Which PT tab to sell from
+  walletPrice: string;  // Which wallet (by price) to sell from
+  signal: string;
+  price: string;
+  quantity: string;
+}
+
+export interface SellTransactionExpected {
+  type: string;         // "Sell"
+  signal: string;
+  price: string;
+  quantity: string;
+  amount: string;       // SELL specific (proceeds after commission)
+  profitLoss: string;
+  profitLossPercent: string;
+}
+
+// Target to identify a SELL transaction for editing/deleting
+export interface EditSellTransactionTarget {
+  signal: string;  // Display signal (e.g., "Profit Target")
+  price: string;   // Formatted price (e.g., "$110.00")
+  amount: string;  // Formatted amount (e.g., "$163.35")
+}
+
+// Union type for transaction actions in SELL CRUD test
+export type SellCrudTransactionAction = BuyTransactionAction | SellTransactionAction;
+
+export interface SellTransactionAction {
+  testPriceUpdate?: string;
+  isSell: true;                          // Discriminator to identify SELL actions
+  target?: EditSellTransactionTarget;    // If present, this is an edit or delete operation
+  delete?: boolean;                      // If true (with target), this is a delete operation
+  input?: SellTransactionInput;          // Optional for delete (not needed)
+  expected: {
+    transaction?: SellTransactionExpected;           // The new/edited SELL transaction
+    transactionNotPresent?: EditSellTransactionTarget; // Verify deleted transaction
+    priorTransactions?: (TransactionExpected | SellTransactionExpected)[];
+    wallets: WalletExpected[];
+    walletsNotPresent?: { ptPercent: string; price: string }[];
+    overview: OverviewExpected;
+  };
+}
+
+export interface AssetSellCrudTestConfig {
+  scenario: string;
+  description: string;
+  asset: {
+    input: AssetCreateInput;
+  };
+  entryTargets: { input: TargetInput }[];
+  profitTargets: { input: TargetInput }[];
+  transactions: {
+    [key: string]: SellCrudTransactionAction;
   };
 }
 
@@ -245,6 +307,30 @@ export function loadAssetBuyCrudTestData(fileName: string): AssetBuyCrudTestConf
     const data = JSON.parse(fileContent) as AssetBuyCrudTestConfig;
     console.log(
       `[jsonHelper.ts] Successfully parsed Buy CRUD JSON for scenario: ${data.scenario}`
+    );
+    return data;
+  } catch (error) {
+    throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
+  }
+}
+
+export function loadAssetSellCrudTestData(fileName: string): AssetSellCrudTestConfig {
+  const filePath = path.resolve(process.cwd(), fileName);
+  console.log(`[jsonHelper.ts] Attempting to load Sell CRUD JSON from: ${filePath}`);
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`JSON file not found: ${filePath}`);
+  }
+
+  const fileContent = fs.readFileSync(filePath, "utf-8");
+  console.log(
+    `[jsonHelper.ts] File content read successfully. Length: ${fileContent.length}`
+  );
+
+  try {
+    const data = JSON.parse(fileContent) as AssetSellCrudTestConfig;
+    console.log(
+      `[jsonHelper.ts] Successfully parsed Sell CRUD JSON for scenario: ${data.scenario}`
     );
     return data;
   } catch (error) {

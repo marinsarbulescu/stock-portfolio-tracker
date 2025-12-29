@@ -14,10 +14,22 @@ import {
   WalletExpected,
   OverviewExpected,
   EditTransactionTarget,
+  SellTransactionInput,
+  SellTransactionExpected,
+  EditSellTransactionTarget,
 } from "./jsonHelper";
 
 // Re-export types for convenience
-export type { AssetCreateInput, TargetInput, TargetExpected, TransactionInput, TransactionExpected, WalletExpected, OverviewExpected, EditTransactionTarget };
+export type { AssetCreateInput, TargetInput, TargetExpected, TransactionInput, TransactionExpected, WalletExpected, OverviewExpected, EditTransactionTarget, SellTransactionInput, SellTransactionExpected, EditSellTransactionTarget };
+
+// ============================================================================
+// Highlight Color Constants (Tailwind CSS classes used in UI)
+// ============================================================================
+
+export const HIGHLIGHT_COLORS = {
+  green: "text-green-400",  // Positive %2PT highlight
+  none: "",                 // No highlight (negative %2PT)
+} as const;
 
 // ============================================================================
 // Navigation & Page Helpers
@@ -698,14 +710,14 @@ export async function findTransactionRow(
 }
 
 /**
- * Verify transaction values in the table.
+ * Verify BUY transaction values in the table.
  * Finds the transaction by price+signal+investment and checks all expected values.
  */
-export async function verifyTransaction(
+export async function verifyBuyTransaction(
   page: Page,
   expected: TransactionExpected
 ): Promise<void> {
-  console.log(`[AssetHelper] Verifying transaction: type=${expected.type}, signal=${expected.signal}...`);
+  console.log(`[AssetHelper] Verifying BUY transaction: type=${expected.type}, signal=${expected.signal}...`);
 
   const row = await findTransactionRow(page, expected.price, expected.signal, expected.investment);
 
@@ -725,7 +737,141 @@ export async function verifyTransaction(
     await expect(row).toContainText(expected.profitLossPercent);
   }
 
-  console.log("[AssetHelper] Transaction verified successfully.");
+  console.log("[AssetHelper] BUY transaction verified successfully.");
+}
+
+/**
+ * Alias for backward compatibility
+ * @deprecated Use verifyBuyTransaction instead
+ */
+export const verifyTransaction = verifyBuyTransaction;
+
+// ============================================================================
+// SELL Transaction CRUD Helpers
+// ============================================================================
+
+/**
+ * Find a SELL transaction row by price, signal, and amount.
+ * Returns a locator for the row.
+ */
+export async function findSellTransactionRow(
+  page: Page,
+  price: string,
+  signal: string,
+  amount: string
+): Promise<import("@playwright/test").Locator> {
+  console.log(`[AssetHelper] Finding SELL transaction row: price=${price}, signal=${signal}, amount=${amount}...`);
+
+  // Find a tr that contains all three values
+  const row = page.locator("tr").filter({ hasText: price }).filter({ hasText: signal }).filter({ hasText: amount });
+
+  // Ensure we found exactly one
+  const count = await row.count();
+  if (count === 0) {
+    throw new Error(`No SELL transaction row found with price=${price}, signal=${signal}, amount=${amount}`);
+  }
+  if (count > 1) {
+    console.warn(`[AssetHelper] Found ${count} matching rows, using first one`);
+  }
+
+  return row.first();
+}
+
+/**
+ * Create a SELL transaction via the SellModal.
+ * Call this from the transactions page.
+ * @param ptPercent - The PT tab containing the wallet to sell from
+ * @param walletPrice - The price of the wallet to sell from
+ * @param input - The SELL transaction input (signal, price, quantity)
+ */
+export async function createSellTransaction(
+  page: Page,
+  ptPercent: string,
+  walletPrice: string,
+  input: SellTransactionInput
+): Promise<void> {
+  console.log(`[AssetHelper] Creating SELL transaction: PT=${ptPercent}%, wallet=$${walletPrice}, qty=${input.quantity}...`);
+
+  // Click the PT tab to show the wallet
+  await page.locator(`[data-testid="wallet-tab-pt-${ptPercent}"]`).click();
+  await page.waitForTimeout(300);
+
+  // Find the wallet row by price and click its Sell button
+  const walletSection = page.locator('[data-testid="wallet-tabs"]').locator("..");
+  const walletRow = walletSection.locator("tr").filter({ hasText: walletPrice });
+
+  const sellButton = walletRow.locator('text=Sell');
+  await sellButton.click();
+
+  // Wait for SellModal to open
+  await expect(page.locator('[data-testid="sell-form-signal"]')).toBeVisible({ timeout: 5000 });
+
+  // Fill signal
+  await page.locator('[data-testid="sell-form-signal"]').selectOption(input.signal);
+
+  // Fill price
+  await page.locator('[data-testid="sell-form-price"]').clear();
+  await page.locator('[data-testid="sell-form-price"]').fill(input.price);
+
+  // Fill quantity
+  await page.locator('[data-testid="sell-form-quantity"]').clear();
+  await page.locator('[data-testid="sell-form-quantity"]').fill(input.quantity);
+
+  // Submit
+  await page.locator('[data-testid="sell-form-submit"]').click();
+
+  // Wait for modal to close
+  await expect(page.locator('[data-testid="sell-form-submit"]')).not.toBeVisible({ timeout: 10000 });
+
+  console.log("[AssetHelper] SELL transaction created successfully.");
+}
+
+/**
+ * Verify SELL transaction values in the table.
+ * Finds the transaction by price+signal+amount and checks all expected values.
+ */
+export async function verifySellTransaction(
+  page: Page,
+  expected: SellTransactionExpected
+): Promise<void> {
+  console.log(`[AssetHelper] Verifying SELL transaction: type=${expected.type}, signal=${expected.signal}...`);
+
+  const row = await findSellTransactionRow(page, expected.price, expected.signal, expected.amount);
+
+  // Verify each expected value is in the row
+  await expect(row).toContainText(expected.type);
+  await expect(row).toContainText(expected.signal);
+  await expect(row).toContainText(expected.price);
+  await expect(row).toContainText(expected.quantity);
+  await expect(row).toContainText(expected.amount);
+  await expect(row).toContainText(expected.profitLoss);
+  await expect(row).toContainText(expected.profitLossPercent);
+
+  console.log("[AssetHelper] SELL transaction verified successfully.");
+}
+
+/**
+ * Verify a SELL transaction is NOT present in the table.
+ * Call this from the transactions page.
+ */
+export async function verifySellTransactionNotPresent(
+  page: Page,
+  target: EditSellTransactionTarget
+): Promise<void> {
+  console.log(`[AssetHelper] Verifying SELL transaction NOT present: ${target.signal} @ ${target.price}...`);
+
+  // Find rows that match the criteria
+  const row = page.locator("tr")
+    .filter({ hasText: target.price })
+    .filter({ hasText: target.signal })
+    .filter({ hasText: target.amount });
+
+  const count = await row.count();
+  if (count > 0) {
+    throw new Error(`Expected no SELL transaction with price=${target.price}, signal=${target.signal}, amount=${target.amount}, but found ${count}`);
+  }
+
+  console.log("[AssetHelper] SELL transaction confirmed NOT present.");
 }
 
 /**
@@ -760,6 +906,7 @@ export async function findWalletRow(
 
 /**
  * Verify wallet values for a given PT tab.
+ * Optionally verifies %2PT highlight color.
  */
 export async function verifyWallet(
   page: Page,
@@ -775,6 +922,22 @@ export async function verifyWallet(
   await expect(row).toContainText(expected.investment);
   await expect(row).toContainText(expected.pt);
   await expect(row).toContainText(expected.pct2pt);
+
+  // Verify %2PT highlight if specified
+  if (expected.pct2ptHighlight) {
+    const pct2ptCell = row.locator(`text=${expected.pct2pt}`);
+    const expectedClass = HIGHLIGHT_COLORS[expected.pct2ptHighlight];
+
+    if (expectedClass) {
+      // Should have the highlight class
+      await expect(pct2ptCell).toHaveClass(new RegExp(expectedClass));
+      console.log(`[AssetHelper] Verified %2PT highlight: ${expected.pct2ptHighlight}`);
+    } else {
+      // Should NOT have any highlight class (green)
+      await expect(pct2ptCell).not.toHaveClass(/text-green-400/);
+      console.log(`[AssetHelper] Verified %2PT has no highlight`);
+    }
+  }
 
   console.log("[AssetHelper] Wallet verified successfully.");
 }
