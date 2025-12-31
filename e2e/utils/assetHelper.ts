@@ -32,6 +32,46 @@ export const HIGHLIGHT_COLORS = {
 } as const;
 
 // ============================================================================
+// Form Helpers
+// ============================================================================
+
+/**
+ * Robustly select a dropdown option with verification and retry.
+ * Handles race conditions where React hasn't finished rendering options.
+ */
+async function selectDropdownOption(
+  page: Page,
+  selectTestId: string,
+  value: string,
+  maxRetries: number = 3
+): Promise<void> {
+  const selectLocator = page.locator(`[data-testid="${selectTestId}"]`);
+  const optionLocator = page.locator(`[data-testid="${selectTestId}"] option[value="${value}"]`);
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    // Wait for option to be in DOM
+    await optionLocator.waitFor({ state: 'attached', timeout: 5000 });
+
+    // Select the option
+    await selectLocator.selectOption(value);
+
+    // Verify the selection took effect
+    const selectedValue = await selectLocator.inputValue();
+    if (selectedValue === value) {
+      return; // Success
+    }
+
+    console.warn(`[AssetHelper] Dropdown selection attempt ${attempt} failed: expected "${value}", got "${selectedValue}"`);
+
+    if (attempt < maxRetries) {
+      await page.waitForTimeout(100); // Brief delay before retry
+    }
+  }
+
+  throw new Error(`Failed to select "${value}" in dropdown "${selectTestId}" after ${maxRetries} attempts`);
+}
+
+// ============================================================================
 // Navigation & Page Helpers
 // ============================================================================
 
@@ -536,11 +576,14 @@ export async function createBuyTransaction(
   // Wait for modal to open
   await expect(page.locator('[data-testid="transaction-form-signal"]')).toBeVisible({ timeout: 5000 });
 
+  // Wait for asset dropdown to be populated (has a non-empty value)
+  await expect(page.locator('[data-testid="transaction-form-asset"]')).toHaveValue(/.+/, { timeout: 5000 });
+
   // Type should already be BUY (default), but ensure it
   await page.locator('[data-testid="transaction-form-type"]').selectOption("BUY");
 
-  // Fill signal
-  await page.locator('[data-testid="transaction-form-signal"]').selectOption(input.signal);
+  // Select signal with verification and retry
+  await selectDropdownOption(page, "transaction-form-signal", input.signal);
 
   // Fill price
   await page.locator('[data-testid="transaction-form-price"]').fill(input.price);
@@ -595,8 +638,8 @@ export async function editBuyTransaction(
   // Wait for modal to open in edit mode
   await expect(page.locator('[data-testid="transaction-form-signal"]')).toBeVisible({ timeout: 5000 });
 
-  // Update signal
-  await page.locator('[data-testid="transaction-form-signal"]').selectOption(input.signal);
+  // Select signal with verification and retry
+  await selectDropdownOption(page, "transaction-form-signal", input.signal);
 
   // Clear and update price
   await page.locator('[data-testid="transaction-form-price"]').clear();
@@ -668,13 +711,14 @@ export async function verifyTransactionNotPresent(
 ): Promise<void> {
   console.log(`[AssetHelper] Verifying transaction NOT present: ${target.signal} @ ${target.price}...`);
 
-  // Find rows that match the criteria
-  const row = page.locator("tr")
+  // Find rows that match the criteria using data-testid pattern
+  const rows = page.locator('tr[data-testid^="transaction-row-"]');
+  const matchingRow = rows
     .filter({ hasText: target.price })
     .filter({ hasText: target.signal })
     .filter({ hasText: target.investment });
 
-  const count = await row.count();
+  const count = await matchingRow.count();
   if (count > 0) {
     throw new Error(`Expected no transaction with price=${target.price}, signal=${target.signal}, investment=${target.investment}, but found ${count}`);
   }
@@ -694,11 +738,12 @@ export async function findTransactionRow(
 ): Promise<import("@playwright/test").Locator> {
   console.log(`[AssetHelper] Finding transaction row: price=${price}, signal=${signal}, investment=${investment}...`);
 
-  // Find a tr that contains all three values
-  const row = page.locator("tr").filter({ hasText: price }).filter({ hasText: signal }).filter({ hasText: investment });
+  // Find row using data-testid pattern and filter by content
+  const rows = page.locator('tr[data-testid^="transaction-row-"]');
+  const matchingRow = rows.filter({ hasText: price }).filter({ hasText: signal }).filter({ hasText: investment });
 
   // Ensure we found exactly one
-  const count = await row.count();
+  const count = await matchingRow.count();
   if (count === 0) {
     throw new Error(`No transaction row found with price=${price}, signal=${signal}, investment=${investment}`);
   }
@@ -706,7 +751,7 @@ export async function findTransactionRow(
     console.warn(`[AssetHelper] Found ${count} matching rows, using first one`);
   }
 
-  return row.first();
+  return matchingRow.first();
 }
 
 /**
@@ -762,11 +807,12 @@ export async function findSellTransactionRow(
 ): Promise<import("@playwright/test").Locator> {
   console.log(`[AssetHelper] Finding SELL transaction row: price=${price}, signal=${signal}, amount=${amount}...`);
 
-  // Find a tr that contains all three values
-  const row = page.locator("tr").filter({ hasText: price }).filter({ hasText: signal }).filter({ hasText: amount });
+  // Find row using data-testid pattern and filter by content
+  const rows = page.locator('tr[data-testid^="transaction-row-"]');
+  const matchingRow = rows.filter({ hasText: price }).filter({ hasText: signal }).filter({ hasText: amount });
 
   // Ensure we found exactly one
-  const count = await row.count();
+  const count = await matchingRow.count();
   if (count === 0) {
     throw new Error(`No SELL transaction row found with price=${price}, signal=${signal}, amount=${amount}`);
   }
@@ -774,7 +820,7 @@ export async function findSellTransactionRow(
     console.warn(`[AssetHelper] Found ${count} matching rows, using first one`);
   }
 
-  return row.first();
+  return matchingRow.first();
 }
 
 /**
@@ -796,11 +842,19 @@ export async function createSellTransaction(
   await page.locator(`[data-testid="wallet-tab-pt-${ptPercent}"]`).click();
   await page.waitForTimeout(300);
 
-  // Find the wallet row by price and click its Sell button
-  const walletSection = page.locator('[data-testid="wallet-tabs"]').locator("..");
-  const walletRow = walletSection.locator("tr").filter({ hasText: walletPrice });
+  // Find the wallet row by data-testid pattern and filter by price
+  const walletRows = page.locator('tr[data-testid^="wallet-row-"]');
+  const walletRow = walletRows.filter({ hasText: walletPrice }).first();
 
-  const sellButton = walletRow.locator('text=Sell');
+  // Get the wallet ID from the row's data-testid
+  const testId = await walletRow.getAttribute("data-testid");
+  if (!testId) {
+    throw new Error(`No wallet row found with price=${walletPrice}`);
+  }
+  const walletId = testId.replace("wallet-row-", "");
+
+  // Click the Sell button using its data-testid
+  const sellButton = page.locator(`[data-testid="wallet-sell-${walletId}"]`);
   await sellButton.click();
 
   // Wait for SellModal to open
@@ -860,18 +914,95 @@ export async function verifySellTransactionNotPresent(
 ): Promise<void> {
   console.log(`[AssetHelper] Verifying SELL transaction NOT present: ${target.signal} @ ${target.price}...`);
 
-  // Find rows that match the criteria
-  const row = page.locator("tr")
+  // Find rows that match the criteria using data-testid pattern
+  const rows = page.locator('tr[data-testid^="transaction-row-"]');
+  const matchingRow = rows
     .filter({ hasText: target.price })
     .filter({ hasText: target.signal })
     .filter({ hasText: target.amount });
 
-  const count = await row.count();
+  const count = await matchingRow.count();
   if (count > 0) {
     throw new Error(`Expected no SELL transaction with price=${target.price}, signal=${target.signal}, amount=${target.amount}, but found ${count}`);
   }
 
   console.log("[AssetHelper] SELL transaction confirmed NOT present.");
+}
+
+/**
+ * Edit a SELL transaction via the edit modal.
+ * Call this from the transactions page.
+ * @param target - The transaction to edit (identified by signal, price, amount)
+ * @param input - The new values for the transaction
+ */
+export async function editSellTransaction(
+  page: Page,
+  target: EditSellTransactionTarget,
+  input: SellTransactionInput
+): Promise<void> {
+  console.log(`[AssetHelper] Editing SELL transaction: ${target.signal} @ ${target.price}...`);
+
+  // Find the transaction row
+  const row = await findSellTransactionRow(page, target.price, target.signal, target.amount);
+
+  // Click the edit button on that row
+  const editButton = row.locator('[data-testid^="transaction-edit-"]');
+  await editButton.click();
+
+  // Wait for the edit modal to open (TransactionModal is used for editing)
+  await expect(page.locator('[data-testid="transaction-form-signal"]')).toBeVisible({ timeout: 5000 });
+
+  // Wait for the form to load with SELL type (Quantity field only shows for SELL)
+  await expect(page.locator('[data-testid="transaction-form-quantity"]')).toBeVisible({ timeout: 5000 });
+
+  // Select signal with verification and retry
+  await selectDropdownOption(page, "transaction-form-signal", input.signal);
+
+  // Fill price
+  await page.locator('[data-testid="transaction-form-price"]').clear();
+  await page.locator('[data-testid="transaction-form-price"]').fill(input.price);
+
+  // Fill quantity
+  await page.locator('[data-testid="transaction-form-quantity"]').clear();
+  await page.locator('[data-testid="transaction-form-quantity"]').fill(input.quantity);
+
+  // Submit
+  await page.locator('[data-testid="transaction-form-submit"]').click();
+
+  // Wait for modal to close
+  await expect(page.locator('[data-testid="transaction-form-submit"]')).not.toBeVisible({ timeout: 10000 });
+
+  console.log("[AssetHelper] SELL transaction edited successfully.");
+}
+
+/**
+ * Delete a SELL transaction.
+ * Call this from the transactions page.
+ * @param target - The transaction to delete (identified by signal, price, amount)
+ */
+export async function deleteSellTransaction(
+  page: Page,
+  target: EditSellTransactionTarget
+): Promise<void> {
+  console.log(`[AssetHelper] Deleting SELL transaction: ${target.signal} @ ${target.price}...`);
+
+  // Find the transaction row
+  const row = await findSellTransactionRow(page, target.price, target.signal, target.amount);
+
+  // Set up dialog handler to accept the native confirm dialog
+  page.once("dialog", async (dialog) => {
+    console.log(`[AssetHelper] Dialog appeared: ${dialog.message()}`);
+    await dialog.accept();
+  });
+
+  // Click the delete button on that row
+  const deleteButton = row.locator('[data-testid^="transaction-delete-"]');
+  await deleteButton.click();
+
+  // Wait for the transaction to be removed from the table
+  await page.waitForTimeout(1000);
+
+  console.log("[AssetHelper] SELL transaction deleted successfully.");
 }
 
 /**
@@ -891,17 +1022,16 @@ export async function findWalletRow(
   // Wait for tab to be active
   await page.waitForTimeout(300);
 
-  // Find wallet row by price and shares
-  // The wallet table is within the wallets section
-  const walletSection = page.locator('[data-testid="wallet-tabs"]').locator("..");
-  const row = walletSection.locator("tr").filter({ hasText: price }).filter({ hasText: shares });
+  // Find wallet row by data-testid pattern and filter by content
+  const walletRows = page.locator('tr[data-testid^="wallet-row-"]');
+  const matchingRow = walletRows.filter({ hasText: price }).filter({ hasText: shares });
 
-  const count = await row.count();
+  const count = await matchingRow.count();
   if (count === 0) {
     throw new Error(`No wallet row found with price=${price}, shares=${shares} in PT+${ptPercent}%`);
   }
 
-  return row.first();
+  return matchingRow.first();
 }
 
 /**
@@ -958,11 +1088,11 @@ export async function verifyWalletNotPresent(
   // Wait for tab to be active
   await page.waitForTimeout(300);
 
-  // Find wallet row by price - should not exist
-  const walletSection = page.locator('[data-testid="wallet-tabs"]').locator("..");
-  const row = walletSection.locator("tr").filter({ hasText: price });
+  // Find wallet row by data-testid pattern and filter by price - should not exist
+  const walletRows = page.locator('tr[data-testid^="wallet-row-"]');
+  const matchingRow = walletRows.filter({ hasText: price });
 
-  const count = await row.count();
+  const count = await matchingRow.count();
   if (count > 0) {
     throw new Error(`Expected no wallet with price=${price} in PT+${ptPercent}%, but found ${count}`);
   }
@@ -990,4 +1120,130 @@ export async function verifyOverview(
   }
 
   console.log("[AssetHelper] Overview verified successfully.");
+}
+
+// ============================================================================
+// Wallet ID Verification Helpers
+// ============================================================================
+
+/**
+ * Toggle the Wallet ID column visibility in the Wallets table.
+ * Call this from the transactions page.
+ * @param visible - true to show the column, false to hide it
+ */
+export async function toggleWalletIdColumn(
+  page: Page,
+  visible: boolean
+): Promise<void> {
+  console.log(`[AssetHelper] Toggling Wallet ID column visibility to ${visible}...`);
+
+  const checkbox = page.locator('[data-testid="column-toggle-walletId"]');
+  const isCurrentlyChecked = await checkbox.isChecked();
+
+  if (isCurrentlyChecked !== visible) {
+    await checkbox.click();
+    await page.waitForTimeout(300);
+  }
+
+  console.log("[AssetHelper] Wallet ID column visibility toggled.");
+}
+
+/**
+ * Get the wallet ID from the Wallets table for a given PT and price.
+ * Call this from the transactions page with the Wallet ID column visible.
+ * @param ptPercent - The PT tab to look in
+ * @param price - The price of the wallet (formatted, e.g., "$100.00")
+ * @returns The short wallet ID (first 8 characters)
+ */
+export async function getWalletIdFromTable(
+  page: Page,
+  ptPercent: string,
+  price: string
+): Promise<string> {
+  console.log(`[AssetHelper] Getting wallet ID for PT=${ptPercent}%, price=${price}...`);
+
+  // Click the PT tab
+  await page.locator(`[data-testid="wallet-tab-pt-${ptPercent}"]`).click();
+  await page.waitForTimeout(300);
+
+  // Find the wallet row by data-testid pattern and filter by price
+  const walletRows = page.locator('tr[data-testid^="wallet-row-"]');
+  const matchingRow = walletRows.filter({ hasText: price }).first();
+
+  // Get the wallet ID from the data-testid attribute of the row
+  const rowTestId = await matchingRow.getAttribute("data-testid");
+  if (!rowTestId) {
+    throw new Error(`No wallet row found for PT=${ptPercent}%, price=${price}`);
+  }
+
+  // Extract wallet ID from data-testid="wallet-row-{fullWalletId}"
+  const fullWalletId = rowTestId.replace("wallet-row-", "");
+  // Return the short wallet ID (first 8 characters) to match what's displayed
+  const shortWalletId = fullWalletId.substring(0, 8);
+  console.log(`[AssetHelper] Found wallet ID: ${shortWalletId}`);
+
+  return shortWalletId;
+}
+
+/**
+ * Verify that a BUY transaction's wallet allocation for a given PT matches the expected wallet ID.
+ * Call this from the transactions page with the Wallet column visible.
+ * @param buyTxnTarget - The BUY transaction to check (identified by signal, price, investment)
+ * @param ptPercent - The PT percentage to check the allocation for
+ * @param expectedWalletId - The expected wallet ID (short, 8 chars)
+ */
+export async function verifyBuyTransactionWalletAllocation(
+  page: Page,
+  buyTxnTarget: EditTransactionTarget,
+  ptPercent: string,
+  expectedWalletId: string
+): Promise<void> {
+  console.log(`[AssetHelper] Verifying BUY transaction wallet allocation: PT=${ptPercent}%, expectedWalletId=${expectedWalletId}...`);
+
+  // Find the BUY transaction row
+  const row = await findTransactionRow(page, buyTxnTarget.price, buyTxnTarget.signal, buyTxnTarget.investment);
+
+  // Look for the wallet allocation element with the expected PT and wallet ID
+  const expectedTestId = `txn-wallet-pt-${ptPercent}-${expectedWalletId}`;
+  const walletAllocation = row.locator(`[data-testid="${expectedTestId}"]`);
+
+  const count = await walletAllocation.count();
+  if (count === 0) {
+    // Get all wallet allocations for debugging
+    const allAllocations = row.locator('[data-testid^="txn-wallet-pt-"]');
+    const allocCount = await allAllocations.count();
+    const allocTestIds: string[] = [];
+    for (let i = 0; i < allocCount; i++) {
+      const tid = await allAllocations.nth(i).getAttribute("data-testid");
+      if (tid) allocTestIds.push(tid);
+    }
+    throw new Error(
+      `No wallet allocation found with PT=${ptPercent}% and walletId=${expectedWalletId}. ` +
+      `Found allocations: ${allocTestIds.join(", ")}`
+    );
+  }
+
+  console.log(`[AssetHelper] Verified BUY transaction wallet allocation: PT=${ptPercent}% -> ${expectedWalletId}`);
+}
+
+/**
+ * Toggle the Wallet column visibility in the Transactions table.
+ * Call this from the transactions page.
+ * @param visible - true to show the column, false to hide it
+ */
+export async function toggleTransactionWalletColumn(
+  page: Page,
+  visible: boolean
+): Promise<void> {
+  console.log(`[AssetHelper] Toggling Transaction Wallet column visibility to ${visible}...`);
+
+  const checkbox = page.locator('[data-testid="column-toggle-wallet"]');
+  const isCurrentlyChecked = await checkbox.isChecked();
+
+  if (isCurrentlyChecked !== visible) {
+    await checkbox.click();
+    await page.waitForTimeout(300);
+  }
+
+  console.log("[AssetHelper] Transaction Wallet column visibility toggled.");
 }

@@ -186,6 +186,17 @@ export interface EditSellTransactionTarget {
   amount: string;  // Formatted amount (e.g., "$163.35")
 }
 
+// Wallet ID verification - verify a BUY transaction's allocation points to the correct wallet
+export interface WalletIdVerification {
+  // The wallet to get the ID from
+  walletPtPercent: string;
+  walletPrice: string;
+  // The BUY transaction to verify (identified by signal, price, investment)
+  buyTransaction: EditTransactionTarget;
+  // The PT percent allocation to verify in the BUY transaction
+  allocationPtPercent: string;
+}
+
 // Union type for transaction actions in SELL CRUD test
 export type SellCrudTransactionAction = BuyTransactionAction | SellTransactionAction;
 
@@ -202,6 +213,7 @@ export interface SellTransactionAction {
     wallets: WalletExpected[];
     walletsNotPresent?: { ptPercent: string; price: string }[];
     overview: OverviewExpected;
+    walletIdVerification?: WalletIdVerification;     // Verify wallet ID propagation
   };
 }
 

@@ -680,10 +680,14 @@ export default function AssetTransactionsPage() {
             <div className="flex flex-col text-xs text-muted-foreground">
               {sortedAllocations.map((alloc) => {
                 const pt = profitTargets.find(p => p.id === alloc.profitTargetId);
-                const ptName = pt ? `+${pt.targetPercent}%` : "PT";
+                const ptPercent = pt?.targetPercent ?? 0;
+                const ptName = pt ? `+${ptPercent}%` : "PT";
                 const shortWalletId = alloc.walletId.substring(0, 8);
                 return (
-                  <span key={alloc.walletId}>
+                  <span
+                    key={alloc.walletId}
+                    data-testid={`txn-wallet-pt-${ptPercent}-${shortWalletId}`}
+                  >
                     {ptName}: {shortWalletId}
                   </span>
                 );
@@ -843,7 +847,10 @@ export default function AssetTransactionsPage() {
       header: "Wallet ID",
       defaultHidden: true,
       render: (item) => (
-        <span className="text-xs text-muted-foreground font-mono">
+        <span
+          className="text-xs text-muted-foreground font-mono"
+          data-testid={`wallet-id-${item.id.substring(0, 8)}`}
+        >
           {item.id.substring(0, 8)}
         </span>
       ),
@@ -891,6 +898,7 @@ export default function AssetTransactionsPage() {
       render: (item) => (
         <button
           onClick={() => setSellWallet(item)}
+          data-testid={`wallet-sell-${item.id}`}
           className={`hover:underline text-sm ${
             isPTHit
               ? "text-green-400 hover:text-green-300"
@@ -1512,6 +1520,7 @@ export default function AssetTransactionsPage() {
               keyField="id"
               emptyMessage="No wallets for this profit target."
               hiddenColumns={walletHiddenColumns}
+              rowTestId={(item) => `wallet-row-${item.id}`}
             />
           </div>
         </div>
@@ -1532,6 +1541,7 @@ export default function AssetTransactionsPage() {
           keyField="id"
           emptyMessage="No transactions yet. Click 'New Transaction' to add one."
           hiddenColumns={hiddenColumns}
+          rowTestId={(item) => `transaction-row-${item.id}`}
         />
       </div>
 

@@ -16,6 +16,8 @@ import {
   navigateToTransactionsPage,
   createBuyTransaction,
   createSellTransaction,
+  editSellTransaction,
+  deleteSellTransaction,
   verifyBuyTransaction,
   verifySellTransaction,
   verifyTransactionNotPresent,
@@ -24,6 +26,10 @@ import {
   verifyWalletNotPresent,
   verifyOverview,
   updateTestPrice,
+  toggleWalletIdColumn,
+  getWalletIdFromTable,
+  toggleTransactionWalletColumn,
+  verifyBuyTransactionWalletAllocation,
 } from "../utils/assetHelper";
 
 // Set test timeout to 240 seconds (longer for full SELL CRUD flow)
@@ -112,11 +118,11 @@ test.describe("Assets - SELL Transaction CRUD (JSON-driven)", () => {
       else {
         const sellTxn = txn as SellTransactionAction;
         if (isDelete) {
-          console.log(`[${testConfig.scenario}] Deleting SELL transaction...`);
-          // TODO: Implement deleteSellTransaction when needed
+          console.log(`[${testConfig.scenario}] Deleting SELL transaction: ${sellTxn.target!.signal} @ ${sellTxn.target!.price}...`);
+          await deleteSellTransaction(page, sellTxn.target!);
         } else if (isEdit) {
-          console.log(`[${testConfig.scenario}] Editing SELL transaction...`);
-          // TODO: Implement editSellTransaction when needed
+          console.log(`[${testConfig.scenario}] Editing SELL transaction: ${sellTxn.target!.signal} @ ${sellTxn.target!.price}...`);
+          await editSellTransaction(page, sellTxn.target!, sellTxn.input!);
         } else {
           console.log(`[${testConfig.scenario}] Creating SELL transaction from PT${sellTxn.input!.ptPercent}% wallet @ $${sellTxn.input!.walletPrice}...`);
           await createSellTransaction(page, sellTxn.input!.ptPercent, sellTxn.input!.walletPrice, sellTxn.input!);
@@ -179,6 +185,43 @@ test.describe("Assets - SELL Transaction CRUD (JSON-driven)", () => {
       // Verify overview
       console.log(`[${testConfig.scenario}] Verifying overview...`);
       await verifyOverview(page, txn.expected.overview);
+
+      // Verify wallet ID propagation if specified (only for SELL transactions)
+      if (isSell) {
+        const sellTxn = txn as SellTransactionAction;
+        if (sellTxn.expected.walletIdVerification) {
+          const verification = sellTxn.expected.walletIdVerification;
+          console.log(`[${testConfig.scenario}] Verifying wallet ID propagation...`);
+
+          // Step 1: Show wallet ID column in wallets table
+          await toggleWalletIdColumn(page, true);
+
+          // Step 2: Get the wallet ID from the specified wallet
+          const walletId = await getWalletIdFromTable(
+            page,
+            verification.walletPtPercent,
+            verification.walletPrice
+          );
+
+          // Step 3: Show wallet column in transactions table
+          await toggleTransactionWalletColumn(page, true);
+
+          // Step 4: Verify the BUY transaction's allocation points to this wallet
+          await verifyBuyTransactionWalletAllocation(
+            page,
+            verification.buyTransaction,
+            verification.allocationPtPercent,
+            walletId
+          );
+
+          console.log(`[${testConfig.scenario}] Wallet ID propagation verified: PT${verification.allocationPtPercent}% -> ${walletId}`);
+
+          // Step 5: Clean up - hide the extra columns to restore normal UI state
+          await toggleTransactionWalletColumn(page, false);
+          await toggleWalletIdColumn(page, false);
+          console.log(`[${testConfig.scenario}] Wallet ID verification cleanup complete.`);
+        }
+      }
 
       console.log(`[${testConfig.scenario}] Transaction ${txnKey} verified successfully.`);
     }

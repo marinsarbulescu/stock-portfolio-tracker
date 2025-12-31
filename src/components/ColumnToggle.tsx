@@ -33,6 +33,7 @@ export function ColumnToggle<T>({
           >
             <input
               type="checkbox"
+              data-testid={`column-toggle-${key}`}
               checked={isVisible}
               onChange={() => onToggle(key)}
               className="w-3.5 h-3.5 rounded border-border bg-background text-foreground focus:ring-1 focus:ring-border cursor-pointer"

@@ -34,6 +34,12 @@ const tests: TestItem[] = [
     specFile: "assets/asset-buy-crud.spec.ts",
     describeName: "Assets - BUY Transaction CRUD",
   },
+  {
+    id: "sell-1",
+    name: "AssetSellCRUD - SELL transaction CRUD",
+    specFile: "assets/asset-sell-crud.spec.ts",
+    describeName: "Assets - SELL Transaction CRUD",
+  },
 ];
 
 // Group tests by describeName

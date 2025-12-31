@@ -427,6 +427,7 @@ export function TransactionModal({
             </label>
             <select
               id="assetId"
+              data-testid="transaction-form-asset"
               value={formData.assetId}
               onChange={(e) =>
                 setFormData({ ...formData, assetId: e.target.value })
@@ -596,6 +597,7 @@ export function TransactionModal({
             <input
               type="number"
               id="quantity"
+              data-testid="transaction-form-quantity"
               step="0.01"
               value={formData.quantity}
               onChange={(e) =>
