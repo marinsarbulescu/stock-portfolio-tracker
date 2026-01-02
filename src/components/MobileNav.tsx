@@ -7,9 +7,10 @@ import { usePathname } from "next/navigation";
 interface MobileNavProps {
   userEmail?: string;
   onSignOut: () => void;
+  isAdmin?: boolean;
 }
 
-export function MobileNav({ userEmail, onSignOut }: MobileNavProps) {
+export function MobileNav({ userEmail, onSignOut, isAdmin }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -104,18 +105,20 @@ export function MobileNav({ userEmail, onSignOut }: MobileNavProps) {
             >
               Assets
             </Link>
-            <Link
-              href="/e2e-runner"
-              onClick={() => setIsOpen(false)}
-              data-testid="mobile-nav-e2e"
-              className={`block px-4 py-2 text-sm ${
-                pathname === "/e2e-runner"
-                  ? "text-foreground font-medium"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
-            >
-              E2E
-            </Link>
+            {isAdmin && (
+              <Link
+                href="/e2e-runner"
+                onClick={() => setIsOpen(false)}
+                data-testid="mobile-nav-e2e"
+                className={`block px-4 py-2 text-sm ${
+                  pathname === "/e2e-runner"
+                    ? "text-foreground font-medium"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+              >
+                E2E
+              </Link>
+            )}
           </nav>
           <button
             onClick={() => {

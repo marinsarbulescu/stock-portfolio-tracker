@@ -218,7 +218,7 @@ export default function Dashboard() {
           }
           return (
             <span className={item.isTestPrice ? "text-purple-400" : ""}>
-              {item.currentPrice.toFixed(2)}
+              ${item.currentPrice.toFixed(2)}
             </span>
           );
         },
@@ -269,7 +269,7 @@ export default function Dashboard() {
                 ? "text-yellow-400"
                 : "";
 
-          return <span className={colorClass}>{item.daysSinceLastBuy}d</span>;
+          return <span className={colorClass}>{item.daysSinceLastBuy}</span>;
         },
       },
       {
@@ -291,7 +291,6 @@ export default function Dashboard() {
 
           return (
             <span className={colorClass}>
-              {item.pctToLowestPT >= 0 ? "+" : ""}
               {item.pctToLowestPT.toFixed(2)}%
             </span>
           );

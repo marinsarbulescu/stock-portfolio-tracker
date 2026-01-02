@@ -14,6 +14,7 @@ function AuthedLayoutContent({ children }: { children: React.ReactNode }) {
   ]);
   const router = useRouter();
   const pathname = usePathname();
+  const isAdmin = user?.signInDetails?.loginId === "marin.sarbulescu@gmail.com";
 
   useEffect(() => {
     if (authStatus === "unauthenticated") {
@@ -65,17 +66,19 @@ function AuthedLayoutContent({ children }: { children: React.ReactNode }) {
                 >
                   Assets
                 </Link>
-                <Link
-                  href="/e2e-runner"
-                  data-testid="nav-e2e"
-                  className={`text-sm ${
-                    pathname === "/e2e-runner"
-                      ? "text-foreground font-medium"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  E2E
-                </Link>
+                {isAdmin && (
+                  <Link
+                    href="/e2e-runner"
+                    data-testid="nav-e2e"
+                    className={`text-sm ${
+                      pathname === "/e2e-runner"
+                        ? "text-foreground font-medium"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    E2E
+                  </Link>
+                )}
               </nav>
             </div>
             <div className="hidden md:flex items-center gap-4">
@@ -93,6 +96,7 @@ function AuthedLayoutContent({ children }: { children: React.ReactNode }) {
             <MobileNav
               userEmail={user?.signInDetails?.loginId}
               onSignOut={signOut}
+              isAdmin={isAdmin}
             />
           </div>
         </header>
