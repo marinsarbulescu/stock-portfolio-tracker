@@ -592,7 +592,11 @@ export async function createBuyTransaction(
   await page.locator('[data-testid="transaction-form-investment"]').fill(input.investment);
 
   // Wait for PT allocation inputs to appear (they appear after price+investment are filled)
-  await page.waitForTimeout(500);
+  // Wait for the first allocation input to be visible before filling any
+  if (input.allocations.length > 0) {
+    const firstAllocTestId = `transaction-pt-alloc-${input.allocations[0].ptPercent}`;
+    await expect(page.locator(`[data-testid="${firstAllocTestId}"]`)).toBeVisible({ timeout: 10000 });
+  }
 
   // Fill PT allocations
   for (const alloc of input.allocations) {
@@ -649,8 +653,11 @@ export async function editBuyTransaction(
   await page.locator('[data-testid="transaction-form-investment"]').clear();
   await page.locator('[data-testid="transaction-form-investment"]').fill(input.investment);
 
-  // Wait for PT allocation inputs to update
-  await page.waitForTimeout(500);
+  // Wait for PT allocation inputs to be visible before updating
+  if (input.allocations.length > 0) {
+    const firstAllocTestId = `transaction-pt-alloc-${input.allocations[0].ptPercent}`;
+    await expect(page.locator(`[data-testid="${firstAllocTestId}"]`)).toBeVisible({ timeout: 10000 });
+  }
 
   // Update PT allocations
   for (const alloc of input.allocations) {
