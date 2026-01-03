@@ -1,0 +1,176 @@
+{
+  "scenario": "DashboardSignals",
+  "description": "Test %2PT color logic (green/yellow/default) in Dashboard and Wallets tables",
+  "asset": {
+    "input": {
+      "symbol": "E2E-DASHBOARD-SIGNALS",
+      "name": "E2E Dashboard Signals Test",
+      "type": "STOCK",
+      "testPrice": "100",
+      "commission": "0.5",
+      "status": "ACTIVE"
+    }
+  },
+  "entryTargets": [
+    { "input": { "name": "ET1", "targetPercent": "2", "sortOrder": "1" } }
+  ],
+  "profitTargets": [
+    { "input": { "name": "PT4", "targetPercent": "4", "allocationPercent": "50", "sortOrder": "1" } },
+    { "input": { "name": "PT8", "targetPercent": "8", "allocationPercent": "30", "sortOrder": "2" } },
+    { "input": { "name": "PT16", "targetPercent": "16", "allocationPercent": "20", "sortOrder": "3" } }
+  ],
+  "actions": {
+    "buyA": {
+      "input": {
+        "signal": "INITIAL",
+        "price": "100",
+        "investment": "600",
+        "allocations": [
+          { "ptPercent": "4", "percentage": "50" },
+          { "ptPercent": "8", "percentage": "30" },
+          { "ptPercent": "16", "percentage": "20" }
+        ]
+      },
+      "expected": {
+        "transaction": {
+          "type": "Buy",
+          "signal": "Initial",
+          "price": "$100.00",
+          "quantity": "6.00000",
+          "investment": "$600.00",
+          "entryTarget": "$98.00",
+          "profitLoss": "-",
+          "profitLossPercent": "-"
+        },
+        "wallets": [
+          { "ptPercent": "4", "price": "$100.00", "shares": "3.00000", "investment": "$300.00", "pt": "$104.52", "pct2pt": "-4.33%", "pct2ptHighlight": "none" },
+          { "ptPercent": "8", "price": "$100.00", "shares": "1.80000", "investment": "$180.00", "pt": "$108.54", "pct2pt": "-7.87%", "pct2ptHighlight": "none" },
+          { "ptPercent": "16", "price": "$100.00", "shares": "1.20000", "investment": "$120.00", "pt": "$116.58", "pct2pt": "-14.22%", "pct2ptHighlight": "none" }
+        ],
+        "overview": {
+          "totalShares": "6.00000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "3.00000" },
+            { "ptPercent": "8", "shares": "1.80000" },
+            { "ptPercent": "16", "shares": "1.20000" }
+          ]
+        },
+        "dashboard": {
+          "symbol": "E2E-DASHBOARD-SIGNALS",
+          "pct2pt": "-4.33%",
+          "pct2ptHighlight": "none"
+        }
+      }
+    },
+    "priceUpdateA": {
+      "testPriceUpdate": "104",
+      "expected": {
+        "wallets": [
+          { "ptPercent": "4", "price": "$100.00", "shares": "3.00000", "investment": "$300.00", "pt": "$104.52", "pct2pt": "-0.50%", "pct2ptHighlight": "yellow" },
+          { "ptPercent": "8", "price": "$100.00", "shares": "1.80000", "investment": "$180.00", "pt": "$108.54", "pct2pt": "-4.19%", "pct2ptHighlight": "none" },
+          { "ptPercent": "16", "price": "$100.00", "shares": "1.20000", "investment": "$120.00", "pt": "$116.58", "pct2pt": "-10.79%", "pct2ptHighlight": "none" }
+        ],
+        "overview": {
+          "totalShares": "6.00000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "3.00000" },
+            { "ptPercent": "8", "shares": "1.80000" },
+            { "ptPercent": "16", "shares": "1.20000" }
+          ]
+        },
+        "dashboard": {
+          "symbol": "E2E-DASHBOARD-SIGNALS",
+          "pct2pt": "-0.50%",
+          "pct2ptHighlight": "yellow"
+        }
+      }
+    },
+    "priceUpdateB": {
+      "testPriceUpdate": "104.7",
+      "expected": {
+        "wallets": [
+          { "ptPercent": "4", "price": "$100.00", "shares": "3.00000", "investment": "$300.00", "pt": "$104.52", "pct2pt": "0.17%", "pct2ptHighlight": "green" },
+          { "ptPercent": "8", "price": "$100.00", "shares": "1.80000", "investment": "$180.00", "pt": "$108.54", "pct2pt": "-3.54%", "pct2ptHighlight": "none" },
+          { "ptPercent": "16", "price": "$100.00", "shares": "1.20000", "investment": "$120.00", "pt": "$116.58", "pct2pt": "-10.19%", "pct2ptHighlight": "none" }
+        ],
+        "overview": {
+          "totalShares": "6.00000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "3.00000" },
+            { "ptPercent": "8", "shares": "1.80000" },
+            { "ptPercent": "16", "shares": "1.20000" }
+          ]
+        },
+        "dashboard": {
+          "symbol": "E2E-DASHBOARD-SIGNALS",
+          "pct2pt": "0.17%",
+          "pct2ptHighlight": "green"
+        }
+      }
+    },
+    "priceUpdateC": {
+      "testPriceUpdate": "108.5",
+      "expected": {
+        "wallets": [
+          { "ptPercent": "4", "price": "$100.00", "shares": "3.00000", "investment": "$300.00", "pt": "$104.52", "pct2pt": "3.81%", "pct2ptHighlight": "green" },
+          { "ptPercent": "8", "price": "$100.00", "shares": "1.80000", "investment": "$180.00", "pt": "$108.54", "pct2pt": "-0.04%", "pct2ptHighlight": "yellow" },
+          { "ptPercent": "16", "price": "$100.00", "shares": "1.20000", "investment": "$120.00", "pt": "$116.58", "pct2pt": "-6.93%", "pct2ptHighlight": "none" }
+        ],
+        "overview": {
+          "totalShares": "6.00000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "3.00000" },
+            { "ptPercent": "8", "shares": "1.80000" },
+            { "ptPercent": "16", "shares": "1.20000" }
+          ]
+        },
+        "dashboard": {
+          "symbol": "E2E-DASHBOARD-SIGNALS",
+          "pct2pt": "3.81%",
+          "pct2ptHighlight": "green"
+        }
+      }
+    },
+    "sellA": {
+      "isSell": true,
+      "sellInput": {
+        "ptPercent": "4",
+        "walletPrice": "$100.00",
+        "signal": "PROFITTARGET",
+        "price": "108.50",
+        "quantity": "3"
+      },
+      "expected": {
+        "sellTransaction": {
+          "type": "Sell",
+          "signal": "Profit Target",
+          "price": "$108.50",
+          "quantity": "3.00000",
+          "amount": "$323.87",
+          "profitLoss": "$23.87",
+          "profitLossPercent": "7.96%"
+        },
+        "wallets": [
+          { "ptPercent": "8", "price": "$100.00", "shares": "1.80000", "investment": "$180.00", "pt": "$108.54", "pct2pt": "-0.04%", "pct2ptHighlight": "yellow" },
+          { "ptPercent": "16", "price": "$100.00", "shares": "1.20000", "investment": "$120.00", "pt": "$116.58", "pct2pt": "-6.93%", "pct2ptHighlight": "none" }
+        ],
+        "walletsNotPresent": [
+          { "ptPercent": "4", "price": "$100.00" }
+        ],
+        "overview": {
+          "totalShares": "3.00000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "0.00000" },
+            { "ptPercent": "8", "shares": "1.80000" },
+            { "ptPercent": "16", "shares": "1.20000" }
+          ]
+        },
+        "dashboard": {
+          "symbol": "E2E-DASHBOARD-SIGNALS",
+          "pct2pt": "-0.04%",
+          "pct2ptHighlight": "yellow"
+        }
+      }
+    }
+  }
+}

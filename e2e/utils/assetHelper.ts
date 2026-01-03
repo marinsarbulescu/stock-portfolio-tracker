@@ -27,8 +27,9 @@ export type { AssetCreateInput, TargetInput, TargetExpected, TransactionInput, T
 // ============================================================================
 
 export const HIGHLIGHT_COLORS = {
-  green: "text-green-400",  // Positive %2PT highlight
-  none: "",                 // No highlight (negative %2PT)
+  green: "text-green-400",   // %2PT >= -0.005% (PT hit)
+  yellow: "text-yellow-400", // -1% <= %2PT < -0.005% (close to PT)
+  none: "",                  // %2PT < -1% (far from PT)
 } as const;
 
 // ============================================================================
@@ -153,6 +154,26 @@ export async function updateTestPrice(page: Page, newPrice: string): Promise<voi
 
   // Navigate back to transactions
   await navigateToTransactionsPage(page);
+
+  console.log("[AssetHelper] Test price updated successfully.");
+}
+
+/**
+ * Update the test price of an asset. Call this when already on the Edit page.
+ * Just updates the price field and saves. Does not navigate.
+ */
+export async function updateTestPriceOnEditPage(page: Page, newPrice: string): Promise<void> {
+  console.log(`[AssetHelper] Updating test price to ${newPrice}...`);
+
+  // Update test price field
+  await page.locator('[data-testid="asset-form-testPrice"]').clear();
+  await page.locator('[data-testid="asset-form-testPrice"]').fill(newPrice);
+
+  // Submit form
+  await page.locator('[data-testid="asset-form-submit"]').click();
+
+  // Wait for save to complete
+  await expect(page.locator('[data-testid="asset-form-submit"]')).toHaveText("Save Changes", { timeout: 10000 });
 
   console.log("[AssetHelper] Test price updated successfully.");
 }
@@ -1070,8 +1091,9 @@ export async function verifyWallet(
       await expect(pct2ptCell).toHaveClass(new RegExp(expectedClass));
       console.log(`[AssetHelper] Verified %2PT highlight: ${expected.pct2ptHighlight}`);
     } else {
-      // Should NOT have any highlight class (green)
+      // Should NOT have any highlight class (green or yellow)
       await expect(pct2ptCell).not.toHaveClass(/text-green-400/);
+      await expect(pct2ptCell).not.toHaveClass(/text-yellow-400/);
       console.log(`[AssetHelper] Verified %2PT has no highlight`);
     }
   }
@@ -1253,4 +1275,76 @@ export async function toggleTransactionWalletColumn(
   }
 
   console.log("[AssetHelper] Transaction Wallet column visibility toggled.");
+}
+
+// ============================================================================
+// Dashboard Verification Helpers
+// ============================================================================
+
+export interface DashboardExpectedRow {
+  symbol: string;
+  pct2pt: string;
+  pct2ptHighlight: "green" | "yellow" | "none";
+}
+
+/**
+ * Navigate to the Dashboard page.
+ */
+export async function navigateToDashboard(page: Page): Promise<void> {
+  console.log("[AssetHelper] Navigating to Dashboard...");
+
+  await page.locator('[data-testid="nav-dashboard"]').click();
+  await waitForDashboardToLoad(page);
+
+  console.log("[AssetHelper] Dashboard navigation complete.");
+}
+
+/**
+ * Wait for Dashboard to load (loading indicator disappears).
+ */
+export async function waitForDashboardToLoad(page: Page): Promise<void> {
+  console.log("[AssetHelper] Waiting for Dashboard to load...");
+
+  // Wait for loading text to disappear or table to appear
+  await page.waitForSelector('text="Loading dashboard..."', { state: "hidden", timeout: 15000 }).catch(() => {
+    // If loading text was never shown, that's fine
+  });
+
+  // Wait for the dashboard table to be visible
+  await page.waitForSelector('table', { state: "visible", timeout: 15000 });
+
+  console.log("[AssetHelper] Dashboard loaded.");
+}
+
+/**
+ * Verify Dashboard row values and %2PT highlight color.
+ * The asset must be ACTIVE to appear on Dashboard.
+ */
+export async function verifyDashboardRow(
+  page: Page,
+  expected: DashboardExpectedRow
+): Promise<void> {
+  console.log(`[AssetHelper] Verifying Dashboard row for ${expected.symbol}...`);
+
+  // Find the row by data-testid (use first() in case of duplicates from failed tests)
+  const row = page.locator(`[data-testid="dashboard-row-${expected.symbol}"]`).first();
+  await expect(row).toBeVisible({ timeout: 10000 });
+
+  // Find the %2PT cell (use first() in case of duplicates)
+  const pct2ptCell = page.locator(`[data-testid="dashboard-pct2pt-${expected.symbol}"]`).first();
+  await expect(pct2ptCell).toHaveText(expected.pct2pt);
+
+  // Verify highlight color
+  const expectedClass = HIGHLIGHT_COLORS[expected.pct2ptHighlight];
+  if (expectedClass) {
+    await expect(pct2ptCell).toHaveClass(new RegExp(expectedClass));
+    console.log(`[AssetHelper] Verified Dashboard %2PT highlight: ${expected.pct2ptHighlight}`);
+  } else {
+    // No highlight - should NOT have green or yellow
+    await expect(pct2ptCell).not.toHaveClass(/text-green-400/);
+    await expect(pct2ptCell).not.toHaveClass(/text-yellow-400/);
+    console.log(`[AssetHelper] Verified Dashboard %2PT has no highlight`);
+  }
+
+  console.log("[AssetHelper] Dashboard row verified successfully.");
 }

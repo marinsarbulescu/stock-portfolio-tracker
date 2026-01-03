@@ -113,7 +113,7 @@ export interface WalletExpected {
   investment: string;
   pt: string;
   pct2pt: string;
-  pct2ptHighlight?: "green" | "none";  // Optional highlight verification
+  pct2ptHighlight?: "green" | "yellow" | "none";  // Optional highlight verification
 }
 
 export interface OverviewExpected {
@@ -230,6 +230,44 @@ export interface AssetSellCrudTestConfig {
   };
 }
 
+// ============================================================================
+// Dashboard Signals Test Types
+// ============================================================================
+
+export interface DashboardExpected {
+  symbol: string;
+  pct2pt: string;
+  pct2ptHighlight: "green" | "yellow" | "none";
+}
+
+export interface DashboardSignalAction {
+  testPriceUpdate?: string;
+  isSell?: boolean;                    // Discriminator for SELL actions
+  input?: TransactionInput;            // For BUY transaction creation
+  sellInput?: SellTransactionInput;    // For SELL transaction creation
+  expected: {
+    transaction?: TransactionExpected;
+    sellTransaction?: SellTransactionExpected;  // For SELL verification
+    wallets: WalletExpected[];
+    walletsNotPresent?: { ptPercent: string; price: string }[];  // Verify deleted wallets
+    overview: OverviewExpected;
+    dashboard: DashboardExpected;
+  };
+}
+
+export interface DashboardSignalsTestConfig {
+  scenario: string;
+  description: string;
+  asset: {
+    input: AssetCreateInput;
+  };
+  entryTargets: { input: TargetInput }[];
+  profitTargets: { input: TargetInput }[];
+  actions: {
+    [key: string]: DashboardSignalAction;
+  };
+}
+
 export function loadAssetCrudTestData(fileName: string): AssetCrudTestConfig {
   const filePath = path.resolve(process.cwd(), fileName);
   console.log(`[jsonHelper.ts] Attempting to load CRUD JSON from: ${filePath}`);
@@ -343,6 +381,30 @@ export function loadAssetSellCrudTestData(fileName: string): AssetSellCrudTestCo
     const data = JSON.parse(fileContent) as AssetSellCrudTestConfig;
     console.log(
       `[jsonHelper.ts] Successfully parsed Sell CRUD JSON for scenario: ${data.scenario}`
+    );
+    return data;
+  } catch (error) {
+    throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
+  }
+}
+
+export function loadDashboardSignalsTestData(fileName: string): DashboardSignalsTestConfig {
+  const filePath = path.resolve(process.cwd(), fileName);
+  console.log(`[jsonHelper.ts] Attempting to load Dashboard Signals JSON from: ${filePath}`);
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`JSON file not found: ${filePath}`);
+  }
+
+  const fileContent = fs.readFileSync(filePath, "utf-8");
+  console.log(
+    `[jsonHelper.ts] File content read successfully. Length: ${fileContent.length}`
+  );
+
+  try {
+    const data = JSON.parse(fileContent) as DashboardSignalsTestConfig;
+    console.log(
+      `[jsonHelper.ts] Successfully parsed Dashboard Signals JSON for scenario: ${data.scenario}`
     );
     return data;
   } catch (error) {

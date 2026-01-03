@@ -278,7 +278,14 @@ export default function Dashboard() {
         sortable: true,
         render: (item) => {
           if (item.pctToLowestPT === null) {
-            return <span className="text-muted-foreground">-</span>;
+            return (
+              <span
+                className="text-muted-foreground"
+                data-testid={`dashboard-pct2pt-${item.symbol}`}
+              >
+                -
+              </span>
+            );
           }
 
           const color = getPct2PTColor(item.pctToLowestPT);
@@ -292,7 +299,10 @@ export default function Dashboard() {
           // Avoid displaying "-0.00%" - show "0.00%" for values that round to zero
           const displayValue = Math.abs(item.pctToLowestPT) < 0.005 ? "0.00" : item.pctToLowestPT.toFixed(2);
           return (
-            <span className={colorClass}>
+            <span
+              className={colorClass}
+              data-testid={`dashboard-pct2pt-${item.symbol}`}
+            >
               {displayValue}%
             </span>
           );
@@ -345,6 +355,7 @@ export default function Dashboard() {
             columns={columns}
             keyField="id"
             emptyMessage="No active assets. Add assets to see signals."
+            rowTestId={(item) => `dashboard-row-${item.symbol}`}
           />
         </div>
       )}

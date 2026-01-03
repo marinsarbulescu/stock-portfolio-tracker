@@ -40,6 +40,12 @@ const tests: TestItem[] = [
     specFile: "assets/asset-sell-crud.spec.ts",
     describeName: "Assets - SELL Transaction CRUD",
   },
+  {
+    id: "dashboard-signals-1",
+    name: "DashboardSignals - Verify %2PT colors in Dashboard and Wallets tables",
+    specFile: "assets/dashboard-signals.spec.ts",
+    describeName: "Dashboard Signals - %2PT Color Logic",
+  },
 ];
 
 // Group tests by describeName
