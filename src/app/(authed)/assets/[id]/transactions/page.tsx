@@ -524,42 +524,32 @@ export default function AssetTransactionsPage() {
     return { effectivePrice: price, isTestPrice: isTest };
   }, [asset, prices]);
 
-  // Calculate OOP and Cash Balance by processing transactions chronologically
-  const { oop, cashBalance } = useMemo(() => {
+  // Calculate balance and OOP by processing transactions chronologically
+  // balance: running net position (negative = invested, positive = cash available)
+  // oop: maximum out-of-pocket investment (tracks the deepest investment point)
+  const { balance, oop } = useMemo(() => {
     // Sort by date ascending (oldest first)
     const sorted = [...transactions].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
-    let totalOOP = 0;
-    let currentCashBalance = 0;
+    let balance = 0;
+    let oop = 0;
 
     for (const txn of sorted) {
       if (txn.type === "BUY" && txn.investment !== null) {
-        const investment = txn.investment;
-        if (currentCashBalance >= investment) {
-          // Fund entirely from cash balance
-          currentCashBalance -= investment;
-        } else {
-          // Need additional out-of-pocket cash
-          const additionalOOP = investment - currentCashBalance;
-          totalOOP += additionalOOP;
-          currentCashBalance = 0;
-        }
-      } else if (txn.type === "SELL" && txn.amount !== null) {
-        // Add sale proceeds to cash balance
-        currentCashBalance += txn.amount;
-      } else if ((txn.type === "DIVIDEND" || txn.type === "SLP") && txn.amount !== null) {
-        // Dividend/SLP adds to cash balance
-        currentCashBalance += txn.amount;
+        balance -= txn.investment;
+        oop = Math.max(oop, Math.abs(balance));
+      } else if ((txn.type === "SELL" || txn.type === "DIVIDEND" || txn.type === "SLP") && txn.amount !== null) {
+        balance += txn.amount;
       }
     }
 
-    return {
-      oop: Math.max(0, totalOOP),
-      cashBalance: Math.max(0, currentCashBalance),
-    };
+    return { balance, oop };
   }, [transactions]);
+
+  // Derived value for display
+  const cashBalance = oop + balance;
 
   // Calculate transaction counts and shares
   const txnStats = useMemo(() => {
@@ -1434,8 +1424,8 @@ export default function AssetTransactionsPage() {
                 <span className="text-sm text-foreground">{formatCurrency(oop)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Cash Balance</span>
-                <span className="text-sm text-foreground">{formatCurrency(cashBalance)}</span>
+                <span className="text-sm text-muted-foreground">Balance</span>
+                <span className="text-sm text-foreground">{formatCurrency(balance)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Market Value</span>
@@ -1446,13 +1436,13 @@ export default function AssetTransactionsPage() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">ROIC</span>
+                <span className="text-sm text-muted-foreground">ROI</span>
                 <span className="text-sm text-foreground">
                   {effectivePrice !== null && oop > 0
                     ? (() => {
                         const marketValue = txnStats.totalShares * effectivePrice;
-                        const roic = ((cashBalance + marketValue - oop) / oop) * 100;
-                        return `${roic.toFixed(2)}%`;
+                        const roi = ((balance + marketValue) / oop) * 100;
+                        return `${roi.toFixed(2)}%`;
                       })()
                     : "-"}
                 </span>
