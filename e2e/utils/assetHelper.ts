@@ -72,6 +72,47 @@ async function selectDropdownOption(
   throw new Error(`Failed to select "${value}" in dropdown "${selectTestId}" after ${maxRetries} attempts`);
 }
 
+/**
+ * Fill an allocation input with retry logic to handle React re-renders.
+ * The allocation inputs can get detached from DOM when totalShares recalculates.
+ * Similar pattern to selectDropdownOption but for text/number inputs.
+ */
+async function fillAllocationInput(
+  page: Page,
+  testId: string,
+  value: string,
+  maxRetries: number = 3
+): Promise<void> {
+  const locator = page.locator(`[data-testid="${testId}"]`);
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // Wait for element to be attached and stable
+      await locator.waitFor({ state: 'attached', timeout: 5000 });
+
+      // Clear and fill
+      await locator.clear();
+      await locator.fill(value);
+
+      // Verify the value was set
+      const actualValue = await locator.inputValue();
+      if (actualValue === value) {
+        return; // Success
+      }
+
+      console.warn(`[AssetHelper] Allocation fill attempt ${attempt}: expected "${value}", got "${actualValue}"`);
+    } catch (error) {
+      console.warn(`[AssetHelper] Allocation fill attempt ${attempt} failed:`, error);
+    }
+
+    if (attempt < maxRetries) {
+      await page.waitForTimeout(200); // Allow React to settle
+    }
+  }
+
+  throw new Error(`Failed to fill allocation ${testId} with "${value}" after ${maxRetries} attempts`);
+}
+
 // ============================================================================
 // Navigation & Page Helpers
 // ============================================================================
@@ -619,10 +660,13 @@ export async function createBuyTransaction(
     await expect(page.locator(`[data-testid="${firstAllocTestId}"]`)).toBeVisible({ timeout: 10000 });
   }
 
-  // Fill PT allocations
+  // Fill PT allocations (with retry logic to handle React re-renders)
   for (const alloc of input.allocations) {
-    const allocInput = page.locator(`[data-testid="transaction-pt-alloc-${alloc.ptPercent}"]`);
-    await allocInput.fill(alloc.percentage);
+    await fillAllocationInput(
+      page,
+      `transaction-pt-alloc-${alloc.ptPercent}`,
+      alloc.percentage
+    );
   }
 
   // Submit
@@ -680,11 +724,13 @@ export async function editBuyTransaction(
     await expect(page.locator(`[data-testid="${firstAllocTestId}"]`)).toBeVisible({ timeout: 10000 });
   }
 
-  // Update PT allocations
+  // Update PT allocations (with retry logic to handle React re-renders)
   for (const alloc of input.allocations) {
-    const allocInput = page.locator(`[data-testid="transaction-pt-alloc-${alloc.ptPercent}"]`);
-    await allocInput.clear();
-    await allocInput.fill(alloc.percentage);
+    await fillAllocationInput(
+      page,
+      `transaction-pt-alloc-${alloc.ptPercent}`,
+      alloc.percentage
+    );
   }
 
   // Submit
