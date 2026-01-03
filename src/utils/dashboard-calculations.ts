@@ -89,13 +89,13 @@ export function calculatePctToTarget(
 /**
  * Get color indicator for %2PT (percentage to profit target)
  * @param pct - Percentage to profit target
- * @returns 'default' (< -1%), 'yellow' (-1% to -0.01%), or 'green' (>= 0%)
+ * @returns 'default' (< -1%), 'yellow' (-1% to < -0.005%), or 'green' (>= -0.005%, rounds to 0.00%)
  */
 export function getPct2PTColor(
   pct: number | null
 ): "default" | "yellow" | "green" {
   if (pct === null) return "default";
-  if (pct >= 0) return "green"; // PT hit
+  if (pct >= -0.005) return "green"; // PT hit (includes values that round to 0.00%)
   if (pct >= -1) return "yellow"; // -1% to -0.01% (close to PT)
   return "default"; // < -1%
 }

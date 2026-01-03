@@ -7,6 +7,7 @@ import { useAuthenticator } from "@aws-amplify/ui-react";
 import { client } from "@/utils/amplify-client";
 import { usePrices } from "@/contexts/PriceContext";
 import { getEffectivePrice } from "@/utils/price-utils";
+import { getPct2PTColor } from "@/utils/dashboard-calculations";
 import { SortableTable, Column } from "@/components/SortableTable";
 import { ColumnToggle } from "@/components/ColumnToggle";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
@@ -874,7 +875,16 @@ export default function AssetTransactionsPage() {
     {
       key: "pt",
       header: "PT",
-      render: (item) => formatCurrency(item.profitTargetPrice),
+      render: (item) => {
+        if (!effectivePrice || !item.profitTargetPrice) {
+          return formatCurrency(item.profitTargetPrice);
+        }
+        const pct2pt = ((effectivePrice - item.profitTargetPrice) / item.profitTargetPrice) * 100;
+        const color = getPct2PTColor(pct2pt);
+        const colorClass = color === "green" ? "text-green-400"
+          : color === "yellow" ? "text-yellow-400" : "";
+        return <span className={colorClass}>{formatCurrency(item.profitTargetPrice)}</span>;
+      },
     },
     {
       key: "pct2pt",
@@ -882,10 +892,14 @@ export default function AssetTransactionsPage() {
       render: (item) => {
         if (!effectivePrice || !item.profitTargetPrice) return "-";
         const pct2pt = ((effectivePrice - item.profitTargetPrice) / item.profitTargetPrice) * 100;
-        const isPositive = pct2pt >= 0;
+        const color = getPct2PTColor(pct2pt);
+        const colorClass = color === "green" ? "text-green-400"
+          : color === "yellow" ? "text-yellow-400" : "";
+        // Avoid displaying "-0.00%" - show "0.00%" for values that round to zero
+        const displayValue = Math.abs(pct2pt) < 0.005 ? "0.00" : pct2pt.toFixed(2);
         return (
-          <span className={isPositive ? "text-green-400" : ""}>
-            {pct2pt.toFixed(2)}%
+          <span className={colorClass}>
+            {displayValue}%
           </span>
         );
       },
@@ -895,21 +909,29 @@ export default function AssetTransactionsPage() {
       header: "Action",
       sortable: false,
       toggleable: false,
-      render: (item) => (
-        <button
-          onClick={() => setSellWallet(item)}
-          data-testid={`wallet-sell-${item.id}`}
-          className={`hover:underline text-sm ${
-            isPTHit
-              ? "text-green-400 hover:text-green-300"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Sell
-        </button>
-      ),
+      render: (item) => {
+        let colorClass = "text-muted-foreground hover:text-foreground";
+        if (effectivePrice && item.profitTargetPrice) {
+          const pct2pt = ((effectivePrice - item.profitTargetPrice) / item.profitTargetPrice) * 100;
+          const color = getPct2PTColor(pct2pt);
+          if (color === "green") {
+            colorClass = "text-green-400 hover:text-green-300";
+          } else if (color === "yellow") {
+            colorClass = "text-yellow-400 hover:text-yellow-300";
+          }
+        }
+        return (
+          <button
+            onClick={() => setSellWallet(item)}
+            data-testid={`wallet-sell-${item.id}`}
+            className={`hover:underline text-sm ${colorClass}`}
+          >
+            Sell
+          </button>
+        );
+      },
     },
-  ], [effectivePrice, isPTHit]);
+  ], [effectivePrice]);
 
   // Column visibility toggle for wallets
   const { visibleKeys: walletVisibleKeys, hiddenColumns: walletHiddenColumns, toggle: toggleWalletColumn } = useColumnVisibility(

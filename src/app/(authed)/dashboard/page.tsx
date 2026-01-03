@@ -289,9 +289,11 @@ export default function Dashboard() {
                 ? "text-yellow-400"
                 : "";
 
+          // Avoid displaying "-0.00%" - show "0.00%" for values that round to zero
+          const displayValue = Math.abs(item.pctToLowestPT) < 0.005 ? "0.00" : item.pctToLowestPT.toFixed(2);
           return (
             <span className={colorClass}>
-              {item.pctToLowestPT.toFixed(2)}%
+              {displayValue}%
             </span>
           );
         },
