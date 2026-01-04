@@ -1399,10 +1399,14 @@ export default function AssetTransactionsPage() {
                 </span>
               </div>
               <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">OOP</span>
+                <span className="text-sm text-foreground" data-testid="overview-oop">{formatCurrency(oop)}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Available</span>
                 <span className="text-sm text-foreground" data-testid="overview-available">
                   {maxOOP !== null
-                    ? formatCurrency(Math.max(0, maxOOP - oop) + cashBalance)
+                    ? formatCurrency(maxOOP - oop + cashBalance)
                     : "-"}
                 </span>
               </div>
@@ -1419,14 +1423,6 @@ export default function AssetTransactionsPage() {
           <div>
             <h4 className="text-sm font-medium text-muted-foreground mb-3">$ Performance</h4>
             <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">OOP</span>
-                <span className="text-sm text-foreground" data-testid="overview-oop">{formatCurrency(oop)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Balance</span>
-                <span className="text-sm text-foreground" data-testid="overview-balance">{formatCurrency(balance)}</span>
-              </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Market Value</span>
                 <span className="text-sm text-foreground" data-testid="overview-market-value">

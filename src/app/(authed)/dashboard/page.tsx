@@ -245,9 +245,11 @@ export default function Dashboard() {
           if (item.available === null) {
             return <span className="text-muted-foreground" data-testid={`dashboard-available-${item.symbol}`}>-</span>;
           }
+          const isNegative = item.available < 0;
+          const displayValue = Math.abs(item.available).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
           return (
             <span data-testid={`dashboard-available-${item.symbol}`}>
-              ${item.available.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {isNegative ? `-$${displayValue}` : `$${displayValue}`}
             </span>
           );
         },
@@ -318,12 +320,13 @@ export default function Dashboard() {
           }
 
           const color = getDaysSinceColor(item.daysSinceLastBuy);
+          // Always set explicit color to override gray row styling
           const colorClass =
             color === "red"
               ? "text-red-400"
               : color === "yellow"
                 ? "text-yellow-400"
-                : "";
+                : "text-card-foreground";
 
           return <span className={colorClass}>{item.daysSinceLastBuy}</span>;
         },
@@ -412,6 +415,7 @@ export default function Dashboard() {
             keyField="id"
             emptyMessage="No active assets. Add assets to see signals."
             rowTestId={(item) => `dashboard-row-${item.symbol}`}
+            rowClassName={(item) => item.available !== null && item.available < 0 ? "text-muted-foreground" : ""}
           />
         </div>
       )}

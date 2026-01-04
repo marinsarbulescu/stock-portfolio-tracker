@@ -149,9 +149,10 @@ export function TransactionModal({
     allocations: {},
   });
 
-  // Reset form when modal opens/closes or transaction changes
+  // Reset form when modal opens or transaction changes
+  // Skip reset while submitting to prevent flash of default form before modal closes
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !isSubmitting) {
       if (mode === "edit" && transaction) {
         // Convert existing allocations to form format
         const allocationsMap: Record<string, string> = {};
@@ -196,6 +197,9 @@ export function TransactionModal({
       }
       setError(null);
     }
+    // Note: isSubmitting intentionally excluded from deps - we only want to
+    // prevent resets during submission, not trigger resets when it changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, mode, transaction, assets, profitTargets]);
 
   const visibleFields = getFieldsForType(formData.type);
@@ -385,7 +389,6 @@ export function TransactionModal({
       onClose();
     } catch {
       setError("Failed to save transaction");
-    } finally {
       setIsSubmitting(false);
     }
   }
@@ -400,7 +403,6 @@ export function TransactionModal({
       onClose();
     } catch {
       setError("Failed to delete transaction");
-    } finally {
       setIsSubmitting(false);
     }
   }

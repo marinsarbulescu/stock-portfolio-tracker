@@ -18,6 +18,7 @@ interface SortableTableProps<T> {
   emptyMessage?: string;
   hiddenColumns?: Set<string>; // Keys of columns to hide
   rowTestId?: (item: T) => string; // Generate data-testid for each row
+  rowClassName?: (item: T) => string; // Generate additional className for each row
 }
 
 type SortDirection = "asc" | "desc";
@@ -29,6 +30,7 @@ export function SortableTable<T>({
   emptyMessage = "No data available",
   hiddenColumns,
   rowTestId,
+  rowClassName,
 }: SortableTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -115,7 +117,7 @@ export function SortableTable<T>({
           {sortedData.map((item) => (
             <tr
               key={String((item as Record<string, unknown>)[keyField as string])}
-              className="border-b border-border hover:bg-muted/50"
+              className={`border-b border-border hover:bg-muted/50 ${rowClassName ? rowClassName(item) : ""}`}
               data-testid={rowTestId ? rowTestId(item) : undefined}
             >
               {visibleColumns.map((column) => (
