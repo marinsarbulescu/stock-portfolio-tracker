@@ -1,5 +1,8 @@
 // amplify/functions/getYfinanceData/handler.ts
-import yahooFinance from 'yahoo-finance2';
+import YahooFinance from 'yahoo-finance2';
+
+// Initialize yahoo-finance2 (v3 pattern)
+const yahooFinance = new YahooFinance();
 
 interface GetPricesEvent { arguments: { symbols: string[] }; }
 
@@ -29,9 +32,6 @@ export const handler = async (event: GetPricesEvent): Promise<PriceResult[]> => 
 
   if (!incomingSymbols || incomingSymbols.length === 0) return [];
   console.log(`getYfinanceData: Received symbols: ${incomingSymbols.join(', ')}`);
-
-  // Suppress yahoo-finance2 notices for cleaner logs
-  yahooFinance.suppressNotices(['yahooSurvey', 'ripHistorical']);
 
   // --- Filter out excluded symbols ---
   const validSymbols = incomingSymbols.filter(symbol => {

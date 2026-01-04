@@ -1,5 +1,8 @@
 import type { Schema } from '../../data/resource';
-import yahooFinance from 'yahoo-finance2';
+import YahooFinance from 'yahoo-finance2';
+
+// Initialize yahoo-finance2 (v3 pattern)
+const yahooFinance = new YahooFinance();
 
 export const handler: Schema["getHistoricalData"]["functionHandler"] = async (event) => {
   console.log('getHistoricalData function called with:', event);
