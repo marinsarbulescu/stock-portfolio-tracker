@@ -144,6 +144,7 @@ export function BudgetList({
             <button
               onClick={startAdding}
               className="text-sm text-blue-400 hover:text-blue-300"
+              data-testid="budget-add-btn"
             >
               + Add
             </button>
@@ -165,7 +166,7 @@ export function BudgetList({
           </thead>
           <tbody>
             {sortedBudgets.map((budget) => (
-              <tr key={budget.id} className="border-b border-border">
+              <tr key={budget.id} className="border-b border-border" data-testid={`budget-row-${budget.year}`}>
                 {editingId === budget.id ? (
                   <>
                     <td className="px-4 py-2">
@@ -218,12 +219,14 @@ export function BudgetList({
                         <button
                           onClick={() => startEditing(budget)}
                           className="text-blue-400 hover:text-blue-300"
+                          data-testid={`budget-edit-${budget.year}`}
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => handleDelete(budget.id)}
                           className="text-red-400 hover:text-red-300"
+                          data-testid={`budget-delete-${budget.year}`}
                         >
                           Delete
                         </button>
@@ -235,7 +238,7 @@ export function BudgetList({
             ))}
 
             {isAdding && (
-              <tr className="border-b border-border bg-muted/30">
+              <tr className="border-b border-border bg-muted/30" data-testid="budget-new-row">
                 <td className="px-4 py-2">
                   <input
                     type="number"
@@ -245,6 +248,7 @@ export function BudgetList({
                     }
                     placeholder="Year"
                     className="w-24 px-2 py-1 bg-background border border-border rounded text-foreground text-sm"
+                    data-testid="budget-new-year"
                   />
                 </td>
                 <td className="px-4 py-2">
@@ -257,6 +261,7 @@ export function BudgetList({
                     }
                     placeholder="Amount"
                     className="w-32 px-2 py-1 bg-background border border-border rounded text-foreground text-sm"
+                    data-testid="budget-new-amount"
                   />
                 </td>
                 <td className="px-4 py-2">
@@ -265,12 +270,14 @@ export function BudgetList({
                       onClick={handleCreate}
                       disabled={isSubmitting}
                       className="text-green-400 hover:text-green-300 disabled:opacity-50"
+                      data-testid="budget-new-submit"
                     >
                       Add
                     </button>
                     <button
                       onClick={() => setIsAdding(false)}
                       className="text-muted-foreground hover:text-foreground"
+                      data-testid="budget-new-cancel"
                     >
                       Cancel
                     </button>

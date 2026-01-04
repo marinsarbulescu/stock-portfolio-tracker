@@ -46,6 +46,12 @@ const tests: TestItem[] = [
     specFile: "assets/dashboard-signals.spec.ts",
     describeName: "Dashboard Signals - %2PT Color Logic",
   },
+  {
+    id: "asset-roi-1",
+    name: "ROI Calculation - ROI calculation verification",
+    specFile: "assets/asset-roi.spec.ts",
+    describeName: "Assets - ROI Calculation",
+  },
 ];
 
 // Group tests by describeName
@@ -60,7 +66,7 @@ function groupTestsByDescribe(testList: TestItem[]) {
   return groups;
 }
 
-export default function E2ERunnerPage() {
+export default function E2EManagerPage() {
   const [selectedTests, setSelectedTests] = useState<Set<string>>(
     new Set(tests.map((t) => t.id))
   );
@@ -132,7 +138,7 @@ export default function E2ERunnerPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-foreground mb-6">E2E Test Runner</h2>
+      <h2 className="text-2xl font-bold text-foreground mb-6">E2E Test Manager</h2>
 
       {/* Action Buttons */}
       <div className="flex gap-2 mb-6">

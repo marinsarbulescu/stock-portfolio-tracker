@@ -107,11 +107,11 @@ export function MobileNav({ userEmail, onSignOut, isAdmin }: MobileNavProps) {
             </Link>
             {isAdmin && (
               <Link
-                href="/e2e-runner"
+                href="/e2e-manager"
                 onClick={() => setIsOpen(false)}
                 data-testid="mobile-nav-e2e"
                 className={`block px-4 py-2 text-sm ${
-                  pathname === "/e2e-runner"
+                  pathname === "/e2e-manager"
                     ? "text-foreground font-medium"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}

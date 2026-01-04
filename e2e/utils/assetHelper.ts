@@ -17,10 +17,12 @@ import {
   SellTransactionInput,
   SellTransactionExpected,
   EditSellTransactionTarget,
+  FinancialOverviewExpected,
+  DividendSlpInput,
 } from "./jsonHelper";
 
 // Re-export types for convenience
-export type { AssetCreateInput, TargetInput, TargetExpected, TransactionInput, TransactionExpected, WalletExpected, OverviewExpected, EditTransactionTarget, SellTransactionInput, SellTransactionExpected, EditSellTransactionTarget };
+export type { AssetCreateInput, TargetInput, TargetExpected, TransactionInput, TransactionExpected, WalletExpected, OverviewExpected, EditTransactionTarget, SellTransactionInput, SellTransactionExpected, EditSellTransactionTarget, FinancialOverviewExpected, DividendSlpInput };
 
 // ============================================================================
 // Highlight Color Constants (Tailwind CSS classes used in UI)
@@ -576,16 +578,18 @@ export interface SetupTestAssetOptions {
   asset: AssetCreateInput;
   entryTargets?: TargetInput[];
   profitTargets?: TargetInput[];
+  budget?: { year: string; amount: string };
 }
 
 /**
- * High-level helper to set up a test asset with optional targets.
+ * High-level helper to set up a test asset with optional targets and budget.
  * This performs the common setup sequence:
  * 1. Navigate to Assets page
  * 2. Cleanup existing test asset if it exists
  * 3. Create the asset
  * 4. Create entry targets (if provided)
  * 5. Create profit targets (if provided)
+ * 6. Create budget (if provided)
  *
  * After this function, the page will be on the asset edit page.
  */
@@ -613,6 +617,11 @@ export async function setupTestAsset(page: Page, options: SetupTestAssetOptions)
     for (const pt of options.profitTargets) {
       await createTarget(page, "profit", pt);
     }
+  }
+
+  // 6. Create budget (if provided)
+  if (options.budget) {
+    await createBudget(page, options.budget.year, options.budget.amount);
   }
 
   console.log(`[AssetHelper] Test asset ${options.asset.symbol} setup complete.`);
@@ -1393,4 +1402,134 @@ export async function verifyDashboardRow(
   }
 
   console.log("[AssetHelper] Dashboard row verified successfully.");
+}
+
+// ============================================================================
+// Budget Helpers
+// ============================================================================
+
+/**
+ * Create a budget via the BudgetList component.
+ * Call this from the asset edit page.
+ */
+export async function createBudget(
+  page: Page,
+  year: string,
+  amount: string
+): Promise<void> {
+  console.log(`[AssetHelper] Creating budget: year=${year}, amount=${amount}...`);
+
+  // Click Add button to show the form
+  await page.locator('[data-testid="budget-add-btn"]').click();
+
+  // Wait for the new row form to appear
+  await expect(page.locator('[data-testid="budget-new-row"]')).toBeVisible({ timeout: 5000 });
+
+  // Fill year
+  await page.locator('[data-testid="budget-new-year"]').clear();
+  await page.locator('[data-testid="budget-new-year"]').fill(year);
+
+  // Fill amount
+  await page.locator('[data-testid="budget-new-amount"]').fill(amount);
+
+  // Submit
+  await page.locator('[data-testid="budget-new-submit"]').click();
+
+  // Wait for form to close (indicates save completed)
+  await expect(page.locator('[data-testid="budget-new-row"]')).not.toBeVisible({ timeout: 10000 });
+
+  // Wait for the budget row to appear
+  await expect(page.locator(`[data-testid="budget-row-${year}"]`)).toBeVisible({ timeout: 5000 });
+
+  console.log("[AssetHelper] Budget created successfully.");
+}
+
+// ============================================================================
+// Financial Overview Helpers (ROI Test)
+// ============================================================================
+
+/**
+ * Verify the financial overview values (OOP, Market Value, ROI, Available).
+ * Call this from the transactions page.
+ */
+export async function verifyFinancialOverview(
+  page: Page,
+  expected: FinancialOverviewExpected
+): Promise<void> {
+  console.log(`[AssetHelper] Verifying financial overview...`);
+
+  // Verify OOP
+  const oopEl = page.locator('[data-testid="overview-oop"]');
+  await expect(oopEl).toHaveText(expected.oop);
+  console.log(`[AssetHelper] OOP verified: ${expected.oop}`);
+
+  // Verify Market Value
+  const marketValueEl = page.locator('[data-testid="overview-market-value"]');
+  await expect(marketValueEl).toHaveText(expected.marketValue);
+  console.log(`[AssetHelper] Market Value verified: ${expected.marketValue}`);
+
+  // Verify ROI
+  const roiEl = page.locator('[data-testid="overview-roi"]');
+  await expect(roiEl).toHaveText(expected.roi);
+  console.log(`[AssetHelper] ROI verified: ${expected.roi}`);
+
+  // Verify Available
+  const availableEl = page.locator('[data-testid="overview-available"]');
+  await expect(availableEl).toHaveText(expected.available);
+  console.log(`[AssetHelper] Available verified: ${expected.available}`);
+
+  console.log("[AssetHelper] Financial overview verified successfully.");
+}
+
+/**
+ * Verify the Available value in the Dashboard for a specific asset.
+ * Call this from the Dashboard page.
+ */
+export async function verifyDashboardAvailable(
+  page: Page,
+  symbol: string,
+  expectedAvailable: string
+): Promise<void> {
+  console.log(`[AssetHelper] Verifying Dashboard Available for ${symbol}...`);
+
+  // Find the Available cell by data-testid
+  const availableCell = page.locator(`[data-testid="dashboard-available-${symbol}"]`).first();
+  await expect(availableCell).toHaveText(expectedAvailable);
+
+  console.log(`[AssetHelper] Dashboard Available verified: ${expectedAvailable}`);
+}
+
+// ============================================================================
+// Dividend/SLP Transaction Helpers
+// ============================================================================
+
+/**
+ * Create a Dividend or SLP transaction via the TransactionModal.
+ * Call this from the transactions page.
+ */
+export async function createDividendSlpTransaction(
+  page: Page,
+  input: DividendSlpInput
+): Promise<void> {
+  console.log(`[AssetHelper] Creating ${input.type} transaction: amount=${input.amount}...`);
+
+  // Click New Transaction button
+  await page.locator('[data-testid="btn-new-transaction"]').click();
+
+  // Wait for modal to appear
+  await expect(page.locator('[data-testid="transaction-form-type"]')).toBeVisible({ timeout: 5000 });
+
+  // Select type (DIVIDEND or SLP)
+  await page.locator('[data-testid="transaction-form-type"]').selectOption(input.type);
+
+  // Fill amount
+  await page.locator('[data-testid="transaction-form-amount"]').fill(input.amount);
+
+  // Submit
+  await page.locator('[data-testid="transaction-form-submit"]').click();
+
+  // Wait for modal to close
+  await expect(page.locator('[data-testid="transaction-form-type"]')).not.toBeVisible({ timeout: 10000 });
+
+  console.log(`[AssetHelper] ${input.type} transaction created successfully.`);
 }

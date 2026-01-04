@@ -1,0 +1,160 @@
+{
+  "scenario": "ROI Calculation",
+  "description": "Test ROI, OOP, Market Value, and Available calculations",
+  "asset": {
+    "input": {
+      "symbol": "E2E-ASSET-ROI",
+      "name": "E2E ROI Test",
+      "type": "STOCK",
+      "testPrice": "100",
+      "commission": "0.5",
+      "status": "ACTIVE"
+    },
+    "budget": { "year": "2026", "amount": "1200" }
+  },
+  "entryTargets": [
+    { "input": { "name": "ET1", "targetPercent": "2", "sortOrder": "1" } }
+  ],
+  "profitTargets": [
+    { "input": { "name": "PT1", "targetPercent": "4", "allocationPercent": "50", "sortOrder": "1" } },
+    { "input": { "name": "PT2", "targetPercent": "8", "allocationPercent": "30", "sortOrder": "2" } },
+    { "input": { "name": "PT3", "targetPercent": "16", "allocationPercent": "20", "sortOrder": "3" } }
+  ],
+  "transactions": {
+    "buyA": {
+      "input": {
+        "signal": "INITIAL",
+        "price": "100",
+        "investment": "600",
+        "allocations": [
+          { "ptPercent": "4", "percentage": "50" },
+          { "ptPercent": "8", "percentage": "30" },
+          { "ptPercent": "16", "percentage": "20" }
+        ]
+      },
+      "expected": {
+        "financialOverview": {
+          "oop": "$600.00",
+          "marketValue": "$600.00",
+          "roi": "0.00%",
+          "available": "$600.00"
+        },
+        "dashboard": {
+          "symbol": "E2E-ASSET-ROI",
+          "available": "$600.00"
+        }
+      }
+    },
+    "sellA": {
+      "testPriceUpdate": "90",
+      "isSell": true,
+      "sellInput": {
+        "ptPercent": "4",
+        "walletPrice": "100",
+        "signal": "CUSTOM",
+        "price": "90",
+        "quantity": "1.5"
+      },
+      "expected": {
+        "financialOverview": {
+          "oop": "$600.00",
+          "marketValue": "$405.00",
+          "roi": "-10.11%",
+          "available": "$734.33"
+        },
+        "dashboard": {
+          "symbol": "E2E-ASSET-ROI",
+          "available": "$734.33"
+        }
+      }
+    },
+    "sellB": {
+      "testPriceUpdate": "120",
+      "isSell": true,
+      "sellInput": {
+        "ptPercent": "4",
+        "walletPrice": "100",
+        "signal": "PROFITTARGET",
+        "price": "120",
+        "quantity": "1.5"
+      },
+      "expected": {
+        "financialOverview": {
+          "oop": "$600.00",
+          "marketValue": "$360.00",
+          "roi": "12.24%",
+          "available": "$913.43"
+        },
+        "dashboard": {
+          "symbol": "E2E-ASSET-ROI",
+          "available": "$913.43"
+        }
+      }
+    },
+    "buyB": {
+      "testPriceUpdate": "115",
+      "input": {
+        "signal": "EOM",
+        "price": "115",
+        "investment": "400",
+        "allocations": [
+          { "ptPercent": "4", "percentage": "50" },
+          { "ptPercent": "8", "percentage": "30" },
+          { "ptPercent": "16", "percentage": "20" }
+        ]
+      },
+      "expected": {
+        "financialOverview": {
+          "oop": "$686.58",
+          "marketValue": "$745.00",
+          "roi": "8.51%",
+          "available": "$513.43"
+        },
+        "dashboard": {
+          "symbol": "E2E-ASSET-ROI",
+          "available": "$513.43"
+        }
+      }
+    },
+    "dividendA": {
+      "testPriceUpdate": "90",
+      "isDividendOrSlp": true,
+      "dividendSlpInput": {
+        "type": "DIVIDEND",
+        "amount": "20"
+      },
+      "expected": {
+        "financialOverview": {
+          "oop": "$686.58",
+          "marketValue": "$583.04",
+          "roi": "-12.17%",
+          "available": "$533.43"
+        },
+        "dashboard": {
+          "symbol": "E2E-ASSET-ROI",
+          "available": "$533.43"
+        }
+      }
+    },
+    "slpA": {
+      "testPriceUpdate": "80",
+      "isDividendOrSlp": true,
+      "dividendSlpInput": {
+        "type": "SLP",
+        "amount": "40"
+      },
+      "expected": {
+        "financialOverview": {
+          "oop": "$686.58",
+          "marketValue": "$518.26",
+          "roi": "-15.78%",
+          "available": "$573.43"
+        },
+        "dashboard": {
+          "symbol": "E2E-ASSET-ROI",
+          "available": "$573.43"
+        }
+      }
+    }
+  }
+}

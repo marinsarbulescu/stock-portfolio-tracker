@@ -411,3 +411,75 @@ export function loadDashboardSignalsTestData(fileName: string): DashboardSignals
     throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
   }
 }
+
+// ============================================================================
+// ROI Test Types
+// ============================================================================
+
+export interface FinancialOverviewExpected {
+  oop: string;           // e.g., "$600.00"
+  marketValue: string;   // e.g., "$600.00"
+  roi: string;           // e.g., "0.00%"
+  available: string;     // e.g., "$600"
+}
+
+export interface DashboardAvailableExpected {
+  symbol: string;
+  available: string;
+}
+
+export interface DividendSlpInput {
+  type: "DIVIDEND" | "SLP";
+  amount: string;
+}
+
+export interface RoiTransactionAction {
+  testPriceUpdate?: string;           // Update test price before transaction
+  isSell?: boolean;                   // Discriminator for SELL transactions
+  isDividendOrSlp?: boolean;          // Discriminator for DIVIDEND/SLP transactions
+  input?: TransactionInput;           // BUY input
+  sellInput?: SellTransactionInput;   // SELL input
+  dividendSlpInput?: DividendSlpInput; // DIVIDEND/SLP input
+  expected: {
+    financialOverview: FinancialOverviewExpected;
+    dashboard: DashboardAvailableExpected;
+  };
+}
+
+export interface RoiTestConfig {
+  scenario: string;
+  description: string;
+  asset: {
+    input: AssetCreateInput;
+    budget: { year: string; amount: string };
+  };
+  entryTargets: { input: TargetInput }[];
+  profitTargets: { input: TargetInput }[];
+  transactions: {
+    [key: string]: RoiTransactionAction;
+  };
+}
+
+export function loadRoiTestData(fileName: string): RoiTestConfig {
+  const filePath = path.resolve(process.cwd(), fileName);
+  console.log(`[jsonHelper.ts] Attempting to load ROI JSON from: ${filePath}`);
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`JSON file not found: ${filePath}`);
+  }
+
+  const fileContent = fs.readFileSync(filePath, "utf-8");
+  console.log(
+    `[jsonHelper.ts] File content read successfully. Length: ${fileContent.length}`
+  );
+
+  try {
+    const data = JSON.parse(fileContent) as RoiTestConfig;
+    console.log(
+      `[jsonHelper.ts] Successfully parsed ROI JSON for scenario: ${data.scenario}`
+    );
+    return data;
+  } catch (error) {
+    throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
+  }
+}

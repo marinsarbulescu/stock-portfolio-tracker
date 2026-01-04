@@ -1400,7 +1400,7 @@ export default function AssetTransactionsPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Available</span>
-                <span className="text-sm text-foreground">
+                <span className="text-sm text-foreground" data-testid="overview-available">
                   {maxOOP !== null
                     ? formatCurrency(Math.max(0, maxOOP - oop) + cashBalance)
                     : "-"}
@@ -1421,15 +1421,15 @@ export default function AssetTransactionsPage() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">OOP</span>
-                <span className="text-sm text-foreground">{formatCurrency(oop)}</span>
+                <span className="text-sm text-foreground" data-testid="overview-oop">{formatCurrency(oop)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Balance</span>
-                <span className="text-sm text-foreground">{formatCurrency(balance)}</span>
+                <span className="text-sm text-foreground" data-testid="overview-balance">{formatCurrency(balance)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Market Value</span>
-                <span className="text-sm text-foreground">
+                <span className="text-sm text-foreground" data-testid="overview-market-value">
                   {effectivePrice !== null
                     ? formatCurrency(txnStats.totalShares * effectivePrice)
                     : "-"}
@@ -1437,7 +1437,7 @@ export default function AssetTransactionsPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">ROI</span>
-                <span className="text-sm text-foreground">
+                <span className="text-sm text-foreground" data-testid="overview-roi">
                   {effectivePrice !== null && oop > 0
                     ? (() => {
                         const marketValue = txnStats.totalShares * effectivePrice;

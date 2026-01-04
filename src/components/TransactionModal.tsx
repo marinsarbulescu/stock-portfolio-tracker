@@ -621,6 +621,7 @@ export function TransactionModal({
             <input
               type="number"
               id="amount"
+              data-testid="transaction-form-amount"
               step="0.01"
               value={formData.amount}
               onChange={(e) =>

@@ -68,10 +68,10 @@ function AuthedLayoutContent({ children }: { children: React.ReactNode }) {
                 </Link>
                 {isAdmin && (
                   <Link
-                    href="/e2e-runner"
+                    href="/e2e-manager"
                     data-testid="nav-e2e"
                     className={`text-sm ${
-                      pathname === "/e2e-runner"
+                      pathname === "/e2e-manager"
                         ? "text-foreground font-medium"
                         : "text-muted-foreground hover:text-foreground"
                     }`}

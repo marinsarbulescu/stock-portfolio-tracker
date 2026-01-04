@@ -243,11 +243,11 @@ export default function Dashboard() {
         sortable: true,
         render: (item) => {
           if (item.available === null) {
-            return <span className="text-muted-foreground">-</span>;
+            return <span className="text-muted-foreground" data-testid={`dashboard-available-${item.symbol}`}>-</span>;
           }
           return (
-            <span>
-              ${item.available.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            <span data-testid={`dashboard-available-${item.symbol}`}>
+              ${item.available.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           );
         },
