@@ -1,0 +1,7 @@
+{
+  "name": "get-yfinance-data",
+  "type": "module",
+  "dependencies": {
+    "yahoo-finance2": "^3.11.2"
+  }
+}
