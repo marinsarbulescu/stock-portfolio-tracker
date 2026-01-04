@@ -31,6 +31,7 @@ interface DashboardAsset {
   pctToLowestPT: number | null;
   fiveDPullback: number | null;
   firstEntryTargetPercent: number | null;
+  available: number | null;
 }
 
 interface RawAssetData {
@@ -42,6 +43,9 @@ interface RawAssetData {
   entryTargetPercent: number | null;
   lowestPTPrice: number | null;
   firstEntryTargetPercent: number | null;
+  maxOOP: number | null;
+  balance: number;
+  oop: number;
 }
 
 export default function Dashboard() {
@@ -65,33 +69,56 @@ export default function Dashboard() {
       setError(null);
 
       // Parallel fetch all required data
-      const [assetsResponse, transactionsResponse, walletsResponse, entryTargetsResponse] =
+      const currentYear = new Date().getFullYear();
+      const [assetsResponse, transactionsResponse, walletsResponse, entryTargetsResponse, yearlyBudgetsResponse] =
         await Promise.all([
           client.models.Asset.list({
             filter: { status: { eq: "ACTIVE" } },
           }),
-          client.models.Transaction.list({
-            filter: { type: { eq: "BUY" } },
-          }),
+          client.models.Transaction.list(), // Fetch all transactions for balance/OOP calculation
           client.models.Wallet.list(),
           client.models.EntryTarget.list(),
+          client.models.YearlyBudget.list({
+            filter: { year: { eq: currentYear } },
+          }),
         ]);
 
       const assets = assetsResponse.data;
       const transactions = transactionsResponse.data;
       const wallets = walletsResponse.data;
       const entryTargets = entryTargetsResponse.data;
+      const yearlyBudgets = yearlyBudgetsResponse.data;
 
       // Process raw data for each asset (without effective price calculation)
       const processedRawData: RawAssetData[] = assets.map((asset) => {
+        // Get all transactions for this asset
+        const assetTransactions = transactions.filter((t) => t.assetId === asset.id);
+
         // Find most recent BUY transaction for this asset
-        const assetBuyTransactions = transactions
-          .filter((t) => t.assetId === asset.id)
+        const assetBuyTransactions = assetTransactions
+          .filter((t) => t.type === "BUY")
           .sort(
             (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
           );
 
         const lastBuy = assetBuyTransactions[0] || null;
+
+        // Calculate balance and OOP from transactions
+        const sortedTransactions = [...assetTransactions].sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+
+        let balance = 0;
+        let oop = 0;
+
+        for (const txn of sortedTransactions) {
+          if (txn.type === "BUY" && txn.investment !== null) {
+            balance -= txn.investment;
+            oop = Math.max(oop, Math.abs(balance));
+          } else if ((txn.type === "SELL" || txn.type === "DIVIDEND" || txn.type === "SLP") && txn.amount !== null) {
+            balance += txn.amount;
+          }
+        }
 
         // Find all wallets for this asset and get lowest profitTargetPrice
         const assetWallets = wallets.filter((w) => w.assetId === asset.id);
@@ -106,6 +133,10 @@ export default function Dashboard() {
           .sort((a, b) => a.sortOrder - b.sortOrder);
         const firstEntryTargetPercent = assetEntryTargets[0]?.targetPercent ?? null;
 
+        // Find yearly budget for this asset (maxOOP)
+        const assetBudget = yearlyBudgets.find((b) => b.assetId === asset.id);
+        const maxOOP = assetBudget?.amount ?? null;
+
         return {
           id: asset.id,
           symbol: asset.symbol,
@@ -115,6 +146,9 @@ export default function Dashboard() {
           entryTargetPercent: lastBuy?.entryTargetPercent ?? null,
           lowestPTPrice,
           firstEntryTargetPercent,
+          maxOOP,
+          balance,
+          oop,
         };
       });
 
@@ -171,6 +205,12 @@ export default function Dashboard() {
         asset.firstEntryTargetPercent
       );
 
+      // Calculate available: max(maxOOP, oop) + balance
+      // Only show if maxOOP is set
+      const available = asset.maxOOP !== null
+        ? Math.max(asset.maxOOP, asset.oop) + asset.balance
+        : null;
+
       return {
         id: asset.id,
         symbol: asset.symbol,
@@ -185,6 +225,7 @@ export default function Dashboard() {
         pctToLowestPT,
         fiveDPullback,
         firstEntryTargetPercent: asset.firstEntryTargetPercent,
+        available,
       };
     });
   }, [rawAssetData, prices]);
@@ -196,6 +237,21 @@ export default function Dashboard() {
 
   const columns: Column<DashboardAsset>[] = useMemo(
     () => [
+      {
+        key: "available",
+        header: "Available",
+        sortable: true,
+        render: (item) => {
+          if (item.available === null) {
+            return <span className="text-muted-foreground">-</span>;
+          }
+          return (
+            <span>
+              ${item.available.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </span>
+          );
+        },
+      },
       {
         key: "symbol",
         header: "Symbol",
