@@ -199,9 +199,21 @@ export async function updateTestPrice(page: Page, newPrice: string): Promise<voi
   await navigateToTransactionsPage(page);
 
   // Wait for the new price to be displayed on the page (prevents race condition)
+  // If the page has stale cached data, reload and retry
   const expectedPriceText = `$${parseFloat(newPrice).toFixed(2)}`;
   console.log(`[AssetHelper] Waiting for price to update to ${expectedPriceText}...`);
-  await expect(page.locator('[data-testid="asset-current-price"]')).toContainText(expectedPriceText, { timeout: 10000 });
+
+  const priceLocator = page.locator('[data-testid="asset-current-price"]');
+  try {
+    await expect(priceLocator).toContainText(expectedPriceText, { timeout: 5000 });
+  } catch {
+    // Page may have stale cached data - reload and retry
+    console.log(`[AssetHelper] Price not updated, reloading page...`);
+    await page.reload();
+    // Wait for page to fully load after reload
+    await page.waitForLoadState("networkidle");
+    await expect(priceLocator).toContainText(expectedPriceText, { timeout: 10000 });
+  }
 
   console.log("[AssetHelper] Test price updated successfully.");
 }
