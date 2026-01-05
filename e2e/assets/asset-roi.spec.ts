@@ -21,6 +21,7 @@ import {
   updateTestPrice,
   verifyFinancialOverview,
   verifyDashboardAvailable,
+  verifyDashboardRowGrayedOut,
 } from "../utils/assetHelper";
 
 // Set test timeout to 180 seconds
@@ -114,6 +115,12 @@ test.describe("ROI Calculation Tests (JSON-driven)", () => {
 
       console.log(`[${testConfig.scenario}] Verifying Dashboard Available...`);
       await verifyDashboardAvailable(page, txn.expected.dashboard.symbol, txn.expected.dashboard.available);
+
+      // Verify gray row styling if expected
+      if (txn.expected.dashboard.isGrayedOut !== undefined) {
+        console.log(`[${testConfig.scenario}] Verifying Dashboard row gray state...`);
+        await verifyDashboardRowGrayedOut(page, txn.expected.dashboard.symbol, txn.expected.dashboard.isGrayedOut);
+      }
 
       console.log(`[${testConfig.scenario}] Transaction ${txnKey} verified successfully.`);
 

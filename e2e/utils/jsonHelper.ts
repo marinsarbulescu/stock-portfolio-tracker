@@ -426,6 +426,7 @@ export interface FinancialOverviewExpected {
 export interface DashboardAvailableExpected {
   symbol: string;
   available: string;
+  isGrayedOut?: boolean;  // If true, verify the row has gray styling (negative Available)
 }
 
 export interface DividendSlpInput {

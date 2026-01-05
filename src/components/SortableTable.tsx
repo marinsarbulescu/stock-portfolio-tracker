@@ -114,16 +114,20 @@ export function SortableTable<T>({
           </tr>
         </thead>
         <tbody>
-          {sortedData.map((item) => (
+          {sortedData.map((item) => {
+            const customRowClass = rowClassName ? rowClassName(item) : "";
+            // Use custom row class for text color, or default to text-card-foreground
+            const textColorClass = customRowClass || "text-card-foreground";
+            return (
             <tr
               key={String((item as Record<string, unknown>)[keyField as string])}
-              className={`border-b border-border hover:bg-muted/50 ${rowClassName ? rowClassName(item) : ""}`}
+              className={`border-b border-border hover:bg-muted/50 ${textColorClass}`}
               data-testid={rowTestId ? rowTestId(item) : undefined}
             >
               {visibleColumns.map((column) => (
                 <td
                   key={String(column.key)}
-                  className="px-4 py-3 text-sm text-card-foreground"
+                  className="px-4 py-3 text-sm"
                 >
                   {column.render
                     ? column.render(item)
@@ -131,7 +135,8 @@ export function SortableTable<T>({
                 </td>
               ))}
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

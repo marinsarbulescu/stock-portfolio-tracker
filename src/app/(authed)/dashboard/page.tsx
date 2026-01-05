@@ -45,7 +45,6 @@ interface RawAssetData {
   firstEntryTargetPercent: number | null;
   maxOOP: number | null;
   balance: number;
-  oop: number;
 }
 
 export default function Dashboard() {
@@ -109,12 +108,10 @@ export default function Dashboard() {
         );
 
         let balance = 0;
-        let oop = 0;
 
         for (const txn of sortedTransactions) {
           if (txn.type === "BUY" && txn.investment !== null) {
             balance -= txn.investment;
-            oop = Math.max(oop, Math.abs(balance));
           } else if ((txn.type === "SELL" || txn.type === "DIVIDEND" || txn.type === "SLP") && txn.amount !== null) {
             balance += txn.amount;
           }
@@ -148,7 +145,6 @@ export default function Dashboard() {
           firstEntryTargetPercent,
           maxOOP,
           balance,
-          oop,
         };
       });
 
@@ -205,10 +201,11 @@ export default function Dashboard() {
         asset.firstEntryTargetPercent
       );
 
-      // Calculate available: max(maxOOP, oop) + balance
+      // Calculate available: maxOOP + balance (matches Transactions page formula)
+      // balance is negative for invested amounts, positive when sells/dividends exceed buys
       // Only show if maxOOP is set
       const available = asset.maxOOP !== null
-        ? Math.max(asset.maxOOP, asset.oop) + asset.balance
+        ? asset.maxOOP + asset.balance
         : null;
 
       return {
@@ -257,14 +254,17 @@ export default function Dashboard() {
       {
         key: "symbol",
         header: "Symbol",
-        render: (item) => (
-          <Link
-            href={`/assets/${item.id}/transactions`}
-            className="font-medium text-blue-400 hover:text-blue-300 hover:underline"
-          >
-            {item.symbol}
-          </Link>
-        ),
+        render: (item) => {
+          const isGrayRow = item.available !== null && item.available < 0;
+          return (
+            <Link
+              href={`/assets/${item.id}/transactions`}
+              className={`font-medium hover:underline ${isGrayRow ? "hover:text-muted-foreground/80" : "text-blue-400 hover:text-blue-300"}`}
+            >
+              {item.symbol}
+            </Link>
+          );
+        },
       },
       {
         key: "currentPrice",
@@ -274,8 +274,11 @@ export default function Dashboard() {
           if (item.currentPrice === null) {
             return <span className="text-muted-foreground">-</span>;
           }
+          const isGrayRow = item.available !== null && item.available < 0;
+          // Only show purple for test price if row is not grayed out
+          const colorClass = isGrayRow ? "" : (item.isTestPrice ? "text-purple-400" : "");
           return (
-            <span className={item.isTestPrice ? "text-purple-400" : ""}>
+            <span className={colorClass}>
               ${item.currentPrice.toFixed(2)}
             </span>
           );

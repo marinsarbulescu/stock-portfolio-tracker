@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Modal } from "./Modal";
 
 type TransactionType = "BUY" | "SELL" | "DIVIDEND" | "SPLIT" | "SLP";
@@ -136,6 +136,7 @@ export function TransactionModal({
 }: TransactionModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const formInitializedRef = useRef(false);
   const [formData, setFormData] = useState<FormData>({
     assetId: "",
     type: "BUY",
@@ -149,10 +150,19 @@ export function TransactionModal({
     allocations: {},
   });
 
-  // Reset form when modal opens or transaction changes
-  // Skip reset while submitting to prevent flash of default form before modal closes
+  // Reset state when modal closes
   useEffect(() => {
-    if (isOpen && !isSubmitting) {
+    if (!isOpen) {
+      setIsSubmitting(false);
+      formInitializedRef.current = false;
+    }
+  }, [isOpen]);
+
+  // Reset form when modal opens or transaction changes
+  // Skip reset while submitting or if form was already initialized (prevents race conditions)
+  useEffect(() => {
+    if (isOpen && !isSubmitting && !formInitializedRef.current) {
+      formInitializedRef.current = true;
       if (mode === "edit" && transaction) {
         // Convert existing allocations to form format
         const allocationsMap: Record<string, string> = {};

@@ -653,13 +653,8 @@ export async function createBuyTransaction(
   // Type should already be BUY (default), but ensure it
   await page.locator('[data-testid="transaction-form-type"]').selectOption("BUY");
 
-  // Select signal with verification and retry
-  await selectDropdownOption(page, "transaction-form-signal", input.signal);
-
-  // Fill price
+  // Fill price and investment first - this triggers allocation inputs to appear
   await page.locator('[data-testid="transaction-form-price"]').fill(input.price);
-
-  // Fill investment
   await page.locator('[data-testid="transaction-form-investment"]').fill(input.investment);
 
   // Wait for PT allocation inputs to appear (they appear after price+investment are filled)
@@ -668,6 +663,10 @@ export async function createBuyTransaction(
     const firstAllocTestId = `transaction-pt-alloc-${input.allocations[0].ptPercent}`;
     await expect(page.locator(`[data-testid="${firstAllocTestId}"]`)).toBeVisible({ timeout: 10000 });
   }
+
+  // Select signal AFTER allocation inputs are stable to avoid form reset race condition
+  // (useEffect on profitTargets can reset form if it triggers during field entry)
+  await selectDropdownOption(page, "transaction-form-signal", input.signal);
 
   // Fill PT allocations (with retry logic to handle React re-renders)
   for (const alloc of input.allocations) {
@@ -1497,6 +1496,32 @@ export async function verifyDashboardAvailable(
   await expect(availableCell).toHaveText(expectedAvailable);
 
   console.log(`[AssetHelper] Dashboard Available verified: ${expectedAvailable}`);
+}
+
+/**
+ * Verify that a Dashboard row is grayed out (for negative Available).
+ * The row should have text-muted-foreground class, but Last Buy should keep its own colors.
+ */
+export async function verifyDashboardRowGrayedOut(
+  page: Page,
+  symbol: string,
+  isGrayedOut: boolean
+): Promise<void> {
+  console.log(`[AssetHelper] Verifying Dashboard row gray state for ${symbol}: ${isGrayedOut}...`);
+
+  const row = page.locator(`[data-testid="dashboard-row-${symbol}"]`).first();
+  await expect(row).toBeVisible({ timeout: 10000 });
+
+  if (isGrayedOut) {
+    // Row should have the gray class
+    await expect(row).toHaveClass(/text-muted-foreground/);
+    console.log(`[AssetHelper] Verified row is grayed out`);
+  } else {
+    // Row should NOT have the gray class
+    const classes = await row.getAttribute("class");
+    expect(classes).not.toContain("text-muted-foreground");
+    console.log(`[AssetHelper] Verified row is NOT grayed out`);
+  }
 }
 
 // ============================================================================

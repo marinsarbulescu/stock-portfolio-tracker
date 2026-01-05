@@ -155,6 +155,32 @@
           "available": "$573.43"
         }
       }
+    },
+    "buyC": {
+      "testPriceUpdate": "115",
+      "input": {
+        "signal": "CUSTOM",
+        "price": "115",
+        "investment": "700",
+        "allocations": [
+          { "ptPercent": "4", "percentage": "50" },
+          { "ptPercent": "8", "percentage": "30" },
+          { "ptPercent": "16", "percentage": "20" }
+        ]
+      },
+      "expected": {
+        "financialOverview": {
+          "oop": "$1,326.58",
+          "marketValue": "$1,445.00",
+          "roi": "8.93%",
+          "available": "-$126.58"
+        },
+        "dashboard": {
+          "symbol": "E2E-ASSET-ROI",
+          "available": "-$126.58",
+          "isGrayedOut": true
+        }
+      }
     }
   }
 }
