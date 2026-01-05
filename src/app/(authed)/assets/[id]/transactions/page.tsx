@@ -1346,7 +1346,10 @@ export default function AssetTransactionsPage() {
             {asset ? `${asset.symbol} ${asset.name}` : "..."}
           </h2>
           {effectivePrice !== null && (
-            <p className={isTestPrice ? "text-purple-400" : "text-muted-foreground"}>
+            <p
+              data-testid="asset-current-price"
+              className={isTestPrice ? "text-purple-400" : "text-muted-foreground"}
+            >
               {formatCurrency(effectivePrice)}
             </p>
           )}
