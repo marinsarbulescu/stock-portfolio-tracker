@@ -196,6 +196,9 @@ export default function EditAssetPage() {
 
     try {
       const symbol = formData.symbol.trim().toUpperCase();
+      const newCommission = formData.commission ? parseFloat(formData.commission) : null;
+      const oldCommission = asset?.commission ?? null;
+      const commissionChanged = newCommission !== oldCommission;
 
       await client.models.Asset.update({
         id: assetId,
@@ -203,7 +206,7 @@ export default function EditAssetPage() {
         name: formData.name.trim(),
         type: formData.type,
         testPrice: formData.testPrice ? parseFloat(formData.testPrice) : null,
-        commission: formData.commission ? parseFloat(formData.commission) : null,
+        commission: newCommission,
         status: formData.status,
       });
 
@@ -212,12 +215,59 @@ export default function EditAssetPage() {
         clearPrice(symbol);
       }
 
+      // If commission changed, recalculate all wallet profitTargetPrices
+      if (commissionChanged) {
+        await recalculateWalletProfitTargetPrices(newCommission ?? 0);
+      }
+
       await fetchAsset();
     } catch (err) {
       console.error("Error updating asset:", err);
       setError("Failed to update asset");
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  /**
+   * Recalculate profitTargetPrice for all wallets when commission changes.
+   * Formula: buyPrice × (1 + PT%) / (1 - commission%)
+   */
+  async function recalculateWalletProfitTargetPrices(newCommission: number) {
+    try {
+      // Fetch all wallets for this asset
+      const walletResponse = await client.models.Wallet.list({
+        filter: { assetId: { eq: assetId } },
+        limit: 5000,
+      });
+
+      // Fetch profit targets directly from DB to ensure we have the latest data
+      // (don't rely on component state which may not be populated yet)
+      const ptResponse = await client.models.ProfitTarget.list({
+        filter: { assetId: { eq: assetId } },
+      });
+
+      // Build a map of profitTargetId -> targetPercent
+      const ptPercentMap = new Map<string, number>();
+      for (const pt of ptResponse.data) {
+        ptPercentMap.set(pt.id, pt.targetPercent);
+      }
+
+      // Update each wallet's profitTargetPrice
+      for (const wallet of walletResponse.data) {
+        const ptPercent = ptPercentMap.get(wallet.profitTargetId) ?? 0;
+        const newProfitTargetPrice = wallet.price * (1 + ptPercent / 100) / (1 - newCommission / 100);
+
+        await client.models.Wallet.update({
+          id: wallet.id,
+          profitTargetPrice: newProfitTargetPrice,
+        });
+      }
+
+      console.log(`[EditAsset] Recalculated profitTargetPrice for ${walletResponse.data.length} wallets with new commission ${newCommission}%`);
+    } catch (err) {
+      console.error("Error recalculating wallet profit target prices:", err);
+      throw err;
     }
   }
 

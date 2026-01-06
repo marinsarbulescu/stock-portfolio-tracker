@@ -484,3 +484,77 @@ export function loadRoiTestData(fileName: string): RoiTestConfig {
     throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
   }
 }
+
+// ============================================================================
+// Config Changes Test Types
+// ============================================================================
+
+export interface ConfigChangeEditET {
+  targetSortOrder: string;
+  newTargetPercent: string;
+}
+
+export interface ConfigChangeEditPTAlloc {
+  [key: string]: {
+    sortOrder: string;
+    newAllocationPercent: string;
+  };
+}
+
+export interface ConfigChangeEditCommission {
+  newCommission: string;
+}
+
+export interface ConfigChanges {
+  editET?: ConfigChangeEditET;
+  editPTAlloc?: ConfigChangeEditPTAlloc;
+  editCommission?: ConfigChangeEditCommission;
+}
+
+// Verification-only action (no transaction created, just verify state after config change)
+export interface VerificationOnlyAction {
+  isVerificationOnly: true;
+  expected: {
+    wallets: WalletExpected[];
+  };
+}
+
+export type ConfigChangesTransactionAction = BuyTransactionAction | SellTransactionAction | VerificationOnlyAction;
+
+export interface AssetConfigChangesTestConfig {
+  scenario: string;
+  description: string;
+  asset: {
+    input: AssetCreateInput;
+  };
+  entryTargets: { input: TargetInput }[];
+  profitTargets: { input: TargetInput }[];
+  configChanges: ConfigChanges;
+  transactions: {
+    [key: string]: ConfigChangesTransactionAction;
+  };
+}
+
+export function loadAssetConfigChangesTestData(fileName: string): AssetConfigChangesTestConfig {
+  const filePath = path.resolve(process.cwd(), fileName);
+  console.log(`[jsonHelper.ts] Attempting to load Config Changes JSON from: ${filePath}`);
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`JSON file not found: ${filePath}`);
+  }
+
+  const fileContent = fs.readFileSync(filePath, "utf-8");
+  console.log(
+    `[jsonHelper.ts] File content read successfully. Length: ${fileContent.length}`
+  );
+
+  try {
+    const data = JSON.parse(fileContent) as AssetConfigChangesTestConfig;
+    console.log(
+      `[jsonHelper.ts] Successfully parsed Config Changes JSON for scenario: ${data.scenario}`
+    );
+    return data;
+  } catch (error) {
+    throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
+  }
+}

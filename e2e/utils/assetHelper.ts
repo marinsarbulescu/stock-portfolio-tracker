@@ -219,6 +219,99 @@ export async function updateTestPrice(page: Page, newPrice: string): Promise<voi
 }
 
 /**
+ * Update the commission of an asset. Call this from the transactions page.
+ * Navigates to edit page, updates commission, saves, and returns to transactions.
+ */
+export async function editCommission(page: Page, newCommission: string): Promise<void> {
+  console.log(`[AssetHelper] Updating commission to ${newCommission}%...`);
+
+  // Navigate back to edit page
+  await navigateBackToEditPage(page);
+
+  // Update commission field
+  await page.locator('[data-testid="asset-form-commission"]').clear();
+  await page.locator('[data-testid="asset-form-commission"]').fill(newCommission);
+
+  // Submit form
+  await page.locator('[data-testid="asset-form-submit"]').click();
+
+  // Wait for save to complete (this includes wallet recalculation)
+  await expect(page.locator('[data-testid="asset-form-submit"]')).toHaveText("Save Changes", { timeout: 15000 });
+
+  // Small wait to ensure all wallet updates are committed to the database
+  await page.waitForTimeout(500);
+
+  // Navigate back to transactions
+  await navigateToTransactionsPage(page);
+
+  console.log("[AssetHelper] Commission updated successfully.");
+}
+
+/**
+ * Update an Entry Target's percent. Call this from the transactions page.
+ * Navigates to edit page, edits the target, saves, and returns to transactions.
+ */
+export async function editEntryTargetPercent(page: Page, sortOrder: string, newTargetPercent: string): Promise<void> {
+  console.log(`[AssetHelper] Updating Entry Target ${sortOrder} to ${newTargetPercent}%...`);
+
+  // Navigate back to edit page
+  await navigateBackToEditPage(page);
+
+  // Click Edit button on the target row
+  await page.locator(`[data-testid="entry-target-edit-btn-${sortOrder}"]`).click();
+
+  // Wait for edit mode
+  await expect(page.locator(`[data-testid="entry-target-edit-percent-${sortOrder}"]`)).toBeVisible({ timeout: 5000 });
+
+  // Update percent field
+  await page.locator(`[data-testid="entry-target-edit-percent-${sortOrder}"]`).clear();
+  await page.locator(`[data-testid="entry-target-edit-percent-${sortOrder}"]`).fill(newTargetPercent);
+
+  // Save
+  await page.locator(`[data-testid="entry-target-edit-save-${sortOrder}"]`).click();
+
+  // Wait for edit mode to close
+  await expect(page.locator(`[data-testid="entry-target-edit-save-${sortOrder}"]`)).not.toBeVisible({ timeout: 5000 });
+
+  // Navigate back to transactions
+  await navigateToTransactionsPage(page);
+
+  console.log("[AssetHelper] Entry Target updated successfully.");
+}
+
+/**
+ * Update a Profit Target's allocation percent. Call this from the transactions page.
+ * Navigates to edit page, edits the target, saves, and returns to transactions.
+ */
+export async function editProfitTargetAllocation(page: Page, sortOrder: string, newAllocationPercent: string): Promise<void> {
+  console.log(`[AssetHelper] Updating Profit Target ${sortOrder} allocation to ${newAllocationPercent}%...`);
+
+  // Navigate back to edit page
+  await navigateBackToEditPage(page);
+
+  // Click Edit button on the target row
+  await page.locator(`[data-testid="profit-target-edit-btn-${sortOrder}"]`).click();
+
+  // Wait for edit mode
+  await expect(page.locator(`[data-testid="profit-target-edit-alloc-${sortOrder}"]`)).toBeVisible({ timeout: 5000 });
+
+  // Update allocation field
+  await page.locator(`[data-testid="profit-target-edit-alloc-${sortOrder}"]`).clear();
+  await page.locator(`[data-testid="profit-target-edit-alloc-${sortOrder}"]`).fill(newAllocationPercent);
+
+  // Save
+  await page.locator(`[data-testid="profit-target-edit-save-${sortOrder}"]`).click();
+
+  // Wait for edit mode to close
+  await expect(page.locator(`[data-testid="profit-target-edit-save-${sortOrder}"]`)).not.toBeVisible({ timeout: 5000 });
+
+  // Navigate back to transactions
+  await navigateToTransactionsPage(page);
+
+  console.log("[AssetHelper] Profit Target allocation updated successfully.");
+}
+
+/**
  * Update the test price of an asset. Call this when already on the Edit page.
  * Just updates the price field and saves. Does not navigate.
  */
@@ -865,20 +958,21 @@ export async function verifyBuyTransaction(
 
   const row = await findTransactionRow(page, expected.price, expected.signal, expected.investment);
 
-  // Verify each expected value is in the row
-  await expect(row).toContainText(expected.type);
-  await expect(row).toContainText(expected.signal);
-  await expect(row).toContainText(expected.price);
-  await expect(row).toContainText(expected.quantity);
-  await expect(row).toContainText(expected.investment);
-  await expect(row).toContainText(expected.entryTarget);
+  // Verify each expected value is in the row (using exact matching to avoid substring issues)
+  // Use .first() since same values may appear in multiple columns
+  await expect(row.getByText(expected.type, { exact: true }).first()).toBeVisible();
+  await expect(row.getByText(expected.signal, { exact: true }).first()).toBeVisible();
+  await expect(row.getByText(expected.price, { exact: true }).first()).toBeVisible();
+  await expect(row.getByText(expected.quantity, { exact: true }).first()).toBeVisible();
+  await expect(row.getByText(expected.investment, { exact: true }).first()).toBeVisible();
+  await expect(row.getByText(expected.entryTarget, { exact: true }).first()).toBeVisible();
 
   // P/L fields may be "-" for BUY transactions
   if (expected.profitLoss !== "-") {
-    await expect(row).toContainText(expected.profitLoss);
+    await expect(row.getByText(expected.profitLoss, { exact: true }).first()).toBeVisible();
   }
   if (expected.profitLossPercent !== "-") {
-    await expect(row).toContainText(expected.profitLossPercent);
+    await expect(row.getByText(expected.profitLossPercent, { exact: true }).first()).toBeVisible();
   }
 
   console.log("[AssetHelper] BUY transaction verified successfully.");
@@ -991,14 +1085,15 @@ export async function verifySellTransaction(
 
   const row = await findSellTransactionRow(page, expected.price, expected.signal, expected.amount);
 
-  // Verify each expected value is in the row
-  await expect(row).toContainText(expected.type);
-  await expect(row).toContainText(expected.signal);
-  await expect(row).toContainText(expected.price);
-  await expect(row).toContainText(expected.quantity);
-  await expect(row).toContainText(expected.amount);
-  await expect(row).toContainText(expected.profitLoss);
-  await expect(row).toContainText(expected.profitLossPercent);
+  // Verify each expected value is in the row (using exact matching to avoid substring issues)
+  // Use .first() since same values may appear in multiple columns
+  await expect(row.getByText(expected.type, { exact: true }).first()).toBeVisible();
+  await expect(row.getByText(expected.signal, { exact: true }).first()).toBeVisible();
+  await expect(row.getByText(expected.price, { exact: true }).first()).toBeVisible();
+  await expect(row.getByText(expected.quantity, { exact: true }).first()).toBeVisible();
+  await expect(row.getByText(expected.amount, { exact: true }).first()).toBeVisible();
+  await expect(row.getByText(expected.profitLoss, { exact: true }).first()).toBeVisible();
+  await expect(row.getByText(expected.profitLossPercent, { exact: true }).first()).toBeVisible();
 
   console.log("[AssetHelper] SELL transaction verified successfully.");
 }
@@ -1145,16 +1240,17 @@ export async function verifyWallet(
 
   const row = await findWalletRow(page, expected.ptPercent, expected.price, expected.shares);
 
-  // Verify each expected value
-  await expect(row).toContainText(expected.price);
-  await expect(row).toContainText(expected.shares);
-  await expect(row).toContainText(expected.investment);
-  await expect(row).toContainText(expected.pt);
-  await expect(row).toContainText(expected.pct2pt);
+  // Verify each expected value (using exact matching to avoid substring issues)
+  // Use .first() since same values may appear in multiple columns (e.g., price = investment)
+  await expect(row.getByText(expected.price, { exact: true }).first()).toBeVisible();
+  await expect(row.getByText(expected.shares, { exact: true }).first()).toBeVisible();
+  await expect(row.getByText(expected.investment, { exact: true }).first()).toBeVisible();
+  await expect(row.getByText(expected.pt, { exact: true }).first()).toBeVisible();
+  await expect(row.getByText(expected.pct2pt, { exact: true }).first()).toBeVisible();
 
   // Verify %2PT highlight if specified
   if (expected.pct2ptHighlight) {
-    const pct2ptCell = row.locator(`text=${expected.pct2pt}`);
+    const pct2ptCell = row.getByText(expected.pct2pt, { exact: true }).first();
     const expectedClass = HIGHLIGHT_COLORS[expected.pct2ptHighlight];
 
     if (expectedClass) {
@@ -1209,14 +1305,14 @@ export async function verifyOverview(
 ): Promise<void> {
   console.log(`[AssetHelper] Verifying overview: totalShares=${expected.totalShares}...`);
 
-  // Verify total shares
+  // Verify total shares (exact match)
   const totalSharesEl = page.locator('[data-testid="overview-total-shares"]');
   await expect(totalSharesEl).toHaveText(expected.totalShares);
 
-  // Verify PT shares
+  // Verify PT shares (exact match to avoid substring issues)
   for (const ptShares of expected.ptShares) {
     const ptSharesEl = page.locator(`[data-testid="overview-pt-shares-${ptShares.ptPercent}"]`);
-    await expect(ptSharesEl).toContainText(ptShares.shares);
+    await expect(ptSharesEl.getByText(ptShares.shares, { exact: true }).first()).toBeVisible();
   }
 
   console.log("[AssetHelper] Overview verified successfully.");
