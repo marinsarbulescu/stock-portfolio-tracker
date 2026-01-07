@@ -12,12 +12,12 @@
     }
   },
   "entryTargets": [
-    { "input": { "name": "ET1", "targetPercent": "4", "sortOrder": "1" } }
+    { "input": { "name": "ET -4%", "targetPercent": "4", "sortOrder": "1" } }
   ],
   "profitTargets": [
-    { "input": { "name": "PT1", "targetPercent": "4", "allocationPercent": "50", "sortOrder": "1" } },
-    { "input": { "name": "PT2", "targetPercent": "8", "allocationPercent": "30", "sortOrder": "2" } },
-    { "input": { "name": "PT3", "targetPercent": "16", "allocationPercent": "20", "sortOrder": "3" } }
+    { "input": { "name": "PT +4%", "targetPercent": "4", "allocationPercent": "50", "sortOrder": "1" } },
+    { "input": { "name": "PT +8%", "targetPercent": "8", "allocationPercent": "30", "sortOrder": "2" } },
+    { "input": { "name": "PT +16%", "targetPercent": "16", "allocationPercent": "20", "sortOrder": "3" } }
   ],
   "steps": {
     "createPT": {
@@ -104,8 +104,8 @@
       },
       "targetSortOrder": "3",
       "expectedPTsAfterDelete": [
-        { "sortOrder": "1", "name": "PT1", "targetPercent": "4", "allocationPercent": "62.5" },
-        { "sortOrder": "2", "name": "PT2", "targetPercent": "8", "allocationPercent": "37.5" }
+        { "sortOrder": "1", "name": "PT +4%", "targetPercent": "4", "allocationPercent": "62.5" },
+        { "sortOrder": "2", "name": "PT +8%", "targetPercent": "8", "allocationPercent": "37.5" }
       ],
       "expectedWalletTabs": ["4", "8"],
       "allocationErrorTests": {
@@ -138,8 +138,8 @@
         }
       ],
       "expectedFinalAllocations": [
-        { "sortOrder": "1", "name": "PT1", "targetPercent": "4", "allocationPercent": "50" },
-        { "sortOrder": "2", "name": "PT2", "targetPercent": "8", "allocationPercent": "50" }
+        { "sortOrder": "1", "name": "PT +4%", "targetPercent": "4", "allocationPercent": "50" },
+        { "sortOrder": "2", "name": "PT +8%", "targetPercent": "8", "allocationPercent": "50" }
       ]
     },
     "editPTOrder": {
@@ -153,8 +153,8 @@
         "newSortOrder": "3"
       },
       "expectedPTsAfterEdit": [
-        { "sortOrder": "2", "name": "PT2", "targetPercent": "8", "allocationPercent": "50" },
-        { "sortOrder": "3", "name": "PT1", "targetPercent": "4", "allocationPercent": "50" }
+        { "sortOrder": "2", "name": "PT +8%", "targetPercent": "8", "allocationPercent": "50" },
+        { "sortOrder": "3", "name": "PT +4%", "targetPercent": "4", "allocationPercent": "50" }
       ],
       "expectedWalletTabOrder": ["4", "8"]
     },
