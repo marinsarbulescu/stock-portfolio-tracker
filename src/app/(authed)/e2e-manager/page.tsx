@@ -30,20 +30,20 @@ const tests: TestItem[] = [
   },
   {
     id: "buy-1",
-    name: "AssetBuyCRUD - Create BUY transaction and verify",
-    specFile: "assets/asset-buy-crud.spec.ts",
-    describeName: "Assets - BUY Transaction CRUD",
+    name: "TransactionBuyCRUD - Create BUY transaction and verify",
+    specFile: "transactions/transaction-buy-crud.spec.ts",
+    describeName: "Transactions - BUY CRUD",
   },
   {
     id: "sell-1",
-    name: "AssetSellCRUD - SELL transaction CRUD",
-    specFile: "assets/asset-sell-crud.spec.ts",
-    describeName: "Assets - SELL Transaction CRUD",
+    name: "TransactionSellCRUD - SELL transaction CRUD",
+    specFile: "transactions/transaction-sell-crud.spec.ts",
+    describeName: "Transactions - SELL CRUD",
   },
   {
     id: "dashboard-signals-1",
     name: "DashboardSignals - Verify %2PT colors in Dashboard and Wallets tables",
-    specFile: "assets/dashboard-signals.spec.ts",
+    specFile: "dashboard/dashboard-signals.spec.ts",
     describeName: "Dashboard Signals - %2PT Color Logic",
   },
   {
@@ -51,6 +51,18 @@ const tests: TestItem[] = [
     name: "ROI Calculation - ROI calculation verification",
     specFile: "assets/asset-roi.spec.ts",
     describeName: "Assets - ROI Calculation",
+  },
+  {
+    id: "asset-config-changes-1",
+    name: "AssetConfigChanges - Config changes between transactions",
+    specFile: "assets/asset-config-changes.spec.ts",
+    describeName: "Assets - Config Changes",
+  },
+  {
+    id: "asset-pt-crud-1",
+    name: "AssetPTCRUD - PT Delete Protection and Allocation Redistribution",
+    specFile: "assets/asset-pt-crud.spec.ts",
+    describeName: "Assets - PT CRUD",
   },
 ];
 

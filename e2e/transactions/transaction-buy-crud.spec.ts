@@ -1,7 +1,7 @@
-// e2e/assets/asset-buy-crud.spec.ts
+// e2e/transactions/transaction-buy-crud.spec.ts
 //
 // This Playwright test verifies BUY transaction CRUD operations.
-// All test input/output values are loaded from asset-buy-crud.json
+// All test input/output values are loaded from transaction-buy-crud.json
 //
 // The test iterates through all transactions in the JSON file.
 // If a transaction has a `target` field, it's an edit operation.
@@ -30,7 +30,7 @@ import {
 test.setTimeout(240000);
 
 // Load test configuration from JSON
-const testConfig = loadAssetBuyCrudTestData("e2e/assets/asset-buy-crud.json");
+const testConfig = loadAssetBuyCrudTestData("e2e/transactions/transaction-buy-crud.json");
 
 // Test Suite
 test.describe("Assets - BUY Transaction CRUD (JSON-driven)", () => {

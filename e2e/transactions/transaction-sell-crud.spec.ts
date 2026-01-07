@@ -1,7 +1,7 @@
-// e2e/assets/asset-sell-crud.spec.ts
+// e2e/transactions/transaction-sell-crud.spec.ts
 //
 // This Playwright test verifies SELL transaction CRUD operations.
-// All test input/output values are loaded from asset-sell-crud.json
+// All test input/output values are loaded from transaction-sell-crud.json
 //
 // The test iterates through all transactions in the JSON file.
 // Transactions can be BUY (setup) or SELL (create/edit/delete).
@@ -36,7 +36,7 @@ import {
 test.setTimeout(240000);
 
 // Load test configuration from JSON
-const testConfig = loadAssetSellCrudTestData("e2e/assets/asset-sell-crud.json");
+const testConfig = loadAssetSellCrudTestData("e2e/transactions/transaction-sell-crud.json");
 
 // Helper to check if action is a SELL action
 function isSellAction(action: BuyTransactionAction | SellTransactionAction): action is SellTransactionAction {

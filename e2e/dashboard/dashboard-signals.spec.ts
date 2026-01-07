@@ -1,4 +1,4 @@
-// e2e/assets/dashboard-signals.spec.ts
+// e2e/dashboard/dashboard-signals.spec.ts
 //
 // This Playwright test verifies %2PT color logic (green/yellow/default) in both
 // the Dashboard table and the Wallets table on the Transactions page.
@@ -33,7 +33,7 @@ import {
 test.setTimeout(180000);
 
 // Load test configuration from JSON
-const testConfig = loadDashboardSignalsTestData("e2e/assets/dashboard-signals.json");
+const testConfig = loadDashboardSignalsTestData("e2e/dashboard/dashboard-signals.json");
 
 test.describe("Dashboard Signals - %2PT Color Logic (JSON-driven)", () => {
   test.beforeEach(async ({ page }) => {
