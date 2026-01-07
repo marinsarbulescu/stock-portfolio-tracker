@@ -36,6 +36,7 @@ interface ProfitTargetListProps extends BaseTargetListProps {
   onCreate: (data: Omit<ProfitTarget, "id">) => Promise<void>;
   onUpdate: (id: string, data: Partial<ProfitTarget>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  walletCounts?: Record<string, number>;  // Wallet count per PT id - hides delete if > 0
 }
 
 type TargetListProps = EntryTargetListProps | ProfitTargetListProps;
@@ -209,7 +210,11 @@ export function TargetList(props: TargetListProps) {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Are you sure you want to delete this target?")) return;
+    // For profit targets, skip confirmation here - handleDeleteProfitTarget shows a comprehensive dialog
+    // For entry targets, confirm here
+    if (!isProfit) {
+      if (!confirm("Are you sure you want to delete this Entry Target?")) return;
+    }
 
     try {
       await props.onDelete(id);
@@ -344,13 +349,16 @@ export function TargetList(props: TargetListProps) {
                         >
                           Edit
                         </button>
-                        <button
-                          onClick={() => handleDelete(target.id)}
-                          data-testid={`${props.type}-target-delete-btn-${target.sortOrder}`}
-                          className="text-red-400 hover:text-red-300"
-                        >
-                          Delete
-                        </button>
+                        {/* Hide delete for profit targets with wallets */}
+                        {(props.type !== "profit" || !(props.walletCounts?.[target.id])) && (
+                          <button
+                            onClick={() => handleDelete(target.id)}
+                            data-testid={`${props.type}-target-delete-btn-${target.sortOrder}`}
+                            className="text-red-400 hover:text-red-300"
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </>

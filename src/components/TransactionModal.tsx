@@ -309,10 +309,7 @@ export function TransactionModal({
       // Validate allocations if profit targets exist
       if (profitTargets.length > 0) {
         const specifiedTotal = getSpecifiedTotal();
-        if (specifiedTotal > 100) {
-          setError("Total allocation cannot exceed 100%");
-          return false;
-        }
+
         // At least one allocation must be specified
         const hasAnyAllocation = Object.values(formData.allocations).some(
           (val) => val && parseFloat(val) > 0
@@ -320,6 +317,25 @@ export function TransactionModal({
         if (!hasAnyAllocation) {
           setError("Please specify allocation for at least one profit target");
           return false;
+        }
+
+        // Check if all PTs have values specified (no empty fields for auto-fill)
+        const allPTsSpecified = profitTargets.every(
+          (pt) => formData.allocations[pt.id] && parseFloat(formData.allocations[pt.id]) > 0
+        );
+
+        if (allPTsSpecified) {
+          // All PTs specified: total must equal exactly 100%
+          if (specifiedTotal !== 100) {
+            setError(`Total allocation must equal 100% (currently ${specifiedTotal}%)`);
+            return false;
+          }
+        } else {
+          // Some PTs empty for auto-fill: total cannot exceed 100%
+          if (specifiedTotal > 100) {
+            setError("Total allocation cannot exceed 100%");
+            return false;
+          }
         }
       }
     }
@@ -762,11 +778,27 @@ export function TransactionModal({
                   </span>
                 </div>
 
-                {getSpecifiedTotal() > 100 && (
-                  <p className="text-xs text-red-400 mt-1">
-                    Total allocation exceeds 100%
-                  </p>
-                )}
+                {(() => {
+                  const specifiedTotal = getSpecifiedTotal();
+                  const allPTsSpecified = profitTargets.every(
+                    (pt) => formData.allocations[pt.id] && parseFloat(formData.allocations[pt.id]) > 0
+                  );
+
+                  if (allPTsSpecified && specifiedTotal !== 100) {
+                    return (
+                      <p className="text-xs text-red-400 mt-1">
+                        Total allocation must equal 100% (currently {specifiedTotal}%)
+                      </p>
+                    );
+                  } else if (!allPTsSpecified && specifiedTotal > 100) {
+                    return (
+                      <p className="text-xs text-red-400 mt-1">
+                        Total allocation exceeds 100%
+                      </p>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             )}
           </div>

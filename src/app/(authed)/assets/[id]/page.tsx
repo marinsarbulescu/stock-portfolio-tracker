@@ -55,6 +55,7 @@ export default function EditAssetPage() {
   const [entryTargets, setEntryTargets] = useState<EntryTarget[]>([]);
   const [profitTargets, setProfitTargets] = useState<ProfitTarget[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [ptWalletCounts, setPtWalletCounts] = useState<Record<string, number>>({});
 
   // Auto-dismiss error after 5 seconds
   useEffect(() => {
@@ -158,14 +159,33 @@ export default function EditAssetPage() {
     }
   }, [assetId]);
 
+  const fetchPtWalletCounts = useCallback(async () => {
+    try {
+      const walletResponse = await client.models.Wallet.list({
+        filter: { assetId: { eq: assetId } },
+        limit: 5000,
+      });
+
+      // Count wallets per profitTargetId
+      const counts: Record<string, number> = {};
+      for (const wallet of walletResponse.data) {
+        counts[wallet.profitTargetId] = (counts[wallet.profitTargetId] || 0) + 1;
+      }
+      setPtWalletCounts(counts);
+    } catch (err) {
+      console.error("Error fetching wallet counts:", err);
+    }
+  }, [assetId]);
+
   useEffect(() => {
     if (authStatus === "authenticated") {
       fetchAsset();
       fetchEntryTargets();
       fetchProfitTargets();
       fetchBudgets();
+      fetchPtWalletCounts();
     }
-  }, [authStatus, fetchAsset, fetchEntryTargets, fetchProfitTargets, fetchBudgets]);
+  }, [authStatus, fetchAsset, fetchEntryTargets, fetchProfitTargets, fetchBudgets, fetchPtWalletCounts]);
 
   function validate(): boolean {
     const newErrors: Record<string, string> = {};
@@ -335,6 +355,13 @@ export default function EditAssetPage() {
 
   // Entry Target handlers
   async function handleCreateEntryTarget(data: Omit<EntryTarget, "id">) {
+    // Check for duplicate sortOrder
+    const duplicate = entryTargets.find(et => et.sortOrder === data.sortOrder);
+    if (duplicate) {
+      setError(`Sort order ${data.sortOrder} is already used by another Entry Target`);
+      return;
+    }
+
     await client.models.EntryTarget.create({
       ...data,
       assetId,
@@ -343,6 +370,15 @@ export default function EditAssetPage() {
   }
 
   async function handleUpdateEntryTarget(id: string, data: Partial<EntryTarget>) {
+    // Check for duplicate sortOrder (excluding the current ET)
+    if (data.sortOrder !== undefined) {
+      const duplicate = entryTargets.find(et => et.id !== id && et.sortOrder === data.sortOrder);
+      if (duplicate) {
+        setError(`Sort order ${data.sortOrder} is already used by another Entry Target`);
+        return;
+      }
+    }
+
     await client.models.EntryTarget.update({
       id,
       ...data,
@@ -357,6 +393,13 @@ export default function EditAssetPage() {
 
   // Profit Target handlers
   async function handleCreateProfitTarget(data: Omit<ProfitTarget, "id">) {
+    // Check for duplicate sortOrder
+    const duplicate = profitTargets.find(pt => pt.sortOrder === data.sortOrder);
+    if (duplicate) {
+      setError(`Sort order ${data.sortOrder} is already used by another Profit Target`);
+      return;
+    }
+
     await client.models.ProfitTarget.create({
       ...data,
       assetId,
@@ -365,14 +408,134 @@ export default function EditAssetPage() {
   }
 
   async function handleUpdateProfitTarget(id: string, data: Partial<ProfitTarget>) {
+    // Check for duplicate sortOrder (excluding the current PT)
+    if (data.sortOrder !== undefined) {
+      const duplicate = profitTargets.find(pt => pt.id !== id && pt.sortOrder === data.sortOrder);
+      if (duplicate) {
+        setError(`Sort order ${data.sortOrder} is already used by another Profit Target`);
+        return;
+      }
+    }
+
+    // Find the current PT to compare values
+    const currentPT = profitTargets.find(pt => pt.id === id);
+    const targetPercentChanged = data.targetPercent !== undefined &&
+      currentPT &&
+      data.targetPercent !== currentPT.targetPercent;
+
+    // Check if targetPercent is actually changing and PT has wallets
+    if (targetPercentChanged) {
+      const walletCount = ptWalletCounts[id] || 0;
+      if (walletCount > 0) {
+        const confirmed = confirm(
+          `This will recalculate the Profit Target price for ${walletCount} wallet(s). Continue?`
+        );
+        if (!confirmed) return;
+      }
+    }
+
     await client.models.ProfitTarget.update({
       id,
       ...data,
     });
+
+    // If targetPercent actually changed, recalculate wallet profitTargetPrices
+    if (targetPercentChanged && data.targetPercent !== undefined) {
+      await recalculateWalletProfitTargetPricesForPT(id, data.targetPercent);
+    }
+
     await fetchProfitTargets();
   }
 
+  /**
+   * Recalculate profitTargetPrice for wallets of a specific PT when its targetPercent changes.
+   * Formula: buyPrice × (1 + PT%) / (1 - commission%)
+   */
+  async function recalculateWalletProfitTargetPricesForPT(ptId: string, newTargetPercent: number) {
+    const commission = asset?.commission ?? 0;
+    const walletResponse = await client.models.Wallet.list({
+      filter: { profitTargetId: { eq: ptId } },
+      limit: 5000,
+    });
+
+    for (const wallet of walletResponse.data) {
+      const newProfitTargetPrice = wallet.price * (1 + newTargetPercent / 100) / (1 - commission / 100);
+      await client.models.Wallet.update({
+        id: wallet.id,
+        profitTargetPrice: newProfitTargetPrice,
+      });
+    }
+
+    console.log(`[EditAsset] Recalculated profitTargetPrice for ${walletResponse.data.length} wallets with new PT ${newTargetPercent}%`);
+  }
+
   async function handleDeleteProfitTarget(id: string) {
+    // Check if PT has wallets - block deletion
+    const walletCount = ptWalletCounts[id] || 0;
+    if (walletCount > 0) {
+      setError(`Cannot delete: this Profit Target has ${walletCount} wallet(s). Sell or delete all shares first.`);
+      return;
+    }
+
+    // Find the PT being deleted and remaining PTs
+    const ptToDelete = profitTargets.find(pt => pt.id === id);
+    if (!ptToDelete) return;
+
+    const remainingPTs = profitTargets.filter(pt => pt.id !== id);
+
+    // If no remaining PTs, just delete with simple confirmation
+    if (remainingPTs.length === 0) {
+      const confirmed = confirm(
+        "Are you sure you want to delete this Profit Target?\n\n" +
+        "• The corresponding empty PT tab from the asset's transactions page will be deleted"
+      );
+      if (!confirmed) return;
+      await client.models.ProfitTarget.delete({ id });
+      await fetchProfitTargets();
+      return;
+    }
+
+    // Calculate proportional redistribution
+    const sumOfRemaining = remainingPTs.reduce((sum, pt) => sum + (pt.allocationPercent ?? 0), 0);
+    const newAllocations: { id: string; name: string; oldAlloc: number; newAlloc: number }[] = [];
+
+    for (const pt of remainingPTs) {
+      const oldAlloc = pt.allocationPercent ?? 0;
+      const newAlloc = sumOfRemaining > 0
+        ? (oldAlloc / sumOfRemaining) * 100
+        : 100 / remainingPTs.length; // Equal split if sum is 0
+      newAllocations.push({
+        id: pt.id,
+        name: pt.name,
+        oldAlloc,
+        newAlloc: Math.round(newAlloc * 100) / 100, // Round to 2 decimal places
+      });
+    }
+
+    // Build confirmation message showing the redistribution
+    const redistributionText = newAllocations
+      .map(a => `  ${a.name}: ${a.oldAlloc}% → ${a.newAlloc}%`)
+      .join("\n");
+
+    const confirmed = confirm(
+      `Are you sure you want to delete this Profit Target?\n\n` +
+      `• The corresponding empty PT tab from the asset's transactions page will be deleted\n` +
+      `• Its ${ptToDelete.allocationPercent ?? 0}% allocation will be redistributed proportionally:\n` +
+      `${redistributionText}\n\n` +
+      `You can adjust allocation values afterward if needed.`
+    );
+
+    if (!confirmed) return;
+
+    // Update remaining PTs with new allocations
+    for (const alloc of newAllocations) {
+      await client.models.ProfitTarget.update({
+        id: alloc.id,
+        allocationPercent: alloc.newAlloc,
+      });
+    }
+
+    // Delete the PT
     await client.models.ProfitTarget.delete({ id });
     await fetchProfitTargets();
   }
@@ -638,15 +801,32 @@ export default function EditAssetPage() {
           onError={setError}
         />
 
-        <TargetList
-          type="profit"
-          assetId={assetId}
-          targets={profitTargets}
-          onCreate={handleCreateProfitTarget}
-          onUpdate={handleUpdateProfitTarget}
-          onDelete={handleDeleteProfitTarget}
-          onError={setError}
-        />
+        <div>
+          <TargetList
+            type="profit"
+            assetId={assetId}
+            targets={profitTargets}
+            onCreate={handleCreateProfitTarget}
+            onUpdate={handleUpdateProfitTarget}
+            onDelete={handleDeleteProfitTarget}
+            onError={setError}
+            walletCounts={ptWalletCounts}
+          />
+          {(() => {
+            const totalAllocation = profitTargets.reduce(
+              (sum, pt) => sum + (pt.allocationPercent ?? 0),
+              0
+            );
+            if (profitTargets.length > 0 && totalAllocation < 100) {
+              return (
+                <p className="mt-2 text-sm text-yellow-500">
+                  Total allocation is {totalAllocation}% (less than 100%)
+                </p>
+              );
+            }
+            return null;
+          })()}
+        </div>
       </div>
 
       <div className="mt-6">
