@@ -451,7 +451,7 @@ export default function AssetTransactionsPage() {
   }, [assetId]);
 
   // Wallet helper functions - now using composite key (assetId, price, profitTargetId)
-  async function findWalletByCompositeKey(price: number, profitTargetId: string) {
+  const findWalletByCompositeKey = useCallback(async (price: number, profitTargetId: string) => {
     const response = await client.models.Wallet.list({
       filter: {
         assetId: { eq: assetId },
@@ -460,14 +460,14 @@ export default function AssetTransactionsPage() {
       },
     });
     return response.data[0] || null;
-  }
+  }, [assetId]);
 
-  async function upsertWallet(
+  const upsertWallet = useCallback(async (
     price: number,
     profitTargetId: string,
     investmentDelta: number,
     profitTargetPrice?: number
-  ): Promise<string | undefined> {
+  ): Promise<string | undefined> => {
     const existing = await findWalletByCompositeKey(price, profitTargetId);
 
     if (existing) {
@@ -503,7 +503,7 @@ export default function AssetTransactionsPage() {
       return result.data?.id;
     }
     return undefined;
-  }
+  }, [assetId, findWalletByCompositeKey]);
 
   // Core delete logic (no confirmation dialog)
   const handleDeleteTransaction = useCallback(async (id: string) => {
@@ -995,8 +995,6 @@ export default function AssetTransactionsPage() {
   }, [effectivePrice, profitTargets, wallets]);
 
   // Wallet columns
-  const isPTHit = selectedProfitTargetId ? hitProfitTargetIds.has(selectedProfitTargetId) : false;
-
   const walletColumns: Column<WalletRow>[] = useMemo(() => [
     {
       key: "walletId",
