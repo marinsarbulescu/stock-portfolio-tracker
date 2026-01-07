@@ -337,19 +337,20 @@ export async function updateTestPriceOnEditPage(page: Page, newPrice: string): P
 
 /**
  * Check if a test asset exists and delete it via UI if found.
+ * Handles duplicates by deleting all matching assets.
  * Call this from the Assets page.
  */
 export async function cleanupTestAssetViaUI(page: Page, symbol: string): Promise<void> {
   console.log(`[AssetHelper] Checking for existing test asset: ${symbol}...`);
 
-  const assetLink = page.locator(`[data-testid="asset-table-symbol-${symbol}"]`);
-  const assetExists = (await assetLink.count()) > 0;
+  let assetLink = page.locator(`[data-testid="asset-table-symbol-${symbol}"]`);
+  let assetCount = await assetLink.count();
 
-  if (assetExists) {
-    console.log(`[AssetHelper] Found existing asset ${symbol}, deleting...`);
+  while (assetCount > 0) {
+    console.log(`[AssetHelper] Found ${assetCount} existing asset(s) ${symbol}, deleting first one...`);
 
-    // Click Edit link to go to edit page
-    const editLink = page.locator(`[data-testid="asset-table-edit-${symbol}"]`);
+    // Click Edit link to go to edit page (use .first() to handle duplicates)
+    const editLink = page.locator(`[data-testid="asset-table-edit-${symbol}"]`).first();
     await editLink.click();
 
     // Wait for edit page to load
@@ -364,15 +365,16 @@ export async function cleanupTestAssetViaUI(page: Page, symbol: string): Promise
     // Wait for redirect back to assets page
     await expect(page).toHaveURL(/\/assets$/, { timeout: 10000 });
 
-    // Verify asset is deleted
-    await expect(
-      page.locator(`[data-testid="asset-table-symbol-${symbol}"]`)
-    ).not.toBeVisible({ timeout: 5000 });
+    // Wait for table to refresh
+    await waitForAssetsTableToLoad(page);
 
-    console.log(`[AssetHelper] Asset ${symbol} deleted successfully.`);
-  } else {
-    console.log(`[AssetHelper] No existing asset ${symbol} found.`);
+    // Check if there are more duplicates
+    assetLink = page.locator(`[data-testid="asset-table-symbol-${symbol}"]`);
+    assetCount = await assetLink.count();
+    console.log(`[AssetHelper] Asset deleted. Remaining: ${assetCount}`);
   }
+
+  console.log(`[AssetHelper] No more assets ${symbol} found.`);
 }
 
 /**
@@ -1633,11 +1635,17 @@ export async function verifyWallet(
   await expect(row.getByText(expected.price, { exact: true }).first()).toBeVisible();
   await expect(row.getByText(expected.shares, { exact: true }).first()).toBeVisible();
   await expect(row.getByText(expected.investment, { exact: true }).first()).toBeVisible();
-  await expect(row.getByText(expected.pt, { exact: true }).first()).toBeVisible();
-  await expect(row.getByText(expected.pct2pt, { exact: true }).first()).toBeVisible();
+
+  // Verify optional fields if provided
+  if (expected.pt) {
+    await expect(row.getByText(expected.pt, { exact: true }).first()).toBeVisible();
+  }
+  if (expected.pct2pt) {
+    await expect(row.getByText(expected.pct2pt, { exact: true }).first()).toBeVisible();
+  }
 
   // Verify %2PT highlight if specified
-  if (expected.pct2ptHighlight) {
+  if (expected.pct2ptHighlight && expected.pct2pt) {
     const pct2ptCell = row.getByText(expected.pct2pt, { exact: true }).first();
     const expectedClass = HIGHLIGHT_COLORS[expected.pct2ptHighlight];
 
@@ -1849,6 +1857,10 @@ export async function navigateToDashboard(page: Page): Promise<void> {
   console.log("[AssetHelper] Navigating to Dashboard...");
 
   await page.locator('[data-testid="nav-dashboard"]').click();
+
+  // Wait for URL to change to /dashboard
+  await page.waitForURL("**/dashboard", { timeout: 10000 });
+
   await waitForDashboardToLoad(page);
 
   console.log("[AssetHelper] Dashboard navigation complete.");
@@ -1867,6 +1879,9 @@ export async function waitForDashboardToLoad(page: Page): Promise<void> {
 
   // Wait for the dashboard table to be visible
   await page.waitForSelector('table', { state: "visible", timeout: 15000 });
+
+  // Wait a bit for data to fully render
+  await page.waitForTimeout(500);
 
   console.log("[AssetHelper] Dashboard loaded.");
 }
@@ -1994,7 +2009,10 @@ export async function verifyDashboardAvailable(
 
   // Find the Available cell by data-testid
   const availableCell = page.locator(`[data-testid="dashboard-available-${symbol}"]`).first();
-  await expect(availableCell).toHaveText(expectedAvailable);
+
+  // Wait for element to be visible first
+  await expect(availableCell).toBeVisible({ timeout: 10000 });
+  await expect(availableCell).toHaveText(expectedAvailable, { timeout: 10000 });
 
   console.log(`[AssetHelper] Dashboard Available verified: ${expectedAvailable}`);
 }
@@ -2058,4 +2076,101 @@ export async function createDividendSlpTransaction(
   await expect(page.locator('[data-testid="transaction-form-type"]')).not.toBeVisible({ timeout: 10000 });
 
   console.log(`[AssetHelper] ${input.type} transaction created successfully.`);
+}
+
+// ============================================================================
+// Stock Split Transaction Helpers
+// ============================================================================
+
+/**
+ * Wait for a wallet to show specific values (used after split transactions).
+ * Uses Playwright's polling mechanism instead of fixed timeouts.
+ * Call this from the transactions page.
+ */
+export async function waitForWalletUpdate(
+  page: Page,
+  ptPercent: string,
+  expectedShares: string,
+  timeout: number = 15000
+): Promise<void> {
+  console.log(`[AssetHelper] Waiting for wallet PT=${ptPercent}% to show shares=${expectedShares}...`);
+
+  // First, wait for the SPLIT transaction to appear in the transaction table
+  // This ensures the transaction was actually saved before checking wallets
+  const splitRow = page.locator('tr').filter({ hasText: /\d+:\d+/ });
+  await expect(splitRow.first()).toBeVisible({ timeout: 10000 });
+  console.log(`[AssetHelper] SPLIT transaction visible in table.`);
+
+  // Now click the PT tab and wait for wallet to update
+  await page.locator(`[data-testid="wallet-tab-pt-${ptPercent}"]`).click();
+  await page.waitForTimeout(500);
+
+  // Wait for wallet row with expected shares to appear
+  const walletRows = page.locator('tr[data-testid^="wallet-row-"]');
+  const matchingRow = walletRows.filter({ hasText: expectedShares });
+
+  await expect(matchingRow.first()).toBeVisible({ timeout });
+
+  console.log(`[AssetHelper] Wallet update confirmed.`);
+}
+
+/**
+ * Create a SPLIT transaction via the TransactionModal.
+ * Call this from the transactions page.
+ * @param splitRatio - The split ratio (e.g., "2" for 2:1 split)
+ * @param expectedWallet - Optional: wait for this wallet value to appear (more robust than fixed timeout)
+ */
+export async function createSplitTransaction(
+  page: Page,
+  splitRatio: string,
+  expectedWallet?: { ptPercent: string; shares: string }
+): Promise<void> {
+  console.log(`[AssetHelper] Creating SPLIT transaction: ratio=${splitRatio}:1...`);
+
+  // Click New Transaction button
+  await page.locator('[data-testid="btn-new-transaction"]').click();
+
+  // Wait for modal to appear
+  await expect(page.locator('[data-testid="transaction-form-type"]')).toBeVisible({ timeout: 5000 });
+
+  // Select SPLIT type
+  await page.locator('[data-testid="transaction-form-type"]').selectOption("SPLIT");
+
+  // Fill split ratio
+  await page.locator('[data-testid="transaction-form-splitRatio"]').fill(splitRatio);
+
+  // Submit
+  await page.locator('[data-testid="transaction-form-submit"]').click();
+
+  // Wait for modal to close
+  await expect(page.locator('[data-testid="transaction-form-submit"]')).not.toBeVisible({ timeout: 10000 });
+
+  // Wait for wallet table to refresh with split-adjusted values
+  if (expectedWallet) {
+    // Use robust polling instead of fixed timeout
+    await waitForWalletUpdate(page, expectedWallet.ptPercent, expectedWallet.shares);
+  } else {
+    // Fallback to fixed timeout if no expected wallet provided
+    await page.waitForTimeout(1000);
+  }
+
+  console.log(`[AssetHelper] SPLIT transaction created successfully.`);
+}
+
+/**
+ * Attempt to delete a SPLIT transaction.
+ * Call this from the transactions page.
+ * Note: This may fail if there are subsequent transactions (which is a valid test case).
+ */
+export async function deleteSplitTransaction(page: Page): Promise<void> {
+  console.log(`[AssetHelper] Attempting to delete SPLIT transaction...`);
+
+  // Set up dialog handler BEFORE clicking delete
+  page.once('dialog', dialog => dialog.accept());
+
+  // Find the SPLIT row (identified by the split ratio pattern like "2:1")
+  const splitRow = page.locator('tr').filter({ hasText: /\d+:\d+/ });
+  await splitRow.locator('[data-testid*="delete"]').click();
+
+  console.log(`[AssetHelper] SPLIT delete attempt completed.`);
 }

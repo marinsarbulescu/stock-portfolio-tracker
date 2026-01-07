@@ -2,23 +2,29 @@
 //
 // This Playwright test verifies SPLIT transaction functionality.
 // Tests that splits correctly adjust wallet shares and prices.
+// All test input/output values are loaded from asset-split.json
 
 import { test, expect } from "@playwright/test";
 import { loginUser, clearBrowserState } from "../utils/auth";
+import { loadAssetSplitTestData, SplitStepTransaction, TransactionInput, SplitTransactionInput } from "../utils/jsonHelper";
 import {
   setupTestAsset,
   cleanupTestAssetViaUI,
+  navigateToAssetsPage,
   navigateToTransactionsPage,
   createBuyTransaction,
+  createSplitTransaction,
+  deleteSplitTransaction,
   verifyWallet,
 } from "../utils/assetHelper";
 
 // Set test timeout
-test.setTimeout(120000);
+test.setTimeout(180000);
 
-test.describe("Stock Split Transactions", () => {
-  const ASSET_SYMBOL = "E2E-SPLIT-TEST";
+// Load test configuration from JSON
+const testConfig = loadAssetSplitTestData("e2e/assets/asset-split.json");
 
+test.describe("Assets - Stock Split (JSON-driven)", () => {
   test.beforeEach(async ({ page }) => {
     console.log("[BEFORE EACH] Starting fresh session setup...");
     await clearBrowserState(page);
@@ -31,179 +37,82 @@ test.describe("Stock Split Transactions", () => {
     try {
       await page.goto("/assets");
       await expect(page).toHaveURL(/\/assets$/);
-      await cleanupTestAssetViaUI(page, ASSET_SYMBOL);
+      await cleanupTestAssetViaUI(page, testConfig.asset.input.symbol);
     } catch (error) {
       console.warn("[AFTER EACH] Cleanup failed:", error);
     }
   });
 
-  test("2:1 split doubles shares and halves prices", async ({ page }) => {
-    console.log("[SPLIT TEST] Setting up test asset...");
+  test(`${testConfig.scenario} - Stock split transactions`, async ({ page }) => {
+    console.log(`[${testConfig.scenario}] Starting test...`);
+    console.log(`[${testConfig.scenario}] ${testConfig.description}`);
 
-    // Setup asset with one profit target
-    await setupTestAsset(page, {
-      asset: {
-        symbol: ASSET_SYMBOL,
-        name: "Split Test Asset",
-        type: "STOCK",
-        testPrice: "100",
-        commission: "0.5",
-        status: "ACTIVE",
-      },
-      entryTargets: [{ name: "ET1", targetPercent: "2", sortOrder: "1" }],
-      profitTargets: [{ name: "PT1", targetPercent: "8", allocationPercent: "100", sortOrder: "1" }],
-    });
+    const stepEntries = Object.entries(testConfig.steps);
 
-    await navigateToTransactionsPage(page);
+    for (let stepIndex = 0; stepIndex < stepEntries.length; stepIndex++) {
+      const [stepKey, step] = stepEntries[stepIndex];
+      console.log(`\n[${testConfig.scenario}] === Step ${stepIndex + 1}/${stepEntries.length}: ${stepKey} ===`);
+      console.log(`[${testConfig.scenario}] ${step.description}`);
 
-    // Create initial BUY transaction: 100 shares @ $10
-    console.log("[SPLIT TEST] Creating BUY transaction: 100 shares @ $10...");
-    await createBuyTransaction(page, {
-      signal: "INITIAL",
-      price: "10",
-      investment: "1000",
-      allocations: [{ ptPercent: "8", percentage: "100" }],
-    });
+      // Setup fresh asset for each step (since steps are independent scenarios)
+      console.log(`[${testConfig.scenario}] Setting up test asset...`);
+      await setupTestAsset(page, {
+        asset: testConfig.asset.input,
+        entryTargets: testConfig.entryTargets.map(et => et.input),
+        profitTargets: testConfig.profitTargets.map(pt => pt.input),
+      });
 
-    // Verify initial wallet
-    console.log("[SPLIT TEST] Verifying initial wallet...");
-    await verifyWallet(page, {
-      ptPercent: "8",
-      price: "$10.00",
-      shares: "100.00000",
-      investment: "$1000.00",
-    });
+      // Navigate to transactions page
+      await navigateToTransactionsPage(page);
+      await expect(page.locator('[data-testid="btn-new-transaction"]')).toBeVisible({ timeout: 10000 });
 
-    // Create 2:1 SPLIT transaction
-    console.log("[SPLIT TEST] Creating 2:1 SPLIT transaction...");
-    await page.click('[data-testid="btn-new-transaction"]');
-    await page.selectOption('[data-testid="transaction-form-type"]', "SPLIT");
-    await page.fill('[data-testid="transaction-form-splitRatio"]', "2");
-    await page.click('[data-testid="transaction-form-submit"]');
+      // Process each transaction in this step
+      for (let txnIndex = 0; txnIndex < step.transactions.length; txnIndex++) {
+        const txn = step.transactions[txnIndex] as SplitStepTransaction;
+        console.log(`[${testConfig.scenario}] Transaction ${txnIndex + 1}/${step.transactions.length}: ${txn.type}`);
 
-    // Wait for modal to close
-    await expect(page.locator('[data-testid="transaction-form-submit"]')).not.toBeVisible({ timeout: 10000 });
+        if (txn.type === "BUY") {
+          const buyInput = txn.input as TransactionInput;
+          console.log(`[${testConfig.scenario}] Creating BUY: ${buyInput.signal} @ $${buyInput.price}...`);
+          await createBuyTransaction(page, buyInput);
+        } else if (txn.type === "SPLIT") {
+          const splitInput = txn.input as SplitTransactionInput;
+          console.log(`[${testConfig.scenario}] Creating SPLIT: ${splitInput.splitRatio}:1...`);
+          // Extract expected wallet for robust waiting (if defined)
+          const expectedWallet = txn.expected?.wallets?.[0]
+            ? { ptPercent: txn.expected.wallets[0].ptPercent, shares: txn.expected.wallets[0].shares }
+            : undefined;
+          await createSplitTransaction(page, splitInput.splitRatio, expectedWallet);
+        } else if (txn.type === "DELETE_SPLIT") {
+          console.log(`[${testConfig.scenario}] Attempting to delete SPLIT...`);
+          await deleteSplitTransaction(page);
 
-    // Verify wallet after split: should have 200 shares @ $5
-    console.log("[SPLIT TEST] Verifying wallet after 2:1 split...");
-    await verifyWallet(page, {
-      ptPercent: "8",
-      price: "$5.00",
-      shares: "200.00000",
-      investment: "$1000.00",
-    });
+          // Verify error message appears
+          if (txn.expected?.errorMessage) {
+            console.log(`[${testConfig.scenario}] Verifying error message...`);
+            await expect(page.locator(`text=/${txn.expected.errorMessage}/i`)).toBeVisible({ timeout: 5000 });
+            console.log(`[${testConfig.scenario}] Error message verified.`);
+          }
+        }
 
-    console.log("[SPLIT TEST] 2:1 split test passed!");
-  });
+        // Verify wallets if expected
+        if (txn.expected?.wallets) {
+          console.log(`[${testConfig.scenario}] Verifying ${txn.expected.wallets.length} wallet(s)...`);
+          for (const wallet of txn.expected.wallets) {
+            await verifyWallet(page, wallet);
+          }
+          console.log(`[${testConfig.scenario}] Wallets verified.`);
+        }
+      }
 
-  test("Split only affects wallets created before split date", async ({ page }) => {
-    console.log("[SPLIT TEST] Setting up test asset...");
+      console.log(`[${testConfig.scenario}] Step ${stepKey} completed.`);
 
-    await setupTestAsset(page, {
-      asset: {
-        symbol: ASSET_SYMBOL,
-        name: "Split Test Asset",
-        type: "STOCK",
-        testPrice: "100",
-        commission: "0.5",
-        status: "ACTIVE",
-      },
-      entryTargets: [{ name: "ET1", targetPercent: "2", sortOrder: "1" }],
-      profitTargets: [{ name: "PT1", targetPercent: "8", allocationPercent: "100", sortOrder: "1" }],
-    });
+      // Cleanup asset before next step
+      console.log(`[${testConfig.scenario}] Cleaning up before next step...`);
+      await navigateToAssetsPage(page);
+      await cleanupTestAssetViaUI(page, testConfig.asset.input.symbol);
+    }
 
-    await navigateToTransactionsPage(page);
-
-    // Create BUY before split: 100 shares @ $10
-    console.log("[SPLIT TEST] Creating BUY before split: 100 shares @ $10...");
-    await createBuyTransaction(page, {
-      signal: "INITIAL",
-      price: "10",
-      investment: "1000",
-      allocations: [{ ptPercent: "8", percentage: "100" }],
-    });
-
-    // Create 2:1 SPLIT
-    console.log("[SPLIT TEST] Creating 2:1 SPLIT...");
-    await page.click('[data-testid="btn-new-transaction"]');
-    await page.selectOption('[data-testid="transaction-form-type"]', "SPLIT");
-    await page.fill('[data-testid="transaction-form-splitRatio"]', "2");
-    await page.click('[data-testid="transaction-form-submit"]');
-    await expect(page.locator('[data-testid="transaction-form-submit"]')).not.toBeVisible({ timeout: 10000 });
-
-    // Create BUY after split: 50 shares @ $5 (should NOT be split-adjusted)
-    console.log("[SPLIT TEST] Creating BUY after split: 50 shares @ $5...");
-    await createBuyTransaction(page, {
-      signal: "CUSTOM",
-      price: "5",
-      investment: "250",
-      allocations: [{ ptPercent: "8", percentage: "100" }],
-    });
-
-    // Should have combined wallet: 250 shares @ $5 (200 from split + 50 new)
-    console.log("[SPLIT TEST] Verifying combined wallet...");
-    await verifyWallet(page, {
-      ptPercent: "8",
-      price: "$5.00",
-      shares: "250.00000",
-      investment: "$1250.00",
-    });
-
-    console.log("[SPLIT TEST] Date-based split test passed!");
-  });
-
-  test("Deleting split is prevented if subsequent transactions exist", async ({ page }) => {
-    console.log("[SPLIT TEST] Setting up test asset...");
-
-    await setupTestAsset(page, {
-      asset: {
-        symbol: ASSET_SYMBOL,
-        name: "Split Test Asset",
-        type: "STOCK",
-        testPrice: "100",
-        commission: "0.5",
-        status: "ACTIVE",
-      },
-      entryTargets: [{ name: "ET1", targetPercent: "2", sortOrder: "1" }],
-      profitTargets: [{ name: "PT1", targetPercent: "8", allocationPercent: "100", sortOrder: "1" }],
-    });
-
-    await navigateToTransactionsPage(page);
-
-    // Create BUY, then SPLIT, then another BUY
-    await createBuyTransaction(page, {
-      signal: "INITIAL",
-      price: "10",
-      investment: "1000",
-      allocations: [{ ptPercent: "8", percentage: "100" }],
-    });
-
-    await page.click('[data-testid="btn-new-transaction"]');
-    await page.selectOption('[data-testid="transaction-form-type"]', "SPLIT");
-    await page.fill('[data-testid="transaction-form-splitRatio"]', "2");
-    await page.click('[data-testid="transaction-form-submit"]');
-    await expect(page.locator('[data-testid="transaction-form-submit"]')).not.toBeVisible({ timeout: 10000 });
-
-    await createBuyTransaction(page, {
-      signal: "CUSTOM",
-      price: "5",
-      investment: "250",
-      allocations: [{ ptPercent: "8", percentage: "100" }],
-    });
-
-    // Try to delete the SPLIT - should show error
-    console.log("[SPLIT TEST] Attempting to delete SPLIT with subsequent transaction...");
-
-    // Find and click delete button for SPLIT transaction (should be visible in table)
-    const splitRow = page.locator('tr').filter({ hasText: '2:1' });
-    await splitRow.locator('[data-testid*="delete"]').click();
-
-    // Confirm deletion
-    page.once('dialog', dialog => dialog.accept());
-
-    // Should show error message
-    await expect(page.locator('text=/Cannot delete.*subsequent transactions/i')).toBeVisible({ timeout: 5000 });
-
-    console.log("[SPLIT TEST] Delete prevention test passed!");
+    console.log(`\n[${testConfig.scenario}] All steps completed successfully!`);
   });
 });

@@ -64,6 +64,12 @@ const tests: TestItem[] = [
     specFile: "assets/asset-pt-crud.spec.ts",
     describeName: "Assets - PT CRUD",
   },
+  {
+    id: "asset-split-1",
+    name: "AssetSplit - Stock split transactions",
+    specFile: "assets/asset-split.spec.ts",
+    describeName: "Assets - Stock Split",
+  },
 ];
 
 // Group tests by describeName

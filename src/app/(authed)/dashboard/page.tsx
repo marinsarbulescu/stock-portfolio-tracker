@@ -82,11 +82,11 @@ export default function Dashboard() {
           }),
         ]);
 
-      const assets = assetsResponse.data;
-      const transactions = transactionsResponse.data;
-      const wallets = walletsResponse.data;
-      const entryTargets = entryTargetsResponse.data;
-      const yearlyBudgets = yearlyBudgetsResponse.data;
+      const assets = assetsResponse.data.filter(Boolean);
+      const transactions = transactionsResponse.data.filter(Boolean);
+      const wallets = walletsResponse.data.filter(Boolean);
+      const entryTargets = entryTargetsResponse.data.filter(Boolean);
+      const yearlyBudgets = yearlyBudgetsResponse.data.filter(Boolean);
 
       // Process raw data for each asset (without effective price calculation)
       const processedRawData: RawAssetData[] = assets.map((asset) => {

@@ -111,8 +111,8 @@ export interface WalletExpected {
   price: string;
   shares: string;
   investment: string;
-  pt: string;
-  pct2pt: string;
+  pt?: string;  // Optional - profit target price
+  pct2pt?: string;  // Optional - percent to profit target
   pct2ptHighlight?: "green" | "yellow" | "none";  // Optional highlight verification
 }
 
@@ -691,6 +691,63 @@ export function loadAssetPTCrudTestData(fileName: string): AssetPTCrudTestConfig
     const data = JSON.parse(fileContent) as AssetPTCrudTestConfig;
     console.log(
       `[jsonHelper.ts] Successfully parsed PT CRUD JSON for scenario: ${data.scenario}`
+    );
+    return data;
+  } catch (error) {
+    throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
+  }
+}
+
+// ============================================================================
+// Stock Split Test Types
+// ============================================================================
+
+export interface SplitTransactionInput {
+  splitRatio: string;
+}
+
+export interface SplitStepTransaction {
+  type: "BUY" | "SPLIT" | "DELETE_SPLIT";
+  input?: TransactionInput | SplitTransactionInput;
+  expected?: {
+    wallets?: WalletExpected[];
+    errorMessage?: string;
+  };
+}
+
+export interface SplitTestStep {
+  description: string;
+  transactions: SplitStepTransaction[];
+}
+
+export interface AssetSplitTestConfig {
+  scenario: string;
+  description: string;
+  asset: {
+    input: AssetCreateInput;
+  };
+  entryTargets: { input: TargetInput }[];
+  profitTargets: { input: TargetInput }[];
+  steps: Record<string, SplitTestStep>;
+}
+
+export function loadAssetSplitTestData(fileName: string): AssetSplitTestConfig {
+  const filePath = path.resolve(process.cwd(), fileName);
+  console.log(`[jsonHelper.ts] Attempting to load Split JSON from: ${filePath}`);
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`JSON file not found: ${filePath}`);
+  }
+
+  const fileContent = fs.readFileSync(filePath, "utf-8");
+  console.log(
+    `[jsonHelper.ts] File content read successfully. Length: ${fileContent.length}`
+  );
+
+  try {
+    const data = JSON.parse(fileContent) as AssetSplitTestConfig;
+    console.log(
+      `[jsonHelper.ts] Successfully parsed Split JSON for scenario: ${data.scenario}`
     );
     return data;
   } catch (error) {
