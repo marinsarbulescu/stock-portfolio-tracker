@@ -124,7 +124,7 @@
         {
           "targetSortOrder": "1",
           "newAllocationPercent": "70",
-          "expectedError": "Total allocation cannot exceed 100%. Current: 37.5%, Available: 62.5%"
+          "expectedError": "Total allocation cannot exceed 100%. You can only update this PT value to max 62.5%"
         },
         {
           "targetSortOrder": "1",

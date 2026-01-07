@@ -84,7 +84,7 @@ export function TargetList(props: TargetListProps) {
     const newTotal = currentTotal + newAllocation;
     if (newTotal > 100) {
       const available = 100 - currentTotal;
-      return `Total allocation cannot exceed 100%. Current: ${currentTotal}%, Available: ${available}%`;
+      return `Total allocation cannot exceed 100%. You can only update this PT value to max ${available}%`;
     }
     return null;
   }
