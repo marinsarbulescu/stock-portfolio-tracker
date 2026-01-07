@@ -101,6 +101,138 @@ function formatCurrency(value: number | null): string {
   return value < 0 ? `-$${absValue}` : `$${absValue}`;
 }
 
+// Helper function to get wallet creation date
+async function getWalletCreationDate(walletId: string): Promise<string | null> {
+  try {
+    const allocsResponse = await client.models.TransactionAllocation.list({
+      filter: { walletId: { eq: walletId } },
+    });
+
+    if (allocsResponse.data.length === 0) return null;
+
+    // Get all transaction dates
+    const txnDates = await Promise.all(
+      allocsResponse.data.map(async (alloc) => {
+        const txn = await client.models.Transaction.get({ id: alloc.transactionId });
+        return txn.data?.date || null;
+      })
+    );
+
+    // Return earliest date
+    const validDates = txnDates.filter(d => d !== null) as string[];
+    return validDates.length > 0 ? validDates.sort()[0] : null;
+  } catch (error) {
+    console.error(`Error getting wallet creation date for ${walletId}:`, error);
+    return null;
+  }
+}
+
+// Helper function to get all splits for an asset
+async function getAllSplitsForAsset(assetId: string) {
+  try {
+    const response = await client.models.Transaction.list({
+      filter: {
+        assetId: { eq: assetId },
+        type: { eq: "SPLIT" }
+      },
+    });
+    return response.data
+      .map(t => ({ date: t.date, ratio: t.splitRatio! }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  } catch (error) {
+    console.error(`Error getting splits for asset ${assetId}:`, error);
+    return [];
+  }
+}
+
+// Helper function to compute adjusted values based on splits
+function computeAdjustedValues(
+  origShares: number,
+  origPrice: number,
+  origPTPrice: number,
+  splits: Array<{ date: string, ratio: number }>,
+  walletCreationDate: string
+) {
+  let shares = origShares;
+  let price = origPrice;
+  let ptPrice = origPTPrice;
+
+  // Apply each split that occurred after wallet creation
+  for (const split of splits) {
+    if (split.date > walletCreationDate) {
+      shares *= split.ratio;
+      price /= split.ratio;
+      ptPrice /= split.ratio;
+    }
+  }
+
+  return {
+    shares: parseFloat(shares.toFixed(5)),
+    price: parseFloat(price.toFixed(2)),
+    profitTargetPrice: parseFloat(ptPrice.toFixed(2)),
+  };
+}
+
+// Helper function to apply split adjustments to all wallets
+async function applySplitAdjustments(assetId: string): Promise<number> {
+  try {
+    // Get all wallets for this asset
+    const walletsResponse = await client.models.Wallet.list({
+      filter: { assetId: { eq: assetId } },
+      limit: 5000
+    });
+
+    // Get all splits for this asset
+    const splits = await getAllSplitsForAsset(assetId);
+
+    if (splits.length === 0) {
+      return 0; // No splits to apply
+    }
+
+    let updatedCount = 0;
+
+    // Process each wallet
+    for (const wallet of walletsResponse.data) {
+      const creationDate = await getWalletCreationDate(wallet.id);
+      if (!creationDate) {
+        console.warn(`Could not find creation date for wallet ${wallet.id}, skipping`);
+        continue;
+      }
+
+      // Use original values (guaranteed to exist since fields are required)
+      const { shares, price, profitTargetPrice } = computeAdjustedValues(
+        wallet.originalShares,
+        wallet.originalPrice,
+        wallet.originalProfitTargetPrice,
+        splits,
+        creationDate
+      );
+
+      // Only update if values changed
+      if (
+        shares !== wallet.shares ||
+        price !== wallet.price ||
+        profitTargetPrice !== wallet.profitTargetPrice
+      ) {
+        await client.models.Wallet.update({
+          id: wallet.id,
+          shares,
+          price,
+          profitTargetPrice,
+          investment: parseFloat((shares * price).toFixed(2)),
+        });
+        updatedCount++;
+      }
+    }
+
+    console.log(`Applied split adjustments to ${updatedCount} wallet(s)`);
+    return updatedCount;
+  } catch (error) {
+    console.error(`Error applying split adjustments:`, error);
+    throw error;
+  }
+}
+
 export default function AssetTransactionsPage() {
   const { authStatus } = useAuthenticator((context) => [context.authStatus]);
   const params = useParams();
@@ -356,13 +488,17 @@ export default function AssetTransactionsPage() {
       }
     } else if (investmentDelta > 0 && profitTargetPrice !== undefined) {
       // Create new wallet for this (assetId, price, profitTargetId) combination
+      const shares = parseFloat((investmentDelta / price).toFixed(5));
       const result = await client.models.Wallet.create({
         assetId,
         price,
         profitTargetId,
         investment: investmentDelta,
-        shares: parseFloat((investmentDelta / price).toFixed(5)),
+        shares,
         profitTargetPrice,
+        originalShares: shares,
+        originalPrice: price,
+        originalProfitTargetPrice: profitTargetPrice,
       });
       return result.data?.id;
     }
@@ -436,6 +572,9 @@ export default function AssetTransactionsPage() {
             investment: investmentToRestore,
             profitTargetId: pt.id,
             profitTargetPrice,
+            originalShares: sharesToRestore,
+            originalPrice: buyPrice,
+            originalProfitTargetPrice: profitTargetPrice,
           });
 
           // Update TransactionAllocations that pointed to old wallet
@@ -463,7 +602,33 @@ export default function AssetTransactionsPage() {
       return;
     }
 
-    // For non-SELL transactions (BUY, DIVIDEND, SPLIT, SLP)
+    // For SPLIT transactions, check for subsequent transactions
+    if (txn.type === "SPLIT") {
+      const hasSubsequentTxns = transactions.some(
+        (t) => t.id !== id && new Date(t.date) > new Date(txn.date)
+      );
+      if (hasSubsequentTxns) {
+        setError("Cannot delete this SPLIT transaction because there are subsequent transactions.");
+        return;
+      }
+
+      try {
+        // Delete the split transaction
+        await client.models.Transaction.delete({ id });
+
+        // Reapply all remaining splits (which automatically reverses this split)
+        await applySplitAdjustments(assetId);
+
+        await fetchWallets();
+        await fetchTransactions();
+      } catch (err) {
+        console.error("Error deleting SPLIT transaction:", err);
+        setError("Failed to delete SPLIT transaction");
+      }
+      return;
+    }
+
+    // For non-SELL, non-SPLIT transactions (BUY, DIVIDEND, SLP)
     try {
       const allocationsResponse = await client.models.TransactionAllocation.list({
         filter: { transactionId: { eq: id } },
@@ -1064,6 +1229,9 @@ export default function AssetTransactionsPage() {
               investment: oldInvestment,
               profitTargetId: pt.id,
               profitTargetPrice,
+              originalShares: oldQuantity,
+              originalPrice: walletPrice,
+              originalProfitTargetPrice: profitTargetPrice,
             });
 
             if (newWallet.data?.id) {
@@ -1176,6 +1344,19 @@ export default function AssetTransactionsPage() {
           }
         }
         await fetchWallets();
+      }
+
+      // Apply split adjustments if this is a SPLIT transaction
+      if (data.type === "SPLIT" && data.splitRatio) {
+        try {
+          const count = await applySplitAdjustments(assetId);
+          console.log(`Split applied: adjusted ${count} wallet(s)`);
+          await fetchWallets();
+        } catch (err) {
+          console.error("Failed to apply split adjustments:", err);
+          setError("Split transaction created but failed to adjust wallets. Please try again.");
+          return;
+        }
       }
 
       await fetchTransactions();

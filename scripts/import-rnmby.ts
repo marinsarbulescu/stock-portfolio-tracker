@@ -404,6 +404,9 @@ async function upsertWallet(
       investment,
       shares,
       profitTargetPrice,
+      originalShares: shares,
+      originalPrice: price,
+      originalProfitTargetPrice: profitTargetPrice,
     });
 
     if (newWallet) {

@@ -110,6 +110,9 @@ const schema = a.schema({
       investment: a.float().required(), // Sum of all investments at this price/PT
       shares: a.float().required(), // Calculated: investment / price
       profitTargetPrice: a.float().required(), // Pre-calculated: price * (1 + PT%) / (1 - commission%)
+      originalShares: a.float().required(), // Pre-split share count (for split adjustments)
+      originalPrice: a.float().required(), // Pre-split buy price (for split adjustments)
+      originalProfitTargetPrice: a.float().required(), // Pre-split PT price (for split adjustments)
       // Relationships
       assetId: a.id().required(),
       asset: a.belongsTo("Asset", "assetId"),
