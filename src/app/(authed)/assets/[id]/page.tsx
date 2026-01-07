@@ -620,7 +620,7 @@ export default function EditAssetPage() {
       </h2>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-500/20 text-red-400 rounded flex items-center justify-between">
+        <div data-testid="asset-edit-error" className="mb-4 p-3 bg-red-500/20 text-red-400 rounded flex items-center justify-between">
           <span>{error}</span>
           <button
             onClick={() => setError(null)}

@@ -558,3 +558,142 @@ export function loadAssetConfigChangesTestData(fileName: string): AssetConfigCha
     throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
   }
 }
+
+// ============================================================================
+// PT CRUD Test Types
+// ============================================================================
+
+export interface PTDeleteButtonsVerification {
+  hidden?: string[];   // sortOrders where delete should be hidden
+  visible?: string[];  // sortOrders where delete should be visible
+}
+
+export interface PTExpectedAfterDelete {
+  sortOrder: string;
+  name: string;
+  targetPercent: string;
+  allocationPercent: string;
+}
+
+export interface AllocationErrorTest {
+  allocations: Record<string, string>;  // ptPercent -> allocation value
+  expectedError: string;
+}
+
+export interface PTCrudCreateStep {
+  buyTransaction: {
+    input: TransactionInput;
+    expected: {
+      transaction: TransactionExpected;
+      wallets: WalletExpected[];
+      overview: OverviewExpected;
+    };
+  };
+  verifyDeleteButtons: PTDeleteButtonsVerification;
+}
+
+export interface PTCrudDeleteStep {
+  sellTransaction: {
+    input: SellTransactionInput;
+    expected: {
+      transaction: SellTransactionExpected;
+      wallets: WalletExpected[];
+      walletsNotPresent: { ptPercent: string; price: string }[];
+      overview: OverviewExpected;
+    };
+  };
+  verifyDeleteButtonsAfterSell: PTDeleteButtonsVerification;
+  targetSortOrder: string;
+  expectedPTsAfterDelete: PTExpectedAfterDelete[];
+  expectedWalletTabs: string[];
+  allocationErrorTests: {
+    lessThan100: AllocationErrorTest;
+    moreThan100: AllocationErrorTest;
+  };
+}
+
+export interface PTAllocationEditTest {
+  targetSortOrder: string;
+  newAllocationPercent: string;
+  expectedError?: string;    // If present, expect error after save
+  expectedWarning?: string;  // Yellow warning below PT list (for < 100%)
+  noWarning?: boolean;       // If true, verify no warning is shown
+}
+
+export interface PTCrudEditAllocationStep {
+  tests: PTAllocationEditTest[];
+  expectedFinalAllocations: PTExpectedAfterDelete[];
+}
+
+export interface PTOrderEditTest {
+  targetSortOrder: string;      // Current sortOrder of PT to edit
+  newSortOrder: string;         // New sortOrder to set
+  expectedError?: string;       // If present, expect error message
+}
+
+export interface PTCrudEditOrderStep {
+  duplicateOrderTest: PTOrderEditTest;
+  validOrderTest: PTOrderEditTest;
+  expectedPTsAfterEdit: PTExpectedAfterDelete[];
+  expectedWalletTabOrder: string[];  // PT percents in expected tab order
+}
+
+export interface PTCrudEditValueStep {
+  targetSortOrder: string;           // sortOrder of PT to edit
+  input: {
+    targetPercent: string;           // New target percent value
+    name: string;                    // New name for the PT
+  };
+  confirmationMessage: string;       // Expected browser confirm() message
+  expectedPT: PTExpectedAfterDelete; // Expected PT row after edit
+  expectedWalletTabs: string[];      // Expected wallet tab order after edit
+  expectedWallet: {
+    ptPercent: string;               // PT percent to verify (tab identifier)
+    price: string;                   // Entry price of wallet
+    shares: string;                  // Shares in wallet (unchanged)
+    investment: string;              // Investment in wallet (unchanged)
+    pt: string;                      // New PT price after recalculation
+    pct2pt: string;                  // New %2PT after recalculation
+  };
+}
+
+export interface AssetPTCrudTestConfig {
+  scenario: string;
+  description: string;
+  asset: {
+    input: AssetCreateInput;
+  };
+  entryTargets: { input: TargetInput }[];
+  profitTargets: { input: TargetInput }[];
+  steps: {
+    createPT: PTCrudCreateStep;
+    deletePT: PTCrudDeleteStep;
+    editPTAllocation?: PTCrudEditAllocationStep;
+    editPTOrder?: PTCrudEditOrderStep;
+    editPTValue?: PTCrudEditValueStep;
+  };
+}
+
+export function loadAssetPTCrudTestData(fileName: string): AssetPTCrudTestConfig {
+  const filePath = path.resolve(process.cwd(), fileName);
+  console.log(`[jsonHelper.ts] Attempting to load PT CRUD JSON from: ${filePath}`);
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`JSON file not found: ${filePath}`);
+  }
+
+  const fileContent = fs.readFileSync(filePath, "utf-8");
+  console.log(
+    `[jsonHelper.ts] File content read successfully. Length: ${fileContent.length}`
+  );
+
+  try {
+    const data = JSON.parse(fileContent) as AssetPTCrudTestConfig;
+    console.log(
+      `[jsonHelper.ts] Successfully parsed PT CRUD JSON for scenario: ${data.scenario}`
+    );
+    return data;
+  } catch (error) {
+    throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
+  }
+}

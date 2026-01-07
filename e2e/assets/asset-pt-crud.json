@@ -1,0 +1,185 @@
+{
+  "scenario": "AssetPTCRUD",
+  "description": "Test PT delete protection, allocation redistribution, and modal validation",
+  "asset": {
+    "input": {
+      "symbol": "E2E-ASSET-PT-CRUD",
+      "name": "E2E Asset PT CRUD Test",
+      "type": "STOCK",
+      "testPrice": "100",
+      "commission": "1",
+      "status": "ACTIVE"
+    }
+  },
+  "entryTargets": [
+    { "input": { "name": "ET1", "targetPercent": "4", "sortOrder": "1" } }
+  ],
+  "profitTargets": [
+    { "input": { "name": "PT1", "targetPercent": "4", "allocationPercent": "50", "sortOrder": "1" } },
+    { "input": { "name": "PT2", "targetPercent": "8", "allocationPercent": "30", "sortOrder": "2" } },
+    { "input": { "name": "PT3", "targetPercent": "16", "allocationPercent": "20", "sortOrder": "3" } }
+  ],
+  "steps": {
+    "createPT": {
+      "buyTransaction": {
+        "input": {
+          "signal": "INITIAL",
+          "price": "100",
+          "investment": "100",
+          "allocations": [
+            { "ptPercent": "4", "percentage": "50" },
+            { "ptPercent": "8", "percentage": "30" },
+            { "ptPercent": "16", "percentage": "20" }
+          ]
+        },
+        "expected": {
+          "transaction": {
+            "type": "Buy",
+            "signal": "Initial",
+            "price": "$100.00",
+            "quantity": "1.00000",
+            "investment": "$100.00",
+            "entryTarget": "$96.00",
+            "profitLoss": "-",
+            "profitLossPercent": "-"
+          },
+          "wallets": [
+            { "ptPercent": "4", "price": "$100.00", "shares": "0.50000", "investment": "$50.00", "pt": "$105.05", "pct2pt": "-4.81%" },
+            { "ptPercent": "8", "price": "$100.00", "shares": "0.30000", "investment": "$30.00", "pt": "$109.09", "pct2pt": "-8.33%" },
+            { "ptPercent": "16", "price": "$100.00", "shares": "0.20000", "investment": "$20.00", "pt": "$117.17", "pct2pt": "-14.66%" }
+          ],
+          "overview": {
+            "totalShares": "1.00000",
+            "ptShares": [
+              { "ptPercent": "4", "shares": "0.50000" },
+              { "ptPercent": "8", "shares": "0.30000" },
+              { "ptPercent": "16", "shares": "0.20000" }
+            ]
+          }
+        }
+      },
+      "verifyDeleteButtons": {
+        "hidden": ["1", "2", "3"]
+      }
+    },
+    "deletePT": {
+      "sellTransaction": {
+        "input": {
+          "ptPercent": "16",
+          "walletPrice": "$100.00",
+          "signal": "CUSTOM",
+          "price": "100",
+          "quantity": "0.2"
+        },
+        "expected": {
+          "transaction": {
+            "type": "Sell",
+            "signal": "Custom",
+            "price": "$100.00",
+            "quantity": "0.20000",
+            "amount": "$19.80",
+            "profitLoss": "-$0.20",
+            "profitLossPercent": "-1.00%"
+          },
+          "wallets": [
+            { "ptPercent": "4", "price": "$100.00", "shares": "0.50000", "investment": "$50.00", "pt": "$105.05", "pct2pt": "-4.81%" },
+            { "ptPercent": "8", "price": "$100.00", "shares": "0.30000", "investment": "$30.00", "pt": "$109.09", "pct2pt": "-8.33%" }
+          ],
+          "walletsNotPresent": [
+            { "ptPercent": "16", "price": "$100.00" }
+          ],
+          "overview": {
+            "totalShares": "0.80000",
+            "ptShares": [
+              { "ptPercent": "4", "shares": "0.50000" },
+              { "ptPercent": "8", "shares": "0.30000" },
+              { "ptPercent": "16", "shares": "0.00000" }
+            ]
+          }
+        }
+      },
+      "verifyDeleteButtonsAfterSell": {
+        "hidden": ["1", "2"],
+        "visible": ["3"]
+      },
+      "targetSortOrder": "3",
+      "expectedPTsAfterDelete": [
+        { "sortOrder": "1", "name": "PT1", "targetPercent": "4", "allocationPercent": "62.5" },
+        { "sortOrder": "2", "name": "PT2", "targetPercent": "8", "allocationPercent": "37.5" }
+      ],
+      "expectedWalletTabs": ["4", "8"],
+      "allocationErrorTests": {
+        "lessThan100": {
+          "allocations": { "4": "40", "8": "40" },
+          "expectedError": "Total allocation must equal 100% (currently 80%)"
+        },
+        "moreThan100": {
+          "allocations": { "4": "60", "8": "60" },
+          "expectedError": "Total allocation must equal 100% (currently 120%)"
+        }
+      }
+    },
+    "editPTAllocation": {
+      "tests": [
+        {
+          "targetSortOrder": "1",
+          "newAllocationPercent": "70",
+          "expectedError": "Total allocation cannot exceed 100%. Current: 37.5%, Available: 62.5%"
+        },
+        {
+          "targetSortOrder": "1",
+          "newAllocationPercent": "50",
+          "expectedWarning": "Total allocation is 87.5% (less than 100%)"
+        },
+        {
+          "targetSortOrder": "2",
+          "newAllocationPercent": "50",
+          "noWarning": true
+        }
+      ],
+      "expectedFinalAllocations": [
+        { "sortOrder": "1", "name": "PT1", "targetPercent": "4", "allocationPercent": "50" },
+        { "sortOrder": "2", "name": "PT2", "targetPercent": "8", "allocationPercent": "50" }
+      ]
+    },
+    "editPTOrder": {
+      "duplicateOrderTest": {
+        "targetSortOrder": "1",
+        "newSortOrder": "2",
+        "expectedError": "Sort order 2 is already used by another Profit Target"
+      },
+      "validOrderTest": {
+        "targetSortOrder": "1",
+        "newSortOrder": "3"
+      },
+      "expectedPTsAfterEdit": [
+        { "sortOrder": "2", "name": "PT2", "targetPercent": "8", "allocationPercent": "50" },
+        { "sortOrder": "3", "name": "PT1", "targetPercent": "4", "allocationPercent": "50" }
+      ],
+      "expectedWalletTabOrder": ["4", "8"]
+    },
+    "editPTValue": {
+      "targetSortOrder": "3",
+      "input": {
+        "targetPercent": "5",
+        "name": "PT +5%"
+      },
+      "confirmationMessage": "This will recalculate the Profit Target price for 1 wallet(s). Continue?",
+      "expectedPT": {
+        "sortOrder": "3",
+        "name": "PT +5%",
+        "targetPercent": "5",
+        "allocationPercent": "50"
+      },
+      "expectedWalletTabs": ["5", "8"],
+      "expectedWallet": {
+        "ptPercent": "5",
+        "price": "$100.00",
+        "shares": "0.50000",
+        "investment": "$50.00",
+        "pt": "$106.06",
+        "pct2pt": "-5.71%"
+      }
+    }
+  }
+}

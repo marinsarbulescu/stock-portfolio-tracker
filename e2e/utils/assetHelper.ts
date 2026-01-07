@@ -651,6 +651,394 @@ export async function deleteTarget(
 }
 
 // ============================================================================
+// PT Delete Button Visibility Helpers (for PT CRUD test)
+// ============================================================================
+
+/**
+ * Verify that the delete button IS visible for a PT on the Asset Edit page.
+ * Call this from the asset edit page.
+ */
+export async function verifyPTDeleteButtonVisible(page: Page, sortOrder: string): Promise<void> {
+  console.log(`[AssetHelper] Verifying PT delete button visible for sortOrder ${sortOrder}...`);
+  await expect(page.locator(`[data-testid="profit-target-delete-btn-${sortOrder}"]`)).toBeVisible({ timeout: 5000 });
+  console.log(`[AssetHelper] PT delete button at sortOrder ${sortOrder} is visible.`);
+}
+
+/**
+ * Verify that the delete button is NOT visible for a PT on the Asset Edit page.
+ * Call this from the asset edit page.
+ */
+export async function verifyPTDeleteButtonHidden(page: Page, sortOrder: string): Promise<void> {
+  console.log(`[AssetHelper] Verifying PT delete button hidden for sortOrder ${sortOrder}...`);
+  await expect(page.locator(`[data-testid="profit-target-delete-btn-${sortOrder}"]`)).not.toBeVisible({ timeout: 5000 });
+  console.log(`[AssetHelper] PT delete button at sortOrder ${sortOrder} is hidden.`);
+}
+
+/**
+ * Verify a PT's allocation percentage in the table on the Asset Edit page.
+ * Call this from the asset edit page.
+ */
+export async function verifyPTAllocation(page: Page, sortOrder: string, expectedAllocation: string): Promise<void> {
+  console.log(`[AssetHelper] Verifying PT allocation at sortOrder ${sortOrder} is ${expectedAllocation}%...`);
+  const allocCell = page.locator(`[data-testid="profit-target-alloc-${sortOrder}"]`);
+  await expect(allocCell).toHaveText(`${expectedAllocation}%`, { timeout: 5000 });
+  console.log(`[AssetHelper] PT allocation verified: ${expectedAllocation}%.`);
+}
+
+/**
+ * Verify a PT row exists with expected values on the Asset Edit page.
+ * Call this from the asset edit page.
+ */
+export async function verifyPTRow(
+  page: Page,
+  expected: { sortOrder: string; name: string; targetPercent: string; allocationPercent: string }
+): Promise<void> {
+  console.log(`[AssetHelper] Verifying PT row at sortOrder ${expected.sortOrder}...`);
+  await expect(page.locator(`[data-testid="profit-target-name-${expected.sortOrder}"]`)).toHaveText(expected.name);
+  // Profit target percentages are displayed with "+" prefix in UI
+  await expect(page.locator(`[data-testid="profit-target-percent-${expected.sortOrder}"]`)).toHaveText(`+${expected.targetPercent}%`);
+  await expect(page.locator(`[data-testid="profit-target-alloc-${expected.sortOrder}"]`)).toHaveText(`${expected.allocationPercent}%`);
+  console.log(`[AssetHelper] PT row verified: ${expected.name}, +${expected.targetPercent}%, ${expected.allocationPercent}%.`);
+}
+
+/**
+ * Verify a PT row does NOT exist on the Asset Edit page.
+ * Call this from the asset edit page.
+ */
+export async function verifyPTRowNotPresent(page: Page, sortOrder: string): Promise<void> {
+  console.log(`[AssetHelper] Verifying PT row at sortOrder ${sortOrder} is NOT present...`);
+  await expect(page.locator(`[data-testid="profit-target-row-${sortOrder}"]`)).not.toBeVisible({ timeout: 5000 });
+  console.log(`[AssetHelper] PT row at sortOrder ${sortOrder} confirmed not present.`);
+}
+
+/**
+ * Edit a PT's allocation percentage and attempt to save.
+ * Call this from the asset edit page.
+ * Returns true if save succeeded (edit mode closed), false if it failed (edit mode still open).
+ */
+export async function editPTAllocationAndSave(
+  page: Page,
+  sortOrder: string,
+  newAllocationPercent: string
+): Promise<boolean> {
+  console.log(`[AssetHelper] Editing PT allocation at sortOrder ${sortOrder} to ${newAllocationPercent}%...`);
+
+  // Wait for any previous animations to complete
+  await page.waitForTimeout(300);
+
+  // Ensure Edit button is visible and click it
+  const editBtn = page.locator(`[data-testid="profit-target-edit-btn-${sortOrder}"]`);
+  await expect(editBtn).toBeVisible({ timeout: 5000 });
+  await editBtn.click();
+
+  // Wait for edit mode
+  const allocInput = page.locator(`[data-testid="profit-target-edit-alloc-${sortOrder}"]`);
+  await expect(allocInput).toBeVisible({ timeout: 5000 });
+
+  // Clear and fill allocation field
+  await allocInput.clear();
+  await allocInput.fill(newAllocationPercent);
+
+  // Click Save
+  await page.locator(`[data-testid="profit-target-edit-save-${sortOrder}"]`).click();
+
+  // Wait for the save to process
+  await page.waitForTimeout(500);
+
+  // Check if edit mode closed (success) or still open (failure)
+  const saveButton = page.locator(`[data-testid="profit-target-edit-save-${sortOrder}"]`);
+  const isStillEditing = await saveButton.isVisible();
+
+  if (isStillEditing) {
+    console.log(`[AssetHelper] PT allocation edit at sortOrder ${sortOrder} failed (still in edit mode).`);
+    // Cancel the edit to restore normal state
+    await page.locator(`[data-testid="profit-target-edit-cancel-${sortOrder}"]`).click();
+    await expect(saveButton).not.toBeVisible({ timeout: 5000 });
+    return false;
+  }
+
+  console.log(`[AssetHelper] PT allocation at sortOrder ${sortOrder} updated to ${newAllocationPercent}%.`);
+  return true;
+}
+
+/**
+ * Verify the page-level error message on the Asset Edit page.
+ * Call this from the asset edit page.
+ */
+export async function verifyPageError(page: Page, expectedError: string): Promise<void> {
+  console.log(`[AssetHelper] Verifying page error: "${expectedError}"...`);
+  const errorEl = page.locator('[data-testid="asset-edit-error"]');
+  await expect(errorEl).toBeVisible({ timeout: 5000 });
+  await expect(errorEl).toContainText(expectedError);
+  console.log("[AssetHelper] Page error verified.");
+}
+
+/**
+ * Dismiss/clear the page-level error message on the Asset Edit page.
+ * Call this from the asset edit page.
+ */
+export async function dismissPageError(page: Page): Promise<void> {
+  console.log("[AssetHelper] Dismissing page error...");
+  const errorEl = page.locator('[data-testid="asset-edit-error"]');
+  const isVisible = await errorEl.isVisible();
+  if (isVisible) {
+    // Click the dismiss button (X) inside the error element
+    const dismissBtn = errorEl.locator('button[aria-label="Dismiss error"]');
+    try {
+      await dismissBtn.click();
+    } catch {
+      // Button might not be clickable
+    }
+    // Wait for the error to disappear
+    await expect(errorEl).not.toBeVisible({ timeout: 5000 }).catch(() => {
+      // If still visible, that's ok - error might auto-dismiss later
+    });
+  }
+  console.log("[AssetHelper] Page error dismissed (or not present).");
+}
+
+/**
+ * Verify the yellow allocation warning below the PT list on the Asset Edit page.
+ * Call this from the asset edit page.
+ */
+export async function verifyPTAllocationWarning(page: Page, expectedWarning: string): Promise<void> {
+  console.log(`[AssetHelper] Verifying PT allocation warning: "${expectedWarning}"...`);
+  const warningEl = page.locator('.text-yellow-500').filter({ hasText: expectedWarning });
+  await expect(warningEl).toBeVisible({ timeout: 5000 });
+  console.log("[AssetHelper] PT allocation warning verified.");
+}
+
+/**
+ * Verify NO allocation warning is shown below the PT list on the Asset Edit page.
+ * Call this from the asset edit page.
+ */
+export async function verifyNoPTAllocationWarning(page: Page): Promise<void> {
+  console.log("[AssetHelper] Verifying no PT allocation warning...");
+  const warningEl = page.locator('.text-yellow-500').filter({ hasText: "less than 100%" });
+  await expect(warningEl).not.toBeVisible({ timeout: 5000 });
+  console.log("[AssetHelper] No PT allocation warning confirmed.");
+}
+
+/**
+ * Edit a PT's sort order and attempt to save.
+ * Call this from the asset edit page.
+ * Returns true if save succeeded (no error), false if it failed (error shown or edit mode still open).
+ */
+export async function editPTSortOrderAndSave(
+  page: Page,
+  currentSortOrder: string,
+  newSortOrder: string
+): Promise<boolean> {
+  console.log(`[AssetHelper] Editing PT sortOrder from ${currentSortOrder} to ${newSortOrder}...`);
+
+  // Click Edit button
+  await page.locator(`[data-testid="profit-target-edit-btn-${currentSortOrder}"]`).click();
+
+  // Wait for edit mode
+  await expect(page.locator(`[data-testid="profit-target-edit-order-${currentSortOrder}"]`)).toBeVisible({ timeout: 5000 });
+
+  // Clear and fill sortOrder field
+  await page.locator(`[data-testid="profit-target-edit-order-${currentSortOrder}"]`).clear();
+  await page.locator(`[data-testid="profit-target-edit-order-${currentSortOrder}"]`).fill(newSortOrder);
+
+  // Click Save
+  await page.locator(`[data-testid="profit-target-edit-save-${currentSortOrder}"]`).click();
+
+  // Wait a moment for the save to process
+  await page.waitForTimeout(500);
+
+  // Check if an error appeared (validation failed at page level)
+  const errorEl = page.locator('[data-testid="asset-edit-error"]');
+  const hasError = await errorEl.isVisible();
+
+  if (hasError) {
+    console.log(`[AssetHelper] PT sortOrder edit failed (error shown).`);
+    return false;
+  }
+
+  // Check if edit mode is still open (validation failed client-side)
+  const saveButton = page.locator(`[data-testid="profit-target-edit-save-${currentSortOrder}"]`);
+  const isStillEditing = await saveButton.isVisible();
+
+  if (isStillEditing) {
+    console.log(`[AssetHelper] PT sortOrder edit failed (still in edit mode).`);
+    // Cancel the edit to restore normal state
+    await page.locator(`[data-testid="profit-target-edit-cancel-${currentSortOrder}"]`).click();
+    await expect(saveButton).not.toBeVisible({ timeout: 5000 });
+    return false;
+  }
+
+  console.log(`[AssetHelper] PT sortOrder updated from ${currentSortOrder} to ${newSortOrder}.`);
+  return true;
+}
+
+/**
+ * Edit a PT's targetPercent and name, handling the browser confirmation dialog.
+ * Call this from the asset edit page.
+ * Returns true if save succeeded, false if it failed.
+ */
+export async function editPTValueAndSave(
+  page: Page,
+  sortOrder: string,
+  newTargetPercent: string,
+  newName: string
+): Promise<boolean> {
+  console.log(`[AssetHelper] Editing PT at sortOrder ${sortOrder}: targetPercent=${newTargetPercent}, name=${newName}...`);
+
+  // Set up dialog handler BEFORE clicking save (dialog will appear after save)
+  let dialogAccepted = false;
+  const dialogHandler = (dialog: import("@playwright/test").Dialog) => {
+    console.log(`[AssetHelper] Dialog appeared: ${dialog.message()}`);
+    dialog.accept();
+    dialogAccepted = true;
+  };
+  page.on("dialog", dialogHandler);
+
+  try {
+    // Click Edit button
+    await page.locator(`[data-testid="profit-target-edit-btn-${sortOrder}"]`).click();
+
+    // Wait for edit mode
+    await expect(page.locator(`[data-testid="profit-target-edit-percent-${sortOrder}"]`)).toBeVisible({ timeout: 5000 });
+
+    // Clear and fill targetPercent field
+    await page.locator(`[data-testid="profit-target-edit-percent-${sortOrder}"]`).clear();
+    await page.locator(`[data-testid="profit-target-edit-percent-${sortOrder}"]`).fill(newTargetPercent);
+
+    // Clear and fill name field
+    await page.locator(`[data-testid="profit-target-edit-name-${sortOrder}"]`).clear();
+    await page.locator(`[data-testid="profit-target-edit-name-${sortOrder}"]`).fill(newName);
+
+    // Click Save
+    await page.locator(`[data-testid="profit-target-edit-save-${sortOrder}"]`).click();
+
+    // Wait for the save to process (and dialog to be handled)
+    await page.waitForTimeout(1000);
+
+    // Check if edit mode closed (success)
+    const saveButton = page.locator(`[data-testid="profit-target-edit-save-${sortOrder}"]`);
+    const isStillEditing = await saveButton.isVisible();
+
+    if (isStillEditing) {
+      console.log(`[AssetHelper] PT value edit at sortOrder ${sortOrder} failed (still in edit mode).`);
+      // Cancel the edit to restore normal state
+      await page.locator(`[data-testid="profit-target-edit-cancel-${sortOrder}"]`).click();
+      await expect(saveButton).not.toBeVisible({ timeout: 5000 });
+      return false;
+    }
+
+    console.log(`[AssetHelper] PT value at sortOrder ${sortOrder} updated. Dialog accepted: ${dialogAccepted}`);
+    return true;
+  } finally {
+    // Remove dialog handler
+    page.off("dialog", dialogHandler);
+  }
+}
+
+// ============================================================================
+// Transaction Modal Helpers (for PT CRUD test)
+// ============================================================================
+
+/**
+ * Open the New Transaction modal.
+ * Call this from the transactions page.
+ */
+export async function openNewTransactionModal(page: Page): Promise<void> {
+  console.log("[AssetHelper] Opening new transaction modal...");
+  await page.locator('[data-testid="btn-new-transaction"]').click();
+  await expect(page.locator('[data-testid="transaction-form-type"]')).toBeVisible({ timeout: 10000 });
+  console.log("[AssetHelper] New transaction modal opened.");
+}
+
+/**
+ * Cancel the transaction modal.
+ * Call this when the transaction modal is open.
+ */
+export async function cancelTransactionModal(page: Page): Promise<void> {
+  console.log("[AssetHelper] Cancelling transaction modal...");
+  await page.locator('[data-testid="transaction-form-cancel"]').click();
+  await expect(page.locator('[data-testid="transaction-form-type"]')).not.toBeVisible({ timeout: 5000 });
+  console.log("[AssetHelper] Transaction modal cancelled.");
+}
+
+/**
+ * Verify the allocation error message in the transaction modal.
+ * Call this when the transaction modal is open.
+ */
+export async function verifyAllocationError(page: Page, expectedError: string): Promise<void> {
+  console.log(`[AssetHelper] Verifying allocation error: "${expectedError}"...`);
+  const errorEl = page.locator('.text-red-400').filter({ hasText: expectedError });
+  await expect(errorEl).toBeVisible({ timeout: 5000 });
+  console.log("[AssetHelper] Allocation error verified.");
+}
+
+/**
+ * Verify that an allocation input for a specific PT is visible in the transaction modal.
+ * Call this when the transaction modal is open.
+ */
+export async function verifyAllocationInputVisible(page: Page, ptPercent: string): Promise<void> {
+  console.log(`[AssetHelper] Verifying allocation input visible for PT ${ptPercent}%...`);
+  await expect(page.locator(`[data-testid="transaction-pt-alloc-${ptPercent}"]`)).toBeVisible({ timeout: 5000 });
+  console.log(`[AssetHelper] Allocation input for PT ${ptPercent}% is visible.`);
+}
+
+/**
+ * Verify that an allocation input for a specific PT is NOT visible in the transaction modal.
+ * Call this when the transaction modal is open.
+ */
+export async function verifyAllocationInputNotVisible(page: Page, ptPercent: string): Promise<void> {
+  console.log(`[AssetHelper] Verifying allocation input NOT visible for PT ${ptPercent}%...`);
+  await expect(page.locator(`[data-testid="transaction-pt-alloc-${ptPercent}"]`)).not.toBeVisible({ timeout: 5000 });
+  console.log(`[AssetHelper] Allocation input for PT ${ptPercent}% is not visible.`);
+}
+
+/**
+ * Get the current value of an allocation input in the transaction modal.
+ * Call this when the transaction modal is open.
+ */
+export async function getAllocationInputValue(page: Page, ptPercent: string): Promise<string> {
+  const input = page.locator(`[data-testid="transaction-pt-alloc-${ptPercent}"]`);
+  return await input.inputValue();
+}
+
+/**
+ * Fill allocation inputs in the transaction modal without submitting.
+ * Call this when the transaction modal is open and price/investment are filled.
+ */
+export async function fillTransactionAllocations(
+  page: Page,
+  allocations: Record<string, string>
+): Promise<void> {
+  console.log(`[AssetHelper] Filling allocations: ${JSON.stringify(allocations)}...`);
+
+  for (const [ptPercent, percentage] of Object.entries(allocations)) {
+    const testId = `transaction-pt-alloc-${ptPercent}`;
+    await fillAllocationInput(page, testId, percentage);
+  }
+
+  console.log("[AssetHelper] Allocations filled.");
+}
+
+/**
+ * Fill price and investment in the transaction modal.
+ * Call this when the transaction modal is open.
+ */
+export async function fillPriceAndInvestment(page: Page, price: string, investment: string): Promise<void> {
+  console.log(`[AssetHelper] Filling price: ${price}, investment: ${investment}...`);
+
+  await page.locator('[data-testid="transaction-form-price"]').clear();
+  await page.locator('[data-testid="transaction-form-price"]').fill(price);
+
+  await page.locator('[data-testid="transaction-form-investment"]').clear();
+  await page.locator('[data-testid="transaction-form-investment"]').fill(investment);
+
+  // Wait for allocations to appear (they render after price+investment)
+  await page.waitForTimeout(500);
+
+  console.log("[AssetHelper] Price and investment filled.");
+}
+
+// ============================================================================
 // Wallet Tab Helpers (for verifying PT tabs on transactions page)
 // ============================================================================
 
