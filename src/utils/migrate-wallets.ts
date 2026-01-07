@@ -137,9 +137,13 @@ export async function migrateWallets(): Promise<MigrationResult[]> {
     console.log(`  Creating ${newWalletCount} new wallets...`);
     const newWalletsArray = Array.from(newWalletMap.values());
     for (const walletData of newWalletsArray) {
+      const shares = parseFloat(walletData.shares.toFixed(5));
       await client.models.Wallet.create({
         ...walletData,
-        shares: parseFloat(walletData.shares.toFixed(5)),
+        shares,
+        originalShares: shares,
+        originalPrice: walletData.price,
+        originalProfitTargetPrice: walletData.profitTargetPrice,
       });
     }
 

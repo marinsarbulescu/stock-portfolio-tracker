@@ -1,0 +1,101 @@
+{
+  "scenario": "AssetSplit",
+  "description": "Stock split transaction testing with wallet adjustments",
+  "asset": {
+    "input": {
+      "symbol": "E2E-ASSET-SPLIT",
+      "name": "E2E Split Test",
+      "type": "STOCK",
+      "testPrice": "100",
+      "commission": "0.5",
+      "status": "ACTIVE"
+    }
+  },
+  "entryTargets": [
+    { "input": { "name": "ET1", "targetPercent": "2", "sortOrder": "1" } }
+  ],
+  "profitTargets": [
+    { "input": { "name": "PT1", "targetPercent": "8", "allocationPercent": "100", "sortOrder": "1" } }
+  ],
+  "transactions": {
+    "buy1": {
+      "input": {
+        "signal": "INITIAL",
+        "price": "10",
+        "investment": "1000",
+        "allocations": [
+          { "ptPercent": "8", "percentage": "100" }
+        ]
+      },
+      "expected": {
+        "transaction": {
+          "type": "Buy",
+          "signal": "Initial",
+          "price": "$10.00",
+          "quantity": "100.00000",
+          "investment": "$1000.00"
+        },
+        "wallets": [
+          { "ptPercent": "8", "price": "$10.00", "shares": "100.00000", "investment": "$1000.00" }
+        ]
+      }
+    },
+    "split1": {
+      "input": {
+        "type": "SPLIT",
+        "date": "2024-02-01T10:00:00",
+        "splitRatio": "2"
+      },
+      "expected": {
+        "transaction": {
+          "type": "Split",
+          "splitRatio": "2:1"
+        },
+        "wallets": [
+          { "ptPercent": "8", "price": "$5.00", "shares": "200.00000", "investment": "$1000.00" }
+        ]
+      }
+    },
+    "buy2": {
+      "input": {
+        "signal": "CUSTOM",
+        "price": "5",
+        "investment": "500",
+        "allocations": [
+          { "ptPercent": "8", "percentage": "100" }
+        ]
+      },
+      "expected": {
+        "transaction": {
+          "type": "Buy",
+          "signal": "Custom",
+          "price": "$5.00",
+          "quantity": "100.00000",
+          "investment": "$500.00"
+        },
+        "wallets": [
+          { "ptPercent": "8", "price": "$5.00", "shares": "300.00000", "investment": "$1500.00" }
+        ],
+        "comment": "Buy after split should NOT be affected by split - buys at post-split price"
+      }
+    },
+    "split2": {
+      "input": {
+        "type": "SPLIT",
+        "date": "2024-03-01T10:00:00",
+        "splitRatio": "3"
+      },
+      "expected": {
+        "transaction": {
+          "type": "Split",
+          "splitRatio": "3:1"
+        },
+        "wallets": [
+          { "ptPercent": "8", "price": "$1.67", "shares": "600.00000", "investment": "$1000.00", "comment": "buy1 wallet: affected by both splits (2x then 3x = 6x)" },
+          { "ptPercent": "8", "price": "$1.67", "shares": "300.00000", "investment": "$500.00", "comment": "buy2 wallet: affected only by split2 (3x)" }
+        ],
+        "comment": "Multiple splits should compound: buy1 gets 2*3=6x shares, buy2 gets 3x shares"
+      }
+    }
+  }
+}
