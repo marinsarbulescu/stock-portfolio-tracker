@@ -65,12 +65,6 @@ const tests: TestItem[] = [
     describeName: "Assets - PT CRUD",
   },
   {
-    id: "asset-split-1",
-    name: "AssetSplit - Stock split transactions",
-    specFile: "assets/asset-split.spec.ts",
-    describeName: "Assets - Stock Split",
-  },
-  {
     id: "transaction-split-1",
     name: "TransactionSplit - BUY, SELL, SPLIT with verification",
     specFile: "transactions/transaction-split.spec.ts",
