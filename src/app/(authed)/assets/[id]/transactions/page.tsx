@@ -841,7 +841,7 @@ export default function AssetTransactionsPage() {
         toggleable: false,
         render: (item) => (
           <div className="flex items-center gap-2">
-            {(item.type !== "SELL" || !hasSubsequentTransactions(item)) && (
+            {(!["SELL", "SPLIT"].includes(item.type) || !hasSubsequentTransactions(item)) && (
               <button
                 onClick={() => handleRowClick(item)}
                 data-testid={`transaction-edit-${item.id}`}
