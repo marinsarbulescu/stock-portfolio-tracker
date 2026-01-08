@@ -228,9 +228,9 @@
         ],
         "wallets": [
           { "ptPercent": "4", "price": "$50.00", "shares": "1.50000", "investment": "$75.00", "pt": "$52.26", "pct2pt": "-13.89%" },
-          { "ptPercent": "4", "price": "$45.00", "shares": "2.22222", "investment": "$100.00", "pt": "$47.04", "pct2pt": "-4.34%" },
+          { "ptPercent": "4", "price": "$45.00", "shares": "2.22222", "investment": "$100.00", "pt": "$47.04", "pct2pt": "-4.33%" },
           { "ptPercent": "8", "price": "$50.00", "shares": "1.80000", "investment": "$90.00", "pt": "$54.27", "pct2pt": "-17.08%" },
-          { "ptPercent": "8", "price": "$45.00", "shares": "2.22222", "investment": "$100.00", "pt": "$48.84", "pct2pt": "-7.86%" },
+          { "ptPercent": "8", "price": "$45.00", "shares": "2.22222", "investment": "$100.00", "pt": "$48.84", "pct2pt": "-7.87%" },
           { "ptPercent": "16", "price": "$50.00", "shares": "1.20000", "investment": "$60.00", "pt": "$58.29", "pct2pt": "-22.80%" }
         ],
         "overview": {
@@ -246,6 +246,129 @@
           "marketValue": "$402.50",
           "roi": "-3.69%",
           "available": "$782.09"
+        }
+      }
+    },
+    "buyC": {
+      "testPriceUpdate": "50",
+      "input": {
+        "signal": "CUSTOM",
+        "price": "50",
+        "investment": "300",
+        "allocations": [
+          { "ptPercent": "4", "percentage": "50" },
+          { "ptPercent": "8", "percentage": "30" },
+          { "ptPercent": "16", "percentage": "20" }
+        ]
+      },
+      "expected": {
+        "transaction": {
+          "type": "Buy",
+          "signal": "Custom",
+          "price": "$50.00",
+          "quantity": "6.00000",
+          "investment": "$300.00",
+          "entryTarget": "$49.00",
+          "profitLoss": "-",
+          "profitLossPercent": "-"
+        },
+        "wallets": [
+          { "ptPercent": "4", "price": "$45.00", "shares": "2.22222", "investment": "$100.00", "pt": "$47.04", "pct2pt": "6.30%", "pct2ptHighlight": "green" },
+          { "ptPercent": "4", "price": "$50.00", "shares": "4.50000", "investment": "$225.00", "pt": "$52.26", "pct2pt": "-4.33%" },
+          { "ptPercent": "8", "price": "$45.00", "shares": "2.22222", "investment": "$100.00", "pt": "$48.84", "pct2pt": "2.37%", "pct2ptHighlight": "green" },
+          { "ptPercent": "8", "price": "$50.00", "shares": "3.60000", "investment": "$180.00", "pt": "$54.27", "pct2pt": "-7.87%" },
+          { "ptPercent": "16", "price": "$50.00", "shares": "2.40000", "investment": "$120.00", "pt": "$58.29", "pct2pt": "-14.22%" }
+        ],
+        "overview": {
+          "totalShares": "14.94444",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "6.72222" },
+            { "ptPercent": "8", "shares": "5.82222" },
+            { "ptPercent": "16", "shares": "2.40000" }
+          ]
+        },
+        "financialOverview": {
+          "oop": "$717.91",
+          "marketValue": "$747.22",
+          "roi": "4.08%",
+          "available": "$482.09"
+        }
+      }
+    },
+    "splitB": {
+      "isSplit": true,
+      "testPriceUpdate": "16.67",
+      "splitInput": {
+        "splitRatio": "3"
+      },
+      "expected": {
+        "transaction": {
+          "type": "Split",
+          "ratio": "3:1"
+        },
+        "wallets": [
+          { "ptPercent": "4", "price": "$15.00", "shares": "6.66666", "investment": "$100.00", "pt": "$15.68", "pct2pt": "6.32%", "pct2ptHighlight": "green" },
+          { "ptPercent": "4", "price": "$16.67", "shares": "13.50000", "investment": "$225.00", "pt": "$17.42", "pct2pt": "-4.31%" },
+          { "ptPercent": "8", "price": "$15.00", "shares": "6.66666", "investment": "$100.00", "pt": "$16.28", "pct2pt": "2.39%", "pct2ptHighlight": "green" },
+          { "ptPercent": "8", "price": "$16.67", "shares": "10.80000", "investment": "$180.00", "pt": "$18.09", "pct2pt": "-7.85%" },
+          { "ptPercent": "16", "price": "$16.67", "shares": "7.20000", "investment": "$120.00", "pt": "$19.43", "pct2pt": "-14.21%" }
+        ],
+        "overview": {
+          "totalShares": "44.83332",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "20.16666" },
+            { "ptPercent": "8", "shares": "17.46666" },
+            { "ptPercent": "16", "shares": "7.20000" }
+          ]
+        },
+        "financialOverview": {
+          "oop": "$717.91",
+          "marketValue": "$747.37",
+          "roi": "4.10%",
+          "available": "$482.09"
+        }
+      }
+    },
+    "sellC": {
+      "isSell": true,
+      "testPriceUpdate": "20",
+      "input": {
+        "ptPercent": "8",
+        "walletPrice": "$16.67",
+        "signal": "CUSTOM",
+        "price": "20",
+        "quantity": "5.4"
+      },
+      "expected": {
+        "transaction": {
+          "type": "Sell",
+          "signal": "Custom",
+          "price": "$20.00",
+          "quantity": "5.40000",
+          "amount": "$107.46",
+          "profitLoss": "$17.46",
+          "profitLossPercent": "19.40%"
+        },
+        "wallets": [
+          { "ptPercent": "4", "price": "$15.00", "shares": "6.66666", "investment": "$100.00", "pt": "$15.68", "pct2pt": "27.56%", "pct2ptHighlight": "green" },
+          { "ptPercent": "4", "price": "$16.67", "shares": "13.50000", "investment": "$225.00", "pt": "$17.42", "pct2pt": "14.81%", "pct2ptHighlight": "green" },
+          { "ptPercent": "8", "price": "$15.00", "shares": "6.66666", "investment": "$100.00", "pt": "$16.28", "pct2pt": "22.84%", "pct2ptHighlight": "green" },
+          { "ptPercent": "8", "price": "$16.67", "shares": "5.40000", "investment": "$90.00", "pt": "$18.09", "pct2pt": "10.56%", "pct2ptHighlight": "green" },
+          { "ptPercent": "16", "price": "$16.67", "shares": "7.20000", "investment": "$120.00", "pt": "$19.43", "pct2pt": "2.93%", "pct2ptHighlight": "green" }
+        ],
+        "overview": {
+          "totalShares": "39.43332",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "20.16666" },
+            { "ptPercent": "8", "shares": "12.06666" },
+            { "ptPercent": "16", "shares": "7.20000" }
+          ]
+        },
+        "financialOverview": {
+          "oop": "$717.91",
+          "marketValue": "$788.67",
+          "roi": "24.82%",
+          "available": "$589.55"
         }
       }
     }

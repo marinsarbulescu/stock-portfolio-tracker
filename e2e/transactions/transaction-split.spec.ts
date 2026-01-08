@@ -120,7 +120,7 @@ test.describe("Transactions - Split (JSON-driven)", () => {
         if (txn.expected.transaction.type === 'Split') {
           // For SPLIT, just verify the split row exists with ratio
           console.log(`[${testConfig.scenario}] Verifying SPLIT transaction in table...`);
-          const splitRow = page.locator('tr').filter({ hasText: /\d+:\d+/ });
+          const splitRow = page.locator('tr').filter({ hasText: /\d+:\d+/ }).first();
           await expect(splitRow).toBeVisible();
         } else if (txn.expected.transaction.type === 'Sell') {
           // For SELL, use verifySellTransaction

@@ -96,7 +96,7 @@ export async function migrateWallets(): Promise<MigrationResult[]> {
 
         // Calculate profitTargetPrice: buyPrice × (1 + PT%) / (1 - commission%)
         const ptPercent = profitTargetsMap.get(alloc.profitTargetId) ?? 0;
-        const profitTargetPrice = txn.price * (1 + ptPercent / 100) / (1 - commission / 100);
+        const profitTargetPrice = parseFloat((txn.price * (1 + ptPercent / 100) / (1 - commission / 100)).toFixed(5));
 
         if (newWalletMap.has(key)) {
           const existing = newWalletMap.get(key)!;

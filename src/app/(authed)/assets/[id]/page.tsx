@@ -276,7 +276,7 @@ export default function EditAssetPage() {
       // Update each wallet's profitTargetPrice
       for (const wallet of walletResponse.data) {
         const ptPercent = ptPercentMap.get(wallet.profitTargetId) ?? 0;
-        const newProfitTargetPrice = wallet.price * (1 + ptPercent / 100) / (1 - newCommission / 100);
+        const newProfitTargetPrice = parseFloat((wallet.price * (1 + ptPercent / 100) / (1 - newCommission / 100)).toFixed(5));
 
         await client.models.Wallet.update({
           id: wallet.id,
@@ -459,7 +459,7 @@ export default function EditAssetPage() {
     });
 
     for (const wallet of walletResponse.data) {
-      const newProfitTargetPrice = wallet.price * (1 + newTargetPercent / 100) / (1 - commission / 100);
+      const newProfitTargetPrice = parseFloat((wallet.price * (1 + newTargetPercent / 100) / (1 - commission / 100)).toFixed(5));
       await client.models.Wallet.update({
         id: wallet.id,
         profitTargetPrice: newProfitTargetPrice,
