@@ -72,6 +72,7 @@ interface WalletRow {
   investment: number;
   profitTargetId: string;
   profitTargetPrice: number;
+  originalShares: number;
 }
 
 const SIGNAL_LABELS: Record<TransactionSignal, string> = {
@@ -422,6 +423,7 @@ export default function AssetTransactionsPage() {
         investment: w.investment,
         profitTargetId: w.profitTargetId,
         profitTargetPrice: w.profitTargetPrice,
+        originalShares: w.originalShares,
       }));
       // Sort by price ascending (lowest price first)
       walletData.sort((a, b) => a.price - b.price);
@@ -1464,10 +1466,14 @@ export default function AssetTransactionsPage() {
         await client.models.Wallet.delete({ id: sellWallet.id });
       } else {
         // Update wallet with remaining shares
+        // Also update originalShares proportionally so splits apply correctly
+        const sellRatio = newShares / sellWallet.shares;
+        const newOriginalShares = sellWallet.originalShares * sellRatio;
         const newInvestment = newShares * sellWallet.price;
         await client.models.Wallet.update({
           id: sellWallet.id,
           shares: parseFloat(newShares.toFixed(5)),
+          originalShares: parseFloat(newOriginalShares.toFixed(5)),
           investment: newInvestment,
         });
       }

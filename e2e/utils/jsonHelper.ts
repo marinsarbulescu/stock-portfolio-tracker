@@ -754,3 +754,76 @@ export function loadAssetSplitTestData(fileName: string): AssetSplitTestConfig {
     throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
   }
 }
+
+// ============================================================================
+// Transaction Split Test Types (BUY, SELL, SPLIT combined)
+// ============================================================================
+
+export interface SplitInput {
+  splitRatio: string;
+}
+
+export interface SplitTransactionExpected {
+  type: "Split";
+  ratio: string;
+}
+
+export interface TransactionSplitAction {
+  testPriceUpdate?: string;
+  isSell?: boolean;
+  isSplit?: boolean;
+  input?: TransactionInput | {
+    ptPercent: string;
+    walletPrice: string;
+    signal: string;
+    price: string;
+    quantity: string;
+  };
+  splitInput?: SplitInput;
+  expected: {
+    transaction?: TransactionExpected | SplitTransactionExpected;
+    priorTransactions?: TransactionExpected[];
+    wallets: WalletExpected[];
+    walletsNotPresent?: { ptPercent: string; price: string }[];
+    overview: OverviewExpected;
+    financialOverview: FinancialOverviewExpected;
+  };
+}
+
+export interface TransactionSplitTestConfig {
+  scenario: string;
+  description: string;
+  asset: {
+    input: AssetCreateInput;
+    budget: { year: string; amount: string };
+  };
+  entryTargets: { input: TargetInput }[];
+  profitTargets: { input: TargetInput }[];
+  transactions: {
+    [key: string]: TransactionSplitAction;
+  };
+}
+
+export function loadTransactionSplitTestData(fileName: string): TransactionSplitTestConfig {
+  const filePath = path.resolve(process.cwd(), fileName);
+  console.log(`[jsonHelper.ts] Attempting to load TransactionSplit JSON from: ${filePath}`);
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`JSON file not found: ${filePath}`);
+  }
+
+  const fileContent = fs.readFileSync(filePath, "utf-8");
+  console.log(
+    `[jsonHelper.ts] File content read successfully. Length: ${fileContent.length}`
+  );
+
+  try {
+    const data = JSON.parse(fileContent) as TransactionSplitTestConfig;
+    console.log(
+      `[jsonHelper.ts] Successfully parsed TransactionSplit JSON for scenario: ${data.scenario}`
+    );
+    return data;
+  } catch (error) {
+    throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
+  }
+}
