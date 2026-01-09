@@ -232,6 +232,56 @@
         }
       }
     },
+    "delSellB": {
+      "isSell": true,
+      "delete": true,
+      "target": {
+        "signal": "Custom",
+        "price": "$95.00",
+        "amount": "$84.65"
+      },
+      "expected": {
+        "transactionNotPresent": {
+          "signal": "Custom",
+          "price": "$95.00",
+          "amount": "$84.65"
+        },
+        "priorTransactions": [
+          {
+            "type": "Sell",
+            "signal": "Profit Target",
+            "price": "$110.00",
+            "quantity": "1.50000",
+            "amount": "$163.35",
+            "profitLoss": "$13.35",
+            "profitLossPercent": "8.90%"
+          },
+          {
+            "type": "Buy",
+            "signal": "Initial",
+            "price": "$100.00",
+            "quantity": "6.00000",
+            "investment": "$600.00",
+            "entryTarget": "$98.00",
+            "profitLoss": "-",
+            "profitLossPercent": "-"
+          }
+        ],
+        "wallets": [
+          { "ptPercent": "4", "price": "$100.00", "shares": "1.50000", "investment": "$150.00", "pt": "$105.05", "pct2pt": "-14.33%", "pct2ptHighlight": "none" },
+          { "ptPercent": "8", "price": "$100.00", "shares": "1.80000", "investment": "$180.00", "pt": "$109.09", "pct2pt": "-17.50%", "pct2ptHighlight": "none" },
+          { "ptPercent": "16", "price": "$100.00", "shares": "1.20000", "investment": "$120.00", "pt": "$117.17", "pct2pt": "-23.19%", "pct2ptHighlight": "none" }
+        ],
+        "overview": {
+          "totalShares": "4.50000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "1.50000" },
+            { "ptPercent": "8", "shares": "1.80000" },
+            { "ptPercent": "16", "shares": "1.20000" }
+          ]
+        }
+      }
+    },
     "buyB": {
       "testPriceUpdate": "100",
       "input": {
@@ -256,75 +306,6 @@
           "profitLossPercent": "-"
         },
         "priorTransactions": [
-          {
-            "type": "Sell",
-            "signal": "Custom",
-            "price": "$95.00",
-            "quantity": "0.90000",
-            "amount": "$84.65",
-            "profitLoss": "-$5.36",
-            "profitLossPercent": "-5.95%"
-          },
-          {
-            "type": "Sell",
-            "signal": "Profit Target",
-            "price": "$110.00",
-            "quantity": "1.50000",
-            "amount": "$163.35",
-            "profitLoss": "$13.35",
-            "profitLossPercent": "8.90%"
-          },
-          {
-            "type": "Buy",
-            "signal": "Initial",
-            "price": "$100.00",
-            "quantity": "6.00000",
-            "investment": "$600.00",
-            "entryTarget": "$98.00",
-            "profitLoss": "-",
-            "profitLossPercent": "-"
-          }
-        ],
-        "wallets": [
-          { "ptPercent": "4", "price": "$100.00", "shares": "3.10000", "investment": "$310.00", "pt": "$105.05", "pct2pt": "-4.81%", "pct2ptHighlight": "none" },
-          { "ptPercent": "8", "price": "$100.00", "shares": "2.50000", "investment": "$250.00", "pt": "$109.09", "pct2pt": "-8.33%", "pct2ptHighlight": "none" },
-          { "ptPercent": "16", "price": "$100.00", "shares": "2.00000", "investment": "$200.00", "pt": "$117.17", "pct2pt": "-14.66%", "pct2ptHighlight": "none" }
-        ],
-        "overview": {
-          "totalShares": "7.60000",
-          "ptShares": [
-            { "ptPercent": "4", "shares": "3.10000" },
-            { "ptPercent": "8", "shares": "2.50000" },
-            { "ptPercent": "16", "shares": "2.00000" }
-          ]
-        }
-      }
-    },
-    "delSellB": {
-      "isSell": true,
-      "delete": true,
-      "target": {
-        "signal": "Custom",
-        "price": "$95.00",
-        "amount": "$84.65"
-      },
-      "expected": {
-        "transactionNotPresent": {
-          "signal": "Custom",
-          "price": "$95.00",
-          "amount": "$84.65"
-        },
-        "priorTransactions": [
-          {
-            "type": "Buy",
-            "signal": "Entry Target",
-            "price": "$100.00",
-            "quantity": "4.00000",
-            "investment": "$400.00",
-            "entryTarget": "$98.00",
-            "profitLoss": "-",
-            "profitLossPercent": "-"
-          },
           {
             "type": "Sell",
             "signal": "Profit Target",

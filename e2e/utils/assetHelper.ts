@@ -1584,7 +1584,7 @@ export async function deleteSellTransaction(
   await deleteButton.click();
 
   // Wait for the transaction to be removed from the table
-  await page.waitForTimeout(1000);
+  await expect(row).not.toBeVisible({ timeout: 10000 });
 
   console.log("[AssetHelper] SELL transaction deleted successfully.");
 }

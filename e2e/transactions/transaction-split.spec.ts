@@ -15,6 +15,8 @@ import {
   createBuyTransaction,
   createSellTransaction,
   createSplitTransaction,
+  deleteSellTransaction,
+  verifySellTransactionNotPresent,
   verifyTransaction,
   verifySellTransaction,
   verifyWallet,
@@ -22,6 +24,7 @@ import {
   verifyOverview,
   verifyFinancialOverview,
   updateTestPrice,
+  EditSellTransactionTarget,
 } from "../utils/assetHelper";
 
 // Set test timeout to 240 seconds
@@ -81,13 +84,127 @@ test.describe("Transactions - Split (JSON-driven)", () => {
       let txnType = 'BUY';
       if (isSell) txnType = 'SELL';
       if (isSplit) txnType = 'SPLIT';
+      if (txn.isProtectionCheck) txnType = 'PROTECTION_CHECK';
+      if (txn.isDelete) txnType = 'DELETE';
+      if (txn.isDeleteSplit) txnType = 'DELETE_SPLIT';
+      if (txn.isEditSplit) txnType = 'EDIT_SPLIT';
 
-      console.log(`[${testConfig.scenario}] === Transaction ${stepNum}/${transactionEntries.length}: ${txnKey} (${txnType}) ===`);
+      console.log(`[${testConfig.scenario}] === Step ${stepNum}/${transactionEntries.length}: ${txnKey} (${txnType}) ===`);
 
       // Update test price if needed
       if (txn.testPriceUpdate) {
         console.log(`[${testConfig.scenario}] Updating test price to $${txn.testPriceUpdate}...`);
         await updateTestPrice(page, txn.testPriceUpdate);
+      }
+
+      // Handle protection check step
+      if (txn.isProtectionCheck) {
+        console.log(`[${testConfig.scenario}] Checking transaction protection...`);
+        const targetTxn = txn.targetTransaction as { type: string; ratio: string };
+        // Find the split row by ratio
+        const splitRow = page.locator('tr').filter({ hasText: targetTxn.ratio }).first();
+        await expect(splitRow).toBeVisible();
+
+        // Verify edit button is NOT visible
+        const editButton = splitRow.locator('[data-testid^="transaction-edit-"]');
+        await expect(editButton).not.toBeVisible();
+        console.log(`[${testConfig.scenario}] Edit button is hidden as expected.`);
+
+        // Verify delete button is NOT visible
+        const deleteButton = splitRow.locator('[data-testid^="transaction-delete-"]');
+        await expect(deleteButton).not.toBeVisible();
+        console.log(`[${testConfig.scenario}] Delete button is hidden as expected.`);
+
+        console.log(`[${testConfig.scenario}] Protection check passed.`);
+        continue;
+      }
+
+      // Handle delete step
+      if (txn.isDelete) {
+        console.log(`[${testConfig.scenario}] Deleting transaction...`);
+        const target = txn.targetTransaction as EditSellTransactionTarget;
+        await deleteSellTransaction(page, target);
+
+        // Verify transaction is not present
+        if (txn.expected.transactionNotPresent) {
+          const notPresent = txn.expected.transactionNotPresent as { signal: string; price: string };
+          await verifySellTransactionNotPresent(page, { signal: notPresent.signal, price: notPresent.price, amount: target.amount });
+        }
+
+        // Continue to wallet verification below
+      }
+
+      // Handle delete split step
+      if (txn.isDeleteSplit) {
+        console.log(`[${testConfig.scenario}] Deleting SPLIT transaction...`);
+        const targetTxn = txn.targetTransaction as { type: string; ratio: string };
+
+        // Find all split rows with this ratio
+        const splitRows = page.locator('tr').filter({ hasText: targetTxn.ratio });
+
+        // Find the one that has a visible delete button (protected splits have hidden delete buttons)
+        let splitRowToDelete: ReturnType<typeof splitRows.first> | null = null;
+        const count = await splitRows.count();
+        for (let i = 0; i < count; i++) {
+          const row = splitRows.nth(i);
+          const deleteBtn = row.locator('[data-testid^="transaction-delete-"]');
+          if (await deleteBtn.isVisible()) {
+            splitRowToDelete = row;
+            break;
+          }
+        }
+
+        if (!splitRowToDelete) {
+          throw new Error(`No deletable SPLIT transaction found with ratio ${targetTxn.ratio}`);
+        }
+
+        await expect(splitRowToDelete).toBeVisible();
+
+        // Set up dialog handler to accept the native confirm dialog
+        page.once("dialog", async (dialog) => {
+          console.log(`[${testConfig.scenario}] Dialog appeared: ${dialog.message()}`);
+          await dialog.accept();
+        });
+
+        // Click delete button
+        const deleteButton = splitRowToDelete.locator('[data-testid^="transaction-delete-"]');
+        await deleteButton.click();
+
+        // Wait for the row to be removed
+        await page.waitForTimeout(2000);
+
+        console.log(`[${testConfig.scenario}] SPLIT transaction deleted.`);
+        // Continue to verification below
+      }
+
+      // Handle edit split step
+      if (txn.isEditSplit) {
+        console.log(`[${testConfig.scenario}] Editing SPLIT transaction...`);
+        const targetTxn = txn.targetTransaction as { type: string; ratio: string };
+        const splitInput = txn.input as { splitRatio: string };
+
+        // Find the split row by ratio
+        const splitRow = page.locator('tr').filter({ hasText: targetTxn.ratio }).first();
+        await expect(splitRow).toBeVisible();
+
+        // Click edit button
+        const editButton = splitRow.locator('[data-testid^="transaction-edit-"]');
+        await editButton.click();
+
+        // Wait for modal
+        await page.waitForTimeout(500);
+
+        // Update ratio in modal
+        const ratioInput = page.locator('[data-testid="transaction-form-splitRatio"]');
+        await ratioInput.clear();
+        await ratioInput.fill(splitInput.splitRatio);
+
+        // Submit
+        await page.locator('[data-testid="transaction-form-submit"]').click();
+        await page.waitForTimeout(1000);
+
+        console.log(`[${testConfig.scenario}] SPLIT edited to ${splitInput.splitRatio}:1.`);
+        // Continue to verification below
       }
 
       // Create transaction (BUY, SELL, or SPLIT)
@@ -145,9 +262,11 @@ test.describe("Transactions - Split (JSON-driven)", () => {
       }
 
       // Verify wallets
-      console.log(`[${testConfig.scenario}] Verifying ${txn.expected.wallets.length} wallets...`);
-      for (const wallet of txn.expected.wallets) {
-        await verifyWallet(page, wallet);
+      if (txn.expected.wallets?.length) {
+        console.log(`[${testConfig.scenario}] Verifying ${txn.expected.wallets.length} wallets...`);
+        for (const wallet of txn.expected.wallets) {
+          await verifyWallet(page, wallet);
+        }
       }
 
       // Verify wallets NOT present
@@ -159,14 +278,18 @@ test.describe("Transactions - Split (JSON-driven)", () => {
       }
 
       // Verify overview
-      console.log(`[${testConfig.scenario}] Verifying overview...`);
-      await verifyOverview(page, txn.expected.overview);
+      if (txn.expected.overview) {
+        console.log(`[${testConfig.scenario}] Verifying overview...`);
+        await verifyOverview(page, txn.expected.overview);
+      }
 
       // Verify financial overview
-      console.log(`[${testConfig.scenario}] Verifying financial overview...`);
-      await verifyFinancialOverview(page, txn.expected.financialOverview);
+      if (txn.expected.financialOverview) {
+        console.log(`[${testConfig.scenario}] Verifying financial overview...`);
+        await verifyFinancialOverview(page, txn.expected.financialOverview);
+      }
 
-      console.log(`[${testConfig.scenario}] Transaction ${txnKey} verified successfully.`);
+      console.log(`[${testConfig.scenario}] Step ${txnKey} verified successfully.`);
     }
 
     // Cleanup

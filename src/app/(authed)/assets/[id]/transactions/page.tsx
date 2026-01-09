@@ -841,7 +841,7 @@ export default function AssetTransactionsPage() {
         toggleable: false,
         render: (item) => (
           <div className="flex items-center gap-2">
-            {(!["SELL", "SPLIT"].includes(item.type) || !hasSubsequentTransactions(item)) && (
+            {!hasSubsequentTransactions(item) && (
               <button
                 onClick={() => handleRowClick(item)}
                 data-testid={`transaction-edit-${item.id}`}
@@ -863,26 +863,28 @@ export default function AssetTransactionsPage() {
                 </svg>
               </button>
             )}
-            <button
-              onClick={() => handleDeleteFromTable(item.id)}
-              data-testid={`transaction-delete-${item.id}`}
-              className="text-muted-foreground hover:text-red-400 p-1"
-              aria-label="Delete transaction"
-            >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+            {!hasSubsequentTransactions(item) && (
+              <button
+                onClick={() => handleDeleteFromTable(item.id)}
+                data-testid={`transaction-delete-${item.id}`}
+                className="text-muted-foreground hover:text-red-400 p-1"
+                aria-label="Delete transaction"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
-            </button>
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              </button>
+            )}
           </div>
         ),
       },
@@ -1090,6 +1092,11 @@ export default function AssetTransactionsPage() {
           for (const alloc of oldAllocations.data) {
             await client.models.TransactionAllocation.delete({ id: alloc.id });
           }
+        }
+
+        // For SPLIT edits, reverse old split ratio before applying new one
+        if (selectedTransaction.type === "SPLIT" && selectedTransaction.splitRatio) {
+          await reverseSplitOnWallets(assetId, selectedTransaction.splitRatio);
         }
 
         // For SELL edits, handle wallet restoration and re-deduction
