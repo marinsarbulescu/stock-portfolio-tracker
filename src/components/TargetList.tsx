@@ -229,7 +229,7 @@ export function TargetList(props: TargetListProps) {
     <div className="bg-card border border-border rounded-lg">
       <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <h3 className="font-medium text-card-foreground">{title}</h3>
-        {!isAdding && (
+        {!isAdding && !(props.type === "entry" && targets.length > 0) && (
           <button
             onClick={startAdding}
             data-testid={`${props.type}-target-add-btn`}
