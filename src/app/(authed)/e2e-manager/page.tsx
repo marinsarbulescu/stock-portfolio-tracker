@@ -53,12 +53,6 @@ const tests: TestItem[] = [
     describeName: "Assets - ROI Calculation",
   },
   {
-    id: "asset-config-changes-1",
-    name: "AssetConfigChanges - Config changes between transactions",
-    specFile: "assets/asset-config-changes.spec.ts",
-    describeName: "Assets - Config Changes",
-  },
-  {
     id: "asset-pt-crud-1",
     name: "AssetPTCRUD - PT Delete Protection and Allocation Redistribution",
     specFile: "assets/asset-pt-crud.spec.ts",
