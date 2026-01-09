@@ -383,6 +383,33 @@ export default function EditAssetPage() {
       id,
       ...data,
     });
+
+    // If targetPercent changed, update all BUY transactions
+    if (data.targetPercent !== undefined) {
+      const newETPercent = data.targetPercent;
+
+      // Fetch all BUY transactions for this asset
+      const response = await client.models.Transaction.list({
+        filter: {
+          assetId: { eq: assetId },
+          type: { eq: "BUY" },
+        },
+      });
+
+      // Update each BUY transaction with new ET values
+      for (const txn of response.data) {
+        const price = txn.price;
+        if (price) {
+          const newEntryTargetPrice = price * (1 - Math.abs(newETPercent) / 100);
+          await client.models.Transaction.update({
+            id: txn.id,
+            entryTargetPercent: newETPercent,
+            entryTargetPrice: newEntryTargetPrice,
+          });
+        }
+      }
+    }
+
     await fetchEntryTargets();
   }
 
