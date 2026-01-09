@@ -64,6 +64,12 @@ const tests: TestItem[] = [
     specFile: "transactions/transaction-split.spec.ts",
     describeName: "Transactions - Split",
   },
+  {
+    id: "transaction-historical-reversal-1",
+    name: "TransactionHistoricalReversal - Create and delete in reverse",
+    specFile: "transactions/transaction-historical-reversal.spec.ts",
+    describeName: "Transactions - Historical Reversal",
+  },
 ];
 
 // Group tests by describeName

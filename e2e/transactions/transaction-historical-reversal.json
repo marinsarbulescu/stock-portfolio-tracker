@@ -1,0 +1,342 @@
+{
+  "scenario": "TransactionHistoricalReversal",
+  "description": "Test data integrity by creating transactions and deleting in reverse order",
+  "asset": {
+    "input": {
+      "symbol": "E2E-TXN-REVERSAL",
+      "name": "E2E Historical Reversal Test",
+      "type": "STOCK",
+      "testPrice": "100",
+      "commission": "0.5",
+      "status": "ACTIVE"
+    },
+    "budget": { "year": "2026", "amount": "1200" }
+  },
+  "entryTargets": [
+    { "input": { "name": "ET -2%", "targetPercent": "2", "sortOrder": "1" } }
+  ],
+  "profitTargets": [
+    { "input": { "name": "PT +4%", "targetPercent": "4", "allocationPercent": "50", "sortOrder": "1" } },
+    { "input": { "name": "PT +8%", "targetPercent": "8", "allocationPercent": "30", "sortOrder": "2" } },
+    { "input": { "name": "PT +16%", "targetPercent": "16", "allocationPercent": "20", "sortOrder": "3" } }
+  ],
+  "transactions": {
+    "buyA": {
+      "input": {
+        "signal": "INITIAL",
+        "price": "100",
+        "investment": "300",
+        "allocations": [
+          { "ptPercent": "4", "percentage": "50" },
+          { "ptPercent": "8", "percentage": "30" },
+          { "ptPercent": "16", "percentage": "20" }
+        ]
+      },
+      "expected": {
+        "transaction": {
+          "type": "Buy",
+          "signal": "Initial",
+          "price": "$100.00",
+          "quantity": "3.00000",
+          "investment": "$300.00",
+          "entryTarget": "$98.00",
+          "profitLoss": "-",
+          "profitLossPercent": "-"
+        },
+        "wallets": [
+          { "ptPercent": "4", "price": "$100.00", "shares": "1.50000", "investment": "$150.00", "pt": "$104.52", "pct2pt": "-4.33%" },
+          { "ptPercent": "8", "price": "$100.00", "shares": "0.90000", "investment": "$90.00", "pt": "$108.54", "pct2pt": "-7.87%" },
+          { "ptPercent": "16", "price": "$100.00", "shares": "0.60000", "investment": "$60.00", "pt": "$116.58", "pct2pt": "-14.22%" }
+        ],
+        "overview": {
+          "totalShares": "3.00000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "1.50000" },
+            { "ptPercent": "8", "shares": "0.90000" },
+            { "ptPercent": "16", "shares": "0.60000" }
+          ]
+        },
+        "financialOverview": {
+          "oop": "$300.00",
+          "marketValue": "$300.00",
+          "roi": "0.00%",
+          "available": "$900.00"
+        }
+      }
+    },
+    "divA": {
+      "isDividendOrSlp": true,
+      "dividendSlpInput": {
+        "type": "DIVIDEND",
+        "amount": "20"
+      },
+      "expected": {
+        "wallets": [
+          { "ptPercent": "4", "price": "$100.00", "shares": "1.50000", "investment": "$150.00", "pt": "$104.52", "pct2pt": "-4.33%" },
+          { "ptPercent": "8", "price": "$100.00", "shares": "0.90000", "investment": "$90.00", "pt": "$108.54", "pct2pt": "-7.87%" },
+          { "ptPercent": "16", "price": "$100.00", "shares": "0.60000", "investment": "$60.00", "pt": "$116.58", "pct2pt": "-14.22%" }
+        ],
+        "overview": {
+          "totalShares": "3.00000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "1.50000" },
+            { "ptPercent": "8", "shares": "0.90000" },
+            { "ptPercent": "16", "shares": "0.60000" }
+          ]
+        },
+        "financialOverview": {
+          "oop": "$300.00",
+          "marketValue": "$300.00",
+          "roi": "6.67%",
+          "available": "$920.00"
+        }
+      }
+    },
+    "splitA": {
+      "isSplit": true,
+      "splitInput": {
+        "splitRatio": "2"
+      },
+      "expected": {
+        "transaction": {
+          "type": "Split",
+          "ratio": "2:1"
+        },
+        "wallets": [
+          { "ptPercent": "4", "price": "$50.00", "shares": "3.00000", "investment": "$150.00", "pt": "$52.26" },
+          { "ptPercent": "8", "price": "$50.00", "shares": "1.80000", "investment": "$90.00", "pt": "$54.27" },
+          { "ptPercent": "16", "price": "$50.00", "shares": "1.20000", "investment": "$60.00", "pt": "$58.29" }
+        ],
+        "overview": {
+          "totalShares": "6.00000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "3.00000" },
+            { "ptPercent": "8", "shares": "1.80000" },
+            { "ptPercent": "16", "shares": "1.20000" }
+          ]
+        },
+        "financialOverview": {
+          "oop": "$300.00",
+          "marketValue": "$600.00",
+          "roi": "106.67%",
+          "available": "$920.00"
+        }
+      }
+    },
+    "slpA": {
+      "isDividendOrSlp": true,
+      "dividendSlpInput": {
+        "type": "SLP",
+        "amount": "10"
+      },
+      "expected": {
+        "wallets": [
+          { "ptPercent": "4", "price": "$50.00", "shares": "3.00000", "investment": "$150.00", "pt": "$52.26" },
+          { "ptPercent": "8", "price": "$50.00", "shares": "1.80000", "investment": "$90.00", "pt": "$54.27" },
+          { "ptPercent": "16", "price": "$50.00", "shares": "1.20000", "investment": "$60.00", "pt": "$58.29" }
+        ],
+        "overview": {
+          "totalShares": "6.00000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "3.00000" },
+            { "ptPercent": "8", "shares": "1.80000" },
+            { "ptPercent": "16", "shares": "1.20000" }
+          ]
+        },
+        "financialOverview": {
+          "oop": "$300.00",
+          "marketValue": "$600.00",
+          "roi": "110.00%",
+          "available": "$930.00"
+        }
+      }
+    },
+    "sellA": {
+      "isSell": true,
+      "input": {
+        "ptPercent": "4",
+        "walletPrice": "$50.00",
+        "signal": "PROFITTARGET",
+        "price": "100",
+        "quantity": "1.5"
+      },
+      "expected": {
+        "transaction": {
+          "type": "Sell",
+          "signal": "Profit Target",
+          "price": "$100.00",
+          "quantity": "1.50000",
+          "amount": "$149.25",
+          "profitLoss": "$74.25",
+          "profitLossPercent": "99.00%"
+        },
+        "wallets": [
+          { "ptPercent": "4", "price": "$50.00", "shares": "1.50000", "investment": "$75.00", "pt": "$52.26" },
+          { "ptPercent": "8", "price": "$50.00", "shares": "1.80000", "investment": "$90.00", "pt": "$54.27" },
+          { "ptPercent": "16", "price": "$50.00", "shares": "1.20000", "investment": "$60.00", "pt": "$58.29" }
+        ],
+        "overview": {
+          "totalShares": "4.50000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "1.50000" },
+            { "ptPercent": "8", "shares": "1.80000" },
+            { "ptPercent": "16", "shares": "1.20000" }
+          ]
+        },
+        "financialOverview": {
+          "oop": "$300.00",
+          "marketValue": "$450.00",
+          "roi": "109.75%",
+          "available": "$1,079.25"
+        }
+      }
+    },
+    "deleteSellA": {
+      "isDelete": true,
+      "targetTransaction": {
+        "signal": "Profit Target",
+        "price": "$100.00",
+        "amount": "$149.25"
+      },
+      "expected": {
+        "transactionNotPresent": {
+          "signal": "Profit Target",
+          "price": "$100.00"
+        },
+        "wallets": [
+          { "ptPercent": "4", "price": "$50.00", "shares": "3.00000", "investment": "$150.00", "pt": "$52.26" },
+          { "ptPercent": "8", "price": "$50.00", "shares": "1.80000", "investment": "$90.00", "pt": "$54.27" },
+          { "ptPercent": "16", "price": "$50.00", "shares": "1.20000", "investment": "$60.00", "pt": "$58.29" }
+        ],
+        "overview": {
+          "totalShares": "6.00000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "3.00000" },
+            { "ptPercent": "8", "shares": "1.80000" },
+            { "ptPercent": "16", "shares": "1.20000" }
+          ]
+        },
+        "financialOverview": {
+          "oop": "$300.00",
+          "marketValue": "$600.00",
+          "roi": "110.00%",
+          "available": "$930.00"
+        }
+      }
+    },
+    "deleteSlpA": {
+      "isDeleteDividendOrSlp": true,
+      "targetTransaction": {
+        "type": "SLP",
+        "amount": "$10.00"
+      },
+      "expected": {
+        "wallets": [
+          { "ptPercent": "4", "price": "$50.00", "shares": "3.00000", "investment": "$150.00", "pt": "$52.26" },
+          { "ptPercent": "8", "price": "$50.00", "shares": "1.80000", "investment": "$90.00", "pt": "$54.27" },
+          { "ptPercent": "16", "price": "$50.00", "shares": "1.20000", "investment": "$60.00", "pt": "$58.29" }
+        ],
+        "overview": {
+          "totalShares": "6.00000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "3.00000" },
+            { "ptPercent": "8", "shares": "1.80000" },
+            { "ptPercent": "16", "shares": "1.20000" }
+          ]
+        },
+        "financialOverview": {
+          "oop": "$300.00",
+          "marketValue": "$600.00",
+          "roi": "106.67%",
+          "available": "$920.00"
+        }
+      }
+    },
+    "deleteSplitA": {
+      "isDeleteSplit": true,
+      "targetTransaction": {
+        "type": "Split",
+        "ratio": "2:1"
+      },
+      "expected": {
+        "wallets": [
+          { "ptPercent": "4", "price": "$100.00", "shares": "1.50000", "investment": "$150.00", "pt": "$104.52", "pct2pt": "-4.33%" },
+          { "ptPercent": "8", "price": "$100.00", "shares": "0.90000", "investment": "$90.00", "pt": "$108.54", "pct2pt": "-7.87%" },
+          { "ptPercent": "16", "price": "$100.00", "shares": "0.60000", "investment": "$60.00", "pt": "$116.58", "pct2pt": "-14.22%" }
+        ],
+        "overview": {
+          "totalShares": "3.00000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "1.50000" },
+            { "ptPercent": "8", "shares": "0.90000" },
+            { "ptPercent": "16", "shares": "0.60000" }
+          ]
+        },
+        "financialOverview": {
+          "oop": "$300.00",
+          "marketValue": "$300.00",
+          "roi": "6.67%",
+          "available": "$920.00"
+        }
+      }
+    },
+    "deleteDivA": {
+      "isDeleteDividendOrSlp": true,
+      "targetTransaction": {
+        "type": "Dividend",
+        "amount": "$20.00"
+      },
+      "expected": {
+        "wallets": [
+          { "ptPercent": "4", "price": "$100.00", "shares": "1.50000", "investment": "$150.00", "pt": "$104.52", "pct2pt": "-4.33%" },
+          { "ptPercent": "8", "price": "$100.00", "shares": "0.90000", "investment": "$90.00", "pt": "$108.54", "pct2pt": "-7.87%" },
+          { "ptPercent": "16", "price": "$100.00", "shares": "0.60000", "investment": "$60.00", "pt": "$116.58", "pct2pt": "-14.22%" }
+        ],
+        "overview": {
+          "totalShares": "3.00000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "1.50000" },
+            { "ptPercent": "8", "shares": "0.90000" },
+            { "ptPercent": "16", "shares": "0.60000" }
+          ]
+        },
+        "financialOverview": {
+          "oop": "$300.00",
+          "marketValue": "$300.00",
+          "roi": "0.00%",
+          "available": "$900.00"
+        }
+      }
+    },
+    "deleteBuyA": {
+      "isDeleteBuy": true,
+      "target": {
+        "signal": "Initial",
+        "price": "$100.00",
+        "investment": "$300.00"
+      },
+      "expected": {
+        "transactionNotPresent": {
+          "signal": "Initial",
+          "price": "$100.00",
+          "investment": "$300.00"
+        },
+        "wallets": [],
+        "overview": {
+          "totalShares": "0.00000",
+          "ptShares": [
+            { "ptPercent": "4", "shares": "0.00000" },
+            { "ptPercent": "8", "shares": "0.00000" },
+            { "ptPercent": "16", "shares": "0.00000" }
+          ]
+        },
+        "financialOverview": {
+          "oop": "$0.00",
+          "marketValue": "$0.00",
+          "roi": "-",
+          "available": "$1,200.00"
+        }
+      }
+    }
+  }
+}

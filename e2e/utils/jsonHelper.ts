@@ -827,3 +827,96 @@ export function loadTransactionSplitTestData(fileName: string): TransactionSplit
     throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
   }
 }
+
+// ============================================================================
+// Historical Reversal Test Types
+// ============================================================================
+
+export interface HistoricalReversalAction {
+  testPriceUpdate?: string;
+
+  // Create operations
+  isSell?: boolean;
+  isSplit?: boolean;
+  isDividendOrSlp?: boolean;
+
+  // Delete operations
+  isDelete?: boolean;              // Delete SELL
+  isDeleteSplit?: boolean;         // Delete SPLIT
+  isDeleteDividendOrSlp?: boolean; // Delete DIVIDEND/SLP
+  isDeleteBuy?: boolean;           // Delete BUY
+
+  // Inputs
+  input?: TransactionInput | {
+    ptPercent: string;
+    walletPrice: string;
+    signal: string;
+    price: string;
+    quantity: string;
+  };
+  splitInput?: SplitInput;
+  dividendSlpInput?: DividendSlpInput;
+
+  // Target for delete/edit operations
+  target?: EditTransactionTarget;
+  targetTransaction?: {
+    type?: string;
+    ratio?: string;
+    signal?: string;
+    price?: string;
+    amount?: string;
+  };
+
+  expected: {
+    transaction?: TransactionExpected | SellTransactionExpected | SplitTransactionExpected;
+    transactionNotPresent?: {
+      signal?: string;
+      price?: string;
+      investment?: string;
+      amount?: string;
+    };
+    priorTransactions?: (TransactionExpected | SellTransactionExpected)[];
+    wallets?: WalletExpected[];
+    walletsNotPresent?: { ptPercent: string; price: string }[];
+    overview?: OverviewExpected;
+    financialOverview?: FinancialOverviewExpected;
+  };
+}
+
+export interface HistoricalReversalTestConfig {
+  scenario: string;
+  description: string;
+  asset: {
+    input: AssetCreateInput;
+    budget: { year: string; amount: string };
+  };
+  entryTargets: { input: TargetInput }[];
+  profitTargets: { input: TargetInput }[];
+  transactions: {
+    [key: string]: HistoricalReversalAction;
+  };
+}
+
+export function loadHistoricalReversalTestData(fileName: string): HistoricalReversalTestConfig {
+  const filePath = path.resolve(process.cwd(), fileName);
+  console.log(`[jsonHelper.ts] Attempting to load HistoricalReversal JSON from: ${filePath}`);
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`JSON file not found: ${filePath}`);
+  }
+
+  const fileContent = fs.readFileSync(filePath, "utf-8");
+  console.log(
+    `[jsonHelper.ts] File content read successfully. Length: ${fileContent.length}`
+  );
+
+  try {
+    const data = JSON.parse(fileContent) as HistoricalReversalTestConfig;
+    console.log(
+      `[jsonHelper.ts] Successfully parsed HistoricalReversal JSON for scenario: ${data.scenario}`
+    );
+    return data;
+  } catch (error) {
+    throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
+  }
+}
