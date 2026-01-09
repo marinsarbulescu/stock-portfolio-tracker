@@ -213,7 +213,7 @@ export function TargetList(props: TargetListProps) {
     // For profit targets, skip confirmation here - handleDeleteProfitTarget shows a comprehensive dialog
     // For entry targets, confirm here
     if (!isProfit) {
-      if (!confirm("Are you sure you want to delete this Entry Target?")) return;
+      if (!confirm("If you don't set an Entry Target, you won't be able to create Buy transactions.")) return;
     }
 
     try {

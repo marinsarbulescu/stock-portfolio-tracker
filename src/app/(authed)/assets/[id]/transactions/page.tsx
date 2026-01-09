@@ -1494,13 +1494,15 @@ export default function AssetTransactionsPage() {
               {isDeleting ? "Deleting..." : "Delete All"}
             </button>
           )}
-          <button
-            onClick={handleNewTransaction}
-            data-testid="btn-new-transaction"
-            className="px-4 py-2 text-sm bg-foreground text-background rounded hover:opacity-90"
-          >
-            New Transaction
-          </button>
+          {entryTargets.length > 0 && (
+            <button
+              onClick={handleNewTransaction}
+              data-testid="btn-new-transaction"
+              className="px-4 py-2 text-sm bg-foreground text-background rounded hover:opacity-90"
+            >
+              New Transaction
+            </button>
+          )}
         </div>
       </div>
 
