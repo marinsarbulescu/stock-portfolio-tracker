@@ -1,24 +1,35 @@
 # Stock Portfolio Tracker - Development Guide
 
 ## Tech Stack
-- **Frontend**: Next.js 15 (App Router), React 18, TypeScript, Tailwind CSS
+- **Frontend**: Next.js 15 (App Router), React 19, TypeScript 5, Tailwind CSS 4
 - **Backend**: AWS Amplify Gen 2
 - **Auth**: AWS Cognito (admin-creates-users-only)
 - **Database**: DynamoDB via Amplify Data
 - **API**: GraphQL via AWS AppSync
+- **Price Data**: yahoo-finance2 via AWS Lambda
+- **Testing**: Jest + Testing Library (unit), Playwright (E2E)
 
 ## Project Structure
 ```
 ├── amplify/              # Amplify Gen 2 backend
 │   ├── auth/             # Cognito authentication config
 │   ├── data/             # GraphQL schema and data models
+│   ├── functions/        # Lambda functions (e.g., getYfinanceData)
 │   └── backend.ts        # Main backend definition
+├── e2e/                  # Playwright E2E tests
+│   ├── assets/           # Asset-related tests + JSON data
+│   ├── dashboard/        # Dashboard tests
+│   ├── transactions/     # Transaction tests
+│   └── utils/            # Test helpers (assetHelper.ts, jsonHelper.ts)
+├── scripts/              # Data import scripts
 ├── src/
 │   ├── app/              # Next.js App Router pages
 │   │   ├── (authed)/     # Protected routes (require login)
 │   │   └── login/        # Public login page
 │   ├── components/       # React components
-│   └── utils/            # Utility functions
+│   ├── contexts/         # React contexts (PriceContext)
+│   ├── hooks/            # Custom React hooks
+│   └── utils/            # Utility functions and calculations
 ```
 
 ## Development Commands
@@ -37,6 +48,48 @@ npm run lint
 ```
 
 **Important**: You must run `npx ampx sandbox` before `npm run dev` to generate `amplify_outputs.json`.
+
+## Business Logic
+
+### Core Concepts
+- **Entry Target (ET)**: Pullback threshold that triggers BUY signals. Stored as positive (e.g., 4), displayed as negative (e.g., "-4%")
+- **Profit Target (PT)**: Sell target percentage. Each BUY allocates shares across PTs based on allocation percentages
+- **Wallet**: Holds shares at a specific (buyPrice, profitTargetId) combination. One wallet per unique combo
+
+### Key Formulas
+- **Quantity**: `investment / price` (no commission deducted at buy)
+- **Entry Target Price**: `buyPrice × (1 - ET%/100)`
+- **Profit Target Price**: `buyPrice × (1 + PT%/100) / (1 - commission%/100)`
+- **Pullback**: `(currentPrice - lastBuyPrice) / lastBuyPrice × 100`
+- **ROI**: `(balance + marketValue) / maxOOP × 100`
+- **P/L on SELL**: `netProceeds - costBasis` where `costBasis = walletPrice × quantity`
+
+### Important Rules
+- **One ET per asset** - Add button hidden after first ET created
+- **PT allocations must sum to 100%** - Can be auto-distributed if some PTs left empty
+- **Commission only affects SELL** - Deducted from gross proceeds, also baked into PT price calculation
+- **No transaction editing if subsequent transactions exist** - Protects wallet history integrity
+- **Wallet deletion blocked** if PT has remaining shares
+- **ET changes cascade** - Updating ET% recalculates all BUY transactions' entryTargetPrice
+- **"New Transaction" button hidden** if no ET exists on the asset
+
+### %2PT Color Coding (Dashboard/Wallets)
+- **Green**: `≥ -0.005%` (at or above PT)
+- **Yellow**: `-1% to -0.005%` (close to PT)
+- **Default**: `< -1%` (far from PT)
+
+### Transaction Types
+- **BUY**: Creates wallets, allocates shares across PTs
+- **SELL**: Reduces wallet shares, records P/L
+- **DIVIDEND/SLP**: Cash inflow, no share impact
+- **SPLIT**: Multiplies shares, divides prices (investment constant)
+
+### Price Fetching (Yahoo Finance)
+- **Lambda function**: `amplify/functions/getYfinanceData/handler.ts` uses yahoo-finance2
+- **GraphQL query**: `getLatestPrices(symbols: [String!]!)` → returns current price + 7 days historical
+- **Frontend context**: `PriceContext` manages prices, batches requests (5 symbols/batch), caches in localStorage
+- **Test price override**: Assets can have `testPrice` field that overrides live price for development/testing
+- **Historical data**: Used for 5D Pullback calculation (needs 5 trading days of closes)
 
 ## Key Conventions
 

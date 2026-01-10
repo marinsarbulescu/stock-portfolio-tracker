@@ -63,22 +63,6 @@ export interface TargetEditAction extends TargetAction {
   targetSortOrder: string; // Which target to edit (by sortOrder)
 }
 
-export interface AssetTargetsTestConfig {
-  scenario: string;
-  description: string;
-  asset: {
-    input: AssetCreateInput;
-  };
-  entryTarget: {
-    create: TargetAction;
-    edit: TargetAction;
-  };
-  profitTargets: {
-    create: TargetAction[];
-    edit: TargetEditAction;
-  };
-}
-
 // ============================================================================
 // BUY Transaction CRUD Types
 // ============================================================================
@@ -309,30 +293,6 @@ export function loadAssetCreateTestData(fileName: string): AssetCreateTestConfig
     const data = JSON.parse(fileContent) as AssetCreateTestConfig;
     console.log(
       `[jsonHelper.ts] Successfully parsed JSON for scenario: ${data.scenario}`
-    );
-    return data;
-  } catch (error) {
-    throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
-  }
-}
-
-export function loadAssetTargetsTestData(fileName: string): AssetTargetsTestConfig {
-  const filePath = path.resolve(process.cwd(), fileName);
-  console.log(`[jsonHelper.ts] Attempting to load Targets JSON from: ${filePath}`);
-
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`JSON file not found: ${filePath}`);
-  }
-
-  const fileContent = fs.readFileSync(filePath, "utf-8");
-  console.log(
-    `[jsonHelper.ts] File content read successfully. Length: ${fileContent.length}`
-  );
-
-  try {
-    const data = JSON.parse(fileContent) as AssetTargetsTestConfig;
-    console.log(
-      `[jsonHelper.ts] Successfully parsed Targets JSON for scenario: ${data.scenario}`
     );
     return data;
   } catch (error) {
@@ -914,6 +874,95 @@ export function loadHistoricalReversalTestData(fileName: string): HistoricalReve
     const data = JSON.parse(fileContent) as HistoricalReversalTestConfig;
     console.log(
       `[jsonHelper.ts] Successfully parsed HistoricalReversal JSON for scenario: ${data.scenario}`
+    );
+    return data;
+  } catch (error) {
+    throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
+  }
+}
+
+// ============================================================================
+// Entry Target CRUD Test Types
+// ============================================================================
+
+export interface ETCrudCreateStep {
+  input: TargetInput;
+  expected: TargetExpected;
+}
+
+export interface ETCrudEditStep {
+  input: TargetInput;
+  expected: TargetExpected;
+}
+
+export interface ETCrudDeleteStep {
+  confirmationMessage: string;  // Expected warning message when deleting ET
+}
+
+export interface ETTransactionAction {
+  testPriceUpdate?: string;
+  input?: TransactionInput;
+  expected: {
+    transaction?: TransactionExpected;
+    wallets: WalletExpected[];
+    overview: OverviewExpected;
+  };
+}
+
+export interface ETEditAfterTransactionsStep {
+  input: TargetInput;
+  expected: TargetExpected;
+  expectedTransactions: {
+    signal: string;
+    price: string;
+    entryTarget: string;  // The updated entry target price
+  }[];
+  expectedColumnHeader: string;  // The expected ET column header name
+}
+
+export interface DashboardVerification {
+  symbol: string;
+  pullback: string;  // Expected pullback value (e.g., "-18.18%")
+}
+
+export interface AssetETCrudTestConfig {
+  scenario: string;
+  description: string;
+  asset: {
+    input: AssetCreateInput;
+    budget?: { year: string; amount: string };
+  };
+  profitTargets: { input: TargetInput }[];
+  steps: {
+    createET: ETCrudCreateStep;
+    editET: ETCrudEditStep;
+    deleteET: ETCrudDeleteStep;
+    recreateET: ETCrudCreateStep;
+    transactions: {
+      [key: string]: ETTransactionAction;
+    };
+    editETAfterTransactions: ETEditAfterTransactionsStep;
+    dashboardVerification: DashboardVerification;
+  };
+}
+
+export function loadAssetETCrudTestData(fileName: string): AssetETCrudTestConfig {
+  const filePath = path.resolve(process.cwd(), fileName);
+  console.log(`[jsonHelper.ts] Attempting to load ET CRUD JSON from: ${filePath}`);
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`JSON file not found: ${filePath}`);
+  }
+
+  const fileContent = fs.readFileSync(filePath, "utf-8");
+  console.log(
+    `[jsonHelper.ts] File content read successfully. Length: ${fileContent.length}`
+  );
+
+  try {
+    const data = JSON.parse(fileContent) as AssetETCrudTestConfig;
+    console.log(
+      `[jsonHelper.ts] Successfully parsed ET CRUD JSON for scenario: ${data.scenario}`
     );
     return data;
   } catch (error) {

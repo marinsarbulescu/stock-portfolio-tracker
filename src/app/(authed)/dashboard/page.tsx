@@ -295,10 +295,10 @@ export default function Dashboard() {
           );
 
           if (!triggered || item.pullbackPercent === null) {
-            return <span className="text-muted-foreground">-</span>;
+            return <span className="text-muted-foreground" data-testid={`dashboard-pullback-${item.symbol}`}>-</span>;
           }
 
-          return <span>{item.pullbackPercent.toFixed(2)}%</span>;
+          return <span data-testid={`dashboard-pullback-${item.symbol}`}>{item.pullbackPercent.toFixed(2)}%</span>;
         },
       },
       {

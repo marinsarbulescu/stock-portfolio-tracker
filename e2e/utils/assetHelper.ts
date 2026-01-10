@@ -2043,6 +2043,85 @@ export async function verifyDashboardRowGrayedOut(
   }
 }
 
+/**
+ * Verify the Pullback value in the Dashboard for a specific asset.
+ * Call this from the Dashboard page.
+ */
+export async function verifyDashboardPullback(
+  page: Page,
+  symbol: string,
+  expectedPullback: string
+): Promise<void> {
+  console.log(`[AssetHelper] Verifying Dashboard Pullback for ${symbol}...`);
+
+  // Find the Pullback cell by data-testid
+  const pullbackCell = page.locator(`[data-testid="dashboard-pullback-${symbol}"]`).first();
+
+  // Wait for element to be visible first
+  await expect(pullbackCell).toBeVisible({ timeout: 10000 });
+  await expect(pullbackCell).toHaveText(expectedPullback, { timeout: 10000 });
+
+  console.log(`[AssetHelper] Dashboard Pullback verified: ${expectedPullback}`);
+}
+
+/**
+ * Verify that the "New Transaction" button is hidden.
+ * This happens when an asset has no Entry Target configured.
+ * Call this from the transactions page.
+ */
+export async function verifyNewTransactionButtonHidden(page: Page): Promise<void> {
+  console.log(`[AssetHelper] Verifying New Transaction button is hidden...`);
+
+  const newTxnButton = page.locator('[data-testid="btn-new-transaction"]');
+  await expect(newTxnButton).not.toBeVisible({ timeout: 5000 });
+
+  console.log(`[AssetHelper] New Transaction button is hidden as expected.`);
+}
+
+/**
+ * Verify the Entry Target column header name in the transactions table.
+ * Call this from the transactions page.
+ */
+export async function verifyEntryTargetColumnHeader(
+  page: Page,
+  expectedHeaderName: string
+): Promise<void> {
+  console.log(`[AssetHelper] Verifying Entry Target column header: ${expectedHeaderName}...`);
+
+  // The ET column header should contain the ET name
+  const headerCell = page.locator('[data-testid="txn-table-header-entryTarget"]');
+  await expect(headerCell).toBeVisible({ timeout: 5000 });
+  await expect(headerCell).toContainText(expectedHeaderName);
+
+  console.log(`[AssetHelper] Entry Target column header verified: ${expectedHeaderName}`);
+}
+
+/**
+ * Verify a BUY transaction's Entry Target value in the transactions table.
+ * Call this from the transactions page.
+ */
+export async function verifyTransactionEntryTarget(
+  page: Page,
+  transactionPrice: string,
+  signal: string,
+  expectedEntryTarget: string
+): Promise<void> {
+  console.log(`[AssetHelper] Verifying transaction Entry Target: price=${transactionPrice}, signal=${signal}, expected ET=${expectedEntryTarget}...`);
+
+  // Wait for the loading state to clear before looking for the row
+  await expect(page.getByText('Loading...')).not.toBeVisible({ timeout: 10000 });
+
+  // Find the transaction row by price and signal
+  const row = page.locator(`tr:has([data-testid="txn-price"]:text("${transactionPrice}")):has([data-testid="txn-signal"]:text("${signal}"))`);
+  await expect(row).toBeVisible({ timeout: 5000 });
+
+  // Find the ET cell within this row
+  const etCell = row.locator('[data-testid="txn-entry-target"]');
+  await expect(etCell).toHaveText(expectedEntryTarget);
+
+  console.log(`[AssetHelper] Transaction Entry Target verified: ${expectedEntryTarget}`);
+}
+
 // ============================================================================
 // Dividend/SLP Transaction Helpers
 // ============================================================================

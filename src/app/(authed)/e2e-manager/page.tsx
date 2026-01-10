@@ -23,10 +23,10 @@ const tests: TestItem[] = [
     describeName: "Assets - CRUD Operations",
   },
   {
-    id: "targets-1",
-    name: "AssetTargets - Entry Target and Profit Target CRUD",
-    specFile: "assets/asset-targets-crud.spec.ts",
-    describeName: "Assets - ET/PT CRUD",
+    id: "et-crud-1",
+    name: "AssetETCRUD - Entry Target CRUD and Transaction Updates",
+    specFile: "assets/asset-et-crud.spec.ts",
+    describeName: "Assets - Entry Target CRUD",
   },
   {
     id: "buy-1",

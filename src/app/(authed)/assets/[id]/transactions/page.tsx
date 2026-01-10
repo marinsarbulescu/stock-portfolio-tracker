@@ -715,47 +715,52 @@ export default function AssetTransactionsPage() {
       {
         key: "type",
         header: "Type",
-        render: (item) => formatType(item.type),
+        render: (item) => <span data-testid="txn-type">{formatType(item.type)}</span>,
       },
       {
         key: "signal",
         header: "Signal",
-        render: (item) =>
-          item.signal ? SIGNAL_LABELS[item.signal] || item.signal : "-",
+        render: (item) => (
+          <span data-testid="txn-signal">
+            {item.signal ? SIGNAL_LABELS[item.signal] || item.signal : "-"}
+          </span>
+        ),
       },
       {
         key: "price",
         header: "Price",
-        render: (item) => formatCurrency(item.price),
+        render: (item) => <span data-testid="txn-price">{formatCurrency(item.price)}</span>,
       },
       {
         key: "quantity",
         header: "Quantity",
         render: (item) => {
+          let content: string;
           if (item.type === "SPLIT") {
-            return item.splitRatio ? `${item.splitRatio}:1` : "-";
-          }
-          if (item.type === "BUY" || item.type === "SELL") {
-            return item.quantity !== null
+            content = item.splitRatio ? `${item.splitRatio}:1` : "-";
+          } else if (item.type === "BUY" || item.type === "SELL") {
+            content = item.quantity !== null
               ? item.quantity.toLocaleString(undefined, { minimumFractionDigits: 5, maximumFractionDigits: 5 })
               : "-";
+          } else {
+            content = "-";
           }
-          return "-";
+          return <span data-testid="txn-quantity">{content}</span>;
         },
       },
       {
         key: "investment",
         header: "Investment",
-        render: (item) => formatCurrency(item.investment),
+        render: (item) => <span data-testid="txn-investment">{formatCurrency(item.investment)}</span>,
       },
       {
         key: "amount",
         header: "Amount",
         render: (item) => {
-          if (item.type === "SELL" || item.type === "DIVIDEND" || item.type === "SLP") {
-            return formatCurrency(item.amount);
-          }
-          return "-";
+          const content = (item.type === "SELL" || item.type === "DIVIDEND" || item.type === "SLP")
+            ? formatCurrency(item.amount)
+            : "-";
+          return <span data-testid="txn-amount">{content}</span>;
         },
       },
       {
@@ -797,7 +802,8 @@ export default function AssetTransactionsPage() {
       },
       {
         key: "entryTarget",
-        header: firstEntryTarget ? `ET (-${Math.abs(firstEntryTarget.targetPercent)}%)` : "ET",
+        header: firstEntryTarget ? `${firstEntryTarget.name}` : "ET",
+        headerTestId: "txn-table-header-entryTarget",
         render: (item) => {
           if (item.type !== "BUY" || item.entryTargetPrice === null) {
             return "-";
@@ -805,7 +811,7 @@ export default function AssetTransactionsPage() {
           const isLastBuy = lastBuyTransaction?.id === item.id;
           const shouldHighlight = isLastBuy && effectivePrice !== null && effectivePrice <= item.entryTargetPrice;
           return (
-            <span className={shouldHighlight ? "text-green-400 font-medium" : ""}>
+            <span className={shouldHighlight ? "text-green-400 font-medium" : ""} data-testid="txn-entry-target">
               {formatCurrency(item.entryTargetPrice)}
             </span>
           );

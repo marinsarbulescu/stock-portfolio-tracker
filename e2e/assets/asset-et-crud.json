@@ -1,0 +1,194 @@
+{
+  "scenario": "AssetETCRUD",
+  "description": "Test Entry Target CRUD operations and how ET changes affect BUY transactions and Dashboard pullback",
+  "asset": {
+    "input": {
+      "symbol": "E2E-ASSET-ET-CRUD",
+      "name": "E2E Asset ET CRUD Test",
+      "type": "STOCK",
+      "testPrice": "100",
+      "commission": "1",
+      "status": "ACTIVE"
+    },
+    "budget": {
+      "year": "2026",
+      "amount": "1200"
+    }
+  },
+  "profitTargets": [
+    { "input": { "name": "PT4", "targetPercent": "4", "allocationPercent": "50", "sortOrder": "1" } },
+    { "input": { "name": "PT8", "targetPercent": "8", "allocationPercent": "30", "sortOrder": "2" } },
+    { "input": { "name": "PT16", "targetPercent": "16", "allocationPercent": "20", "sortOrder": "3" } }
+  ],
+  "steps": {
+    "createET": {
+      "input": {
+        "name": "ET -2%",
+        "targetPercent": "2",
+        "sortOrder": "1"
+      },
+      "expected": {
+        "name": "ET -2%",
+        "targetPercent": "-2%",
+        "sortOrder": "1"
+      }
+    },
+    "editET": {
+      "input": {
+        "name": "ET -4%",
+        "targetPercent": "4",
+        "sortOrder": "1"
+      },
+      "expected": {
+        "name": "ET -4%",
+        "targetPercent": "-4%",
+        "sortOrder": "1"
+      }
+    },
+    "deleteET": {
+      "confirmationMessage": "If you don't set an Entry Target, you won't be able to create Buy transactions."
+    },
+    "recreateET": {
+      "input": {
+        "name": "ET -2%",
+        "targetPercent": "2",
+        "sortOrder": "1"
+      },
+      "expected": {
+        "name": "ET -2%",
+        "targetPercent": "-2%",
+        "sortOrder": "1"
+      }
+    },
+    "transactions": {
+      "buyA": {
+        "input": {
+          "signal": "INITIAL",
+          "price": "100",
+          "investment": "200",
+          "allocations": [
+            { "ptPercent": "4", "percentage": "50" },
+            { "ptPercent": "8", "percentage": "30" },
+            { "ptPercent": "16", "percentage": "20" }
+          ]
+        },
+        "expected": {
+          "transaction": {
+            "type": "Buy",
+            "signal": "Initial",
+            "price": "$100.00",
+            "quantity": "2.00000",
+            "investment": "$200.00",
+            "entryTarget": "$98.00",
+            "profitLoss": "-",
+            "profitLossPercent": "-"
+          },
+          "wallets": [
+            { "ptPercent": "4", "price": "$100.00", "shares": "1.00000", "investment": "$100.00" },
+            { "ptPercent": "8", "price": "$100.00", "shares": "0.60000", "investment": "$60.00" },
+            { "ptPercent": "16", "price": "$100.00", "shares": "0.40000", "investment": "$40.00" }
+          ],
+          "overview": {
+            "totalShares": "2.00000",
+            "ptShares": [
+              { "ptPercent": "4", "shares": "1.00000" },
+              { "ptPercent": "8", "shares": "0.60000" },
+              { "ptPercent": "16", "shares": "0.40000" }
+            ]
+          }
+        }
+      },
+      "buyB": {
+        "testPriceUpdate": "110",
+        "input": {
+          "signal": "CUSTOM",
+          "price": "110",
+          "investment": "300",
+          "allocations": [
+            { "ptPercent": "4", "percentage": "50" },
+            { "ptPercent": "8", "percentage": "30" },
+            { "ptPercent": "16", "percentage": "20" }
+          ]
+        },
+        "expected": {
+          "transaction": {
+            "type": "Buy",
+            "signal": "Custom",
+            "price": "$110.00",
+            "quantity": "2.72727",
+            "investment": "$300.00",
+            "entryTarget": "$107.80",
+            "profitLoss": "-",
+            "profitLossPercent": "-"
+          },
+          "wallets": [
+            { "ptPercent": "4", "price": "$100.00", "shares": "1.00000", "investment": "$100.00" },
+            { "ptPercent": "4", "price": "$110.00", "shares": "1.36364", "investment": "$150.00" },
+            { "ptPercent": "8", "price": "$100.00", "shares": "0.60000", "investment": "$60.00" },
+            { "ptPercent": "8", "price": "$110.00", "shares": "0.81818", "investment": "$90.00" },
+            { "ptPercent": "16", "price": "$100.00", "shares": "0.40000", "investment": "$40.00" },
+            { "ptPercent": "16", "price": "$110.00", "shares": "0.54545", "investment": "$60.00" }
+          ],
+          "overview": {
+            "totalShares": "4.72727",
+            "ptShares": [
+              { "ptPercent": "4", "shares": "2.36364" },
+              { "ptPercent": "8", "shares": "1.41818" },
+              { "ptPercent": "16", "shares": "0.94545" }
+            ]
+          }
+        }
+      },
+      "priceUpdate": {
+        "testPriceUpdate": "90",
+        "expected": {
+          "wallets": [
+            { "ptPercent": "4", "price": "$100.00", "shares": "1.00000", "investment": "$100.00" },
+            { "ptPercent": "4", "price": "$110.00", "shares": "1.36364", "investment": "$150.00" },
+            { "ptPercent": "8", "price": "$100.00", "shares": "0.60000", "investment": "$60.00" },
+            { "ptPercent": "8", "price": "$110.00", "shares": "0.81818", "investment": "$90.00" },
+            { "ptPercent": "16", "price": "$100.00", "shares": "0.40000", "investment": "$40.00" },
+            { "ptPercent": "16", "price": "$110.00", "shares": "0.54545", "investment": "$60.00" }
+          ],
+          "overview": {
+            "totalShares": "4.72727",
+            "ptShares": [
+              { "ptPercent": "4", "shares": "2.36364" },
+              { "ptPercent": "8", "shares": "1.41818" },
+              { "ptPercent": "16", "shares": "0.94545" }
+            ]
+          }
+        }
+      }
+    },
+    "editETAfterTransactions": {
+      "input": {
+        "name": "ET -4%",
+        "targetPercent": "4",
+        "sortOrder": "1"
+      },
+      "expected": {
+        "name": "ET -4%",
+        "targetPercent": "-4%",
+        "sortOrder": "1"
+      },
+      "expectedTransactions": [
+        {
+          "signal": "Initial",
+          "price": "$100.00",
+          "entryTarget": "$96.00"
+        },
+        {
+          "signal": "Custom",
+          "price": "$110.00",
+          "entryTarget": "$105.60"
+        }
+      ],
+      "expectedColumnHeader": "ET -4%"
+    },
+    "dashboardVerification": {
+      "symbol": "E2E-ASSET-ET-CRUD",
+      "pullback": "-18.18%"
+    }
+  }
+}

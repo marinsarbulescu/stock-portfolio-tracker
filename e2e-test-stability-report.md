@@ -5,7 +5,7 @@
 
 ## Executive Summary
 
-Out of 7 e2e test suites, 6 showed **100% stability** across 10 runs. One test suite (**AssetSellCRUD**) encountered a **timeout failure** on the first run and did not complete the remaining 9 iterations.
+Out of 6 e2e test suites, 5 showed **100% stability** across 10 runs. One test suite (**AssetSellCRUD**) encountered a **timeout failure** on the first run and did not complete the remaining 9 iterations.
 
 ---
 
@@ -17,7 +17,6 @@ Out of 7 e2e test suites, 6 showed **100% stability** across 10 runs. One test s
 | AssetCRUD | 10 | 10 | 0 | 100% | ~12s |
 | ROI Calculation | 10 | 10 | 0 | 100% | ~55s |
 | **AssetSellCRUD** | **1** | **0** | **1** | **0%** | **240s (timeout)** |
-| AssetTargets | 10 | 10 | 0 | 100% | ~19s |
 | DashboardSignals | 10 | 10 | 0 | 100% | ~54s |
 | Authentication | 10 | 10 | 0 | 100% | ~4s |
 
@@ -45,19 +44,13 @@ Out of 7 e2e test suites, 6 showed **100% stability** across 10 runs. One test s
 - **Duration:** ~55 seconds per run
 - **Notes:** Consistent performance
 
-#### 4. AssetTargets - Entry Target and Profit Target CRUD
-- **Status:** ✅ Stable
-- **Runs:** 10/10 passed
-- **Duration:** ~19 seconds per run
-- **Notes:** No issues detected
-
-#### 5. DashboardSignals - Verify %2PT colors
+#### 4. DashboardSignals - Verify %2PT colors
 - **Status:** ✅ Stable
 - **Runs:** 10/10 passed
 - **Duration:** ~54 seconds per run
 - **Notes:** Reliable performance
 
-#### 6. Authentication - authentication flow
+#### 5. Authentication - authentication flow
 - **Status:** ✅ Stable
 - **Runs:** 10/10 passed
 - **Duration:** ~4 seconds per run
@@ -155,9 +148,9 @@ Since only one test failed and only on the first attempt, there are **no repeati
 
 ### General Test Suite Health:
 
-✅ **Overall test suite is very stable** (85.7% of tests are 100% reliable)
+✅ **Overall test suite is very stable** (83.3% of tests are 100% reliable)
 ⚠️ **One test requires attention** (AssetSellCRUD needs investigation)
-📊 **Total test coverage:** 7 test suites covering authentication, CRUD operations, calculations, and UI verification
+📊 **Total test coverage:** 6 test suites covering authentication, CRUD operations, calculations, and UI verification
 
 ---
 

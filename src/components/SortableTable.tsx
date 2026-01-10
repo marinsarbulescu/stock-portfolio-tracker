@@ -5,6 +5,7 @@ import { useState, useMemo } from "react";
 export interface Column<T> {
   key: keyof T | string;
   header: string;
+  headerTestId?: string; // Optional data-testid for the header cell
   sortable?: boolean;
   toggleable?: boolean; // Set to false to always show column (e.g., actions)
   defaultHidden?: boolean; // Set to true to hide column by default (user can toggle)
@@ -106,6 +107,7 @@ export function SortableTable<T>({
                 onClick={() =>
                   column.sortable !== false && handleSort(String(column.key))
                 }
+                data-testid={column.headerTestId}
               >
                 {column.header}
                 {column.sortable !== false && renderSortIndicator(String(column.key))}
