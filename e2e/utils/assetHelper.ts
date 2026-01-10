@@ -331,6 +331,65 @@ export async function updateTestPriceOnEditPage(page: Page, newPrice: string): P
   console.log("[AssetHelper] Test price updated successfully.");
 }
 
+/**
+ * Update testHistoricalCloses for an asset. Call this when already on the Edit page.
+ * Uses page.evaluate() to set the hidden field value and trigger React onChange.
+ */
+export async function updateTestHistoricalCloses(page: Page, jsonData: string): Promise<void> {
+  console.log(`[AssetHelper] Updating testHistoricalCloses...`);
+
+  // Use page.evaluate to set the hidden input value and dispatch events
+  await page.evaluate((data) => {
+    const input = document.querySelector('[data-testid="asset-form-testHistoricalCloses"]') as HTMLInputElement;
+    if (input) {
+      // Set value directly
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+      if (nativeInputValueSetter) {
+        nativeInputValueSetter.call(input, data);
+      }
+      // Dispatch input event to trigger React onChange
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }, jsonData);
+
+  // Submit form
+  await page.locator('[data-testid="asset-form-submit"]').click();
+
+  // Wait for save to complete
+  await expect(page.locator('[data-testid="asset-form-submit"]')).toHaveText("Save Changes", { timeout: 10000 });
+
+  console.log("[AssetHelper] testHistoricalCloses updated successfully.");
+}
+
+/**
+ * Update both testPrice and testHistoricalCloses for an asset in a single form submission.
+ * Call this when already on the Edit page.
+ */
+export async function updateTestPriceAndHistoricalCloses(
+  page: Page,
+  testPrice: string,
+  testHistoricalClosesJson: string
+): Promise<void> {
+  console.log(`[AssetHelper] Updating testPrice to ${testPrice} and testHistoricalCloses...`);
+
+  // Update test price field
+  await page.locator('[data-testid="asset-form-testPrice"]').clear();
+  await page.locator('[data-testid="asset-form-testPrice"]').fill(testPrice);
+
+  // Update testHistoricalCloses field
+  await page.locator('[data-testid="asset-form-testHistoricalCloses"]').clear();
+  await page.locator('[data-testid="asset-form-testHistoricalCloses"]').fill(testHistoricalClosesJson);
+
+  // Submit form
+  await page.locator('[data-testid="asset-form-submit"]').click();
+
+  // Wait for save to complete
+  await expect(page.locator('[data-testid="asset-form-submit"]')).toHaveText("Save Changes", { timeout: 10000 });
+
+  console.log("[AssetHelper] testPrice and testHistoricalCloses updated successfully.");
+}
+
 // ============================================================================
 // Asset CRUD Helpers
 // ============================================================================

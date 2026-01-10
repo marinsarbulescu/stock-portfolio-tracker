@@ -38,6 +38,7 @@ interface RawAssetData {
   id: string;
   symbol: string;
   testPrice: number | null;
+  testHistoricalCloses: string | null;
   lastBuyPrice: number | null;
   lastBuyDate: string | null;
   entryTargetPercent: number | null;
@@ -138,6 +139,7 @@ export default function Dashboard() {
           id: asset.id,
           symbol: asset.symbol,
           testPrice: asset.testPrice ?? null,
+          testHistoricalCloses: asset.testHistoricalCloses ?? null,
           lastBuyPrice: lastBuy?.price ?? null,
           lastBuyDate: lastBuy?.date ?? null,
           entryTargetPercent: lastBuy?.entryTargetPercent ?? null,
@@ -194,7 +196,15 @@ export default function Dashboard() {
       );
 
       // Calculate 5D Pullback using historical closes and first entry target
-      const historicalCloses = getHistoricalCloses(asset.symbol, prices);
+      // Use testHistoricalCloses if available (for E2E testing), otherwise fetch from prices
+      let historicalCloses = getHistoricalCloses(asset.symbol, prices);
+      if (asset.testHistoricalCloses) {
+        try {
+          historicalCloses = JSON.parse(asset.testHistoricalCloses);
+        } catch {
+          // If parsing fails, fall back to prices
+        }
+      }
       const fiveDPullback = calculate5DPullback(
         currentPrice,
         historicalCloses,
@@ -307,10 +317,10 @@ export default function Dashboard() {
         sortable: true,
         render: (item) => {
           if (item.fiveDPullback === null) {
-            return <span className="text-muted-foreground">-</span>;
+            return <span className="text-muted-foreground" data-testid={`dashboard-5d-pullback-${item.symbol}`}>-</span>;
           }
 
-          return <span>{item.fiveDPullback.toFixed(2)}%</span>;
+          return <span data-testid={`dashboard-5d-pullback-${item.symbol}`}>{item.fiveDPullback.toFixed(2)}%</span>;
         },
       },
       {

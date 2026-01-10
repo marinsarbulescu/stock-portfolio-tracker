@@ -18,6 +18,7 @@ interface Asset {
   name: string;
   type: AssetType;
   testPrice: number | null;
+  testHistoricalCloses: string | null;
   commission: number | null;
   status: AssetStatus;
 }
@@ -27,6 +28,7 @@ interface FormData {
   name: string;
   type: AssetType;
   testPrice: string;
+  testHistoricalCloses: string;
   commission: string;
   status: AssetStatus;
 }
@@ -47,6 +49,7 @@ export default function EditAssetPage() {
     name: "",
     type: "STOCK",
     testPrice: "",
+    testHistoricalCloses: "",
     commission: "",
     status: "ACTIVE",
   });
@@ -82,6 +85,7 @@ export default function EditAssetPage() {
         name: data.name,
         type: data.type as AssetType,
         testPrice: data.testPrice ?? null,
+        testHistoricalCloses: data.testHistoricalCloses ?? null,
         commission: data.commission ?? null,
         status: data.status as AssetStatus,
       });
@@ -91,6 +95,7 @@ export default function EditAssetPage() {
         name: data.name,
         type: data.type as AssetType,
         testPrice: data.testPrice?.toString() ?? "",
+        testHistoricalCloses: data.testHistoricalCloses ?? "",
         commission: data.commission?.toString() ?? "",
         status: data.status as AssetStatus,
       });
@@ -226,6 +231,7 @@ export default function EditAssetPage() {
         name: formData.name.trim(),
         type: formData.type,
         testPrice: formData.testPrice ? parseFloat(formData.testPrice) : null,
+        testHistoricalCloses: formData.testHistoricalCloses || null,
         commission: newCommission,
         status: formData.status,
       });
@@ -754,6 +760,27 @@ export default function EditAssetPage() {
                 }
                 className="w-full px-3 py-2 bg-background border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-border"
                 placeholder="For E2E testing"
+              />
+            </div>
+
+            {/* Visible field for E2E testing of 5D Pullback */}
+            <div>
+              <label
+                htmlFor="testHistoricalCloses"
+                className="block text-sm font-medium text-card-foreground mb-1"
+              >
+                Test Historical Closes (JSON)
+              </label>
+              <textarea
+                id="testHistoricalCloses"
+                data-testid="asset-form-testHistoricalCloses"
+                value={formData.testHistoricalCloses}
+                onChange={(e) =>
+                  setFormData({ ...formData, testHistoricalCloses: e.target.value })
+                }
+                className="w-full px-3 py-2 bg-background border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-border font-mono text-xs"
+                placeholder='[{"date":"2026-01-08","close":100}]'
+                rows={2}
               />
             </div>
 

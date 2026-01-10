@@ -969,3 +969,55 @@ export function loadAssetETCrudTestData(fileName: string): AssetETCrudTestConfig
     throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
   }
 }
+
+// ============================================================================
+// 5D Pullback Test Types
+// ============================================================================
+
+export interface HistoricalCloseInput {
+  date: string;
+  close: number;
+}
+
+export interface FiveDPullbackScenario {
+  name: string;
+  testPrice: string;
+  testHistoricalCloses: HistoricalCloseInput[];
+  expected: {
+    fiveDPullback: string;  // e.g., "-6.86%" or "-" for null
+  };
+}
+
+export interface FiveDPullbackTestConfig {
+  scenario: string;
+  description: string;
+  asset: {
+    input: AssetCreateInput;
+  };
+  entryTarget: { input: TargetInput };
+  scenarios: FiveDPullbackScenario[];
+}
+
+export function loadFiveDPullbackTestData(fileName: string): FiveDPullbackTestConfig {
+  const filePath = path.resolve(process.cwd(), fileName);
+  console.log(`[jsonHelper.ts] Attempting to load 5D Pullback JSON from: ${filePath}`);
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`JSON file not found: ${filePath}`);
+  }
+
+  const fileContent = fs.readFileSync(filePath, "utf-8");
+  console.log(
+    `[jsonHelper.ts] File content read successfully. Length: ${fileContent.length}`
+  );
+
+  try {
+    const data = JSON.parse(fileContent) as FiveDPullbackTestConfig;
+    console.log(
+      `[jsonHelper.ts] Successfully parsed 5D Pullback JSON for scenario: ${data.scenario}`
+    );
+    return data;
+  } catch (error) {
+    throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
+  }
+}

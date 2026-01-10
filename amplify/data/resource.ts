@@ -15,6 +15,7 @@ const schema = a.schema({
       name: a.string().required(),
       type: a.ref("AssetType").required(),
       testPrice: a.float(), // For E2E testing signals
+      testHistoricalCloses: a.string(), // JSON string for E2E testing 5D Pullback: "[{date, close}, ...]"
       commission: a.float(), // Percentage per sell transaction
       status: a.ref("AssetStatus").required(),
       // Relationships
