@@ -84,9 +84,9 @@
             "profitLossPercent": "-"
           },
           "wallets": [
-            { "ptPercent": "4", "price": "$100.00", "shares": "1.00000", "investment": "$100.00" },
-            { "ptPercent": "8", "price": "$100.00", "shares": "0.60000", "investment": "$60.00" },
-            { "ptPercent": "16", "price": "$100.00", "shares": "0.40000", "investment": "$40.00" }
+            { "ptPercent": "4", "price": "$100.00", "shares": "1.00000", "investment": "$100.00", "pt": "$105.05", "pct2pt": "-4.81%" },
+            { "ptPercent": "8", "price": "$100.00", "shares": "0.60000", "investment": "$60.00", "pt": "$109.09", "pct2pt": "-8.33%" },
+            { "ptPercent": "16", "price": "$100.00", "shares": "0.40000", "investment": "$40.00", "pt": "$117.17", "pct2pt": "-14.66%" }
           ],
           "overview": {
             "totalShares": "2.00000",
@@ -122,12 +122,12 @@
             "profitLossPercent": "-"
           },
           "wallets": [
-            { "ptPercent": "4", "price": "$100.00", "shares": "1.00000", "investment": "$100.00" },
-            { "ptPercent": "4", "price": "$110.00", "shares": "1.36364", "investment": "$150.00" },
-            { "ptPercent": "8", "price": "$100.00", "shares": "0.60000", "investment": "$60.00" },
-            { "ptPercent": "8", "price": "$110.00", "shares": "0.81818", "investment": "$90.00" },
-            { "ptPercent": "16", "price": "$100.00", "shares": "0.40000", "investment": "$40.00" },
-            { "ptPercent": "16", "price": "$110.00", "shares": "0.54545", "investment": "$60.00" }
+            { "ptPercent": "4", "price": "$100.00", "shares": "1.00000", "investment": "$100.00", "pt": "$105.05", "pct2pt": "4.71%" },
+            { "ptPercent": "4", "price": "$110.00", "shares": "1.36364", "investment": "$150.00", "pt": "$115.56", "pct2pt": "-4.81%" },
+            { "ptPercent": "8", "price": "$100.00", "shares": "0.60000", "investment": "$60.00", "pt": "$109.09", "pct2pt": "0.83%" },
+            { "ptPercent": "8", "price": "$110.00", "shares": "0.81818", "investment": "$90.00", "pt": "$120.00", "pct2pt": "-8.33%" },
+            { "ptPercent": "16", "price": "$100.00", "shares": "0.40000", "investment": "$40.00", "pt": "$117.17", "pct2pt": "-6.12%" },
+            { "ptPercent": "16", "price": "$110.00", "shares": "0.54545", "investment": "$60.00", "pt": "$128.89", "pct2pt": "-14.66%" }
           ],
           "overview": {
             "totalShares": "4.72727",
@@ -143,12 +143,12 @@
         "testPriceUpdate": "90",
         "expected": {
           "wallets": [
-            { "ptPercent": "4", "price": "$100.00", "shares": "1.00000", "investment": "$100.00" },
-            { "ptPercent": "4", "price": "$110.00", "shares": "1.36364", "investment": "$150.00" },
-            { "ptPercent": "8", "price": "$100.00", "shares": "0.60000", "investment": "$60.00" },
-            { "ptPercent": "8", "price": "$110.00", "shares": "0.81818", "investment": "$90.00" },
-            { "ptPercent": "16", "price": "$100.00", "shares": "0.40000", "investment": "$40.00" },
-            { "ptPercent": "16", "price": "$110.00", "shares": "0.54545", "investment": "$60.00" }
+            { "ptPercent": "4", "price": "$100.00", "shares": "1.00000", "investment": "$100.00", "pt": "$105.05", "pct2pt": "-14.33%" },
+            { "ptPercent": "4", "price": "$110.00", "shares": "1.36364", "investment": "$150.00", "pt": "$115.56", "pct2pt": "-22.12%" },
+            { "ptPercent": "8", "price": "$100.00", "shares": "0.60000", "investment": "$60.00", "pt": "$109.09", "pct2pt": "-17.50%" },
+            { "ptPercent": "8", "price": "$110.00", "shares": "0.81818", "investment": "$90.00", "pt": "$120.00", "pct2pt": "-25.00%" },
+            { "ptPercent": "16", "price": "$100.00", "shares": "0.40000", "investment": "$40.00", "pt": "$117.17", "pct2pt": "-23.19%" },
+            { "ptPercent": "16", "price": "$110.00", "shares": "0.54545", "investment": "$60.00", "pt": "$128.89", "pct2pt": "-30.17%" }
           ],
           "overview": {
             "totalShares": "4.72727",
