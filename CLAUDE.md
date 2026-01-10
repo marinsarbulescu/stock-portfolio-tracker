@@ -191,7 +191,7 @@ Naming convention for `data-testid`:
 ## Git Workflow
 
 ### Commit Frequently
-**IMPORTANT**: When the user completes a feature/fix and asks to move to a different topic, prompt them to commit first if there are uncommitted changes. Keep commits atomic and focused on one logical change.
+**IMPORTANT**: When the user completes a feature/fix and asks to move to a different topic, prompt them to commit first if there are uncommitted changes. Keep commits atomic and focused on one logical change. Do NOT automatically push — only commit locally unless the user explicitly asks to push.
 
 Before switching topics, ask: "Should we commit these changes before moving on?"
 
