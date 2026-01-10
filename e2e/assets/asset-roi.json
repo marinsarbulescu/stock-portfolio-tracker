@@ -7,7 +7,7 @@
       "name": "E2E ROI Test",
       "type": "STOCK",
       "testPrice": "100",
-      "buyFee": "0",
+      "buyFee": "1",
       "sellFee": "0.5",
       "status": "ACTIVE"
     },
