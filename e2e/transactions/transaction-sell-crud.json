@@ -7,7 +7,7 @@
       "name": "E2E Sell CRUD Test",
       "type": "STOCK",
       "testPrice": "100",
-      "buyFee": "0",
+      "buyFee": "1",
       "sellFee": "1",
       "status": "ACTIVE"
     }
@@ -39,7 +39,7 @@
           "price": "$100.00",
           "quantity": "6.00000",
           "investment": "$600.00",
-          "entryTarget": "$98.00",
+          "entryTarget": "$97.03",
           "profitLoss": "-",
           "profitLossPercent": "-"
         },
@@ -85,7 +85,7 @@
             "price": "$100.00",
             "quantity": "6.00000",
             "investment": "$600.00",
-            "entryTarget": "$98.00",
+            "entryTarget": "$97.03",
             "profitLoss": "-",
             "profitLossPercent": "-"
           }
@@ -141,7 +141,7 @@
             "price": "$100.00",
             "quantity": "6.00000",
             "investment": "$600.00",
-            "entryTarget": "$98.00",
+            "entryTarget": "$97.03",
             "profitLoss": "-",
             "profitLossPercent": "-"
           }
@@ -203,7 +203,7 @@
             "price": "$100.00",
             "quantity": "6.00000",
             "investment": "$600.00",
-            "entryTarget": "$98.00",
+            "entryTarget": "$97.03",
             "profitLoss": "-",
             "profitLossPercent": "-"
           }
@@ -263,7 +263,7 @@
             "price": "$100.00",
             "quantity": "6.00000",
             "investment": "$600.00",
-            "entryTarget": "$98.00",
+            "entryTarget": "$97.03",
             "profitLoss": "-",
             "profitLossPercent": "-"
           }
@@ -302,7 +302,7 @@
           "price": "$100.00",
           "quantity": "4.00000",
           "investment": "$400.00",
-          "entryTarget": "$98.00",
+          "entryTarget": "$97.03",
           "profitLoss": "-",
           "profitLossPercent": "-"
         },
@@ -322,7 +322,7 @@
             "price": "$100.00",
             "quantity": "6.00000",
             "investment": "$600.00",
-            "entryTarget": "$98.00",
+            "entryTarget": "$97.03",
             "profitLoss": "-",
             "profitLossPercent": "-"
           }

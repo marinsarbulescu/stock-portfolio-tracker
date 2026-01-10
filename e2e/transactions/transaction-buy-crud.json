@@ -7,7 +7,7 @@
       "name": "E2E Buy CRUD Test",
       "type": "STOCK",
       "testPrice": "100",
-      "buyFee": "0",
+      "buyFee": "1",
       "sellFee": "1",
       "status": "ACTIVE"
     }
@@ -39,7 +39,7 @@
           "price": "$100.00",
           "quantity": "2.00000",
           "investment": "$200.00",
-          "entryTarget": "$98.00",
+          "entryTarget": "$97.03",
           "profitLoss": "-",
           "profitLossPercent": "-"
         },
@@ -76,7 +76,7 @@
           "price": "$100.00",
           "quantity": "3.00000",
           "investment": "$300.00",
-          "entryTarget": "$98.00",
+          "entryTarget": "$97.03",
           "profitLoss": "-",
           "profitLossPercent": "-"
         },
@@ -87,7 +87,7 @@
             "price": "$100.00",
             "quantity": "2.00000",
             "investment": "$200.00",
-            "entryTarget": "$98.00",
+            "entryTarget": "$97.03",
             "profitLoss": "-",
             "profitLossPercent": "-"
           }
@@ -130,7 +130,7 @@
           "price": "$110.00",
           "quantity": "3.63636",
           "investment": "$400.00",
-          "entryTarget": "$107.80",
+          "entryTarget": "$106.73",
           "profitLoss": "-",
           "profitLossPercent": "-"
         },
@@ -141,7 +141,7 @@
             "price": "$100.00",
             "quantity": "2.00000",
             "investment": "$200.00",
-            "entryTarget": "$98.00",
+            "entryTarget": "$97.03",
             "profitLoss": "-",
             "profitLossPercent": "-"
           }
@@ -183,7 +183,7 @@
           "price": "$120.00",
           "quantity": "3.33333",
           "investment": "$400.00",
-          "entryTarget": "$117.60",
+          "entryTarget": "$116.44",
           "profitLoss": "-",
           "profitLossPercent": "-"
         },
@@ -194,7 +194,7 @@
             "price": "$100.00",
             "quantity": "2.00000",
             "investment": "$200.00",
-            "entryTarget": "$98.00",
+            "entryTarget": "$97.03",
             "profitLoss": "-",
             "profitLossPercent": "-"
           },
@@ -204,7 +204,7 @@
             "price": "$110.00",
             "quantity": "3.63636",
             "investment": "$400.00",
-            "entryTarget": "$107.80",
+            "entryTarget": "$106.73",
             "profitLoss": "-",
             "profitLossPercent": "-"
           }
@@ -249,7 +249,7 @@
             "price": "$100.00",
             "quantity": "2.00000",
             "investment": "$200.00",
-            "entryTarget": "$98.00",
+            "entryTarget": "$97.03",
             "profitLoss": "-",
             "profitLossPercent": "-"
           },
@@ -259,7 +259,7 @@
             "price": "$110.00",
             "quantity": "3.63636",
             "investment": "$400.00",
-            "entryTarget": "$107.80",
+            "entryTarget": "$106.73",
             "profitLoss": "-",
             "profitLossPercent": "-"
           }
