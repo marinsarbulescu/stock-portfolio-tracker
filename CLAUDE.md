@@ -188,6 +188,21 @@ Naming convention for `data-testid`:
 #### E2E Test Data Values
 **IMPORTANT**: Never calculate or derive your own input/expected values for e2e tests. Always use the exact values provided by the user. If the test fails because the UI shows different values than expected, discuss with the user before making changes. Do not assume calculation errors - the discrepancy may reveal a bug in the application.
 
+## Git Workflow
+
+### Commit Frequently
+**IMPORTANT**: When the user completes a feature/fix and asks to move to a different topic, prompt them to commit first if there are uncommitted changes. Keep commits atomic and focused on one logical change.
+
+Before switching topics, ask: "Should we commit these changes before moving on?"
+
+### Commit Message Format
+Use conventional commits:
+- `feat:` New feature
+- `fix:` Bug fix
+- `docs:` Documentation only
+- `refactor:` Code change that neither fixes a bug nor adds a feature
+- `test:` Adding or updating tests
+
 ## Deployment
 - Push to `beta` branch deploys to beta.mystocs.com
 - Amplify Hosting handles CI/CD automatically
