@@ -36,6 +36,7 @@ interface Asset {
   id: string;
   symbol: string;
   name: string;
+  buyFee?: number | null;
 }
 
 interface ProfitTarget {
@@ -385,6 +386,7 @@ export function TransactionModal({
           : undefined;
 
       // Calculate entry target for BUY transactions
+      // Formula: (price / (1 + buyFee%/100)) × (1 - ET%/100)
       let entryTargetPrice: number | null = null;
       let entryTargetPercent: number | null = null;
       if (formData.type === "BUY" && price && entryTargets.length > 0) {
@@ -393,8 +395,12 @@ export function TransactionModal({
         const firstET = sortedEntryTargets[0];
         if (firstET) {
           entryTargetPercent = firstET.targetPercent;
-          // ET is a buy signal when price drops - subtract the percentage
-          entryTargetPrice = price * (1 - Math.abs(firstET.targetPercent) / 100);
+          // Get buyFee from selected asset
+          const selectedAsset = assets.find(a => a.id === formData.assetId);
+          const buyFee = selectedAsset?.buyFee ?? 0;
+          // Convert execution price to market price, then calculate ET trigger
+          const marketPrice = price / (1 + buyFee / 100);
+          entryTargetPrice = parseFloat((marketPrice * (1 - Math.abs(firstET.targetPercent) / 100)).toFixed(5));
         }
       }
 

@@ -7,7 +7,8 @@
       "name": "E2E Transaction Split Test",
       "type": "STOCK",
       "testPrice": "100",
-      "commission": "0.5",
+      "buyFee": "0",
+      "sellFee": "0.5",
       "status": "ACTIVE"
     },
     "budget": { "year": "2026", "amount": "1200" }

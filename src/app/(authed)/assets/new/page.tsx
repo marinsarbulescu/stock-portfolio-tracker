@@ -13,7 +13,8 @@ interface FormData {
   name: string;
   type: AssetType;
   testPrice: string;
-  commission: string;
+  buyFee: string;
+  sellFee: string;
   status: AssetStatus;
 }
 
@@ -26,7 +27,8 @@ export default function NewAssetPage() {
     name: "",
     type: "STOCK",
     testPrice: "",
-    commission: "",
+    buyFee: "",
+    sellFee: "",
     status: "ACTIVE",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -42,8 +44,12 @@ export default function NewAssetPage() {
       newErrors.name = "Name is required";
     }
 
-    if (formData.commission && parseFloat(formData.commission) < 0) {
-      newErrors.commission = "Commission cannot be negative";
+    if (formData.buyFee && parseFloat(formData.buyFee) < 0) {
+      newErrors.buyFee = "Buy Fee cannot be negative";
+    }
+
+    if (formData.sellFee && parseFloat(formData.sellFee) < 0) {
+      newErrors.sellFee = "Sell Fee cannot be negative";
     }
 
     setErrors(newErrors);
@@ -64,7 +70,8 @@ export default function NewAssetPage() {
         name: formData.name.trim(),
         type: formData.type,
         testPrice: formData.testPrice ? parseFloat(formData.testPrice) : null,
-        commission: formData.commission ? parseFloat(formData.commission) : null,
+        buyFee: formData.buyFee ? parseFloat(formData.buyFee) : null,
+        sellFee: formData.sellFee ? parseFloat(formData.sellFee) : null,
         status: formData.status,
       });
 
@@ -148,7 +155,7 @@ export default function NewAssetPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label
                 htmlFor="type"
@@ -194,25 +201,49 @@ export default function NewAssetPage() {
 
             <div>
               <label
-                htmlFor="commission"
+                htmlFor="buyFee"
                 className="block text-sm font-medium text-card-foreground mb-1"
               >
-                Commission (%)
+                Buy Fee (%)
               </label>
               <input
                 type="number"
-                id="commission"
-                data-testid="asset-form-commission"
+                id="buyFee"
+                data-testid="asset-form-buyFee"
                 step="0.01"
-                value={formData.commission}
+                value={formData.buyFee}
                 onChange={(e) =>
-                  setFormData({ ...formData, commission: e.target.value })
+                  setFormData({ ...formData, buyFee: e.target.value })
+                }
+                className="w-full px-3 py-2 bg-background border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-border"
+                placeholder="e.g., 0.85"
+              />
+              {errors.buyFee && (
+                <p className="text-red-500 text-sm mt-1">{errors.buyFee}</p>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="sellFee"
+                className="block text-sm font-medium text-card-foreground mb-1"
+              >
+                Sell Fee (%)
+              </label>
+              <input
+                type="number"
+                id="sellFee"
+                data-testid="asset-form-sellFee"
+                step="0.01"
+                value={formData.sellFee}
+                onChange={(e) =>
+                  setFormData({ ...formData, sellFee: e.target.value })
                 }
                 className="w-full px-3 py-2 bg-background border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-border"
                 placeholder="e.g., 0.5"
               />
-              {errors.commission && (
-                <p className="text-red-500 text-sm mt-1">{errors.commission}</p>
+              {errors.sellFee && (
+                <p className="text-red-500 text-sm mt-1">{errors.sellFee}</p>
               )}
             </div>
           </div>

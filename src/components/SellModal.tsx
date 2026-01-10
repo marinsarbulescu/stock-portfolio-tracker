@@ -17,7 +17,7 @@ interface Asset {
   id: string;
   symbol: string;
   name: string;
-  commission: number | null;
+  sellFee: number | null;
 }
 
 export interface SellData {
@@ -86,19 +86,19 @@ export function SellModal({
   const calculations = useMemo(() => {
     const priceNum = parseFloat(price) || 0;
     const quantityNum = parseFloat(quantity) || 0;
-    const commission = asset?.commission || 0;
+    const sellFee = asset?.sellFee || 0;
 
     const grossProceeds = priceNum * quantityNum;
-    const commissionAmount = grossProceeds * (commission / 100);
-    const netProceeds = grossProceeds - commissionAmount;
+    const sellFeeAmount = grossProceeds * (sellFee / 100);
+    const netProceeds = grossProceeds - sellFeeAmount;
 
     return {
       grossProceeds,
-      commission,
-      commissionAmount,
+      sellFee,
+      sellFeeAmount,
       netProceeds,
     };
-  }, [price, quantity, asset?.commission]);
+  }, [price, quantity, asset?.sellFee]);
 
   function validate(): boolean {
     if (!date) {
@@ -272,11 +272,11 @@ export function SellModal({
                 ${calculations.grossProceeds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
-            {calculations.commission > 0 && (
+            {calculations.sellFee > 0 && (
               <div className="flex justify-between text-yellow-500">
-                <span>Commission ({calculations.commission}%):</span>
+                <span>Sell Fee ({calculations.sellFee}%):</span>
                 <span>
-                  -${calculations.commissionAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  -${calculations.sellFeeAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             )}

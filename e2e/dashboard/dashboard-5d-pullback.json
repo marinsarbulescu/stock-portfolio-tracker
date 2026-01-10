@@ -7,7 +7,8 @@
       "name": "E2E 5D Pullback Test",
       "type": "STOCK",
       "testPrice": "95",
-      "commission": "0.5",
+      "buyFee": "0",
+      "sellFee": "0.5",
       "status": "ACTIVE"
     }
   },

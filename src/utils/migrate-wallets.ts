@@ -63,7 +63,7 @@ export async function migrateWallets(): Promise<MigrationResult[]> {
     const profitTargetsMap = new Map(
       profitTargetsResponse.data.map((pt) => [pt.id, pt.targetPercent])
     );
-    const commission = asset.commission ?? 0;
+    const sellFee = asset.sellFee ?? 0;
 
     // 4. Build new wallet map from transaction allocations
     const newWalletMap = new Map<string, {
@@ -94,9 +94,9 @@ export async function migrateWallets(): Promise<MigrationResult[]> {
         const allocationInvestment = (alloc.percentage / 100) * txn.investment;
         const allocationShares = allocationInvestment / txn.price;
 
-        // Calculate profitTargetPrice: buyPrice × (1 + PT%) / (1 - commission%)
+        // Calculate profitTargetPrice: buyPrice × (1 + PT%) / (1 - sellFee%)
         const ptPercent = profitTargetsMap.get(alloc.profitTargetId) ?? 0;
-        const profitTargetPrice = parseFloat((txn.price * (1 + ptPercent / 100) / (1 - commission / 100)).toFixed(5));
+        const profitTargetPrice = parseFloat((txn.price * (1 + ptPercent / 100) / (1 - sellFee / 100)).toFixed(5));
 
         if (newWalletMap.has(key)) {
           const existing = newWalletMap.get(key)!;

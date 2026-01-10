@@ -7,7 +7,8 @@
       "name": "E2E Sell CRUD Test",
       "type": "STOCK",
       "testPrice": "100",
-      "commission": "1",
+      "buyFee": "0",
+      "sellFee": "1",
       "status": "ACTIVE"
     }
   },

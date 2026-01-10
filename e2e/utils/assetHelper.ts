@@ -219,18 +219,18 @@ export async function updateTestPrice(page: Page, newPrice: string): Promise<voi
 }
 
 /**
- * Update the commission of an asset. Call this from the transactions page.
- * Navigates to edit page, updates commission, saves, and returns to transactions.
+ * Update the sell fee of an asset. Call this from the transactions page.
+ * Navigates to edit page, updates sell fee, saves, and returns to transactions.
  */
-export async function editCommission(page: Page, newCommission: string): Promise<void> {
-  console.log(`[AssetHelper] Updating commission to ${newCommission}%...`);
+export async function editSellFee(page: Page, newSellFee: string): Promise<void> {
+  console.log(`[AssetHelper] Updating sell fee to ${newSellFee}%...`);
 
   // Navigate back to edit page
   await navigateBackToEditPage(page);
 
-  // Update commission field
-  await page.locator('[data-testid="asset-form-commission"]').clear();
-  await page.locator('[data-testid="asset-form-commission"]').fill(newCommission);
+  // Update sell fee field
+  await page.locator('[data-testid="asset-form-sellFee"]').clear();
+  await page.locator('[data-testid="asset-form-sellFee"]').fill(newSellFee);
 
   // Submit form
   await page.locator('[data-testid="asset-form-submit"]').click();
@@ -244,7 +244,36 @@ export async function editCommission(page: Page, newCommission: string): Promise
   // Navigate back to transactions
   await navigateToTransactionsPage(page);
 
-  console.log("[AssetHelper] Commission updated successfully.");
+  console.log("[AssetHelper] Sell fee updated successfully.");
+}
+
+/**
+ * Update the buy fee of an asset. Call this from the transactions page.
+ * Navigates to edit page, updates buy fee, saves, and returns to transactions.
+ */
+export async function editBuyFee(page: Page, newBuyFee: string): Promise<void> {
+  console.log(`[AssetHelper] Updating buy fee to ${newBuyFee}%...`);
+
+  // Navigate back to edit page
+  await navigateBackToEditPage(page);
+
+  // Update buy fee field
+  await page.locator('[data-testid="asset-form-buyFee"]').clear();
+  await page.locator('[data-testid="asset-form-buyFee"]').fill(newBuyFee);
+
+  // Submit form
+  await page.locator('[data-testid="asset-form-submit"]').click();
+
+  // Wait for save to complete (this includes transaction ET recalculation)
+  await expect(page.locator('[data-testid="asset-form-submit"]')).toHaveText("Save Changes", { timeout: 15000 });
+
+  // Small wait to ensure all transaction updates are committed to the database
+  await page.waitForTimeout(500);
+
+  // Navigate back to transactions
+  await navigateToTransactionsPage(page);
+
+  console.log("[AssetHelper] Buy fee updated successfully.");
 }
 
 /**
@@ -454,7 +483,10 @@ export async function createAssetViaUI(page: Page, input: AssetCreateInput): Pro
   await page.locator('[data-testid="asset-form-name"]').fill(input.name);
   await page.locator('[data-testid="asset-form-type"]').selectOption(input.type);
   await page.locator('[data-testid="asset-form-testPrice"]').fill(input.testPrice);
-  await page.locator('[data-testid="asset-form-commission"]').fill(input.commission);
+  if (input.buyFee) {
+    await page.locator('[data-testid="asset-form-buyFee"]').fill(input.buyFee);
+  }
+  await page.locator('[data-testid="asset-form-sellFee"]').fill(input.sellFee);
   await page.locator('[data-testid="asset-form-status"]').selectOption(input.status);
 
   // Submit form
@@ -498,8 +530,13 @@ export async function editAssetViaUI(
   await page.locator('[data-testid="asset-form-testPrice"]').clear();
   await page.locator('[data-testid="asset-form-testPrice"]').fill(input.testPrice);
 
-  await page.locator('[data-testid="asset-form-commission"]').clear();
-  await page.locator('[data-testid="asset-form-commission"]').fill(input.commission);
+  if (input.buyFee) {
+    await page.locator('[data-testid="asset-form-buyFee"]').clear();
+    await page.locator('[data-testid="asset-form-buyFee"]').fill(input.buyFee);
+  }
+
+  await page.locator('[data-testid="asset-form-sellFee"]').clear();
+  await page.locator('[data-testid="asset-form-sellFee"]').fill(input.sellFee);
 
   await page.locator('[data-testid="asset-form-status"]').selectOption(input.status);
 
@@ -531,7 +568,7 @@ export async function deleteAssetViaUI(page: Page): Promise<void> {
  */
 export async function verifyAssetInTable(
   page: Page,
-  expected: { symbol: string; name: string; type: string; commission: string; status: string }
+  expected: { symbol: string; name: string; type: string; buyFee?: string; sellFee: string; status: string }
 ): Promise<void> {
   console.log(`[AssetHelper] Verifying asset ${expected.symbol} in table...`);
 
@@ -545,8 +582,13 @@ export async function verifyAssetInTable(
   const typeCell = page.locator(`[data-testid="asset-table-type-${expected.symbol}"]`);
   await expect(typeCell).toHaveText(expected.type);
 
-  const commissionCell = page.locator(`[data-testid="asset-table-commission-${expected.symbol}"]`);
-  await expect(commissionCell).toHaveText(expected.commission);
+  if (expected.buyFee) {
+    const buyFeeCell = page.locator(`[data-testid="asset-table-buyFee-${expected.symbol}"]`);
+    await expect(buyFeeCell).toHaveText(expected.buyFee);
+  }
+
+  const sellFeeCell = page.locator(`[data-testid="asset-table-sellFee-${expected.symbol}"]`);
+  await expect(sellFeeCell).toHaveText(expected.sellFee);
 
   const statusCell = page.locator(`[data-testid="asset-table-status-${expected.symbol}"]`);
   await expect(statusCell).toHaveText(expected.status);

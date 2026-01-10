@@ -2,7 +2,7 @@
  * Import RNMBY transaction history from production to beta
  *
  * Prerequisites:
- * 1. RNMBY asset must exist in beta with commission set
+ * 1. RNMBY asset must exist in beta with sell fee set
  * 2. Entry Target: -4%
  * 3. Profit Targets: 8% (sortOrder 1), 16% (sortOrder 2)
  * 4. Sandbox must be running (npx ampx sandbox)
@@ -128,7 +128,8 @@ async function importRNMBY() {
 
     const asset = assets[0];
     console.log(`   Found asset: ${asset.symbol} (${asset.id})`);
-    console.log(`   Commission: ${asset.commission}%\n`);
+    console.log(`   Buy Fee: ${asset.buyFee}%`);
+    console.log(`   Sell Fee: ${asset.sellFee}%\n`);
 
     // Get Profit Targets
     console.log("🎯 Looking up Profit Targets...");
@@ -204,7 +205,7 @@ async function importRNMBY() {
 async function processBuy(
   txn: OldTransaction,
   date: string,
-  asset: { id: string; commission: number | null },
+  asset: { id: string; buyFee: number | null; sellFee: number | null },
   pt8: ProfitTargetInfo,
   pt16: ProfitTargetInfo,
   et: { targetPercent: number },
@@ -216,8 +217,11 @@ async function processBuy(
   const signal = SIGNAL_MAP[txn.signal] || "CUSTOM";
 
   // Calculate ET values
+  // Formula: (price / (1 + buyFee%/100)) × (1 - ET%/100)
+  const buyFee = asset.buyFee || 0;
   const entryTargetPercent = et.targetPercent;
-  const entryTargetPrice = price * (1 - Math.abs(entryTargetPercent) / 100);
+  const marketPrice = price / (1 + buyFee / 100);
+  const entryTargetPrice = parseFloat((marketPrice * (1 - Math.abs(entryTargetPercent) / 100)).toFixed(5));
 
   console.log(`📥 BUY ${txn.date}: ${quantity} @ $${price.toFixed(2)} (${txn.signal} → ${signal})`);
 
@@ -251,7 +255,7 @@ async function processBuy(
       alloc.shares * price, // investment for this allocation
       alloc.shares,
       alloc.targetPercent,
-      asset.commission || 0,
+      asset.sellFee || 0,
       betaWallets
     );
 
@@ -374,13 +378,13 @@ async function upsertWallet(
   investment: number,
   shares: number,
   targetPercent: number,
-  commission: number,
+  sellFee: number,
   betaWallets: Map<string, { id: string; shares: number }>
 ): Promise<string | undefined> {
   const walletKey = `${assetId}-${profitTargetId}-${price}`;
 
   // Calculate profit target price
-  const profitTargetPrice = (price * (1 + targetPercent / 100)) / (1 - commission / 100);
+  const profitTargetPrice = (price * (1 + targetPercent / 100)) / (1 - sellFee / 100);
 
   const existing = betaWallets.get(walletKey);
 

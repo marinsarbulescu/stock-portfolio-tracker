@@ -16,7 +16,8 @@ const schema = a.schema({
       type: a.ref("AssetType").required(),
       testPrice: a.float(), // For E2E testing signals
       testHistoricalCloses: a.string(), // JSON string for E2E testing 5D Pullback: "[{date, close}, ...]"
-      commission: a.float(), // Percentage per sell transaction
+      sellFee: a.float(), // Percentage per sell transaction
+      buyFee: a.float(), // Percentage spread paid when buying (e.g., Robinhood crypto)
       status: a.ref("AssetStatus").required(),
       // Relationships
       yearlyBudgets: a.hasMany("YearlyBudget", "assetId"),
@@ -79,7 +80,7 @@ const schema = a.schema({
       costBasis: a.float(), // For SELL: buyPrice × quantity (what was paid for sold shares)
       profitTargetPercent: a.float(), // For SELL: PT% of the wallet sold from (e.g., 4, 8, 16)
       walletPrice: a.float(), // For SELL: original buy price from wallet (for wallet restoration)
-      entryTargetPrice: a.float(), // Calculated ET price for BUY (price * (1 + ET%/100))
+      entryTargetPrice: a.float(), // Calculated ET price for BUY: (price / (1 + buyFee%)) * (1 - ET%)
       entryTargetPercent: a.float(), // ET percentage used (e.g., -5)
       // Relationships
       assetId: a.id().required(),
@@ -110,7 +111,7 @@ const schema = a.schema({
       price: a.float().required(),
       investment: a.float().required(), // Sum of all investments at this price/PT
       shares: a.float().required(), // Calculated: investment / price
-      profitTargetPrice: a.float().required(), // Pre-calculated: price * (1 + PT%) / (1 - commission%)
+      profitTargetPrice: a.float().required(), // Pre-calculated: price * (1 + PT%) / (1 - sellFee%)
       // Legacy fields - no longer used, kept for backward compatibility
       originalShares: a.float(), // Deprecated: was for split adjustments
       originalPrice: a.float(), // Deprecated: was for split adjustments

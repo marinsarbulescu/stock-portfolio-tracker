@@ -21,7 +21,8 @@ interface Asset {
   id: string;
   symbol: string;
   name: string;
-  commission: number | null;
+  buyFee: number | null;
+  sellFee: number | null;
   testPrice: number | null;
 }
 
@@ -246,7 +247,8 @@ export default function AssetTransactionsPage() {
           id: response.data.id,
           symbol: response.data.symbol,
           name: response.data.name,
-          commission: response.data.commission ?? null,
+          buyFee: response.data.buyFee ?? null,
+          sellFee: response.data.sellFee ?? null,
           testPrice: response.data.testPrice ?? null,
         });
       }
@@ -471,8 +473,8 @@ export default function AssetTransactionsPage() {
         const buyPrice = txn.walletPrice;
         const sharesToRestore = txn.quantity;
         const investmentToRestore = buyPrice * sharesToRestore;
-        const commission = asset?.commission ?? 0;
-        const profitTargetPrice = parseFloat((buyPrice * (1 + pt.targetPercent / 100) / (1 - commission / 100)).toFixed(5));
+        const sellFee = asset?.sellFee ?? 0;
+        const profitTargetPrice = parseFloat((buyPrice * (1 + pt.targetPercent / 100) / (1 - sellFee / 100)).toFixed(5));
 
         // First try to find wallet by original ID
         let existingWallet = wallets.find(w => w.id === txn.walletId);
@@ -597,7 +599,7 @@ export default function AssetTransactionsPage() {
     } catch {
       setError("Failed to delete transaction");
     }
-  }, [transactions, profitTargets, asset?.commission, wallets, assetId, fetchTransactions, fetchWallets, upsertWallet]);
+  }, [transactions, profitTargets, asset?.sellFee, wallets, assetId, fetchTransactions, fetchWallets, upsertWallet]);
 
   // Wrapper with confirmation dialog for table delete button
   const handleDeleteFromTable = useCallback(async (id: string) => {
@@ -1135,8 +1137,8 @@ export default function AssetTransactionsPage() {
             return;
           }
 
-          const commission = asset?.commission ?? 0;
-          const profitTargetPrice = parseFloat((walletPrice * (1 + pt.targetPercent / 100) / (1 - commission / 100)).toFixed(5));
+          const sellFee = asset?.sellFee ?? 0;
+          const profitTargetPrice = parseFloat((walletPrice * (1 + pt.targetPercent / 100) / (1 - sellFee / 100)).toFixed(5));
 
           // Step 1: Restore old wallet (add old shares back)
           const oldInvestment = walletPrice * oldQuantity;
@@ -1235,7 +1237,7 @@ export default function AssetTransactionsPage() {
           // Step 4: Update transaction with recalculated values
           const newCostBasis = walletPrice * (newQuantity || 0);
           const grossProceeds = (data.price || 0) * (newQuantity || 0);
-          const newAmount = grossProceeds * (1 - commission / 100);
+          const newAmount = grossProceeds * (1 - sellFee / 100);
 
           const result = await client.models.Transaction.update({
             id: selectedTransaction.id,
@@ -1274,14 +1276,14 @@ export default function AssetTransactionsPage() {
 
       // Create new allocations and wallets for BUY transactions
       if (data.type === "BUY" && allocations && allocations.length > 0 && data.price && data.investment) {
-        const commission = asset?.commission ?? 0;
+        const sellFee = asset?.sellFee ?? 0;
 
         for (const alloc of allocations) {
           // Calculate profitTargetPrice for this wallet
           const pt = profitTargets.find((p) => p.id === alloc.profitTargetId);
           const ptPercent = pt?.targetPercent ?? 0;
-          // Formula: buyPrice × (1 + PT%) / (1 - commission%)
-          const profitTargetPrice = parseFloat((data.price * (1 + ptPercent / 100) / (1 - commission / 100)).toFixed(5));
+          // Formula: buyPrice × (1 + PT%) / (1 - sellFee%)
+          const profitTargetPrice = parseFloat((data.price * (1 + ptPercent / 100) / (1 - sellFee / 100)).toFixed(5));
 
           // Create/update wallet for this profit target FIRST to get wallet ID
           const allocationInvestment = (alloc.percentage / 100) * data.investment;

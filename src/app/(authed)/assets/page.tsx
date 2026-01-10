@@ -11,7 +11,8 @@ interface Asset {
   symbol: string;
   name: string;
   type: "STOCK" | "ETF" | "CRYPTO";
-  commission: number | null;
+  buyFee: number | null;
+  sellFee: number | null;
   status: "ACTIVE" | "HIDDEN" | "ARCHIVED";
 }
 
@@ -53,11 +54,20 @@ export default function AssetsPage() {
         ),
       },
       {
-        key: "commission",
-        header: "Commission",
+        key: "buyFee",
+        header: "Buy Fee",
         render: (item) => (
-          <span data-testid={`asset-table-commission-${item.symbol}`}>
-            {item.commission !== null ? `${item.commission.toFixed(2)}%` : "-"}
+          <span data-testid={`asset-table-buyFee-${item.symbol}`}>
+            {item.buyFee !== null ? `${item.buyFee.toFixed(2)}%` : "-"}
+          </span>
+        ),
+      },
+      {
+        key: "sellFee",
+        header: "Sell Fee",
+        render: (item) => (
+          <span data-testid={`asset-table-sellFee-${item.symbol}`}>
+            {item.sellFee !== null ? `${item.sellFee.toFixed(2)}%` : "-"}
           </span>
         ),
       },
@@ -97,7 +107,8 @@ export default function AssetsPage() {
         symbol: item.symbol,
         name: item.name,
         type: item.type as "STOCK" | "ETF" | "CRYPTO",
-        commission: item.commission ?? null,
+        buyFee: item.buyFee ?? null,
+        sellFee: item.sellFee ?? null,
         status: item.status as "ACTIVE" | "HIDDEN" | "ARCHIVED",
       }));
       setAssets(assetData);

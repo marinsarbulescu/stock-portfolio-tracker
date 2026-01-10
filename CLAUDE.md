@@ -57,9 +57,9 @@ npm run lint
 - **Wallet**: Holds shares at a specific (buyPrice, profitTargetId) combination. One wallet per unique combo
 
 ### Key Formulas
-- **Quantity**: `investment / price` (no commission deducted at buy)
-- **Entry Target Price**: `buyPrice × (1 - ET%/100)`
-- **Profit Target Price**: `buyPrice × (1 + PT%/100) / (1 - commission%/100)`
+- **Quantity**: `investment / price` (no sell fee deducted at buy)
+- **Entry Target Price**: `(buyPrice / (1 + buyFee%/100)) × (1 - ET%/100)` — Buy fee converts execution price to market price for Yahoo Finance signal comparison
+- **Profit Target Price**: `buyPrice × (1 + PT%/100) / (1 - sellFee%/100)`
 - **Pullback**: `(currentPrice - lastBuyPrice) / lastBuyPrice × 100`
 - **ROI**: `(balance + marketValue) / maxOOP × 100`
 - **P/L on SELL**: `netProceeds - costBasis` where `costBasis = walletPrice × quantity`
@@ -68,7 +68,7 @@ npm run lint
 ### Important Rules
 - **One ET per asset** - Add button hidden after first ET created
 - **PT allocations must sum to 100%** - Can be auto-distributed if some PTs left empty
-- **Commission only affects SELL** - Deducted from gross proceeds, also baked into PT price calculation
+- **Sell Fee only affects SELL** - Deducted from gross proceeds, also baked into PT price calculation
 - **No transaction editing if subsequent transactions exist** - Protects wallet history integrity
 - **Wallet deletion blocked** if PT has remaining shares
 - **ET changes cascade** - Updating ET% recalculates all BUY transactions' entryTargetPrice
@@ -214,7 +214,8 @@ Use this to replay transaction history from the old production app (main branch)
 
 1. **Sandbox running**: `npx ampx sandbox`
 2. **Asset exists in beta** with:
-   - Commission set (e.g., 0.5%)
+   - Buy Fee set (e.g., 0.85% for crypto on Robinhood) — affects ET price calculation
+   - Sell Fee set (e.g., 0.5%)
    - Entry Target created (e.g., -4%)
    - Profit Targets created (e.g., 8% sortOrder 1, 16% sortOrder 2)
 

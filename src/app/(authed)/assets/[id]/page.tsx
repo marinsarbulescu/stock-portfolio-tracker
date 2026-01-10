@@ -19,7 +19,8 @@ interface Asset {
   type: AssetType;
   testPrice: number | null;
   testHistoricalCloses: string | null;
-  commission: number | null;
+  buyFee: number | null;
+  sellFee: number | null;
   status: AssetStatus;
 }
 
@@ -29,7 +30,8 @@ interface FormData {
   type: AssetType;
   testPrice: string;
   testHistoricalCloses: string;
-  commission: string;
+  buyFee: string;
+  sellFee: string;
   status: AssetStatus;
 }
 
@@ -50,7 +52,8 @@ export default function EditAssetPage() {
     type: "STOCK",
     testPrice: "",
     testHistoricalCloses: "",
-    commission: "",
+    buyFee: "",
+    sellFee: "",
     status: "ACTIVE",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -86,7 +89,8 @@ export default function EditAssetPage() {
         type: data.type as AssetType,
         testPrice: data.testPrice ?? null,
         testHistoricalCloses: data.testHistoricalCloses ?? null,
-        commission: data.commission ?? null,
+        buyFee: data.buyFee ?? null,
+        sellFee: data.sellFee ?? null,
         status: data.status as AssetStatus,
       });
 
@@ -96,7 +100,8 @@ export default function EditAssetPage() {
         type: data.type as AssetType,
         testPrice: data.testPrice?.toString() ?? "",
         testHistoricalCloses: data.testHistoricalCloses ?? "",
-        commission: data.commission?.toString() ?? "",
+        buyFee: data.buyFee?.toString() ?? "",
+        sellFee: data.sellFee?.toString() ?? "",
         status: data.status as AssetStatus,
       });
     } catch (err) {
@@ -203,8 +208,12 @@ export default function EditAssetPage() {
       newErrors.name = "Name is required";
     }
 
-    if (formData.commission && parseFloat(formData.commission) < 0) {
-      newErrors.commission = "Commission cannot be negative";
+    if (formData.buyFee && parseFloat(formData.buyFee) < 0) {
+      newErrors.buyFee = "Buy Fee cannot be negative";
+    }
+
+    if (formData.sellFee && parseFloat(formData.sellFee) < 0) {
+      newErrors.sellFee = "Sell Fee cannot be negative";
     }
 
     setErrors(newErrors);
@@ -221,9 +230,12 @@ export default function EditAssetPage() {
 
     try {
       const symbol = formData.symbol.trim().toUpperCase();
-      const newCommission = formData.commission ? parseFloat(formData.commission) : null;
-      const oldCommission = asset?.commission ?? null;
-      const commissionChanged = newCommission !== oldCommission;
+      const newBuyFee = formData.buyFee ? parseFloat(formData.buyFee) : null;
+      const oldBuyFee = asset?.buyFee ?? null;
+      const buyFeeChanged = newBuyFee !== oldBuyFee;
+      const newSellFee = formData.sellFee ? parseFloat(formData.sellFee) : null;
+      const oldSellFee = asset?.sellFee ?? null;
+      const sellFeeChanged = newSellFee !== oldSellFee;
 
       await client.models.Asset.update({
         id: assetId,
@@ -232,7 +244,8 @@ export default function EditAssetPage() {
         type: formData.type,
         testPrice: formData.testPrice ? parseFloat(formData.testPrice) : null,
         testHistoricalCloses: formData.testHistoricalCloses || null,
-        commission: newCommission,
+        buyFee: newBuyFee,
+        sellFee: newSellFee,
         status: formData.status,
       });
 
@@ -241,9 +254,14 @@ export default function EditAssetPage() {
         clearPrice(symbol);
       }
 
-      // If commission changed, recalculate all wallet profitTargetPrices
-      if (commissionChanged) {
-        await recalculateWalletProfitTargetPrices(newCommission ?? 0);
+      // If buy fee changed, recalculate all BUY transaction entryTargetPrices
+      if (buyFeeChanged) {
+        await recalculateTransactionETprices(newBuyFee ?? 0);
+      }
+
+      // If sell fee changed, recalculate all wallet profitTargetPrices
+      if (sellFeeChanged) {
+        await recalculateWalletProfitTargetPrices(newSellFee ?? 0);
       }
 
       await fetchAsset();
@@ -256,10 +274,10 @@ export default function EditAssetPage() {
   }
 
   /**
-   * Recalculate profitTargetPrice for all wallets when commission changes.
-   * Formula: buyPrice × (1 + PT%) / (1 - commission%)
+   * Recalculate profitTargetPrice for all wallets when sell fee changes.
+   * Formula: buyPrice × (1 + PT%) / (1 - sellFee%)
    */
-  async function recalculateWalletProfitTargetPrices(newCommission: number) {
+  async function recalculateWalletProfitTargetPrices(newSellFee: number) {
     try {
       // Fetch all wallets for this asset
       const walletResponse = await client.models.Wallet.list({
@@ -282,7 +300,7 @@ export default function EditAssetPage() {
       // Update each wallet's profitTargetPrice
       for (const wallet of walletResponse.data) {
         const ptPercent = ptPercentMap.get(wallet.profitTargetId) ?? 0;
-        const newProfitTargetPrice = parseFloat((wallet.price * (1 + ptPercent / 100) / (1 - newCommission / 100)).toFixed(5));
+        const newProfitTargetPrice = parseFloat((wallet.price * (1 + ptPercent / 100) / (1 - newSellFee / 100)).toFixed(5));
 
         await client.models.Wallet.update({
           id: wallet.id,
@@ -290,9 +308,44 @@ export default function EditAssetPage() {
         });
       }
 
-      console.log(`[EditAsset] Recalculated profitTargetPrice for ${walletResponse.data.length} wallets with new commission ${newCommission}%`);
+      console.log(`[EditAsset] Recalculated profitTargetPrice for ${walletResponse.data.length} wallets with new sell fee ${newSellFee}%`);
     } catch (err) {
       console.error("Error recalculating wallet profit target prices:", err);
+      throw err;
+    }
+  }
+
+  /**
+   * Recalculate entryTargetPrice for all BUY transactions when buy fee changes.
+   * Formula: (price / (1 + buyFee%/100)) × (1 - ET%/100)
+   */
+  async function recalculateTransactionETprices(newBuyFee: number) {
+    try {
+      // Fetch all BUY transactions for this asset
+      const txnResponse = await client.models.Transaction.list({
+        filter: {
+          assetId: { eq: assetId },
+          type: { eq: "BUY" },
+        },
+        limit: 5000,
+      });
+
+      // Update each transaction's entryTargetPrice
+      for (const txn of txnResponse.data) {
+        if (txn.price && txn.entryTargetPercent) {
+          const marketPrice = txn.price / (1 + newBuyFee / 100);
+          const newEntryTargetPrice = parseFloat((marketPrice * (1 - Math.abs(txn.entryTargetPercent) / 100)).toFixed(5));
+
+          await client.models.Transaction.update({
+            id: txn.id,
+            entryTargetPrice: newEntryTargetPrice,
+          });
+        }
+      }
+
+      console.log(`[EditAsset] Recalculated entryTargetPrice for ${txnResponse.data.length} BUY transactions with new buy fee ${newBuyFee}%`);
+    } catch (err) {
+      console.error("Error recalculating transaction ET prices:", err);
       throw err;
     }
   }
@@ -403,10 +456,13 @@ export default function EditAssetPage() {
       });
 
       // Update each BUY transaction with new ET values
+      // Formula: (price / (1 + buyFee%/100)) × (1 - ET%/100)
+      const buyFee = asset?.buyFee ?? 0;
       for (const txn of response.data) {
         const price = txn.price;
         if (price) {
-          const newEntryTargetPrice = price * (1 - Math.abs(newETPercent) / 100);
+          const marketPrice = price / (1 + buyFee / 100);
+          const newEntryTargetPrice = parseFloat((marketPrice * (1 - Math.abs(newETPercent) / 100)).toFixed(5));
           await client.models.Transaction.update({
             id: txn.id,
             entryTargetPercent: newETPercent,
@@ -482,17 +538,17 @@ export default function EditAssetPage() {
 
   /**
    * Recalculate profitTargetPrice for wallets of a specific PT when its targetPercent changes.
-   * Formula: buyPrice × (1 + PT%) / (1 - commission%)
+   * Formula: buyPrice × (1 + PT%) / (1 - sellFee%)
    */
   async function recalculateWalletProfitTargetPricesForPT(ptId: string, newTargetPercent: number) {
-    const commission = asset?.commission ?? 0;
+    const sellFee = asset?.sellFee ?? 0;
     const walletResponse = await client.models.Wallet.list({
       filter: { profitTargetId: { eq: ptId } },
       limit: 5000,
     });
 
     for (const wallet of walletResponse.data) {
-      const newProfitTargetPrice = parseFloat((wallet.price * (1 + newTargetPercent / 100) / (1 - commission / 100)).toFixed(5));
+      const newProfitTargetPrice = parseFloat((wallet.price * (1 + newTargetPercent / 100) / (1 - sellFee / 100)).toFixed(5));
       await client.models.Wallet.update({
         id: wallet.id,
         profitTargetPrice: newProfitTargetPrice,
@@ -786,25 +842,49 @@ export default function EditAssetPage() {
 
             <div>
               <label
-                htmlFor="commission"
+                htmlFor="buyFee"
                 className="block text-sm font-medium text-card-foreground mb-1"
               >
-                Commission (%)
+                Buy Fee (%)
               </label>
               <input
                 type="number"
-                id="commission"
-                data-testid="asset-form-commission"
+                id="buyFee"
+                data-testid="asset-form-buyFee"
                 step="0.01"
-                value={formData.commission}
+                value={formData.buyFee}
                 onChange={(e) =>
-                  setFormData({ ...formData, commission: e.target.value })
+                  setFormData({ ...formData, buyFee: e.target.value })
+                }
+                className="w-full px-3 py-2 bg-background border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-border"
+                placeholder="e.g., 0.85"
+              />
+              {errors.buyFee && (
+                <p className="text-red-500 text-sm mt-1">{errors.buyFee}</p>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="sellFee"
+                className="block text-sm font-medium text-card-foreground mb-1"
+              >
+                Sell Fee (%)
+              </label>
+              <input
+                type="number"
+                id="sellFee"
+                data-testid="asset-form-sellFee"
+                step="0.01"
+                value={formData.sellFee}
+                onChange={(e) =>
+                  setFormData({ ...formData, sellFee: e.target.value })
                 }
                 className="w-full px-3 py-2 bg-background border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-border"
                 placeholder="e.g., 0.5"
               />
-              {errors.commission && (
-                <p className="text-red-500 text-sm mt-1">{errors.commission}</p>
+              {errors.sellFee && (
+                <p className="text-red-500 text-sm mt-1">{errors.sellFee}</p>
               )}
             </div>
           </div>

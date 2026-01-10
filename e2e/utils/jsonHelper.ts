@@ -7,7 +7,8 @@ export interface AssetCreateInput {
   name: string;
   type: "STOCK" | "ETF" | "CRYPTO";
   testPrice: string;
-  commission: string;
+  buyFee?: string;
+  sellFee: string;
   status: "ACTIVE" | "HIDDEN" | "ARCHIVED";
 }
 
@@ -15,7 +16,8 @@ export interface AssetCreateExpected {
   symbol: string;
   name: string;
   type: string;
-  commission: string;
+  buyFee?: string;
+  sellFee: string;
   status: string;
 }
 
@@ -158,7 +160,7 @@ export interface SellTransactionExpected {
   signal: string;
   price: string;
   quantity: string;
-  amount: string;       // SELL specific (proceeds after commission)
+  amount: string;       // SELL specific (proceeds after sell fee)
   profitLoss: string;
   profitLossPercent: string;
 }
@@ -461,14 +463,19 @@ export interface ConfigChangeEditPTAlloc {
   };
 }
 
-export interface ConfigChangeEditCommission {
-  newCommission: string;
+export interface ConfigChangeEditBuyFee {
+  newBuyFee: string;
+}
+
+export interface ConfigChangeEditSellFee {
+  newSellFee: string;
 }
 
 export interface ConfigChanges {
   editET?: ConfigChangeEditET;
   editPTAlloc?: ConfigChangeEditPTAlloc;
-  editCommission?: ConfigChangeEditCommission;
+  editBuyFee?: ConfigChangeEditBuyFee;
+  editSellFee?: ConfigChangeEditSellFee;
 }
 
 // Verification-only action (no transaction created, just verify state after config change)
