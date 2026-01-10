@@ -63,6 +63,7 @@ npm run lint
 - **Pullback**: `(currentPrice - lastBuyPrice) / lastBuyPrice × 100`
 - **ROI**: `(balance + marketValue) / maxOOP × 100`
 - **P/L on SELL**: `netProceeds - costBasis` where `costBasis = walletPrice × quantity`
+- **Precision**: All monetary and share values use 5 decimal places (e.g., `toFixed(5)`)
 
 ### Important Rules
 - **One ET per asset** - Add button hidden after first ET created
