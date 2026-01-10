@@ -8,6 +8,7 @@ import { client } from "@/utils/amplify-client";
 import { usePrices } from "@/contexts/PriceContext";
 import { getEffectivePrice } from "@/utils/price-utils";
 import { getPct2PTColor } from "@/utils/dashboard-calculations";
+import { recalculateAssetFinancials } from "@/utils/asset-financials";
 import { SortableTable, Column } from "@/components/SortableTable";
 import { ColumnToggle } from "@/components/ColumnToggle";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
@@ -536,6 +537,7 @@ export default function AssetTransactionsPage() {
 
         // Delete the SELL transaction
         await client.models.Transaction.delete({ id });
+        await recalculateAssetFinancials(assetId);
         await fetchTransactions();
         await fetchWallets();
       } catch (err) {
@@ -595,6 +597,7 @@ export default function AssetTransactionsPage() {
         await fetchWallets();
       }
 
+      await recalculateAssetFinancials(assetId);
       await fetchTransactions();
     } catch {
       setError("Failed to delete transaction");
@@ -1255,6 +1258,7 @@ export default function AssetTransactionsPage() {
             return;
           }
 
+          await recalculateAssetFinancials(assetId);
           await fetchWallets();
           await fetchTransactions();
           return;
@@ -1316,6 +1320,10 @@ export default function AssetTransactionsPage() {
         }
       }
 
+      // Recalculate balance and OOP for non-SPLIT transactions
+      if (data.type !== "SPLIT") {
+        await recalculateAssetFinancials(assetId);
+      }
       await fetchTransactions();
     } catch (err) {
       console.error("Save error:", err);
@@ -1372,6 +1380,8 @@ export default function AssetTransactionsPage() {
         await client.models.Wallet.delete({ id: wallet.id });
       }
 
+      // Reset balance and OOP (will be 0 after deleting all transactions)
+      await recalculateAssetFinancials(assetId);
       // Refresh data
       await fetchTransactions();
       await fetchWallets();
@@ -1431,7 +1441,10 @@ export default function AssetTransactionsPage() {
         });
       }
 
-      // 3. Refresh data and close modal
+      // 3. Recalculate balance and OOP
+      await recalculateAssetFinancials(assetId);
+
+      // 4. Refresh data and close modal
       await fetchWallets();
       await fetchTransactions();
       setSellWallet(null);

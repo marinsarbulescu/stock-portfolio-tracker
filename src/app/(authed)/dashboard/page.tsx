@@ -46,6 +46,14 @@ interface RawAssetData {
   firstEntryTargetPercent: number | null;
   maxOOP: number | null;
   balance: number;
+  oop: number;
+  totalShares: number;
+}
+
+function formatCurrency(value: number | null): string {
+  if (value === null) return "-";
+  const absValue = Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return value < 0 ? `-$${absValue}` : `$${absValue}`;
 }
 
 export default function Dashboard() {
@@ -75,7 +83,9 @@ export default function Dashboard() {
           client.models.Asset.list({
             filter: { status: { eq: "ACTIVE" } },
           }),
-          client.models.Transaction.list(), // Fetch all transactions for balance/OOP calculation
+          client.models.Transaction.list({
+            filter: { type: { eq: "BUY" } }, // Only fetch BUY transactions for lastBuy info
+          }),
           client.models.Wallet.list(),
           client.models.EntryTarget.list(),
           client.models.YearlyBudget.list({
@@ -91,39 +101,26 @@ export default function Dashboard() {
 
       // Process raw data for each asset (without effective price calculation)
       const processedRawData: RawAssetData[] = assets.map((asset) => {
-        // Get all transactions for this asset
-        const assetTransactions = transactions.filter((t) => t.assetId === asset.id);
-
         // Find most recent BUY transaction for this asset
-        const assetBuyTransactions = assetTransactions
-          .filter((t) => t.type === "BUY")
+        const assetBuyTransactions = transactions
+          .filter((t) => t.assetId === asset.id)
           .sort(
             (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
           );
 
         const lastBuy = assetBuyTransactions[0] || null;
 
-        // Calculate balance and OOP from transactions
-        const sortedTransactions = [...assetTransactions].sort(
-          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
-
-        let balance = 0;
-
-        for (const txn of sortedTransactions) {
-          if (txn.type === "BUY" && txn.investment !== null) {
-            balance -= txn.investment;
-          } else if ((txn.type === "SELL" || txn.type === "DIVIDEND" || txn.type === "SLP") && txn.amount !== null) {
-            balance += txn.amount;
-          }
-        }
-
-        // Find all wallets for this asset and get lowest profitTargetPrice
+        // Find all wallets for this asset
         const assetWallets = wallets.filter((w) => w.assetId === asset.id);
+
+        // Get lowest profitTargetPrice
         const lowestPTPrice =
           assetWallets.length > 0
             ? Math.min(...assetWallets.map((w) => w.profitTargetPrice))
             : null;
+
+        // Calculate total shares from wallets
+        const totalShares = assetWallets.reduce((sum, w) => sum + w.shares, 0);
 
         // Find first entry target for this asset (lowest sortOrder)
         const assetEntryTargets = entryTargets
@@ -134,6 +131,10 @@ export default function Dashboard() {
         // Find yearly budget for this asset (maxOOP)
         const assetBudget = yearlyBudgets.find((b) => b.assetId === asset.id);
         const maxOOP = assetBudget?.amount ?? null;
+
+        // Use stored balance and oop from Asset
+        const balance = asset.balance ?? 0;
+        const oop = asset.oop ?? 0;
 
         return {
           id: asset.id,
@@ -147,6 +148,8 @@ export default function Dashboard() {
           firstEntryTargetPercent,
           maxOOP,
           balance,
+          oop,
+          totalShares,
         };
       });
 
@@ -235,6 +238,37 @@ export default function Dashboard() {
         available,
       };
     });
+  }, [rawAssetData, prices]);
+
+  // Calculate portfolio-level totals
+  const portfolioTotals = useMemo(() => {
+    // Sum up OOP and balance from stored values
+    const totalOOP = rawAssetData.reduce((sum, a) => sum + a.oop, 0);
+    const totalBalance = rawAssetData.reduce((sum, a) => sum + a.balance, 0);
+
+    // Calculate total market value using effective prices
+    let totalMarketValue = 0;
+    for (const asset of rawAssetData) {
+      const currentPrice = getEffectivePrice(asset.symbol, prices, asset.testPrice);
+      if (currentPrice !== null) {
+        totalMarketValue += asset.totalShares * currentPrice;
+      }
+    }
+
+    // Calculate portfolio ROI: (balance + marketValue) / oop * 100
+    const portfolioROI = totalOOP > 0
+      ? ((totalBalance + totalMarketValue) / totalOOP) * 100
+      : null;
+
+    // Calculate total available: sum of (maxOOP - oop + balance) per asset
+    let totalAvailable = 0;
+    for (const asset of rawAssetData) {
+      if (asset.maxOOP !== null) {
+        totalAvailable += asset.maxOOP - asset.oop + asset.balance;
+      }
+    }
+
+    return { totalOOP, totalBalance, totalMarketValue, portfolioROI, totalAvailable };
   }, [rawAssetData, prices]);
 
   const handleFetchPrices = useCallback(() => {
@@ -413,6 +447,47 @@ export default function Dashboard() {
       {(error || priceError) && (
         <div className="mb-4 p-3 bg-red-500/20 text-red-400 rounded">
           {error || priceError}
+        </div>
+      )}
+
+      {/* Portfolio Totals */}
+      {!isLoading && rawAssetData.length > 0 && (
+        <div className="mb-6 bg-card border border-border rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-foreground mb-4">Portfolio Overview</h3>
+          <div className="grid grid-cols-5 gap-4">
+            <div>
+              <span className="text-sm text-muted-foreground">Total OOP</span>
+              <p className="text-lg font-medium" data-testid="portfolio-total-oop">
+                {formatCurrency(portfolioTotals.totalOOP)}
+              </p>
+            </div>
+            <div>
+              <span className="text-sm text-muted-foreground">Market Value</span>
+              <p className="text-lg font-medium" data-testid="portfolio-total-market-value">
+                {formatCurrency(portfolioTotals.totalMarketValue)}
+              </p>
+            </div>
+            <div>
+              <span className="text-sm text-muted-foreground">ROI</span>
+              <p className="text-lg font-medium" data-testid="portfolio-roi">
+                {portfolioTotals.portfolioROI !== null
+                  ? `${portfolioTotals.portfolioROI.toFixed(2)}%`
+                  : "-"}
+              </p>
+            </div>
+            <div>
+              <span className="text-sm text-muted-foreground">Available</span>
+              <p className="text-lg font-medium" data-testid="portfolio-total-available">
+                {formatCurrency(portfolioTotals.totalAvailable)}
+              </p>
+            </div>
+            <div>
+              <span className="text-sm text-muted-foreground">Cash Balance</span>
+              <p className="text-lg font-medium" data-testid="portfolio-total-balance">
+                {formatCurrency(portfolioTotals.totalOOP + portfolioTotals.totalBalance)}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 

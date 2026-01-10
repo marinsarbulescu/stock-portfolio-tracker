@@ -18,6 +18,8 @@ const schema = a.schema({
       testHistoricalCloses: a.string(), // JSON string for E2E testing 5D Pullback: "[{date, close}, ...]"
       sellFee: a.float(), // Percentage per sell transaction
       buyFee: a.float(), // Percentage spread paid when buying (e.g., Robinhood crypto)
+      balance: a.float(), // Running net position (negative = invested, positive = cash available)
+      oop: a.float(), // Maximum out-of-pocket (peak investment reached)
       status: a.ref("AssetStatus").required(),
       // Relationships
       yearlyBudgets: a.hasMany("YearlyBudget", "assetId"),
