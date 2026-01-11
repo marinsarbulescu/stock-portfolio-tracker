@@ -70,6 +70,18 @@ const tests: TestItem[] = [
     specFile: "transactions/transaction-historical-reversal.spec.ts",
     describeName: "Transactions - Historical Reversal",
   },
+  {
+    id: "transaction-cash-crud-1",
+    name: "CashCRUD - Verify postdating, edit, and delete of cash transactions",
+    specFile: "transactions/transaction-cash-crud.spec.ts",
+    describeName: "Transactions - Cash CRUD",
+  },
+  {
+    id: "dashboard-5d-pullback-1",
+    name: "FiveDPullback - Verify 5D Pullback calculations",
+    specFile: "dashboard/dashboard-5d-pullback.spec.ts",
+    describeName: "Dashboard - 5D Pullback",
+  },
 ];
 
 // Group tests by describeName
