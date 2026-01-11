@@ -702,6 +702,14 @@ export default function AssetTransactionsPage() {
         );
       };
 
+      // DIVIDEND and SLP can always be edited/deleted (no wallet dependencies)
+      const canEditDelete = (txn: TransactionRow) => {
+        if (txn.type === "DIVIDEND" || txn.type === "SLP") {
+          return true;
+        }
+        return !hasSubsequentTransactions(txn);
+      };
+
       return [
       {
         key: "date",
@@ -852,7 +860,7 @@ export default function AssetTransactionsPage() {
         toggleable: false,
         render: (item) => (
           <div className="flex items-center gap-2">
-            {!hasSubsequentTransactions(item) && (
+            {canEditDelete(item) && (
               <button
                 onClick={() => handleRowClick(item)}
                 data-testid={`transaction-edit-${item.id}`}
@@ -874,7 +882,7 @@ export default function AssetTransactionsPage() {
                 </svg>
               </button>
             )}
-            {!hasSubsequentTransactions(item) && (
+            {canEditDelete(item) && (
               <button
                 onClick={() => handleDeleteFromTable(item.id)}
                 data-testid={`transaction-delete-${item.id}`}

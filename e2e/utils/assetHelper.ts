@@ -1278,6 +1278,16 @@ export async function createBuyTransaction(
     );
   }
 
+  // Fill date if provided (for postdating)
+  if (input.date) {
+    const dateInput = page.locator('[data-testid="transaction-form-date"]');
+    await dateInput.evaluate((el, value) => {
+      (el as HTMLInputElement).value = value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }, input.date);
+  }
+
   // Submit
   await page.locator('[data-testid="transaction-form-submit"]').click();
 
@@ -1554,6 +1564,16 @@ export async function createSellTransaction(
   // Fill quantity
   await page.locator('[data-testid="sell-form-quantity"]').clear();
   await page.locator('[data-testid="sell-form-quantity"]').fill(input.quantity);
+
+  // Fill date if provided (for postdating)
+  if (input.date) {
+    const dateInput = page.locator('[data-testid="sell-form-date"]');
+    await dateInput.evaluate((el, value) => {
+      (el as HTMLInputElement).value = value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }, input.date);
+  }
 
   // Submit
   await page.locator('[data-testid="sell-form-submit"]').click();
@@ -2249,6 +2269,16 @@ export async function createDividendSlpTransaction(
   // Fill amount
   await page.locator('[data-testid="transaction-form-amount"]').fill(input.amount);
 
+  // Fill date if provided (for postdating)
+  if (input.date) {
+    const dateInput = page.locator('[data-testid="transaction-form-date"]');
+    await dateInput.evaluate((el, value) => {
+      (el as HTMLInputElement).value = value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }, input.date);
+  }
+
   // Submit
   await page.locator('[data-testid="transaction-form-submit"]').click();
 
@@ -2256,6 +2286,101 @@ export async function createDividendSlpTransaction(
   await expect(page.locator('[data-testid="transaction-form-type"]')).not.toBeVisible({ timeout: 10000 });
 
   console.log(`[AssetHelper] ${input.type} transaction created successfully.`);
+}
+
+/**
+ * Find a DIVIDEND or SLP transaction row by type and amount.
+ * @param type - "DIVIDEND" or "SLP"
+ * @param amount - The amount to match (e.g., "$20.00")
+ */
+async function findDividendSlpTransactionRow(
+  page: Page,
+  type: "DIVIDEND" | "SLP",
+  amount: string
+): Promise<ReturnType<typeof page.locator>> {
+  const typeLabel = type === "DIVIDEND" ? "Dividend" : "SLP";
+  const rows = page.locator('tbody tr');
+
+  // Find a row that contains both the type and amount
+  const matchingRow = rows.filter({ hasText: typeLabel }).filter({ hasText: amount });
+
+  // Wait for and verify it exists
+  await expect(matchingRow.first()).toBeVisible({ timeout: 5000 });
+
+  return matchingRow.first();
+}
+
+/**
+ * Edit a DIVIDEND or SLP transaction via the TransactionModal.
+ * Call this from the transactions page.
+ * @param target - The transaction to find (by type and amount)
+ * @param newInput - The new values to set
+ */
+export async function editDividendSlpTransaction(
+  page: Page,
+  target: { type: "DIVIDEND" | "SLP"; amount: string },
+  newInput: DividendSlpInput
+): Promise<void> {
+  console.log(`[AssetHelper] Editing ${target.type} transaction: ${target.amount} -> ${newInput.amount}...`);
+
+  // Find the transaction row
+  const row = await findDividendSlpTransactionRow(page, target.type, target.amount);
+
+  // Click the edit button
+  const editButton = row.locator('[data-testid^="transaction-edit-"]');
+  await editButton.click();
+
+  // Wait for modal to open
+  await expect(page.locator('[data-testid="transaction-form-type"]')).toBeVisible({ timeout: 5000 });
+
+  // Update amount
+  await page.locator('[data-testid="transaction-form-amount"]').clear();
+  await page.locator('[data-testid="transaction-form-amount"]').fill(newInput.amount);
+
+  // Update date if provided
+  if (newInput.date) {
+    const dateInput = page.locator('[data-testid="transaction-form-date"]');
+    await dateInput.evaluate((el, value) => {
+      (el as HTMLInputElement).value = value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }, newInput.date);
+  }
+
+  // Submit
+  await page.locator('[data-testid="transaction-form-submit"]').click();
+
+  // Wait for modal to close
+  await expect(page.locator('[data-testid="transaction-form-type"]')).not.toBeVisible({ timeout: 10000 });
+
+  console.log(`[AssetHelper] ${target.type} transaction edited successfully.`);
+}
+
+/**
+ * Delete a DIVIDEND or SLP transaction.
+ * Call this from the transactions page.
+ * @param target - The transaction to find and delete (by type and amount)
+ */
+export async function deleteDividendSlpTransaction(
+  page: Page,
+  target: { type: "DIVIDEND" | "SLP"; amount: string }
+): Promise<void> {
+  console.log(`[AssetHelper] Deleting ${target.type} transaction: ${target.amount}...`);
+
+  // Find the transaction row
+  const row = await findDividendSlpTransactionRow(page, target.type, target.amount);
+
+  // Set up dialog handler BEFORE clicking (important for async dialog handling)
+  page.once('dialog', dialog => dialog.accept());
+
+  // Click the delete button
+  const deleteButton = row.locator('[data-testid^="transaction-delete-"]');
+  await deleteButton.click();
+
+  // Wait for the row to disappear (transaction deleted)
+  await expect(row).not.toBeVisible({ timeout: 10000 });
+
+  console.log(`[AssetHelper] ${target.type} transaction deleted successfully.`);
 }
 
 // ============================================================================

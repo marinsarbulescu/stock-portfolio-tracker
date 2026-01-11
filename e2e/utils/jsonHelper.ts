@@ -79,6 +79,7 @@ export interface TransactionInput {
   price: string;
   investment: string;
   allocations: TransactionAllocationInput[];
+  date?: string;  // Optional datetime for postdating (e.g., "2026-01-15T09:00:00")
 }
 
 export interface TransactionExpected {
@@ -153,6 +154,7 @@ export interface SellTransactionInput {
   signal: string;
   price: string;
   quantity: string;
+  date?: string;  // Optional datetime for postdating (e.g., "2026-01-15T09:00:00")
 }
 
 export interface SellTransactionExpected {
@@ -394,6 +396,7 @@ export interface DashboardAvailableExpected {
 export interface DividendSlpInput {
   type: "DIVIDEND" | "SLP";
   amount: string;
+  date?: string;  // Optional datetime for postdating (e.g., "2026-01-15T11:30:00")
 }
 
 export interface RoiTransactionAction {
@@ -1022,6 +1025,71 @@ export function loadFiveDPullbackTestData(fileName: string): FiveDPullbackTestCo
     const data = JSON.parse(fileContent) as FiveDPullbackTestConfig;
     console.log(
       `[jsonHelper.ts] Successfully parsed 5D Pullback JSON for scenario: ${data.scenario}`
+    );
+    return data;
+  } catch (error) {
+    throw new Error(`Failed to parse JSON file ${filePath}: ${error}`);
+  }
+}
+
+// ============================================================================
+// Cash Transaction CRUD Test Types (DIVIDEND/SLP postdating, edit, delete)
+// ============================================================================
+
+export interface CashCrudTransactionAction {
+  testPriceUpdate?: string;           // Update test price before transaction
+  isSell?: boolean;                   // Discriminator for SELL transactions
+  isDividendOrSlp?: boolean;          // Discriminator for DIVIDEND/SLP transactions
+  input?: TransactionInput;           // BUY input
+  sellInput?: SellTransactionInput;   // SELL input
+  dividendSlpInput?: DividendSlpInput; // DIVIDEND/SLP input
+}
+
+export interface CashCrudCheckpoint {
+  name: string;
+  action: "create" | "edit" | "delete";
+  target?: {                          // For edit/delete: target the transaction by type and amount
+    type: "DIVIDEND" | "SLP";
+    amount?: string;                  // Amount to match for finding transaction
+  };
+  editInput?: DividendSlpInput;       // New values for edit action
+  expected: {
+    financialOverview: FinancialOverviewExpected;
+  };
+}
+
+export interface CashCrudTestConfig {
+  scenario: string;
+  description: string;
+  asset: {
+    input: AssetCreateInput;
+    budget: { year: string; amount: string };
+  };
+  entryTargets: { input: TargetInput }[];
+  profitTargets: { input: TargetInput }[];
+  setupTransactions: {
+    [key: string]: CashCrudTransactionAction;
+  };
+  checkpoints: CashCrudCheckpoint[];
+}
+
+export function loadCashCrudTestData(fileName: string): CashCrudTestConfig {
+  const filePath = path.resolve(process.cwd(), fileName);
+  console.log(`[jsonHelper.ts] Attempting to load Cash CRUD JSON from: ${filePath}`);
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`JSON file not found: ${filePath}`);
+  }
+
+  const fileContent = fs.readFileSync(filePath, "utf-8");
+  console.log(
+    `[jsonHelper.ts] File content read successfully. Length: ${fileContent.length}`
+  );
+
+  try {
+    const data = JSON.parse(fileContent) as CashCrudTestConfig;
+    console.log(
+      `[jsonHelper.ts] Successfully parsed Cash CRUD JSON for scenario: ${data.scenario}`
     );
     return data;
   } catch (error) {

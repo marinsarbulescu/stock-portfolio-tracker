@@ -191,6 +191,7 @@ export function SellModal({
           <input
             type="datetime-local"
             id="sell-date"
+            data-testid="sell-form-date"
             step="1"
             value={date}
             onChange={(e) => setDate(e.target.value)}
