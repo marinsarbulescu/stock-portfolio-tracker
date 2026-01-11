@@ -8,7 +8,7 @@
 
 import { test, expect } from "@playwright/test";
 import { loginUser, clearBrowserState } from "../utils/auth";
-import { loadCashCrudTestData } from "../utils/jsonHelper";
+import { loadRoiTestData } from "../utils/jsonHelper";
 import {
   setupTestAsset,
   navigateToAssetsPage,
@@ -21,14 +21,13 @@ import {
   deleteDividendSlpTransaction,
   updateTestPrice,
   verifyFinancialOverview,
-  navigateToAssetEditPage,
 } from "../utils/assetHelper";
 
 // Set test timeout to 180 seconds
 test.setTimeout(180000);
 
 // Load test configuration from JSON
-const testConfig = loadCashCrudTestData("e2e/transactions/transaction-cash-crud.json");
+const testConfig = loadRoiTestData("e2e/transactions/transaction-cash-crud.json");
 
 // Test Suite
 test.describe("Cash Transaction CRUD (JSON-driven)", () => {
@@ -68,13 +67,27 @@ test.describe("Cash Transaction CRUD (JSON-driven)", () => {
     await navigateToTransactionsPage(page);
     await expect(page.locator('[data-testid="btn-new-transaction"]')).toBeVisible({ timeout: 10000 });
 
-    // Step 3: Create all setup transactions
-    console.log(`[${testConfig.scenario}] Creating setup transactions...`);
-    const setupEntries = Object.entries(testConfig.setupTransactions);
+    // Process each transaction in order
+    const transactionEntries = Object.entries(testConfig.transactions);
 
-    for (let i = 0; i < setupEntries.length; i++) {
-      const [txnKey, txn] = setupEntries[i];
-      console.log(`[${testConfig.scenario}] Setup ${i + 1}/${setupEntries.length}: ${txnKey}`);
+    for (let i = 0; i < transactionEntries.length; i++) {
+      const [txnKey, txn] = transactionEntries[i];
+      const stepNum = i + 1;
+      const isSell = !!txn.isSell;
+      const isDividendOrSlp = !!txn.isDividendOrSlp;
+      const isDelete = !!txn.delete;
+      const isEdit = !!txn.target && !isDelete;
+
+      // Determine transaction type for logging
+      let txnType = 'BUY';
+      if (isSell) txnType = 'SELL';
+      if (isDividendOrSlp && txn.dividendSlpInput) txnType = txn.dividendSlpInput.type;
+      if (isEdit) txnType = `EDIT ${txn.target?.type}`;
+      if (isDelete) txnType = `DELETE ${txn.target?.type}`;
+
+      console.log(`\n[${testConfig.scenario}] ========================================`);
+      console.log(`[${testConfig.scenario}] Transaction ${stepNum}/${transactionEntries.length}: ${txnKey} (${txnType})`);
+      console.log(`[${testConfig.scenario}] ========================================`);
 
       // Update test price if needed
       if (txn.testPriceUpdate) {
@@ -82,39 +95,27 @@ test.describe("Cash Transaction CRUD (JSON-driven)", () => {
         await updateTestPrice(page, txn.testPriceUpdate);
       }
 
-      // Create transaction
-      if (txn.isSell && txn.sellInput) {
+      // Execute the appropriate action
+      if (isDelete && txn.target) {
+        // DELETE operation
+        console.log(`[${testConfig.scenario}] Deleting ${txn.target.type}: ${txn.target.amount}...`);
+        await deleteDividendSlpTransaction(page, txn.target as { type: "DIVIDEND" | "SLP"; amount: string });
+      } else if (isEdit && txn.target && txn.dividendSlpInput) {
+        // EDIT operation
+        console.log(`[${testConfig.scenario}] Editing ${txn.target.type}: ${txn.target.amount} -> $${txn.dividendSlpInput.amount}...`);
+        await editDividendSlpTransaction(page, txn.target as { type: "DIVIDEND" | "SLP"; amount: string }, txn.dividendSlpInput);
+      } else if (isDividendOrSlp && txn.dividendSlpInput) {
+        // CREATE DIVIDEND/SLP
+        console.log(`[${testConfig.scenario}] Creating ${txn.dividendSlpInput.type}: $${txn.dividendSlpInput.amount}...`);
+        await createDividendSlpTransaction(page, txn.dividendSlpInput);
+      } else if (isSell && txn.sellInput) {
+        // SELL transaction
         console.log(`[${testConfig.scenario}] Creating SELL: ${txn.sellInput.quantity} shares @ $${txn.sellInput.price}...`);
         await createSellTransaction(page, txn.sellInput.ptPercent, txn.sellInput.walletPrice, txn.sellInput);
       } else if (txn.input) {
+        // BUY transaction
         console.log(`[${testConfig.scenario}] Creating BUY: $${txn.input.investment} @ $${txn.input.price}...`);
         await createBuyTransaction(page, txn.input);
-      }
-
-      await page.waitForTimeout(500);
-    }
-
-    console.log(`[${testConfig.scenario}] All setup transactions created.`);
-
-    // Step 4: Process each checkpoint
-    console.log(`[${testConfig.scenario}] Processing ${testConfig.checkpoints.length} checkpoints...`);
-
-    for (let i = 0; i < testConfig.checkpoints.length; i++) {
-      const checkpoint = testConfig.checkpoints[i];
-      console.log(`\n[${testConfig.scenario}] ========================================`);
-      console.log(`[${testConfig.scenario}] Checkpoint ${i + 1}/${testConfig.checkpoints.length}: ${checkpoint.name}`);
-      console.log(`[${testConfig.scenario}] ========================================`);
-
-      // Execute the action
-      if (checkpoint.action === "create" && checkpoint.editInput) {
-        console.log(`[${testConfig.scenario}] Creating ${checkpoint.editInput.type}: $${checkpoint.editInput.amount}...`);
-        await createDividendSlpTransaction(page, checkpoint.editInput);
-      } else if (checkpoint.action === "edit" && checkpoint.target && checkpoint.editInput) {
-        console.log(`[${testConfig.scenario}] Editing ${checkpoint.target.type}: ${checkpoint.target.amount} -> $${checkpoint.editInput.amount}...`);
-        await editDividendSlpTransaction(page, checkpoint.target, checkpoint.editInput);
-      } else if (checkpoint.action === "delete" && checkpoint.target) {
-        console.log(`[${testConfig.scenario}] Deleting ${checkpoint.target.type}: ${checkpoint.target.amount}...`);
-        await deleteDividendSlpTransaction(page, checkpoint.target);
       }
 
       // Wait for recalculation
@@ -122,9 +123,9 @@ test.describe("Cash Transaction CRUD (JSON-driven)", () => {
 
       // Verify financial overview
       console.log(`[${testConfig.scenario}] Verifying financial overview...`);
-      await verifyFinancialOverview(page, checkpoint.expected.financialOverview);
+      await verifyFinancialOverview(page, txn.expected.financialOverview);
 
-      console.log(`[${testConfig.scenario}] Checkpoint "${checkpoint.name}" verified successfully.`);
+      console.log(`[${testConfig.scenario}] Transaction "${txnKey}" verified successfully.`);
     }
 
     // Cleanup
